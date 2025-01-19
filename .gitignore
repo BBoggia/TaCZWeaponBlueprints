@@ -20,6 +20,18 @@ build
 # other
 eclipse
 run
+test
+logs
+.luarc.json
 
 # Files from Forge MDK
 forge*changelog.txt
+/temp/
+
+
+# Not related misc files
+/misc_files/
+/misc_files/villagerTradeData/
+/misc_files/gunPropertyBalancing/
+/misc_files/villagerTradeData/
+/misc_files/balanced_weapon_data.json
