@@ -1,7 +1,0 @@
-{
-  "name": "atea.attachment.muzzle_si_md.name",
-  "tooltip": "atea.attachment.muzzle_si_md.desc",
-  "display": "atea:muzzle_si_md_display",
-  "data": "atea:muzzle_si_md_data",
-  "type": "muzzle"
-}

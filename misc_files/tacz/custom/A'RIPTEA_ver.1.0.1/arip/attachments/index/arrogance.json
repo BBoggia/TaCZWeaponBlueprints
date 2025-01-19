@@ -1,7 +1,0 @@
-{
-  "name": "arip.attachment.arrogance.name",
-  "tooltip": "arip.attachment.arrogance.desc",
-  "display": "arip:arrogance_display",
-  "data": "arip:arrogance_data",
-  "type": "muzzle"
-}

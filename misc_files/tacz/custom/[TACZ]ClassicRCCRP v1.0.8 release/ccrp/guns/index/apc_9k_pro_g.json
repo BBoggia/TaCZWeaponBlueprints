@@ -1,8 +1,0 @@
-{
-  "name": "ccrp.gun.apc_9k_pro_g.name",
-  "display": "ccrp:apc_9k_pro_g_display",
-  "data": "ccrp:apc_9k_pro_g_data",
-  "tooltip": "ccrp.gun.apc_9k_pro_g.desc",
-  "type": "pistol",
-  "sort": 10
-}

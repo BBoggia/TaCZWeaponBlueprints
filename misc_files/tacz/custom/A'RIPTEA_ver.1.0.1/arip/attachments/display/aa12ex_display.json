@@ -1,9 +1,0 @@
-{
-  "slot": "arip:attachment/slot/aa12ex",
-  "model": "arip:attachment/aa12ex_geo",
-  "texture": "arip:attachment/uv/aa12ex",
-  "sounds": {
-    "install": "tacz:attachments/muzzle_general",
-    "uninstall": "tacz:attachments/muzzle_general"
-  }
-}

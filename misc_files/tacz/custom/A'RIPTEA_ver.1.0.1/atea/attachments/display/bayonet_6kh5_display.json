@@ -1,9 +1,0 @@
-{
-  "slot": "atea:attachment/slot/bayonet_6kh5",
-  "model": "atea:attachment/bayonet_6kh5_geo",
-  "texture": "atea:attachment/uv/bayonet_6kh5",
-  "sounds": {
-    "install": "tacz:attachments/bayonet_install",
-    "uninstall": "tacz:attachments/bayonet_uninstall"
-  }
-}

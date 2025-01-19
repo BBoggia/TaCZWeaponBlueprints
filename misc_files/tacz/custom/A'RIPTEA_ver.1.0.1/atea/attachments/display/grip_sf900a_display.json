@@ -1,9 +1,0 @@
-{
-  "slot": "atea:attachment/slot/grip_sf900a",
-  "model": "atea:attachment/grip_sf900a_geo",
-  "texture": "atea:attachment/uv/grip_sf900a",
-  "sounds": {
-    "install": "tacz:attachments/attachment_general_b",
-    "uninstall": "tacz:attachments/attachment_general_uninstall"
-  }
-}

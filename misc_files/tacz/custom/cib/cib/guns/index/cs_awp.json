@@ -1,7 +1,0 @@
-{
-  "name": "cib.gun.cs_awp.name",
-  "display": "cib:cs_awp_display",
-  "data": "cib:cs_awp_data",
-  "tooltip": "cib.gun.cs_awp.desc",
-  "type": "sniper"
-}

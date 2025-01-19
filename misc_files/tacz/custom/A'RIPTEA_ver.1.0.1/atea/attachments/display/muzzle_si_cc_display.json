@@ -1,9 +1,0 @@
-{
-  "slot": "atea:attachment/slot/muzzle_si_cc",
-  "model": "atea:attachment/muzzle_si_cc_geo",
-  "texture": "atea:attachment/uv/muzzle_si_cc",
-  "sounds": {
-    "install": "tacz:attachments/muzzle_general",
-    "uninstall": "tacz:attachments/muzzle_general"
-  }
-}

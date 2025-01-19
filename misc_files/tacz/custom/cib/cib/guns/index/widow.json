@@ -1,9 +1,0 @@
-{
-  "name": "cib.gun.widow.name",
-  "display": "cib:widow_display",
-  "data": "cib:widow_data",
-  "type": "shotgun",
-  "item_type": "modern_kinetic",
-  "tooltip": "cib.gun.widow.desc",
-  "sort": 10
-}

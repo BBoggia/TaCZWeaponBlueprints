@@ -1,7 +1,0 @@
-{
-  "name": "HK high-strength polymer stock",
-  "display": "hk:b5_stock_display",
-  "data": "hk:b5_stock_data",
-  "tooltip": "Providing balance between strength and weight.",
-  "type": "stock"
-}

@@ -1,9 +1,0 @@
-{
-  "name": "cib.gun.sig556.name",
-  "display": "cib:sig556_display",
-  "data": "cib:sig556_data",
-  "type": "rifle",
-  "item_type": "modern_kinetic",
-  "tooltip": "cib.gun.sig556.desc",
-  "sort": 10
-}

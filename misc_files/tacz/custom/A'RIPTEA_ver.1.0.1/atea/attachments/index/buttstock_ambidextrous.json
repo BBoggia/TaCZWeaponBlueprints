@@ -1,7 +1,0 @@
-{
-  "name": "atea.attachment.buttstock_ambidextrous.name",
-  "tooltip": "atea.attachment.buttstock_ambidextrous.desc",
-  "display": "atea:buttstock_ambidextrous_display",
-  "data": "atea:buttstock_ambidextrous_data",
-  "type": "stock"
-}

@@ -1,9 +1,0 @@
-{
-	"weight": 0.8,
-	"ammo_speed": {
-		"addend": 10
-	},
-	"effective_range": {
-		"addend": 4
-	}
-}

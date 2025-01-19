@@ -1,7 +1,0 @@
-{
-    "name": "classicr.attachment.b5_stock_sand.name",
-    "tooltip": "classicr.attachment.b5_stock_sand.desc",
-    "display": "classicr:b5_stock_sand_display",
-    "data": "classicr:b5_stock_sand_data",
-    "type": "stock"
-  }

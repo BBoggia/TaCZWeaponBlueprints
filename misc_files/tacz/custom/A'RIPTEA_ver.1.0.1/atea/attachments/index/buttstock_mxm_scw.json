@@ -1,7 +1,0 @@
-{
-  "name": "atea.attachment.buttstock_mxm_scw.name",
-  "tooltip": "atea.attachment.buttstock_mxm_scw.desc",
-  "display": "atea:buttstock_mxm_scw_display",
-  "data": "atea:buttstock_mxm_scw_data",
-  "type": "stock"
-}

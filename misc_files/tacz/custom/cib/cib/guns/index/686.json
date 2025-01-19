@@ -1,9 +1,0 @@
-{
-  "name": "cib.gun.686.name",
-  "display": "cib:686_display",
-  "data": "cib:686_data",
-  "type": "shotgun",
-  "item_type": "modern_kinetic",
-  "tooltip": "cib.gun.686.desc",
-  "sort": 10
-}

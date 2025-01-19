@@ -1,9 +1,0 @@
-{
-  "name": "cib.gun.origin12.name",
-  "display": "cib:origin12_display",
-  "data": "cib:origin12_data",
-  "type": "shotgun",
-  "item_type": "modern_kinetic",
-  "tooltip": "cib.gun.origin12.desc",
-  "sort": 10
-}

@@ -1,7 +1,0 @@
-{
-  "name": "rfp.attachment.elcan_c79_1.name",
-  "tooltip": "rfp.attachment.elcan_c79_2.tooltip",
-  "display": "rfp:elcan_c79_2_display",
-  "data": "rfp:elcan_c79_data",
-  "type": "scope"
-}

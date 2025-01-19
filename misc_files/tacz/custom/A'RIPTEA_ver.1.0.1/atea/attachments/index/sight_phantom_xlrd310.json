@@ -1,7 +1,0 @@
-{
-  "name": "atea.attachment.sight_phantom_xlrd310.name",
-  "tooltip": "atea.attachment.sight_phantom_xlrd310.desc",
-  "display": "atea:sight_phantom_xlrd310_display",
-  "data": "atea:sight3_medium_data",
-  "type": "scope"
-}

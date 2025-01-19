@@ -1,9 +1,0 @@
-{
-  "name": "cib.gun.m4.name",
-  "display": "cib:m4_display",
-  "data": "cib:m4_data",
-  "type": "rifle",
-  "tooltip": "cib.gun.m4.desc",
-  "item_type": "modern_kinetic",
-  "sort": 10
-}

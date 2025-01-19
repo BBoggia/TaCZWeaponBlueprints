@@ -1,8 +1,0 @@
-{
-    "name": "emxarms.gun.emx_sf7b.name",
-    "display": "emxarms:emx_sf7b_display",
-    "tooltip": "emxarms.gun.emx_sf7b.desc",
-    "data": "emxarms:emx_sf7b_data",
-    "type": "mg",
-    "sort": 2
-}

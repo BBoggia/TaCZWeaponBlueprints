@@ -1,7 +1,0 @@
-{
-  "name": "emxarms.attachment.muzzle_emx_encapsulation.name",
-  "tooltip": "emxarms.attachment.muzzle_emx_encapsulation.tooltip",
-  "display": "emxarms:muzzle_emx_encapsulation_display",
-  "data": "emxarms:muzzle_emx_encapsulation_data",
-  "type": "muzzle"
-}

@@ -1,7 +1,0 @@
-{
-  "name": "atea.attachment.grip_vector.name",
-  "tooltip": "atea.attachment.grip_vector.desc",
-  "display": "atea:grip_vector_display",
-  "data": "atea:grip_vector_data",
-  "type": "grip"
-}

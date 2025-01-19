@@ -1,9 +1,0 @@
-{
-  "name": "cib.gun.asval.name",
-  "display": "cib:asval_display",
-  "data": "cib:asval_data",
-  "tooltip": "cib.gun.asval.desc",
-  "type": "rifle",
-  "item_type": "modern_kinetic",
-  "sort": 10
-}

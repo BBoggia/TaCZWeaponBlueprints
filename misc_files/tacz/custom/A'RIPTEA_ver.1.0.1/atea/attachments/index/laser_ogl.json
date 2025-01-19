@@ -1,7 +1,0 @@
-{
-  "name": "atea.attachment.laser_ogl.name",
-  "tooltip": "atea.attachment.laser_ogl.desc",
-  "display": "atea:laser_ogl_display",
-  "data": "atea:sight9_laser_data",
-  "type": "scope"
-}

@@ -1,9 +1,0 @@
-{
-  "slot": "atea:attachment/slot/buttstock_pt1s",
-  "model": "atea:attachment/buttstock_pt1s_geo",
-  "texture": "atea:attachment/uv/buttstock_pt1s",
-  "sounds": {
-    "install": "tacz:attachments/attachment_general_a",
-    "uninstall": "tacz:attachments/attachment_general_uninstall"
-  }
-}

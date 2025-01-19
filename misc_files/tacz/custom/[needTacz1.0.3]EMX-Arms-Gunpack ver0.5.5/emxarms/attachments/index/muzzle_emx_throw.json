@@ -1,7 +1,0 @@
-{
-  "name": "emxarms.attachment.muzzle_emx_throw.name",
-  "tooltip": "emxarms.attachment.muzzle_emx_throw.tooltip",
-  "display": "emxarms:muzzle_emx_throw_display",
-  "data": "emxarms:muzzle_emx_throw_data",
-  "type": "muzzle"
-}

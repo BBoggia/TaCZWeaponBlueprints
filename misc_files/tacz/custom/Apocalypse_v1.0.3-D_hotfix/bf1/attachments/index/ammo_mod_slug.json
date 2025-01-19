@@ -1,8 +1,0 @@
-{
-  "name": "bf1.attachment.ammo_mod_slug.name",
-  "display": "bf1:ammo_mod_slug_display",
-  "data": "bf1:ammo_mod_slug_data",
-  "tooltip": "bf1.attachment.ammo_mod_slug.desc",
-  "type": "extended_mag",
-  "sort": 10
-}

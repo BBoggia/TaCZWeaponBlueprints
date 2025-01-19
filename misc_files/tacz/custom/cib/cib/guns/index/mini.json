@@ -1,9 +1,0 @@
-{
-  "name": "cib.gun.mini.name",
-  "display": "cib:mini_display",
-  "data": "cib:mini_data",
-  "type": "mg",
-  "item_type": "modern_kinetic",
-  "tooltip": "cib.gun.mini.desc",
-  "sort": 10
-}

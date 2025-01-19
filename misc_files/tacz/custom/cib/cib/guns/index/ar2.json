@@ -1,9 +1,0 @@
-{
-  "name": "cib.gun.ar2.name",
-  "display": "cib:ar2_display",
-  "data": "cib:ar2_data",
-  "type": "rifle",
-  "item_type": "modern_kinetic",
-  "tooltip": "cib.gun.ar2.desc",
-  "sort": 10
-}

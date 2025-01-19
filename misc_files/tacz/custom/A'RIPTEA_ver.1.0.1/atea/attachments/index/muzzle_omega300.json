@@ -1,7 +1,0 @@
-{
-  "name": "atea.attachment.muzzle_omega300.name",
-  "tooltip": "atea.attachment.muzzle_omega300.desc",
-  "display": "atea:muzzle_omega300_display",
-  "data": "atea:muzzle_omega300_data",
-  "type": "muzzle"
-}

@@ -1,7 +1,0 @@
-{
-  "name": "atea.attachment.bayonet_sks_blade.name",
-  "tooltip": "atea.attachment.bayonet_sks_blade.desc",
-  "display": "atea:bayonet_sks_blade_display",
-  "data": "atea:bayonet_data",
-  "type": "muzzle"
-}
