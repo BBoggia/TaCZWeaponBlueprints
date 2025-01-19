@@ -1,9 +1,0 @@
-{
-  "slot": "emxarms:attachment/slot/muzzle_emx_throw",
-  "model": "emxarms:attachment/muzzle_emx_throw_geo",
-  "texture": "emxarms:attachment/uv/emx_encapsulation",
-  "sounds": {
-    "install": "emxarms:attachments/emxsystemload",
-    "uninstall": "emxarms:attachments/emxsystemout"
-  }
-}

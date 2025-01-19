@@ -1,7 +1,0 @@
-{
-  "name": "emxarms.attachment.ammo_sgeb.name",
-  "tooltip": "emxarms.attachment.ammo_sgdt.tooltip",
-  "display": "emxarms:ammo_sgeb_display",
-  "data": "emxarms:ammo_sgeb_data",
-  "type": "extended_mag"
-}
