@@ -1,0 +1,10 @@
+{
+  "slot": "emxarms:attachment/slot/bayonet_emx_glowsword",
+  "model": "emxarms:attachment/bayonet_emx_glowsword_geo",
+  "texture": "emxarms:attachment/uv/emx_glowsword",
+  "show_muzzle": true,
+  "sounds": {
+    "install": "emxarms:attachments/emx_gsw_in",
+    "uninstall": "emxarms:attachments/emx_gsw_att"
+  }
+}

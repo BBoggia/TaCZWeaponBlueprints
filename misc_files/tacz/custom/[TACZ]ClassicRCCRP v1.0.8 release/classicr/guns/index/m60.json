@@ -1,0 +1,8 @@
+{
+  "name": "classicr.gun.m60.name",
+  "display": "classicr:m60_display",
+  "data": "classicr:m60_data",
+  "tooltip": "classicr.gun.m60.desc",
+  "type": "mg",
+  "sort": 10
+}

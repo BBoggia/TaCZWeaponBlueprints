@@ -1,0 +1,21 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/copper"
+      },
+      "count": 33
+    },
+    {
+      "item": {
+        "tag": "forge:gunpowder"
+      },
+      "count": 20
+    }
+  ],
+  "result": {
+    "type": "ammo",
+    "id": "atea:1163x39",
+    "count": 32
+  }
+}

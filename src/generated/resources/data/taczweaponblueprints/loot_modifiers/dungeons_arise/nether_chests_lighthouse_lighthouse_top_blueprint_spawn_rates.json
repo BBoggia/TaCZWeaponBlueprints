@@ -1,0 +1,66 @@
+{
+  "type": "taczweaponblueprints:add_items",
+  "conditions": [
+    {
+      "condition": "forge:loot_table_id",
+      "loot_table_id": "dungeons_arise:chests/lighthouse/lighthouse_top"
+    }
+  ],
+  "items": [
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:rpg7"
+        }
+      },
+      "weight": 0.4
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "classicr:mgl_40mm"
+        }
+      },
+      "weight": 0.841
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "lradd:m202"
+        }
+      },
+      "weight": 2.016
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "classicr:m82a2"
+        }
+      },
+      "weight": 4.073
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:m95"
+        }
+      },
+      "weight": 4.277
+    }
+  ],
+  "poolProbability": 0.1,
+  "rolls": {
+    "max": 1,
+    "min": 1
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "emxarms.attachment.bayonet_emx_skyhunterax.name",
+  "tooltip": "emxarms.attachment.bayonet_emx_skyhunterax.tooltip",
+  "display": "emxarms:bayonet_emx_skyhunterax_display",
+  "data": "emxarms:bayonet_emx_skyhunterax_data",
+  "type": "muzzle"
+}

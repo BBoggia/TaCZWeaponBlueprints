@@ -1,0 +1,20 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 30
+    },
+    {
+      "item": {
+        "tag": "minecraft:logs"
+      },
+      "count": 51
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "tacz:db_long"
+  }
+}

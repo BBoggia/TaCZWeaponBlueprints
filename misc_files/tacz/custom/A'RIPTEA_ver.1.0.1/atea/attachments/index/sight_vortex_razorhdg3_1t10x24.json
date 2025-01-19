@@ -1,0 +1,7 @@
+{
+  "name": "atea.attachment.sight_vortex_razorhdg3_1t10x24.name",
+  "tooltip": "atea.attachment.sight_vortex_razorhdg3_1t10x24.desc",
+  "display": "atea:sight_vortex_razorhdg3_1t10x24_display",
+  "data": "atea:sight5_large_data",
+  "type": "scope"
+}

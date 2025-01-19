@@ -1,0 +1,7 @@
+{
+  "name": "emxarms.gun.emx_tknife.name",
+  "display": "emxarms:emx_tknife_display",
+  "data": "emxarms:emx_tknife_data",
+  "type": "pistol",
+  "tooltip":"emxarms.gun.emx_tknife.desc"
+}

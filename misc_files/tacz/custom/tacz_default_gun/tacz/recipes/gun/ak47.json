@@ -1,0 +1,29 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 82
+    },
+    {
+      "item": {
+        "tag": "forge:gems/lapis"
+      },
+      "count": 30
+    },
+    {
+      "item": {
+        "tag": "minecraft:logs"
+      },
+      "count": 48
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "tacz:ak47",
+    "attachments": {
+      "stock": "tacz:oem_stock_tactical"
+    }
+  }
+}

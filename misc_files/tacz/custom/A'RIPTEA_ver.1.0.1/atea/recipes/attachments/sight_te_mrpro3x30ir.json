@@ -1,0 +1,20 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 49
+    },
+    {
+      "item": {
+        "tag": "forge:dusts/redstone"
+      },
+      "count": 13
+    }
+  ],
+  "result": {
+    "type": "attachment",
+    "id": "atea:sight_te_mrpro3x30ir"
+  }
+}

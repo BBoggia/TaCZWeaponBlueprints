@@ -1,0 +1,7 @@
+{
+  "name": "emxarms.attachment.muzzle_emx_catch.name",
+  "tooltip": "emxarms.attachment.muzzle_emx_catch.tooltip",
+  "display": "emxarms:muzzle_emx_catch_display",
+  "data": "emxarms:muzzle_emx_catch_data",
+  "type": "muzzle"
+}

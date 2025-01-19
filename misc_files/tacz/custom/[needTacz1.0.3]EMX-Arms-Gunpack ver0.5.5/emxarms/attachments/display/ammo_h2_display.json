@@ -1,0 +1,7 @@
+{
+  "slot": "emxarms:attachment/slot/ammo_h2",
+  "sounds": {
+    "install": "emxarms:attachments/emxmag_h1",
+    "uninstall": "emxarms:attachments/emxmag_h2"
+  }
+}

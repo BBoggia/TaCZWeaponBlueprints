@@ -1,0 +1,107 @@
+{
+  "ammo": "str", // Ammo type
+  "ammo_amount": "int" // Magazine size
+  "extended_mag_ammo_amount": "list<int>", // Extended magazine size (list with up to 3 levels)
+  "rpm": "int" // Rounds per minute
+  "bullet": {
+    "life": "float" // Bullet life in seconds
+    "damage": "float" // Base damage per bullet
+    "tracer_count_interval": "int"
+    "extra_damage": {
+      "armor_ignore": "float" // Armor ignore % of damage (decimal)
+      "head_shot_multiplier": "float" // Headshot multiplier % (decimal)
+      "damage_adjust": [ // Damage adjust for range (list of distances and the damage adjust)
+        {
+          "distance": "int" // Distance in meters (0 to 55 blocks)
+          "damage": "float"// Damage adjust
+        },
+        {
+          "distance": "int" // Distance in meters (55 to 80 blocks)
+          "damage": "float"
+        },
+        {
+          "distance": "infinite", // Distance in meters (80+ blocks)
+          "damage": "float"
+        }
+      ]
+    },
+    "speed": "int" // Bullet speed in m/s
+    "gravity": "float" // Bullet gravity
+    "knockback": "int" // Bullet knockback force
+    "friction": "float" // Bullet friction
+    "ignite": "boolean" // Ignite on hit,
+    "pierce": "int"// Bullet pierce
+  },
+  "reload": {
+    "type": "magazine", // Reload type (magazine, shell, etc)
+    "feed": {
+      "empty": "float" // Time to reload when empty
+      "tactical": "float"// Time to reload when not empty
+    },
+    "cooldown": {
+      "empty": "float"
+      "tactical": "float"
+    }
+  },
+  "draw_time": "float" // Time to draw weapon
+  "put_away_time": "float" // Time to put away weapon
+  "aim_time": "float" // Time to aim weapon
+  "weight": "float" // Weapon weight
+  "sprint_time": "float" // Time to sprint with weapon
+  "fire_mode": "list<str>", // Fire modes (semi, auto, burst)
+  "fire_mode_adjust": {
+    "auto": { // Auto fire mode adjustments (offsets, + or -)
+      "damage": "int"
+      "rpm": "int"
+      "speed": "int"
+      "knockback": "int"
+      "armor_ignore": "int"
+      "head_shot_multiplier": "int"
+      "aim_inaccuracy": "int"
+      "other_inaccuracy": "int"
+    },
+    "semi": { // Semi fire mode adjustments (offsets, + or -)
+      "damage": "int"
+      "rpm": "int"
+      "speed": "int"
+      "knockback": "float"
+      "armor_ignore": "float"
+      "head_shot_multiplier": "float"
+      "aim_inaccuracy": "float"
+      "other_inaccuracy": "float"
+    }
+  },
+  "recoil": { // Recoil adjustments
+    "pitch": [ // Pitch adjustments
+      {
+        "time": "int" // Time in seconds
+        "value": [ // Recoil values
+          "float" // Recoil value for first shot
+          "float"// Recoil value for subsequent shots
+        ]
+      },
+      { "time": "float" "value":  "[float, float]"},
+      { "time": "float" "value":  "[float, float]"},
+      { "time": "float" "value":  "[int, int]"},
+      { "time": "float" "value":  "[int, int]"}
+    ],
+    "yaw": [ // Yaw adjustments
+      {
+        "time": "int"
+        "value": [
+          "float" // Recoil value for first shot
+          "float"// Recoil value for subsequent shots
+        ]
+      },
+      { "time": "float" "value":  "[float, float]"},
+      { "time": "float" "value":  "[int, int]"}
+    ]
+  },
+  "inaccuracy": { // Inaccuracy adjustments (percentages)
+    "stand": "float" // Standing inaccuracy
+    "move": "int" // Moving inaccuracy
+    "sneak": "float" // Sneaking inaccuracy
+    "lie": "int" // Prone inaccuracy
+    "aim": "float"// Base aiming inaccuracy
+  }
+}

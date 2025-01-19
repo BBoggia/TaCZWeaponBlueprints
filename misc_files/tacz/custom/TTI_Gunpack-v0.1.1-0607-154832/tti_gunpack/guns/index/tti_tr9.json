@@ -1,0 +1,7 @@
+{
+    "name": "tti_gunpack.gun.tti_tr9",
+    "display": "tti_gunpack:tti_tr9_display",
+    "data": "tti_gunpack:tti_tr9_data",
+    "type": "smg",
+    "sort": 200
+}

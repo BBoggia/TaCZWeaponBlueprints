@@ -1,0 +1,8 @@
+{
+  "name": "classicr.gun.mac10.name",
+  "display": "classicr:mac10_display",
+  "data": "classicr:mac10_data",
+  "tooltip": "classicr.gun.mac10.desc",
+  "type": "smg",
+  "sort": 10
+}

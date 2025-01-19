@@ -1,0 +1,9 @@
+{
+  "name": "cib.gun.galilace32.name",
+  "display": "cib:galilace32_display",
+  "data": "cib:galilace32_data",
+  "tooltip": "cib.gun.galilace32.desc",
+  "type": "rifle",
+  "item_type": "modern_kinetic",
+  "sort": 10
+}

@@ -1,0 +1,7 @@
+{
+  "name": "classicr.attachment.sight_canted_laser.name",
+  "tooltip":"classicr.attachment.sight_canted_laser.desc",
+  "display": "classicr:sight_canted_laser_display",
+  "data": "classicr:sight_canted_laser_data",
+  "type": "scope"
+}

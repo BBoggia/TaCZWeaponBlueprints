@@ -1,0 +1,8 @@
+{
+  "weight": 2.0,
+  "ads_addend": 0.1,
+   "damage": {
+  "multiplier": 1.1
+   },
+  "extended_mag_level": 1
+}

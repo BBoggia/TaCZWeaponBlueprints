@@ -1,0 +1,48 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:gems/diamond"
+      },
+      "count": 4
+    },
+    {
+      "item": {
+        "tag": "forge:ingots/copper"
+      },
+      "count": 16
+    },
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 128
+    },
+   {
+      "item": {
+        "item": "minecraft:water_bucket"
+      },
+      "count": 1
+    }, 
+    {
+      "item": {
+        "tag": "minecraft:logs"
+      },
+      "count": 64
+    },
+    {
+      "item": {
+        "tag": "forge:leather"
+      },
+      "count": 6
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "bf1:mg0815",
+    "attachments": {
+      "stock": "tacz:oem_stock_heavy",
+      "grip": "bf1:grip_trench_bipods"
+    }
+  }
+}

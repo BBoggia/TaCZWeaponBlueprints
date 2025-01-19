@@ -1,0 +1,14 @@
+{
+  "slot": "rfp:attachment/slot/scope_acog_ta648",
+  "model": "rfp:attachment/scope_acog_ta648_1",
+  "texture": "rfp:attachment/uv/scope_acog_ta648_1",
+  "zoom": [
+    6
+  ],
+  "scope": true,
+  "fov": 70.0,
+  "sounds": {
+    "install": "tacz:attachments/scope_general_b",
+    "uninstall": "tacz:attachments/scope_general_b"
+  }
+}

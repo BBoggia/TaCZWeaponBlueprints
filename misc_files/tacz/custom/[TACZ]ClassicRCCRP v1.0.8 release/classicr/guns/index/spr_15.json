@@ -1,0 +1,8 @@
+{
+  "name": "classicr.gun.spr_15.name",
+  "display": "classicr:spr_15_display",
+  "data": "classicr:spr_15_data",
+  "tooltip": "classicr.gun.spr_15.desc",
+  "type": "rifle",
+  "sort": 10
+}

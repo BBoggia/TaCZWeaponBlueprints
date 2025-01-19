@@ -1,0 +1,55 @@
+{
+    "model": "tti_gunpack:gun/tti_tr1_geo",
+    "texture": "tti_gunpack:gun/uv/tti_tr1",
+    "lod": {
+        "model": "tti_gunpack:gun/lod/tti_tr1_lod_geo",
+        "texture": "tti_gunpack:gun/lod/tti_tr1_lod"
+    },
+    "hud": "tti_gunpack:gun/hud/tti_tr1",
+    "slot": "tti_gunpack:gun/slot/tti_tr1",
+    "animation": "tacz:m4a1",
+    "use_default_animation": "rifle",
+    "third_person_animation": "default",
+    "transform": {
+        "scale": {
+            "thirdperson": [
+                0.6,
+                0.6,
+                0.6
+            ],
+            "ground": [
+                0.6,
+                0.6,
+                0.6
+            ],
+            "fixed": [
+                1.2,
+                1.2,
+                1.2
+            ]
+        }
+    },
+    "muzzle_flash": {
+      "texture": "tacz:flash/common_muzzle_flash",
+      "scale": 0.75
+    },
+    "shell": {
+        "initial_velocity": [5, 2, 1],
+        "random_velocity": [1, 1, 0.25],
+        "acceleration": [0.0, -10, 0.0],
+        "angular_velocity": [360, -1200, 90],
+        "living_time": 1.0
+    },
+    "sounds": {
+        "shoot": "tti_gunpack:tti_tr1/tti_tr1_shoot",
+        "shoot_3p": "tti_gunpack:tti_tr1/tti_tr1_shoot_3p",
+        "reload_empty": "tti_gunpack:tti_tr1/tti_tr1_reload_empty",
+        "reload_tactical": "tti_gunpack:tti_tr1/tti_tr1_reload_tactical",
+        "inspect": "tti_gunpack:tti_tr1/tti_tr1_inspect",
+        "inspect_empty": "tti_gunpack:tti_tr1/tti_tr1_inspect_empty",
+        "draw": "tti_gunpack:tti_tr1/tti_tr1_draw",
+        "put_away": "tti_gunpack:tti_tr1/tti_tr1_put_away",
+        "silence": "tti_gunpack:tti_tr1/tti_tr1_silence",
+        "silence_3p": "tti_gunpack:tti_tr1/tti_tr1_silence_3p"
+    }
+}

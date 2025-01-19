@@ -1,0 +1,7 @@
+{
+  "name": "ccrp.gun.uzi45.name",
+  "display": "ccrp:uzi45_display",
+  "data": "ccrp:uzi45_data",
+  "tooltip": "ccrp.gun.uzi45.desc",
+  "type": "smg"
+}

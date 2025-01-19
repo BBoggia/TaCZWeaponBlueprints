@@ -1,0 +1,8 @@
+{
+  "name": "§fM27 §3IAR",
+  "display": "hk:hk416_display",
+  "data": "hk:hk416_data",
+  "type": "rifle",
+  "tooltip": "hk.gun.hk416.desc",
+  "sort": 200
+}

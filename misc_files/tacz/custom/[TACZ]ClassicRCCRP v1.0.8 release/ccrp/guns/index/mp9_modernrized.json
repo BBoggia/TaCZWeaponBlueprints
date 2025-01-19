@@ -1,0 +1,8 @@
+{
+  "name": "ccrp.gun.mp9_modernrized.name",
+  "display": "ccrp:mp9_modernrized_display",
+  "data": "ccrp:mp9_modernrized_data",
+  "tooltip": "ccrp.gun.mp9_modernrized.desc",
+  "type": "smg",
+  "sort": 10
+}

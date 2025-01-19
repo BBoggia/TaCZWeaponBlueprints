@@ -1,0 +1,646 @@
+{
+  "type": "taczweaponblueprints:add_items",
+  "conditions": [
+    {
+      "condition": "forge:loot_table_id",
+      "loot_table_id": "dungeons_arise:chests/eerie/heavenly_challenger/heavenly_challenger_treasure"
+    }
+  ],
+  "items": [
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:m16a4"
+        }
+      },
+      "weight": 5.101
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "lradd:mcx"
+        }
+      },
+      "weight": 6.203
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:hk_g3"
+        }
+      },
+      "weight": 6.203
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:scar_h"
+        }
+      },
+      "weight": 6.57
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "lradd:sa58"
+        }
+      },
+      "weight": 6.57
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "cib:asval"
+        }
+      },
+      "weight": 7.305
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "lradd:sg553"
+        }
+      },
+      "weight": 7.452
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "ccrp:type_95_longbow"
+        }
+      },
+      "weight": 7.672
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "cib:qbz951"
+        }
+      },
+      "weight": 7.893
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "cib:qbz191"
+        }
+      },
+      "weight": 7.893
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:mk14"
+        }
+      },
+      "weight": 7.964
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "ccrp:m249_saw"
+        }
+      },
+      "weight": 7.966
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:m249"
+        }
+      },
+      "weight": 7.966
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "classicr:hk416_a5"
+        }
+      },
+      "weight": 8.039
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "ccrp:honeybadger"
+        }
+      },
+      "weight": 8.039
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "ccrp:x95r"
+        }
+      },
+      "weight": 8.039
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "cib:galil"
+        }
+      },
+      "weight": 8.039
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "cib:galilace"
+        }
+      },
+      "weight": 8.039
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "lradd:famas"
+        }
+      },
+      "weight": 8.039
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "lradd:acr"
+        }
+      },
+      "weight": 8.039
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "lradd:xm8"
+        }
+      },
+      "weight": 8.039
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "lradd:mk47"
+        }
+      },
+      "weight": 8.039
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:scar_l"
+        }
+      },
+      "weight": 8.174
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "suffuse:n4"
+        }
+      },
+      "weight": 8.186
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "fibers:arx160"
+        }
+      },
+      "weight": 8.186
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "fibers:bal27"
+        }
+      },
+      "weight": 8.186
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "lradd:aug"
+        }
+      },
+      "weight": 8.186
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "lradd:rfb"
+        }
+      },
+      "weight": 8.242
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "hk:hk416a"
+        }
+      },
+      "weight": 8.26
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:rpk"
+        }
+      },
+      "weight": 8.312
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "classicr:mk18_mod1"
+        }
+      },
+      "weight": 8.333
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:hk416d"
+        }
+      },
+      "weight": 8.333
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "atea:mdx4"
+        }
+      },
+      "weight": 8.333
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "atea:mdx5"
+        }
+      },
+      "weight": 8.333
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "cib:origin12"
+        }
+      },
+      "weight": 8.333
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "fibers:m1216"
+        }
+      },
+      "weight": 8.333
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:aa12"
+        }
+      },
+      "weight": 8.407
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "atea:mdx2"
+        }
+      },
+      "weight": 8.48
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "cib:882"
+        }
+      },
+      "weight": 8.51
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "classicr:mk47"
+        }
+      },
+      "weight": 8.716
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:ak47"
+        }
+      },
+      "weight": 8.716
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "lradd:ultimax100"
+        }
+      },
+      "weight": 8.768
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "cib:sig556"
+        }
+      },
+      "weight": 8.842
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "suffuse:m200"
+        }
+      },
+      "weight": 8.882
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "cib:type20"
+        }
+      },
+      "weight": 8.895
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "lradd:axmc"
+        }
+      },
+      "weight": 8.974
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:ai_awp"
+        }
+      },
+      "weight": 8.974
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "ccrp:p90"
+        }
+      },
+      "weight": 9.055
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "lradd:p90"
+        }
+      },
+      "weight": 9.055
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "qkl:clf10"
+        }
+      },
+      "weight": 9.347
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tti_gunpack:tti_tr1"
+        }
+      },
+      "weight": 10.265
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "cib:9a91"
+        }
+      },
+      "weight": 10.457
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "ccrp:ar57"
+        }
+      },
+      "weight": 10.55
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "cib:evo3"
+        }
+      },
+      "weight": 10.937
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "oldgun:ppsh41"
+        }
+      },
+      "weight": 11.144
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "classicr:b93r"
+        }
+      },
+      "weight": 11.197
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "classicr:tec_9"
+        }
+      },
+      "weight": 12.081
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "ccrp:mp9_modernrized"
+        }
+      },
+      "weight": 12.097
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "classicr:mp9"
+        }
+      },
+      "weight": 12.331
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "fibers:msmc"
+        }
+      },
+      "weight": 12.531
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "classicr:glock_18"
+        }
+      },
+      "weight": 12.652
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "ccrp:x95_smg"
+        }
+      },
+      "weight": 12.714
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "cib:g18c"
+        }
+      },
+      "weight": 12.915
+    }
+  ],
+  "poolProbability": 0.1,
+  "rolls": {
+    "max": 1,
+    "min": 1
+  }
+}

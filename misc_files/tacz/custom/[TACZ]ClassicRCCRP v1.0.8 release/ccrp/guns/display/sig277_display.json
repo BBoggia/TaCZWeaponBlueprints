@@ -1,0 +1,48 @@
+{
+  "model": "ccrp:gun/bas_b_geo",
+  "texture": "ccrp:gun/uv/bas_b",
+  "lod": {
+    "model": "ccrp:gun/lod/bas_b",
+    "texture": "ccrp:gun/lod/bas_b"
+  },
+  "hud": "ccrp:gun/hud/bas_b",
+  "slot": "ccrp:gun/slot/bas_b",
+  "animation": "ccrp:bas_b",
+  "use_default_animation": "rifle",
+  "transform": {
+    "scale": {
+      "thirdperson": [0.6, 0.6, 0.6],
+      "ground": [0.6, 0.6, 0.6],
+      "fixed": [1.2, 1.2, 1.2]
+    }
+  },
+  "muzzle_flash": {
+    "texture": "tacz:flash/common_muzzle_flash",
+    "scale": 1
+  },
+  "sounds": {
+    "draw": "tacz:ai_awp/awp_draw",
+    "shoot": "ccrp:basb/basb_shoot",
+    "shoot_3p": "tacz:ak47/ak47_shoot_3p",
+    "silence": "ccrp:basb/basb_silence",
+    "silence_3p": "tacz:ak47/ak47_silence_3p",
+    "put_away": "tacz:ai_awp/awp_put_away",
+    "melee_push": "tacz:melee_stock/melee_stock_02",
+    "melee_stock": "tacz:melee_stock/melee_stock_03",
+    "head_hit": "ccrp:head_hit",
+    "flesh_hit": "ccrp:flesh_hit",
+    "kill": "ccrp:kill"
+  },
+  "offhand_show": {
+    "pos": [-2, 20, 4],
+    "rotate": [0, 0, 45],
+    "scale": [0.5, 0.5, 0.5]
+  },
+  "hotbar_show": {
+    "0": {
+      "pos": [-4, 26, 3],
+      "rotate": [-90, -5, -90],
+      "scale": [0.5, 0.5, 0.5]
+    }
+  }
+}

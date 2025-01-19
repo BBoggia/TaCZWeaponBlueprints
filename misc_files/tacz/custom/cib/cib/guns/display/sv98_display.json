@@ -1,0 +1,42 @@
+{
+  "model": "cib:gun/sv98_geo",
+  "texture": "cib:gun/uv/sv98",
+  "slot": "cib:gun/slot/sv98",
+  "hud": "cib:gun/hud/sv98",
+  "animation": "cib:sv98",
+  "use_default_animation": "rifle",
+  "third_person_animation": "default",
+  "transform": {
+    "scale": {
+      "thirdperson": [0.6, 0.6, 0.6],
+      "ground": [0.6, 0.6, 0.6],
+      "fixed": [1.0, 1.0, 1.0]
+    }
+  },
+  "muzzle_flash": {
+    "texture": "tacz:flash/common_muzzle_flash",
+    "scale": 1
+  },
+  "shell": {
+    "initial_velocity": [5, 2, 1],
+    "random_velocity": [1, 1, 0.25],
+    "acceleration": [0.0, -10, 0.0],
+    "angular_velocity": [360, -1200, 90],
+    "living_time": 1.0
+  },
+  "sounds": {
+    "shoot": "cib:sv98/sv98_shoot",
+    "shoot_3p": "cib:sv98/sv98_shoot_3p",
+    "silence": "cib:sv98/sv98_silence",
+    "silence_3p": "cib:sv98/sv98_silence_3p",
+    "draw": "cib:sv98/sv98_draw",
+    "put_away": "cib:sv98/sv98_put_away",
+    "reload_empty": "cib:sv98/sv98_reload_empty",
+    "reload_tactical": "cib:sv98/sv98_reload_tactical",
+    "bolt": "cib:sv98/sv98_bolt",
+    "inspect": "cib:sv98/sv98_inspect",
+    "inspect_empty": "cib:sv98/sv98_inspect_empty",
+    "flesh_hit": "cib:flesh_hit",
+    "kill": "cib:kill"
+  }
+}

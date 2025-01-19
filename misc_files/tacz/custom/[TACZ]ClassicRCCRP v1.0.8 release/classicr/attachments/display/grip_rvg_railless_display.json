@@ -1,0 +1,9 @@
+{
+  "slot": "classicr:attachment/slot/grip_rvg_railless",
+  "model": "classicr:attachment/grip_rvg_railless_geo",
+  "texture": "classicr:attachment/uv/grip_rvg_railless_geo",
+  "sounds": {
+    "install": "tacz:attachments/attachment_general_b",
+    "uninstall": "tacz:attachments/attachment_general_uninstall"
+  }
+}

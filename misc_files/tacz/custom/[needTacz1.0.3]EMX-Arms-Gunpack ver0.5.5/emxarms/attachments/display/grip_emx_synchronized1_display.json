@@ -1,0 +1,11 @@
+{
+  "slot": "emxarms:attachment/slot/grip_emx_synchronized1",
+  // 配件的默认模型，不可为空
+  "model": "emxarms:attachment/grip_emx_synchronized1_geo",
+  // 配件默认模型使用的材质，不可为空
+  "texture": "emxarms:attachment/uv/emx_synchronized",
+  "sounds": {
+    "install": "tacz:attachments/scope_general_e",
+    "uninstall": "tacz:attachments/scope_general_e"
+  }
+}

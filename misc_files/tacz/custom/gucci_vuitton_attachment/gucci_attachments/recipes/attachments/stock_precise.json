@@ -1,0 +1,14 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 46
+    }
+  ],
+  "result": {
+    "type": "attachment",
+    "id": "gucci_attachments:stock_precise"
+  }
+}

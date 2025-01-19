@@ -1,0 +1,18 @@
+{
+  "weight": 0,
+  // 加数（多个配件的数值相加，作为第一个乘区）
+  "aim_inaccuracy": {
+    "multiplier": 0
+  },
+  "inaccuracy": {
+    "multiplier": 0
+  },
+  "damage": {
+    "multiplier": 0.9
+  },
+  "ammo_speed": {
+    "multiplier": 0.9
+  }
+  // 扩容弹夹（匣）等级
+  //"extended_mag_level": 1
+}

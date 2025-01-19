@@ -1,0 +1,38 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/netherite"
+      },
+      "count": 4
+    },
+    {
+      "item": {
+        "tag": "forge:ingots/gold"
+      },
+      "count": 179
+    },
+    {
+      "item": {
+        "tag": "forge:gems/diamond"
+      },
+      "count": 11
+    },
+    {
+      "item": {
+        "tag": "forge:rods/blaze"
+      },
+      "count": 30
+    },
+    {
+      "item": {
+        "tag": "forge:dusts/redstone"
+      },
+      "count": 79
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "lradd:txc"
+  }
+}

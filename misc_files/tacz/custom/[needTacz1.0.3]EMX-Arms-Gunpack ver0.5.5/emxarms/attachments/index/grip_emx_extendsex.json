@@ -1,0 +1,7 @@
+{
+  "name": "emxarms.attachment.grip_emx_extendsex.name",
+  "tooltip": "emxarms.attachment.grip_emx_extendsex.tooltip",
+  "display": "emxarms:grip_emx_extendsex_display",
+  "data": "emxarms:grip_emx_extendsex_data",
+  "type": "grip"
+}

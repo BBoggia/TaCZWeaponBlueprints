@@ -1,0 +1,14 @@
+{
+    
+    "name": "oldgun.gun.g43.name",
+   
+    "display": "oldgun:g43_display",
+
+    "data": "oldgun:g43_data",
+   
+    "type": "rifle",
+
+    "item_type": "modern_kinetic",
+
+    "sort": 10
+}

@@ -1,0 +1,7 @@
+{
+  "name": "fibers.gun.raygun.name",
+  "display": "fibers:raygun_display",
+  "data": "fibers:raygun_data",
+  "type": "pistol",
+  "tooltip": "fibers.gun.raygun.desc"
+}

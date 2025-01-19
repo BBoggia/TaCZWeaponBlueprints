@@ -1,0 +1,19 @@
+{
+  "slot": "atea:attachment/slot/sight_eotech_hhs6_hdl_nozoom",
+  "model": "atea:attachment/sight_eotech_hhs6_hdl_nozoom_geo",
+  "texture": "atea:attachment/uv/sight_eotech_hhs6_hdl_nozoom",
+  "lod": {
+    "model": "atea:attachment/lod/sight_eotech_hhs6_hdl_nozoom_lod",
+    "texture": "atea:attachment/lod/sight_eotech_hhs6_hdl_nozoom_lod"
+  },
+  "zoom": [
+    1.2
+  ],
+  "scope": false,
+  "sight": true,
+  "fov": 70.0,
+  "sounds": {
+    "install": "tacz:attachments/scope_general_b",
+    "uninstall": "tacz:attachments/scope_general_b"
+  }
+}

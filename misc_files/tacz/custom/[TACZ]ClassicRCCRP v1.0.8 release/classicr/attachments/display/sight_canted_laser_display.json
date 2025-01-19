@@ -1,0 +1,15 @@
+{
+  "slot": "classicr:attachment/slot/sight_canted_laser",
+  "model": "classicr:attachment/sight_canted_laser_geo",
+  "texture": "classicr:attachment/uv/sight_canted_laser",
+  "zoom": [
+    1.2
+  ],
+  "scope": false,
+  "sight": true,
+  "fov": 70.0,
+  "sounds": {
+    "install": "tacz:attachments/muzzle_general",
+    "uninstall": "tacz:attachments/muzzle_general"
+  }
+}

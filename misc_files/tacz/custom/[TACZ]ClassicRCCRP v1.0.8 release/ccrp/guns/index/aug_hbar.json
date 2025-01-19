@@ -1,0 +1,8 @@
+{
+  "name": "ccrp.gun.aug_hbar.name",
+  "display": "ccrp:aug_hbar_display",
+  "data": "ccrp:aug_hbar_data",
+  "type": "mg",
+  "tooltip": "ccrp.gun.aug_hbar.desc",
+  "sort": 10
+}

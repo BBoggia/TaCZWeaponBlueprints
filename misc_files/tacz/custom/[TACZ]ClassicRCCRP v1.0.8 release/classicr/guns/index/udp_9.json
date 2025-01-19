@@ -1,0 +1,8 @@
+{
+  "name": "classicr.gun.udp_9.name",
+  "display": "classicr:udp_9_display",
+  "data": "classicr:udp_9_data",
+  "tooltip": "classicr.gun.udp_9.desc",
+  "type": "smg",
+  "sort": 10
+}

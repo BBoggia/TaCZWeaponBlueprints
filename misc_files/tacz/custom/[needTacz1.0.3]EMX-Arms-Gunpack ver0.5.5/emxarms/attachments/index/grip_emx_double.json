@@ -1,0 +1,7 @@
+{
+  "name": "emxarms.attachment.grip_emx_double.name",
+  "tooltip": "emxarms.attachment.grip_emx_double.tooltip",
+  "display": "emxarms:grip_emx_double_display",
+  "data": "emxarms:grip_emx_double_data",
+  "type": "grip"
+}

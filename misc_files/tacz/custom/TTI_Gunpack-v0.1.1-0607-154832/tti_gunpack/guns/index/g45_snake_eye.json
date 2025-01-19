@@ -1,0 +1,7 @@
+{
+    "name": "tti_gunpack.gun.g45_snake_eye",
+    "display": "tti_gunpack:g45_snake_eye_display",
+    "data": "tti_gunpack:g45_snake_eye_data",
+    "type": "pistol",
+    "sort": 202
+}

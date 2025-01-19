@@ -1,0 +1,41 @@
+{
+  "model": "cib:gun/r8_geo",
+  "texture": "cib:gun/uv/r8",
+  "slot": "cib:gun/slot/r8",
+  "hud": "cib:gun/hud/r8",
+  "animation": "cib:r8",
+  "use_default_animation": "rifle",
+  "third_person_animation": "default",
+  "transform": {
+    "scale": {
+      "thirdperson": [0.6, 0.6, 0.6],
+      "ground": [0.3, 0.3, 0.3],
+      "fixed": [0.5, 0.5, 0.5]
+    }
+  },
+  "muzzle_flash": {
+    "texture": "tacz:flash/common_muzzle_flash",
+    "scale": 1
+  },
+  "shell": {
+    "initial_velocity": [5, 2, 1],
+    "random_velocity": [1, 1, 0.25],
+    "acceleration": [0.0, -10, 0.0],
+    "angular_velocity": [360, -1200, 90],
+    "living_time": 1.0
+  },
+  "sounds": {
+    "shoot": "cib:r8/r8_shoot",
+    "shoot_3p": "cib:r8/r8_shoot_3p",
+    "silence": "cib:r8/r8_silence",
+    "silence_3p": "cib:r8/r8_silence_3p",
+    "draw": "cib:r8/r8_draw",
+    "put_away": "cib:r8/r8_put_away",
+    "reload_empty": "cib:r8/r8_reload_empty",
+    "reload_tactical": "cib:r8/r8_reload_tactical",
+    "inspect": "cib:r8/r8_inspect",
+    "inspect_empty": "cib:r8/r8_inspect_empty",
+    "flesh_hit": "cib:flesh_hit",
+    "kill": "cib:kill"
+  }
+}

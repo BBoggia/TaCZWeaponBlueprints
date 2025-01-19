@@ -1,0 +1,38 @@
+{
+    "materials": [
+      {
+        "item": {
+          "tag": "forge:gems/diamond"
+        },
+        "count": 6
+      },
+      {
+        "item": {
+          "tag": "forge:ingots/gold"
+        },
+        "count": 29
+      },
+      {
+        "item": {
+          "tag": "forge:ingots/iron"
+        },
+        "count": 43
+      },
+      {
+        "item": {
+          "tag": "forge:dusts/redstone"
+        },
+        "count":25
+      },
+      {
+        "item": {
+          "tag": "forge:gems/amethyst"
+        },
+        "count": 10
+      }
+    ],
+    "result": {
+      "type": "gun",
+      "id": "cib:ar2"
+    }
+  }

@@ -1,0 +1,8 @@
+{
+  "name": "ccrp.gun.honeybadger.name",
+  "display": "ccrp:honeybadger_display",
+  "data": "ccrp:honeybadger_data",
+  "tooltip": "ccrp.gun.honeybadger.desc",
+  "type": "rifle",
+  "sort": 10
+}

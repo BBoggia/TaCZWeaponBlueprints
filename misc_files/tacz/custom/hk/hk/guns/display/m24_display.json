@@ -1,0 +1,45 @@
+{
+  "model": "hk:gun/m24_geo",
+  "texture": "hk:gun/uv/m24",
+  "lod": {
+    "model": "hk:gun/lod/m24",
+    "texture": "hk:gun/lod/m24"
+  },
+  "hud": "hk:gun/hud/m24",
+  "slot": "hk:gun/slot/m24",
+  "animation": "hk:m24",
+  "use_default_animation": "rifle",
+  "transform": {
+    "scale": {
+      "thirdperson": [0.6, 0.6, 0.6],
+      "ground": [0.6, 0.6, 0.6],
+      "fixed": [1.2, 1.2, 1.2]
+    }
+  },
+  "muzzle_flash": {
+    "texture": "tacz:flash/common_muzzle_flash",
+    "scale": 1
+  },
+  "sounds": {
+    "draw": "hk:m24/m24_draw",
+    "shoot": "hk:m24/m24_shoot",
+    "shoot_3p": "hk:m24/m24_shoot_3p",
+    "silence": "hk:m24/m24_silence",
+    "silence_3p": "hk:m24/m24_silence_3p",
+    "put_away": "hk:m24/m24_put_away",
+    "melee_push": "tacz:melee_stock/melee_stock_02",
+    "melee_stock": "tacz:melee_stock/melee_stock_03"
+  },
+  "offhand_show": {
+    "pos": [-2, 20, 4],
+    "rotate": [0, 0, 45],
+    "scale": [0.5, 0.5, 0.5]
+  },
+  "hotbar_show": {
+    "0": {
+      "pos": [-4, 26, 3],
+      "rotate": [-90, -5, -90],
+      "scale": [0.5, 0.5, 0.5]
+    }
+  }
+}

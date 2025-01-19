@@ -1,0 +1,17 @@
+{
+  "slot": "tti_gunpack:attachment/slot/scope_lpvo_1_6_geo",
+  "model": "tti_gunpack:attachment/scope_lpvo_1_6_geo",
+  "texture": "tti_gunpack:attachment/uv/lpvo_6",
+  "zoom": [
+    1.25,
+    3.0,
+    6.0
+  ],
+  "scope": true,
+  "sight": false,
+  "fov": 70,
+  "sounds": {
+    "install": "tacz:attachments/scope_general_c",
+    "uninstall": "tacz:attachments/scope_general_c"
+  }
+}

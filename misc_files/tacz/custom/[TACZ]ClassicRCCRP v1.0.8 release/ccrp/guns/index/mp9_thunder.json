@@ -1,0 +1,8 @@
+{
+  "name": "ccrp.gun.mp9_thunder.name",
+  "display": "ccrp:mp9_thunder_display",
+  "data": "ccrp:mp9_thunder_data",
+  "tooltip": "ccrp.gun.mp9_thunder.desc",
+  "type": "smg",
+  "sort": 10
+}

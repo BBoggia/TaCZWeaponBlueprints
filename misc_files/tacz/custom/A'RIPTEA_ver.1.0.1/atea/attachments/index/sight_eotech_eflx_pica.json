@@ -1,0 +1,7 @@
+{
+  "name": "atea.attachment.sight_eotech_eflx_pica.name",
+  "tooltip": "atea.attachment.sight_eotech_eflx_pica.desc",
+  "display": "atea:sight_eotech_eflx_pica_display",
+  "data": "atea:sight1_mini_data",
+  "type": "scope"
+}

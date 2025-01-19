@@ -1,0 +1,14 @@
+{
+    
+    "name": "qkl.gun.cbr11sp.name",
+   
+    "display": "qkl:cbr11sp_display",
+
+    "data": "qkl:cbr11sp_data",
+   
+    "type": "sniper",
+
+    "item_type": "modern_kinetic",
+
+    "sort": 10
+}

@@ -1,0 +1,20 @@
+{
+  "slot": "atea:attachment/slot/sight_eotech_vudu_ffp_5t25x50",
+  "model": "atea:attachment/sight_eotech_vudu_ffp_5t25x50_geo",
+  "texture": "atea:attachment/uv/sight_eotech_vudu_ffp_5t25x50",
+  "lod": {
+    "model": "atea:attachment/lod/sight_eotech_vudu_ffp_5t25x50_lod",
+    "texture": "atea:attachment/lod/sight_eotech_vudu_ffp_5t25x50_lod"
+  },
+  "zoom": [
+    5.0,
+    13.0,
+    25.0
+  ],
+  "scope": true,
+  "fov": 70.0,
+  "sounds": {
+    "install": "tacz:attachments/scope_general_a",
+    "uninstall": "tacz:attachments/scope_general_a"
+  }
+}

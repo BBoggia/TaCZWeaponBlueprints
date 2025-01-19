@@ -1,0 +1,20 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 90
+    },
+    {
+      "item": {
+        "tag": "minecraft:logs"
+      },
+      "count": 52
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "oldgun:luger_carbine"
+  }
+}

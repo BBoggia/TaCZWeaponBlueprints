@@ -1,0 +1,20 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 39
+    },
+    {
+      "item": {
+        "tag": "forge:ingots/gold"
+      },
+      "count": 9
+    }
+  ],
+  "result": {
+    "type": "attachment",
+    "id": "atea:buttstock_416c_contract"
+  }
+}

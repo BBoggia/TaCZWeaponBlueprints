@@ -1,0 +1,45 @@
+{
+  "model": "suffuse:gun/m200_geo",
+  "texture": "suffuse:gun/uv/m200",
+  "hud": "suffuse:gun/hud/m200_hud",
+  "slot": "suffuse:gun/slot/m200",
+  "animation": "suffuse:m200",
+  "use_default_animation": "rifle",
+  "third_person_animation": "default",
+  "transform": {
+    "scale": {
+      "thirdperson": [0.64, 0.64, 0.64],
+      "ground": [0.7, 0.7, 0.7],
+      "fixed": [1.3, 1.3, 1.3]
+    }
+  },
+  "muzzle_flash": {
+    "texture": "tacz:flash/common_muzzle_flash",
+    "scale": 1
+  },
+  "sounds": {
+    "reload_empty": "suffuse:m200/m200_empty",
+    "reload_tactical": "suffuse:m200/m200_reload",
+    "inspect": "suffuse:m200/m200_inspect",
+    "inspect_empty": "suffuse:m200/m200_inspect",
+    "draw": "tacz:ai_awp/awp_draw",
+    "shoot": "suffuse:m200/m200_fire",
+    "shoot_3p": "suffuse:m200/m200_fire_3p",
+    "silence": "suffuse:m200/m200_silence",
+    "silence_3p": "suffuse:m200/m200_silence_3p",
+    "bolt": "suffuse:m200/m200_bolt",
+    "put_away": "tacz:ai_awp/awp_put_away"
+  },
+  "offhand_show": {
+    "pos": [0, 20, 5],
+    "rotate": [0, 0, -145],
+    "scale": [0.5, 0.5, 0.5]
+  },
+  "hotbar_show": {
+    "0": {
+      "pos": [-4, 17, 3],
+      "rotate": [-90, -5, -90],
+      "scale": [0.5, 0.5, 0.5]
+    }
+  }
+}

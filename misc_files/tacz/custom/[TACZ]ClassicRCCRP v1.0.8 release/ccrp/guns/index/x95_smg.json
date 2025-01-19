@@ -1,0 +1,8 @@
+{
+  "name": "ccrp.gun.x95_smg.name",
+  "display": "ccrp:x95_smg_display",
+  "data": "ccrp:x95_smg_data",
+  "type": "smg",
+  "tooltip": "ccrp.gun.x95_smg.desc",
+  "sort": 10
+}

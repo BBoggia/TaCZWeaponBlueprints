@@ -1,0 +1,57 @@
+注意事项：
+
+禁止在未经授权的情况下修改本包模型 并进行二次分发。
+此版本为Beta测试版，不代表最终产品质量。
+开发进度说明：
+由于时间紧迫，部分动画可能存在简化，枪械数值存在问题。我们将在接下来的几个版本中进行重大优化和修正并添加大量枪械频繁更新。
+我们非常需要用户的反馈意见，以不断改进质量。
+
+7月11日已知问题：
+
+1.PKP弹链任缺乏动画效果。
+2.模型块数过多。
+4.部分枪械弹药无法合成
+5.部分枪械动画简化
+3.左轮动画需要调整。
+4.部分音效不协调。
+以上问题将在未来几个版本中进行完善修复。
+
+7月11日Beta1.1版本日志
+1.更新兼容N4扩容大弹匣配件
+2.修复上个版本配件bug
+3.添加合成方式（部分子弹仍然无法合生存模式下成谨慎合成）
+4.调整部分动画
+5.优化调整枪械音效
+6.AN94/QBZ95-1数值更变，AN95添加双两发模式
+7.优化武器手感
+8.为每把枪械添加了荧光准心
+
+最后祝您游玩愉快
+Caution:
+Unauthorized modification and secondary distribution of this package model is prohibited.
+This version is a Beta test version and does not represent the quality of the final product.
+Development Progress Notes:
+Due to time constraints, some animations may have been simplified and there are problems with gun values. We will make major optimizations and corrections in the next few releases and add a lot of firearms with frequent updates.
+We are in great need of user feedback to keep improving the quality.
+
+Known issues on July 11th:
+
+1.Lack of animation effect for PKP bullet chain any.
+2.Too many model blocks.
+4. Some firearms and ammo can not be synthesized
+5. Some firearms animations simplified
+3. Revolver animation needs to be adjusted.
+4. Some sound effects are not coordinated.
+The above issues will be improved and fixed in the coming versions.
+
+July 11 Beta1.1 version logs
+1. Update compatible with N4 expansion large magazine accessories.
+2.Fixed the bugs of the last version of accessories.
+3.Add synthesis method (some bullets still can't be synthesized discreetly in survival mode)
+4. Adjust some animations
+5.Optimize and adjust the sound effect of firearms
+6. AN94/QBZ95-1 value change, AN95 add double two-shot mode
+7. Optimize the feel of the weapon
+8.Added fluorescent center of gravity for each firearm.
+
+Finally, I wish you a happy game!

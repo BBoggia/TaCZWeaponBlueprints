@@ -1,0 +1,7 @@
+{
+  "name": "emxarms.gun.emx_mac50flux.name",
+  "display": "emxarms:emx_mac50flux_display",
+    "tooltip": "emxarms.gun.emx_mac50flux.desc",
+  "data": "emxarms:emx_mac50flux_data",
+  "type": "smg"
+}

@@ -1,0 +1,7 @@
+{
+	"name": "emxarms.attachment.sight_emx_koei1.name",
+	"tooltip": "emxarms.attachment.sight_emx_koei1.tooltip",
+	"display": "emxarms:sight_emx_koei1_display",
+	"data": "emxarms:sight_emx_koei1_data",
+	"type": "scope"
+}

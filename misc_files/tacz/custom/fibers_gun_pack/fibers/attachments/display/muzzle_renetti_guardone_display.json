@@ -1,0 +1,9 @@
+{
+  "slot": "fibers:attachment/slot/muzzle_renetti_guardone",
+  "model": "fibers:attachment/muzzle_renetti_guardone_geo",
+  "texture": "fibers:attachment/uv/muzzle_renetti_guardone",
+  "sounds": {
+    "install": "tacz:attachments/attachment_general_a",
+    "uninstall": "tacz:attachments/muzzle_general"
+  }
+}

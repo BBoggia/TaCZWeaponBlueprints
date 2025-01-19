@@ -1,0 +1,7 @@
+{
+  "name": "emxarms.attachment.bayonet_emx_atomic.name",
+  "tooltip": "emxarms.attachment.bayonet_emx_atomic.tooltip",
+  "display": "emxarms:bayonet_emx_atomic_display",
+  "data": "emxarms:bayonet_emx_atomic_data",
+  "type": "muzzle"
+}

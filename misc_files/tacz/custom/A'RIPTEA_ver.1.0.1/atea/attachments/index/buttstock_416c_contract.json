@@ -1,0 +1,7 @@
+{
+  "name": "atea.attachment.buttstock_416c_contract.name",
+  "tooltip": "atea.attachment.buttstock_416c_contract.desc",
+  "display": "atea:buttstock_416c_contract_display",
+  "data": "atea:buttstock_416c_contract_data",
+  "type": "stock"
+}

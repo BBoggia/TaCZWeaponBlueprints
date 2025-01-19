@@ -1,0 +1,7 @@
+{
+  "name": "arip.attachment.aa12ex.name",
+  "tooltip": "arip.attachment.aa12ex.desc",
+  "display": "arip:aa12ex_display",
+  "data": "arip:aa12ex_data",
+  "type": "muzzle"
+}

@@ -1,0 +1,50 @@
+{
+    "itemGroup.taczweaponblueprints": "TaCZ Weapon Blueprints",
+
+    "item.taczweaponblueprints.blueprint": "Blueprint: ",
+    "item.taczweaponblueprints.blueprint.invalid_name": "Invalid Blueprint",
+    "item.taczweaponblueprints.blueprint.tooltip": "Right-click to unlock the crafting recipe for the %s.",    
+
+    "message.taczweaponblueprints.blueprint.unlocked": "You have unlocked the recipe for %s!",
+    "message.taczweaponblueprints.blueprint.already_known": "You already know this recipe.",
+    "message.taczweaponblueprints.blueprint.invalid_recipe": "Invalid recipe for this blueprint.",
+    "message.taczweaponblueprints.blueprint.invalid_blueprint": "This blueprint is invalid.",
+
+    "commands.taczweaponblueprints.blueprint.give.success": "Successfully gave %s a blueprint for %s.",
+    "commands.taczweaponblueprints.blueprint.give.invalid_player": "Invalid player.",
+    "commands.taczweaponblueprints.blueprint.give.invalid_blueprint": "Invalid blueprint.",
+    "commands.taczweaponblueprints.blueprint.give.usage": "Usage: /blueprint give <player> <blueprint>",
+    "commands.taczweaponblueprints.blueprint.give.no_permission": "You do not have permission to use this command.",
+    "commands.taczweaponblueprints.blueprint.give.unknown_error": "An unknown error occurred while giving the blueprint.",
+
+    "commands.taczweaponblueprints.reload_tacz_recipes.success": "Successfully reloaded TACZ recipes.",
+    "commands.taczweaponblueprints.reload_tacz_recipes.unknown_error": "An unknown error occurred while reloading the recipes.",
+    "commands.taczweaponblueprints.reload_tacz_recipes.usage": "Usage: /gg reloadRecipes",
+
+    "commands.taczweaponblueprints.clear_tacz_recipes.success": "Successfully cleared TACZ recipes.",
+    "commands.taczweaponblueprints.clear_tacz_recipes.unknown_error": "An unknown error occurred while clearing the recipes.",
+    "commands.taczweaponblueprints.clear_tacz_recipes.usage": "Usage: /gg clearRecipes",
+    "commands.taczweaponblueprints.clear_tacz_recipes.no_permission": "You do not have permission to use this command.",
+    
+    "config.taczweaponblueprints.general": "General Config",
+    "config.taczweaponblueprints.general.desc": "Settings related to the default pack",
+    "config.taczweaponblueprints.general.debugMode": "Pack Debug Mode",
+    "config.taczweaponblueprints.general.debugMode.desc": "Whether to enable debug mode for the default pack",
+    
+    "config.taczweaponblueprints.blueprint": "Blueprint Config",
+    "config.taczweaponblueprints.blueprint.desc": "Settings related to gun blueprints",
+    "config.taczweaponblueprints.blueprint.blueprintSpawnChance": "Blueprint Spawn Chance",
+    "config.taczweaponblueprints.blueprint.blueprintSpawnChance.desc": "Chance for a blueprint to spawn in a chest",
+    "config.taczweaponblueprints.blueprint.minBlueprints": "Minimum Blueprints",
+    "config.taczweaponblueprints.blueprint.minBlueprints.desc": "Minimum number of blueprints to spawn if chance is met",
+    "config.taczweaponblueprints.blueprint.maxBlueprints": "Maximum Blueprints",
+    "config.taczweaponblueprints.blueprint.maxBlueprints.desc": "Maximum number of blueprints to spawn if chance is met",
+    "config.taczweaponblueprints.blueprint.startingBlueprints": "Starting Blueprints",
+    "config.taczweaponblueprints.blueprint.startingBlueprints.desc": "List of blueprints that players start with",
+    "config.taczweaponblueprints.blueprint.gunBlacklist": "Gun BP Blacklist",
+    "config.taczweaponblueprints.blueprint.gunBlacklist.desc": "List of guns that will not have blueprints generated for them",
+    "config.taczweaponblueprints.blueprint.ammoBlacklist": "Ammo BP Blacklist",
+    "config.taczweaponblueprints.blueprint.ammoBlacklist.desc": "List of ammo that will not have blueprints generated for them",
+    "config.taczweaponblueprints.blueprint.attachmentBlacklist": "Attachment BP Blacklist",
+    "config.taczweaponblueprints.blueprint.attachmentBlacklist.desc": "List of attachments that will not have blueprints generated for them"
+  }

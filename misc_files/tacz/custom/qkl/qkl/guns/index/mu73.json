@@ -1,0 +1,14 @@
+{
+    
+    "name": "qkl.gun.mu73.name",
+   
+    "display": "qkl:mu73_display",
+
+    "data": "qkl:mu73_data",
+   
+    "type": "rifle",
+
+    "item_type": "modern_kinetic",
+
+    "sort": 10
+}

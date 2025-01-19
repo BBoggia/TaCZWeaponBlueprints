@@ -1,0 +1,26 @@
+{
+    "pistol": {
+      "damageFallOffStart": 14,
+      "damageFallOffEnd": 39
+    },
+    "smg": {
+      "damageFallOffStart": 16,
+      "damageFallOffEnd": 44
+    },
+    "shotgun": {
+      "damageFallOffStart": 10,
+      "damageFallOffEnd": 30
+    },
+    "rifle": {
+      "damageFallOffStart": 28,
+      "damageFallOffEnd": 64
+    },
+    "mg": {
+      "damageFallOffStart": 33,
+      "damageFallOffEnd": 75
+    },
+    "sniper": {
+      "damageFallOffStart": 50,
+      "damageFallOffEnd": 150
+    }
+}

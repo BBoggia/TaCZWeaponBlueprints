@@ -1,0 +1,20 @@
+{
+  "model": "fibers:ammo_entity/raygun_projectile",
+  "texture": "fibers:ammo_entity/raygun_projectile",
+  "slot": "fibers:ammo/slot/raygun_projectile",
+  "entity": {
+    "model": "fibers:ammo_entity/raygun_projectile",
+    "texture": "fibers:ammo_entity/raygun_projectile"
+  },
+  "particle": {
+    "name": "glow_squid_ink",
+    "delta": [
+      0,
+      0,
+      0
+    ],
+    "speed": 0,
+    "life_time": 15,
+    "count": 5
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "atea.attachment.sight_smtbd_cm2hp_10t60x56.name",
+  "tooltip": "atea.attachment.sight_smtbd_cm2hp_10t60x56.desc",
+  "display": "atea:sight_smtbd_cm2hp_10t60x56_display",
+  "data": "atea:sight6_huge_data",
+  "type": "scope"
+}

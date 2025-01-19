@@ -1,0 +1,14 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 19
+      }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "classicr:m92fs"
+  }
+}

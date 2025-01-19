@@ -1,0 +1,286 @@
+{
+  "type": "taczweaponblueprints:add_items",
+  "conditions": [
+    {
+      "condition": "forge:loot_table_id",
+      "loot_table_id": "awesomedungeonend:chests/awesome_dungeon"
+    }
+  ],
+  "items": [
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:rpg7"
+        }
+      },
+      "weight": 0.4
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "classicr:mgl_40mm"
+        }
+      },
+      "weight": 0.841
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:m320"
+        }
+      },
+      "weight": 1.575
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "lradd:m202"
+        }
+      },
+      "weight": 2.016
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:m16a1"
+        }
+      },
+      "weight": 3.779
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:m4a1"
+        }
+      },
+      "weight": 3.926
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "classicr:m82a2"
+        }
+      },
+      "weight": 4.073
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:m95"
+        }
+      },
+      "weight": 4.277
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "fibers:ax94"
+        }
+      },
+      "weight": 4.309
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:m16a4"
+        }
+      },
+      "weight": 5.101
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "classicr:ngsw_r_renewed"
+        }
+      },
+      "weight": 5.248
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "lradd:qbz191_em"
+        }
+      },
+      "weight": 5.542
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "oldgun:bar"
+        }
+      },
+      "weight": 5.689
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "lradd:mcx"
+        }
+      },
+      "weight": 6.203
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:hk_g3"
+        }
+      },
+      "weight": 6.203
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "cib:mg3"
+        }
+      },
+      "weight": 6.276
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "lradd:mg42"
+        }
+      },
+      "weight": 6.276
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "oldgun:mg34"
+        }
+      },
+      "weight": 6.276
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "suffuse:pkp"
+        }
+      },
+      "weight": 6.423
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "classicr:mrad"
+        }
+      },
+      "weight": 6.56
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:scar_h"
+        }
+      },
+      "weight": 6.57
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "lradd:sa58"
+        }
+      },
+      "weight": 6.57
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "classicr:m60"
+        }
+      },
+      "weight": 6.717
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "cib:negev"
+        }
+      },
+      "weight": 6.717
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:mk14"
+        }
+      },
+      "weight": 7.964
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "lradd:rfb"
+        }
+      },
+      "weight": 8.242
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "classicr:mp7"
+        }
+      },
+      "weight": 8.965
+    }
+  ],
+  "poolProbability": 0.1,
+  "rolls": {
+    "max": 1,
+    "min": 1
+  }
+}

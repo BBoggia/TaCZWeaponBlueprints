@@ -1,0 +1,7 @@
+{
+  "name": "atea.attachment.grip_zolfaqar_gp.name",
+  "tooltip": "atea.attachment.grip_zolfaqar_gp.desc",
+  "display": "atea:grip_zolfaqar_gp_display",
+  "data": "atea:grip_zolfaqar_gp_data",
+  "type": "grip"
+}

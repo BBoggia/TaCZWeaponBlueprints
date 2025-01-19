@@ -1,0 +1,40 @@
+{
+//材料
+  "materials": [
+    {
+      "item": {
+        // forge 提供的宽松型 NBT 写法，只要输入物品符合其中的 NBT，即可合成
+        "type": "forge:partial_nbt",
+        // 默认枪械物品 id
+        "item": "tacz:ammo",
+        // 附加的 NBT 数值
+        // 这里我们填写了枪械 id
+        "nbt": {
+          "AmmoId": "emxarms:emx_cus_tool"
+        }
+      },
+      "count": 3
+    },
+	{
+      "item": {
+        // forge 提供的宽松型 NBT 写法，只要输入物品符合其中的 NBT，即可合成
+        "type": "forge:partial_nbt",
+        // 默认配件物品 id
+        "item": "tacz:attachment",
+        // 附加的 NBT 数值
+        // 这里我们填写了配件 id
+        "nbt": {
+          "AttachmentId": "emxarms:ammo_l3"
+        }
+      },
+      "count": 1
+    }
+  ],
+ //输出结果
+  "result": {
+ //类型
+    "type": "attachment",
+//输出物品
+    "id": "emxarms:ammo_l3r"
+  }
+}

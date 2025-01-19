@@ -1,0 +1,15 @@
+{
+  "slot": "classicr:attachment/slot/sight_red_dot",
+  "model": "classicr:attachment/sight_red_dot",
+  "texture": "classicr:attachment/uv/sight_red_dot",
+  "zoom": [
+    1.2
+  ],
+  "scope": false,
+  "sight": true,
+  "fov": 70.0,
+  "sounds": {
+    "install": "tacz:attachments/muzzle_general",
+    "uninstall": "tacz:attachments/muzzle_general"
+  }
+}

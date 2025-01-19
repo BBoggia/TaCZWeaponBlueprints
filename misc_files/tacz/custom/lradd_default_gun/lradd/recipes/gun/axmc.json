@@ -1,0 +1,38 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:gems/diamond"
+      },
+      "count": 9
+    },
+    {
+      "item": {
+        "tag": "forge:ingots/gold"
+      },
+      "count": 61
+    },
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 250
+    },
+    {
+      "item": {
+        "item": "minecraft:emerald"
+      },
+      "count": 6
+    },
+    {
+      "item": {
+        "tag": "forge:rods/blaze"
+      },
+      "count": 6
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "lradd:axmc"
+  }
+}

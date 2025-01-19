@@ -1,0 +1,8 @@
+{
+  "name": "classicr.gun.m24_renewed.name",
+  "display": "classicr:m24_renewed_display",
+  "data": "classicr:m24_renewed_data",
+  "tooltip": "classicr.gun.m24_renewed.desc",
+  "type": "sniper",
+  "sort": 10
+}

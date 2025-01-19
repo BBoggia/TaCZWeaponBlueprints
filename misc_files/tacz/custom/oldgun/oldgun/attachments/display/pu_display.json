@@ -1,0 +1,14 @@
+{
+  "slot": "oldgun:attachment/slot/pu",
+  "model": "oldgun:attachment/pu_geo",
+  "texture": "oldgun:attachment/uv/pu",
+  "zoom": [
+    4.0
+  ],
+  "scope": true,
+  "fov": 70.0,
+  "sounds": {
+    "install": "tacz:attachments/scope_general_d",
+    "uninstall": "tacz:attachments/scope_general_d"
+  }
+}

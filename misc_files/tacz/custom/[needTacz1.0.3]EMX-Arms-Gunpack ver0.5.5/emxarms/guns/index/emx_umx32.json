@@ -1,0 +1,11 @@
+{
+    // 枪械的显示名称，支持本地化
+    "name": "emxarms.gun.emx_umx32.name",
+    // 枪械效果文件
+    "display": "emxarms:emx_umx32_display",
+	"tooltip": "emxarms.gun.emx_umx32.desc",
+    // 枪械参数文件
+    "data": "emxarms:emx_umx32_data",
+    // 枪械种类，用于创造标签栏归类。
+    "type": "smg"
+}

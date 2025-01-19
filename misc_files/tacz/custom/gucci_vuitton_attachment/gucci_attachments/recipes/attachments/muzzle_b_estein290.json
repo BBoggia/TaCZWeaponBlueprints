@@ -1,0 +1,14 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 26
+    }
+  ],
+  "result": {
+    "type": "attachment",
+    "id": "gucci_attachments:muzzle_b_estein290"
+  }
+}

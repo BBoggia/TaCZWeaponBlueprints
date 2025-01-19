@@ -1,0 +1,7 @@
+{
+  "name": "atea.attachment.sight_eotech_hhs5_ogl_ftc_nozoom.name",
+  "tooltip": "atea.attachment.sight_eotech_hhs5_ogl_ftc_nozoom.desc",
+  "display": "atea:sight_eotech_hhs5_ogl_ftc_nozoom_display",
+  "data": "atea:sight4_mediumlong_wlaser_data",
+  "type": "scope"
+}

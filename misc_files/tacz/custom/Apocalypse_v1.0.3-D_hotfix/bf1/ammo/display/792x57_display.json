@@ -1,0 +1,30 @@
+{
+  // 调用的模型，在包目录下的 models 文件夹中寻找
+  "model": "bf1:ammo/792x57",
+  // 渲染模型使用的材质
+  "texture": "bf1:ammo/uv/792x57",
+  "slot": "bf1:ammo/slot/792x57",
+  "shell": {
+    "model": "tacz:shell/308_shell",
+    "texture": "tacz:shell/308_shell"
+  },
+  "transform": {
+    "scale": {
+      "thirdperson": [
+        0.2,
+        0.2,
+        0.2
+      ],
+      "ground": [
+        0.3,
+        0.3,
+        0.3
+      ],
+      "fixed": [
+        0.6,
+        0.6,
+        0.6
+      ]
+    }
+  }
+}

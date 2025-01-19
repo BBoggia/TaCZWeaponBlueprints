@@ -1,0 +1,7 @@
+{
+  "name": "atea.attachment.muzzle_mxm_dsxm.name",
+  "tooltip": "atea.attachment.muzzle_mxm_dsxm.desc",
+  "display": "atea:muzzle_mxm_dsxm_display",
+  "data": "atea:muzzle_mxm_dsxm_data",
+  "type": "muzzle"
+}

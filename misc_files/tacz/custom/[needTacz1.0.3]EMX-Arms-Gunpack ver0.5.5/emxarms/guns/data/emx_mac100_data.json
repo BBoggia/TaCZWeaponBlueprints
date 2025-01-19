@@ -1,0 +1,143 @@
+{
+  "ammo": "emxarms:402x31",
+  "ammo_amount": 8,
+  "extended_mag_ammo_amount": [
+    11,
+    12,
+    14
+  ],
+  "bolt": "closed_bolt",
+  "rpm": 180,
+  "bullet": {
+    "life": 10,
+    "bullet_amount": 2,
+    "damage": 24.7,
+    "tracer_count_interval": 0,
+    "extra_damage": {
+      "armor_ignore": 0.2,
+      "head_shot_multiplier": 1.8,
+      "damage_adjust": [
+        {
+          "distance": 18,
+          "damage": 24.7
+        },
+        {
+          "distance": 36,
+          "damage": 22
+        },
+        {
+          "distance": 55,
+          "damage": 19
+        },
+        {
+          "distance": "infinite",
+          "damage": 10
+        }
+      ]
+    },
+    "speed": 400,
+    "gravity": 0,
+    "knockback": 1,
+    "friction": 0.01,
+    "ignite": false,
+    "ignite_entity_time": 14,
+    "pierce": 2
+  },
+  "reload": {
+    "type": "magazine",
+    "feed": {
+      "empty": 2.92,
+      "tactical": 1.96
+    },
+    "cooldown": {
+      "empty": 3.58,
+      "tactical": 3.25
+    }
+  },
+  "draw_time": 0.88,
+  "put_away_time": 0.6,
+  "aim_time": 0.2,
+  "sprint_time": 0.3,
+  "weight": 3.85,
+  "movement_speed": {
+    "base": 0.0,
+    "aim": -0.15,
+    "reload": -0.1
+  },
+  "fire_mode": [
+    "semi"
+  ],
+  "allow_attachment_types": [
+    "muzzle",
+    "grip",
+    "extended_mag"
+  ],
+  "burst_data": {
+    "continuous_shoot": false,
+    "count": 2,
+    "bpm": -1,
+    "min_interval": 0.3
+  },
+  "recoil": {
+    "pitch": [
+      {
+        "time": 0,
+        "value": [
+          0.7,
+          0.7
+        ]
+      },
+      {
+        "time": 0.25,
+        "value": [
+          0.7,
+          0.7
+        ]
+      },
+      {
+        "time": 0.45,
+        "value": [
+          -0.175,
+          -0.175
+        ]
+      },
+      {
+        "time": 0.6,
+        "value": [
+          0,
+          0
+        ]
+      }
+    ],
+    "yaw": [
+      {
+        "time": 0,
+        "value": [
+          -0.35,
+          -0.15
+        ]
+      },
+      {
+        "time": 0.25,
+        "value": [
+          -0.35,
+          -0.15
+        ]
+      },
+      {
+        "time": 0.45,
+        "value": [
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  "inaccuracy": {
+    "stand": 2,
+    "move": 4,
+    "sneak": 1,
+    "lie": 0.5,
+    "aim": 0.7
+  }
+}

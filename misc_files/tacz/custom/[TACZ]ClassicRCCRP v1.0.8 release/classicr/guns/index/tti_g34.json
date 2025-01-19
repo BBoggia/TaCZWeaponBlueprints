@@ -1,0 +1,8 @@
+{
+  "name": "classicr.gun.tti_g34.name",
+  "display": "classicr:tti_g34_display",
+  "data": "classicr:tti_g34_data",
+  "tooltip": "classicr.gun.tti_g34.desc",
+  "type": "pistol",
+  "sort": 10
+}

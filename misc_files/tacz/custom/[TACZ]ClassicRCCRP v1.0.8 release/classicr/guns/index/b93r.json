@@ -1,0 +1,8 @@
+{
+  "name": "classicr.gun.b93r.name",
+  "display": "classicr:b93r_display",
+  "data": "classicr:b93r_data",
+  "tooltip": "classicr.gun.b93r.desc",
+  "type": "pistol",
+  "sort": 10
+}

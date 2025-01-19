@@ -1,0 +1,7 @@
+{
+  "name": "kpp.gun.kp31.name",
+  "display": "kpp:kp31_display",
+  "data": "kpp:kp31_data",
+  "tooltip": "kpp.gun.kp31.desc",
+  "type": "smg"
+}

@@ -1,0 +1,10 @@
+{
+  "slot": "atea:attachment/slot/buttstock_si_viper1",
+  "model": "atea:attachment/buttstock_si_viper1_geo",
+  "texture": "atea:attachment/uv/buttstock_si_viper1",
+  "adapter": "ar_stock_adapter",
+  "sounds": {
+    "install": "tacz:attachments/attachment_general_a",
+    "uninstall": "tacz:attachments/attachment_general_uninstall"
+  }
+}

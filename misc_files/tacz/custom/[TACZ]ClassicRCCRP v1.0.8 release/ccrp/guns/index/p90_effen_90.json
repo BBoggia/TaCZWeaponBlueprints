@@ -1,0 +1,8 @@
+{
+  "name": "ccrp.gun.p90_effen_90.name",
+  "display": "ccrp:p90_effen_90_display",
+  "data": "ccrp:p90_effen_90_data",
+  "tooltip": "ccrp.gun.p90_effen_90.desc",
+  "type": "smg",
+  "sort": 10
+}

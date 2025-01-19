@@ -1,0 +1,29 @@
+{
+	"weight": 2,
+	"ads": {
+		"addend": 0.12
+	},
+	"inaccuracy": {
+		"addend": -0.1
+	},
+	"aim_inaccuracy": {
+		"addend": -0.1
+	},
+	"recoil": {
+		"pitch": {
+			"percent": -0.2
+		},
+		"yaw": {
+			"percent": -0.2
+		}
+	},
+	"damage": {
+	"addend": 0.8
+	},
+	"effective_range": {
+		"addend": 18
+	},
+	"ammo_speed": {
+		"addend": 45
+	}
+}

@@ -1,0 +1,9 @@
+{
+  "name": "cib.gun.881.name",
+  "display": "cib:881_display",
+  "data": "cib:881_data",
+  "tooltip": "cib.gun.881.desc",
+  "type": "rifle",
+  "item_type": "modern_kinetic",
+  "sort": 10
+}

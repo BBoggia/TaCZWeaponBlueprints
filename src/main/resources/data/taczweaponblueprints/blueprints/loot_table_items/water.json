@@ -1,0 +1,14 @@
+[
+    { "name": "Origin-12", "score": 0.083332, "id": "cib:origin12"},
+    { "name": "AA-12 Shotgun", "score": 0.084066, "id": "tacz:aa12"},
+    { "name": "HK MP7", "score": 0.089646, "id": "classicr:mp7"},
+    { "name": "FN P90", "score": 0.090548, "id": "ccrp:p90"},
+    { "name": "P90", "score": 0.090548, "id": "lradd:p90"},
+    { "name": "PPSh-41 Submachine Gun", "score": 0.111436, "id": "oldgun:ppsh41"},
+    { "name": "MP9-EX", "score": 0.120974, "id": "ccrp:mp9_modernrized"},
+    { "name": "KelTec | P50", "score": 0.122164, "id": "ccrp:keltec_p50"},
+    { "name": "MP9", "score": 0.123312, "id": "classicr:mp9"},
+    { "name": "Glock 18C", "score": 0.126522, "id": "classicr:glock_18"},
+    { "name": "SMG-45", "score": 0.146818, "id": "lradd:smg45"},
+    { "name": "HK-USP", "score": 0.15125, "id": "cib:usp"}
+]

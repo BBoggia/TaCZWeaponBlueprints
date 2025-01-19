@@ -1,0 +1,27 @@
+{
+    "materials": [
+      {
+        "item": {
+          "tag": "forge:ingots/copper"
+        },
+        "count": 12
+      },
+      {
+        "item": {
+          "tag": "forge:dusts/redstone"
+        },
+        "count": 8
+      },
+      {
+        "item": {
+          "tag": "forge:ingots/iron"
+        },
+        "count": 2
+      }
+    ],
+    "result": {
+      "type": "ammo",
+      "id": "cib:battery",
+      "count": 35
+    }
+  }

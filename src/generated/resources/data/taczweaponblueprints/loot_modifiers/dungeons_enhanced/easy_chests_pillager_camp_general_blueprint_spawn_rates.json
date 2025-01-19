@@ -1,0 +1,316 @@
+{
+  "type": "taczweaponblueprints:add_items",
+  "conditions": [
+    {
+      "condition": "forge:loot_table_id",
+      "loot_table_id": "dungeons_enhanced:chests/pillager_camp/general"
+    }
+  ],
+  "items": [
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "ccrp:ar57"
+        }
+      },
+      "weight": 10.55
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "cib:evo3"
+        }
+      },
+      "weight": 10.937
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "oldgun:ppsh41"
+        }
+      },
+      "weight": 11.144
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "classicr:b93r"
+        }
+      },
+      "weight": 11.197
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "classicr:tec_9"
+        }
+      },
+      "weight": 12.081
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "ccrp:mp9_modernrized"
+        }
+      },
+      "weight": 12.097
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:sks_tactical"
+        }
+      },
+      "weight": 12.142
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "classicr:mp9"
+        }
+      },
+      "weight": 12.331
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "fibers:msmc"
+        }
+      },
+      "weight": 12.531
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "classicr:glock_18"
+        }
+      },
+      "weight": 12.652
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "classicr:scar_mk20"
+        }
+      },
+      "weight": 12.659
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "ccrp:x95_smg"
+        }
+      },
+      "weight": 12.714
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "classicr:spr_15"
+        }
+      },
+      "weight": 12.796
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "cib:g18c"
+        }
+      },
+      "weight": 12.915
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tti_gunpack:tti_tr9"
+        }
+      },
+      "weight": 13.06
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:deagle"
+        }
+      },
+      "weight": 13.317
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "lradd:malorian"
+        }
+      },
+      "weight": 13.373
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:vector45"
+        }
+      },
+      "weight": 13.682
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:hk_mp5a5"
+        }
+      },
+      "weight": 13.91
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "lradd:nitro_505"
+        }
+      },
+      "weight": 14.08
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "classicr:udp_9"
+        }
+      },
+      "weight": 14.155
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "classicr:sti2011"
+        }
+      },
+      "weight": 14.414
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "suffuse:pp19"
+        }
+      },
+      "weight": 14.517
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "cib:ssg08"
+        }
+      },
+      "weight": 14.663
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tti_gunpack:g34_copperhead"
+        }
+      },
+      "weight": 14.674
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "lradd:smg45"
+        }
+      },
+      "weight": 14.682
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tti_gunpack:g45_snake_eye"
+        }
+      },
+      "weight": 14.688
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tti_gunpack:tlg19"
+        }
+      },
+      "weight": 14.688
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:p320"
+        }
+      },
+      "weight": 14.906
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "suffuse:ump45"
+        }
+      },
+      "weight": 15.232
+    }
+  ],
+  "poolProbability": 0.1,
+  "rolls": {
+    "max": 1,
+    "min": 1
+  }
+}

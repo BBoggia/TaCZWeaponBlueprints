@@ -1,0 +1,7 @@
+{
+  "name": "atea.attachment.sight_eotech_vudu_ffp_5t25x50.name",
+  "tooltip": "atea.attachment.sight_eotech_vudu_ffp_5t25x50.desc",
+  "display": "atea:sight_eotech_vudu_ffp_5t25x50_display",
+  "data": "atea:sight5_large_data",
+  "type": "scope"
+}

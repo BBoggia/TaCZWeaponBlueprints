@@ -1,0 +1,9 @@
+{
+  "slot": "tti_gunpack:attachment/slot/muzzle_tti_mpx_compensator",
+  "model": "tti_gunpack:attachment/muzzle_tti_mpx_compensator_geo",
+  "texture": "tti_gunpack:attachment/uv/muzzle_tti_mpx_compensator",
+  "sounds": {
+    "install": "tacz:attachments/attachment_general_a",
+    "uninstall": "tacz:attachments/attachment_general_uninstall"
+  }
+}

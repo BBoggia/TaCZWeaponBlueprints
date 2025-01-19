@@ -1,0 +1,8 @@
+{
+  "name": "bf1.gun.vp1915.name",
+  "display": "bf1:vp1915_display",
+  "data": "bf1:vp1915_data",
+  "tooltip": "bf1.gun.vp1915.desc",
+  "type": "smg",
+  "sort": 4
+}

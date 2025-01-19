@@ -1,0 +1,9 @@
+{
+  "name": "bf1.gun.handgun.name",
+  "display": "bf1:handgun_display",
+  "data": "bf1:handgun_data",
+  "tooltip": "bf1.gun.handgun.desc",
+  "type": "pistol",
+  "item_type": "modern_kinetic",
+  "sort": 4
+}

@@ -1,0 +1,7 @@
+{
+    "name": "classicr.attachment.grip_kac_sand.name",
+    "tooltip": "classicr.attachment.grip_kac_sand.desc",
+    "display": "classicr:grip_kac_sand_display",
+    "data": "classicr:grip_kac_sand_data",
+    "type": "grip"
+  }

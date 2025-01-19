@@ -1,0 +1,8 @@
+{
+  "name": "ccrp.gun.mk18_mjolnir.name",
+  "display": "ccrp:mk18_mjolnir_display",
+  "data": "ccrp:mk18_mjolnir_data",
+  "tooltip": "ccrp.gun.mk18_mjolnir.desc",
+  "type": "sniper",
+  "sort": 10
+}

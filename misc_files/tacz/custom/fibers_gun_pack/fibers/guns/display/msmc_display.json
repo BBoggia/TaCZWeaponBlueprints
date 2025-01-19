@@ -1,0 +1,58 @@
+{
+  "model": "fibers:gun/msmc_geo",
+  "texture": "fibers:gun/uv/msmc",
+  "hud": "fibers:gun/hud/msmc",
+  "lod": {
+    "model": "fibers:gun/lod/msmc",
+    "texture": "fibers:gun/lod/msmc"
+  },
+  "slot": "fibers:gun/slot/msmc",
+  "animation": "fibers:msmc",
+  "use_default_animation": "rifle",
+  "third_person_animation": "default",
+  "transform": {
+    "scale": {
+      "thirdperson": [0.6, 0.6, 0.6],
+      "ground": [0.6, 0.6, 0.6],
+      "fixed": [1.2, 1.2, 1.2]
+    }
+  },
+  "muzzle_flash": {
+    "texture": "tacz:flash/common_muzzle_flash",
+    "scale": 1.2
+  },
+  "shell": {
+    "initial_velocity": [5, 2, 1],
+    "random_velocity": [1, 1, 0.25],
+    "acceleration": [0.0, -10, 0.0],
+    "angular_velocity": [360, -1200, 90],
+    "living_time": 1.0
+  },
+  "sounds": {
+    "shoot": "fibers:msmc/msmc_shoot",
+    "shoot_3p": "fibers:msmc/msmc_shoot_3p",
+    "reload_empty": "fibers:msmc/msmc_reload_empty",
+    "reload_tactical": "fibers:msmc/msmc_reload_tactical",
+    "inspect": "fibers:msmc/msmc_inspect",
+    "inspect_empty": "fibers:msmc/msmc_inspect_empty",
+    "draw": "fibers:msmc/msmc_draw",
+    "put_away": "fibers:msmc/msmc_put_away",
+    "head_hit": "fibers:head_hit",
+    "flesh_hit": "fibers:flesh_hit",
+    "kill": "fibers:kill",
+    "silence": "fibers:msmc/msmc_silence",
+    "silence_3p": "fibers:msmc/msmc_silence_3p"
+  },
+  "offhand_show": {
+    "pos": [1, 20, 4],
+    "rotate": [0, 0, 45],
+    "scale": [0.5, 0.5, 0.5]
+  },
+  "hotbar_show": {
+    "0": {
+      "pos": [1, 16, -2],
+    "rotate": [0, 0, 20],
+    "scale": [0.5, 0.5, 0.5]
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "slot": "classicr:attachment/slot/xm7_stock",
+  "model": "classicr:attachment/xm7_stock_geo",
+  "texture": "classicr:attachment/uv/xm7_stock",
+  "adapter": "ar_stock_adapter",
+  "sounds": {
+    "install": "tacz:attachments/attachment_general_b",
+    "uninstall": "tacz:attachments/attachment_general_uninstall"
+  }
+}

@@ -1,0 +1,7 @@
+{
+    "name": "classicr.attachment.grip_rvg_railless.name",
+    "tooltip": "classicr.attachment.grip_rvg_railless.desc",
+    "display": "classicr:grip_rvg_railless_display",
+    "data": "classicr:grip_rvg_railless_data",
+    "type": "grip"
+  }

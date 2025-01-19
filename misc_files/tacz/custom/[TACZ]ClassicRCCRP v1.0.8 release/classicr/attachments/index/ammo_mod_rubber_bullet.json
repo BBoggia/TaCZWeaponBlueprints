@@ -1,0 +1,7 @@
+{
+    "name": "classicr.attachment.ammo_mod_rubber_bullet.name",
+    "tooltip": "classicr.attachment.ammo_mod_rubber_bullet.desc",
+    "display": "classicr:ammo_mod_rubber_bullet_display",
+    "data": "classicr:ammo_mod_rubber_bullet_data",
+    "type": "extended_mag"
+  }

@@ -1,0 +1,60 @@
+{
+  "model": "fibers:gun/arx160_geo",
+  "texture": "fibers:gun/uv/arx160",
+  "lod": {
+    "model": "fibers:gun/lod/arx160",
+    "texture": "fibers:gun/lod/arx160"
+  },
+  "hud": "fibers:gun/hud/arx160",
+  "slot": "fibers:gun/slot/arx160",
+  "animation": "fibers:arx160",
+  "use_default_animation": "rifle",
+  "third_person_animation": "default",
+  "transform": {
+    "scale": {
+      "thirdperson": [0.6, 0.6, 0.6],
+      "ground": [0.6, 0.6, 0.6],
+      "fixed": [1.2, 1.2, 1.2]
+    }
+  },
+  "muzzle_flash": {
+    "texture": "tacz:flash/common_muzzle_flash",
+    "scale": 1.05
+  },
+  "shell": {
+    "initial_velocity": [5, 2, 1],
+    "random_velocity": [1, 1, 0.25],
+    "acceleration": [0.0, -10, 0.0],
+    "angular_velocity": [360, -1200, 90],
+    "living_time": 1.0
+  },
+  "sounds": {
+    "shoot": "fibers:arx160/arx160_shoot",
+    "shoot_3p": "fibers:arx160/arx160_shoot_3p",
+    "reload_empty": "fibers:arx160/arx160_reload_empty",
+    "reload_tactical": "fibers:arx160/arx160_reload_tactical",
+    "inspect": "fibers:arx160/arx160_inspect",
+    "inspect_empty": "fibers:arx160/arx160_inspect_empty",
+    "draw": "fibers:arx160/arx160_draw",
+    "put_away": "fibers:arx160/arx160_put_away",
+    "silence": "fibers:arx160/arx160_silence",
+    "silence_3p": "fibers:arx160/arx160_silence_3p",
+    "melee_push": "fibers:melee_stock/melee_stock_01",
+    "head_hit": "fibers:head_hit",
+    "flesh_hit": "fibers:flesh_hit",
+    "kill": "fibers:kill",
+    "melee_stock": "fibers:melee_stock/melee_stock_02"
+  },
+  "offhand_show": {
+    "pos": [1, 19, 4],
+    "rotate": [0, 0, 50],
+    "scale": [0.5, 0.5, 0.5]
+  },
+  "hotbar_show": {
+    "0": {
+      "pos": [-1, 19, 3],
+      "rotate": [-180, 0, 130],
+      "scale": [0.5, 0.5, 0.5]
+    }
+  }
+}

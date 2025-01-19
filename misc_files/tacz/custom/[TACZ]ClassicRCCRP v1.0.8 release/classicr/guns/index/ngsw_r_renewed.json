@@ -1,0 +1,8 @@
+{
+  "name": "classicr.gun.ngsw_r_renewed.name",
+  "display": "classicr:ngsw_r_renewed_display",
+  "data": "classicr:ngsw_r_renewed_data",
+  "tooltip": "classicr.gun.ngsw_r_renewed.desc",
+  "type": "rifle",
+  "sort": 10
+}

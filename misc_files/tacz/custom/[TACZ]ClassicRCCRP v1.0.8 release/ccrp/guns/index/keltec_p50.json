@@ -1,0 +1,8 @@
+{
+  "name": "ccrp.gun.keltec_p50.name",
+  "display": "ccrp:keltec_p50_display",
+  "data": "ccrp:keltec_p50_data",
+  "tooltip": "ccrp.gun.keltec_p50.desc",
+  "type": "pistol",
+  "sort": 10
+}

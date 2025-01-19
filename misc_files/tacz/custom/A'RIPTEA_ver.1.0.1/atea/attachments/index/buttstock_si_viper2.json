@@ -1,0 +1,7 @@
+{
+  "name": "atea.attachment.buttstock_si_viper2.name",
+  "tooltip": "atea.attachment.buttstock_si_viper2.desc",
+  "display": "atea:buttstock_si_viper2_display",
+  "data": "atea:buttstock_si_viper2_data",
+  "type": "stock"
+}

@@ -1,0 +1,28 @@
+{
+	"weight": 0.5,
+	"ads": {
+		"addend": 0.04
+	},
+	"inaccuracy": {
+		"addend": -0.2
+	},
+	"aim_inaccuracy": {
+		"addend": -0.2
+	},
+	"recoil": {
+		"pitch": {
+			"percent": -0.22
+		},
+		"yaw": {
+			"percent": -0.13
+		}
+	},
+	"melee": {
+		"distance": 2,
+		"range_angle": 40,
+		"cooldown": 0.4,
+		"damage": 5,
+		"knockback": 0.8,
+		"prep": 0.1
+	}
+}

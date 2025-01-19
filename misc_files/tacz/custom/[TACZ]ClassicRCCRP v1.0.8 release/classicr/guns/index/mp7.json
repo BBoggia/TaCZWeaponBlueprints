@@ -1,0 +1,8 @@
+{
+  "name": "classicr.gun.mp7.name",
+  "display": "classicr:mp7_display",
+  "data": "classicr:mp7_data",
+  "tooltip": "classicr.gun.mp7.desc",
+  "type": "smg",
+  "sort": 10
+}

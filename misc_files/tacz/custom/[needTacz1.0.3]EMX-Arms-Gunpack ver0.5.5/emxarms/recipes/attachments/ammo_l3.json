@@ -1,0 +1,54 @@
+{
+//材料
+  "materials": [
+    {
+      "item": {
+//特定的某种材料
+        "item": "minecraft:obsidian"
+      },
+      "count": 8
+    },
+    {
+      "item": {
+//特定的某种材料
+        "item": "minecraft:diamond"
+      },
+      "count": 10
+    },
+	{
+      "item": {
+        // forge 提供的宽松型 NBT 写法，只要输入物品符合其中的 NBT，即可合成
+        "type": "forge:partial_nbt",
+        // 默认配件物品 id
+        "item": "tacz:attachment",
+        // 附加的 NBT 数值
+        // 这里我们填写了配件 id
+        "nbt": {
+          "AttachmentId": "emxarms:ammo_l2"
+        }
+      },
+      "count": 1
+    },
+	{
+      "item": {
+        // forge 提供的宽松型 NBT 写法，只要输入物品符合其中的 NBT，即可合成
+        "type": "forge:partial_nbt",
+        // 默认配件物品 id
+        "item": "tacz:attachment",
+        // 附加的 NBT 数值
+        // 这里我们填写了配件 id
+        "nbt": {
+          "AttachmentId": "tacz:light_extended_mag_3"
+        }
+      },
+      "count": 1
+    }
+  ],
+ //输出结果
+  "result": {
+ //类型
+    "type": "attachment",
+//输出物品
+    "id": "emxarms:ammo_l3"
+  }
+}

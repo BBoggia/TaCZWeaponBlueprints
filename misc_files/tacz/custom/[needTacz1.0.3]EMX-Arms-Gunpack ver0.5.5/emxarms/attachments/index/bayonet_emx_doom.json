@@ -1,0 +1,7 @@
+{
+  "name": "emxarms.attachment.bayonet_emx_doom.name",
+  "tooltip": "emxarms.attachment.bayonet_emx_doom.tooltip",
+  "display": "emxarms:bayonet_emx_doom_display",
+  "data": "emxarms:bayonet_emx_doom_data",
+  "type": "stock"
+}

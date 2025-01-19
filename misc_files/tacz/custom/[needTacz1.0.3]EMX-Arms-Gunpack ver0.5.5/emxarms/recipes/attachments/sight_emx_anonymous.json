@@ -1,0 +1,33 @@
+{
+//材料
+  "materials": [
+    {
+      "item": {
+//特定的某种材料
+        "item": "minecraft:redstone"
+      },
+      "count": 24
+    },
+    {
+      "item": {
+//特定的某种材料
+        "item": "minecraft:iron_ingot"
+      },
+      "count": 15
+    },
+    {
+      "item": {
+//特定的某种材料
+        "item": "minecraft:quartz"
+      },
+      "count": 12
+    }
+  ],
+ //输出结果
+  "result": {
+ //类型
+    "type": "attachment",
+//输出物品
+    "id": "emxarms:sight_emx_anonymous"
+  }
+}

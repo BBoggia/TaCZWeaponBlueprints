@@ -1,0 +1,7 @@
+{
+  "name": "arip.attachment.sangfroid_shield.name",
+  "tooltip": "arip.attachment.sangfroid_shield.desc",
+  "display": "arip:sangfroid_shield_display",
+  "data": "arip:sangfroid_shield_data",
+  "type": "grip"
+}

@@ -1,0 +1,10 @@
+{
+  "slot": "hk:attachment/slot/stock_tactical_ar",
+  "model": "hk:attachment/stock_tactical_ar_geo",
+  "texture": "hk:attachment/uv/stock_tactical_ar",
+  "adapter": "ar_stock_adapter",
+  "sounds": {
+    "install": "tacz:attachments/attachment_general_a",
+    "uninstall": "tacz:attachments/attachment_general_uninstall"
+  }
+}

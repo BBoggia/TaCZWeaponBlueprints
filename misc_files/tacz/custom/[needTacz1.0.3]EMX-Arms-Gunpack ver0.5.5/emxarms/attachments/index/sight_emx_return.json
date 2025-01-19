@@ -1,0 +1,7 @@
+{
+	"name": "emxarms.attachment.sight_emx_return.name",
+	"tooltip": "emxarms.attachment.sight_emx_return.tooltip",
+	"display": "emxarms:sight_emx_return_display",
+	"data": "emxarms:sight_emx_return_data",
+	"type": "scope"
+}

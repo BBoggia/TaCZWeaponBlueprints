@@ -1,0 +1,7 @@
+{
+  "name": "arip.attachment.openz.name",
+  "tooltip": "arip.attachment.openz.desc",
+  "display": "arip:openz_display",
+  "data": "arip:open_data",
+  "type": "scope"
+}

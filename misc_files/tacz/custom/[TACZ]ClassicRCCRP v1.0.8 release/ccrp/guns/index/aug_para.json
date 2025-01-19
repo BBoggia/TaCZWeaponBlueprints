@@ -1,0 +1,8 @@
+{
+  "name": "ccrp.gun.aug_para.name",
+  "display": "ccrp:aug_para_display",
+  "data": "ccrp:aug_para_data",
+  "type": "smg",
+  "tooltip": "ccrp.gun.aug_para.desc",
+  "sort": 10
+}

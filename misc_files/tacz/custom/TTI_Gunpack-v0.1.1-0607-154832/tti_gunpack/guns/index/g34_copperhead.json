@@ -1,0 +1,7 @@
+{
+    "name": "tti_gunpack.gun.g34_copperhead",
+    "display": "tti_gunpack:g34_copperhead_display",
+    "data": "tti_gunpack:g34_copperhead_data",
+    "type": "pistol",
+    "sort": 201
+}

@@ -1,0 +1,8 @@
+{
+  "name": "ccrp.gun.aug_a3s.name",
+  "display": "ccrp:aug_a3s_display",
+  "data": "ccrp:aug_a3s_data",
+  "type": "rifle",
+  "tooltip": "ccrp.gun.aug_a3s.desc",
+  "sort": 10
+}

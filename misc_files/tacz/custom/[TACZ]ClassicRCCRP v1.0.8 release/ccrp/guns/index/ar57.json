@@ -1,0 +1,8 @@
+{
+  "name": "ccrp.gun.ar57.name",
+  "display": "ccrp:ar57_display",
+  "data": "ccrp:ar57_data",
+  "tooltip": "ccrp.gun.ar57.desc",
+  "type": "smg",
+  "sort": 10
+}

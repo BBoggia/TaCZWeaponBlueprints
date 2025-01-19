@@ -1,0 +1,7 @@
+{
+  "hidden":true,
+  "name": "classicr.attachment.muzzle_silencer_default.name",
+  "display": "classicr:muzzle_silencer_default_display",
+  "data": "classicr:muzzle_silencer_default_data",
+  "type": "muzzle"
+}

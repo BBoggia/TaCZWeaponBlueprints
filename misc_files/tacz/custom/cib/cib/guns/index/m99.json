@@ -1,0 +1,7 @@
+{
+  "name": "cib.gun.m99.name",
+  "display": "cib:m99_display",
+  "data": "cib:m99_data",
+  "tooltip": "cib.gun.m99.desc",
+  "type": "sniper"
+}

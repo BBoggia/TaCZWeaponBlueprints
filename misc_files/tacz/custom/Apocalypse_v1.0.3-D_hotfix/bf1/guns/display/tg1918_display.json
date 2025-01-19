@@ -1,0 +1,42 @@
+{
+  "model": "bf1:gun/tg1918_geo",
+  "texture": "bf1:gun/uv/tg1918",
+  /*"lod": {
+    "model": "bf1:gun/lod/tg1918",
+    "texture": "bf1:gun/lod/tg1918"
+  },*/
+  "hud": "bf1:gun/hud/tg1918",
+  "slot": "bf1:gun/slot/tg1918",
+  "third_person_animation": "default",
+  "transform": {
+    "scale": {
+      "thirdperson": [ 0.6, 0.6, 0.6 ],
+      "ground": [ 0.6, 0.6, 0.6 ],
+      "fixed": [ 1.2, 1.2, 1.2 ]
+    }
+  },
+//  "iron_zoom": 1.25,
+  "sounds": {
+    "shoot": "bf1:tg1918/shoot",
+    "shoot_3p": "bf1:tg1918/shoot_3p",
+    "silence": "bf1:tg1918/silence",
+    "silence_3p": "bf1:tg1918/shoot_3p",
+    "draw": "bf1:draw",
+    "put_away": "bf1:put_away",
+    "reload_empty": "bf1:tg1918/boltopen",
+    "reload_tactical": "tacz:fire_select",
+    "inspect_empty": "bf1:vo/request_ammo",
+    //    "inspect": "bf1:gew98/gew98_inspect",
+    "melee_bayonet": "no",
+
+    "head_hit": "bf1:head_hit",
+    "flesh_hit": "bf1:flesh_hit",
+    "kill": "bf1:kill"
+  },
+  "muzzle_flash": {
+    "texture": "tacz:flash/common_muzzle_flash",
+    "scale": 12
+  },
+  "animation": "bf1:tg1918",
+  "use_default_animation": "rifle"
+}

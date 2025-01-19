@@ -1,0 +1,41 @@
+{
+  "model": "cib:gun/origin12db_geo",
+  "texture": "cib:gun/uv/origin12db",
+  "slot": "cib:gun/slot/origin12db",
+  "hud": "cib:gun/hud/origin12db",
+  "animation": "cib:origin12db",
+  "use_default_animation": "rifle",
+  "third_person_animation": "default",
+  "transform": {
+    "scale": {
+      "thirdperson": [0.6, 0.6, 0.6],
+      "ground": [0.6, 0.6, 0.6],
+      "fixed": [1.0, 1.0, 1.0]
+    }
+  },
+  "muzzle_flash": {
+    "texture": "tacz:flash/common_muzzle_flash",
+    "scale": 3
+  },
+  "shell": {
+    "initial_velocity": [5, 2, 1],
+    "random_velocity": [1, 1, 0.25],
+    "acceleration": [0.0, -10, 0.0],
+    "angular_velocity": [360, -1200, 90],
+    "living_time": 1.0
+  },
+  "sounds": {
+    "shoot": "cib:origin12db/origin12db_shoot",
+    "shoot_3p": "cib:origin12db/origin12db_shoot_3p",
+    "silence": "cib:origin12db/origin12db_silence",
+    "silence_3p": "cib:origin12db/origin12db_silence_3p",
+    "draw": "cib:origin12db/origin12db_draw",
+    "put_away": "cib:origin12db/origin12db_put_away",
+    "reload_empty": "cib:origin12db/origin12db_reload_empty",
+    "reload_tactical": "cib:origin12db/origin12db_reload_tactical",
+    "inspect": "cib:origin12db/origin12db_inspect",
+    "inspect_empty": "cib:origin12db/origin12db_inspect_empty",
+    "flesh_hit": "cib:flesh_hit",
+    "kill": "cib:kill"
+  }
+}

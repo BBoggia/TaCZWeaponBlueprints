@@ -1,0 +1,7 @@
+{
+  "name": "emxarms.attachment.grip_emx_coder.name",
+  "tooltip": "emxarms.attachment.grip_emx_coder.tooltip",
+  "display": "emxarms:grip_emx_coder_display",
+  "data": "emxarms:grip_emx_coder_data",
+  "type": "grip"
+}

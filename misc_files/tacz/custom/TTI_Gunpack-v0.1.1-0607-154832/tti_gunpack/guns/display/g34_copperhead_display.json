@@ -1,0 +1,54 @@
+{
+    "model": "tti_gunpack:gun/g34_copperhead_geo",
+    "texture": "tti_gunpack:gun/uv/g34_copperhead",
+    "lod": {
+        "model": "tti_gunpack:gun/lod/g34_copperhead_lod_geo",
+        "texture": "tti_gunpack:gun/lod/g34_copperhead_lod"
+    },
+    "hud": "tti_gunpack:gun/hud/g34_copperhead",
+    "slot": "tti_gunpack:gun/slot/g34_copperhead",
+    "animation": "tti_gunpack:g34_copperhead",
+    "use_default_animation": "pistol",
+    "third_person_animation": "default",
+    "transform": {
+        "scale": {
+            "thirdperson": [
+                0.6,
+                0.6,
+                0.6
+            ],
+            "ground": [
+                0.6,
+                0.6,
+                0.6
+            ],
+            "fixed": [
+                1.2,
+                1.2,
+                1.2
+            ]
+        }
+    },
+    "muzzle_flash": {
+      "texture": "tacz:flash/common_muzzle_flash",
+      "scale": 0.75
+    },
+    "shell": {
+        "initial_velocity": [5, 2, 1],
+        "random_velocity": [1, 1, 0.25],
+        "acceleration": [0.0, -10, 0.0],
+        "angular_velocity": [360, -1200, 90],
+        "living_time": 1.0
+    },
+    "sounds": {
+        "shoot": "tti_gunpack:g34_copperhead/g34_copperhead_shoot",
+        "shoot_3p": "tti_gunpack:g34_copperhead/g34_copperhead_shoot",
+        "reload_empty": "tti_gunpack:g34_copperhead/g34_copperhead_reload_empty",
+        "reload_tactical": "tti_gunpack:g34_copperhead/g34_copperhead_reload_tactical",
+        "inspect": "tti_gunpack:g34_copperhead/g34_copperhead_inspect",
+        "inspect_empty": "tti_gunpack:g34_copperhead/g34_copperhead_inspect_empty",
+        "draw": "tti_gunpack:g34_copperhead/g34_copperhead_draw",
+        "silence": "tti_gunpack:g34_copperhead/g34_copperhead_silence",
+        "silence_3p": "tti_gunpack:g34_copperhead/g34_copperhead_silence"
+    }
+}

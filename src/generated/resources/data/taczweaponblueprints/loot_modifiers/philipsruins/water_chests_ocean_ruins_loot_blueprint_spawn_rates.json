@@ -1,0 +1,126 @@
+{
+  "type": "taczweaponblueprints:add_items",
+  "conditions": [
+    {
+      "condition": "forge:loot_table_id",
+      "loot_table_id": "philipsruins:chests/ocean_ruins_loot"
+    }
+  ],
+  "items": [
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "cib:origin12"
+        }
+      },
+      "weight": 8.333
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "tacz:aa12"
+        }
+      },
+      "weight": 8.407
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "classicr:mp7"
+        }
+      },
+      "weight": 8.965
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "ccrp:p90"
+        }
+      },
+      "weight": 9.055
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "lradd:p90"
+        }
+      },
+      "weight": 9.055
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "oldgun:ppsh41"
+        }
+      },
+      "weight": 11.144
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "ccrp:mp9_modernrized"
+        }
+      },
+      "weight": 12.097
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "classicr:mp9"
+        }
+      },
+      "weight": 12.331
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "classicr:glock_18"
+        }
+      },
+      "weight": 12.652
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "lradd:smg45"
+        }
+      },
+      "weight": 14.682
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
+          "bpId": "cib:usp"
+        }
+      },
+      "weight": 15.125
+    }
+  ],
+  "poolProbability": 0.1,
+  "rolls": {
+    "max": 1,
+    "min": 1
+  }
+}

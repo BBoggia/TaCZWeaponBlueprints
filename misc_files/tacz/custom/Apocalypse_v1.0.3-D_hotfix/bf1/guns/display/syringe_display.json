@@ -1,0 +1,36 @@
+{
+  "model": "bf1:gun/syringe_geo",
+  "texture": "bf1:gun/uv/syringe",
+  "hud": "bf1:gun/hud/syringe",
+  "slot": "bf1:gun/slot/syringe",
+  "animation": "bf1:syringe",
+  "use_default_animation": "rifle",
+  "lod": {
+    "model": "bf1:gun/lod/syringe",
+    "texture": "bf1:gun/lod/syringe"
+  },
+  "transform": {
+    "scale": {
+      "thirdperson": [1, 1, 1],
+      "ground": [1, 1, 1],
+      "fixed": [1.2, 1.2, 1.2]
+    }
+  },
+  "sounds": {
+    "reload_empty": "bf1:put_away",
+    "inspect": "tacz:rpg7/rpg7_inspect",
+    "inspect_empty": "tacz:rpg7/rpg7_inspect_empty",
+    //    "draw": "tacz:rpg7/rpg7_draw",
+    //    "put_away": "tacz:rpg7/rpg7_put_away",
+    "shoot": "bf1:syringe/throw_medkit",
+    "shoot_3p": "bf1:syringe/throw_medkit_3p",
+    "dry_fire": "bf1:syringe/request_medic",
+    "melee_push": "tacz:melee_stock/melee_stock_02",
+    "melee_stock": "tacz:melee_stock/melee_stock_03",
+    "head_hit": "bf1:head_hit",
+    "flesh_hit": "bf1:flesh_hit",
+    "kill": "bf1:kill"
+  }
+
+  
+}

@@ -1,0 +1,14 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 37
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "oldgun:m3"
+  }
+}

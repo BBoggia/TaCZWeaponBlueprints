@@ -1,0 +1,6 @@
+{
+  "name": "classicr.ammo.762x39copper.name",
+  "display": "classicr:762x39copper_display",
+  // 堆叠数量
+  "stack_size": 60
+}

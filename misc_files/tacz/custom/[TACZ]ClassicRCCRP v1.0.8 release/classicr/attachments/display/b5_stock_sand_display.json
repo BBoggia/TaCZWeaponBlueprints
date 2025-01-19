@@ -1,0 +1,10 @@
+{
+  "slot": "classicr:attachment/slot/b5_stock_sand",
+  "model": "classicr:attachment/b5_stock_sand_geo",
+  "texture": "classicr:attachment/uv/b5_stock_sand",
+  "adapter": "ar_stock_adapter",
+  "sounds": {
+    "install": "tacz:attachments/attachment_general_b",
+    "uninstall": "tacz:attachments/attachment_general_uninstall"
+  }
+}

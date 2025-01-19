@@ -1,0 +1,41 @@
+{
+  "model": "cib:gun/qbz192_geo",
+  "texture": "cib:gun/uv/qbz191",
+  "slot": "cib:gun/slot/qbz192",
+  "hud": "cib:gun/hud/qbz192",
+  "animation": "cib:qbz191",
+  "use_default_animation": "rifle",
+  "third_person_animation": "default",
+  "transform": {
+    "scale": {
+      "thirdperson": [0.6, 0.6, 0.6],
+      "ground": [0.6, 0.6, 0.6],
+      "fixed": [1.0, 1.0, 1.0]
+    }
+  },
+  "muzzle_flash": {
+    "texture": "tacz:flash/common_muzzle_flash",
+    "scale": 1
+  },
+  "shell": {
+    "initial_velocity": [5, 2, 1],
+    "random_velocity": [1, 1, 0.25],
+    "acceleration": [0.0, -10, 0.0],
+    "angular_velocity": [360, -1200, 90],
+    "living_time": 1.0
+  },
+  "sounds": {
+    "shoot": "cib:qbz192/qbz192_shoot",
+    "shoot_3p": "cib:qbz192/qbz192_shoot_3p",
+    "silence": "cib:qbz192/qbz192_silence",
+    "silence_3p": "cib:qbz192/qbz192_silence_3p",
+    "draw": "cib:qbz192/qbz192_draw",
+    "put_away": "cib:qbz192/qbz192_put_away",
+    "reload_empty": "cib:qbz192/qbz192_reload_empty",
+    "reload_tactical": "cib:qbz192/qbz192_reload_tactical",
+    "inspect": "cib:qbz192/qbz192_inspect",
+    "inspect_empty": "cib:qbz192/qbz192_inspect_empty",
+    "flesh_hit": "cib:flesh_hit",
+    "kill": "cib:kill"
+  }
+}

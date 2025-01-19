@@ -1,0 +1,8 @@
+{
+  "name": "fibers.gun.arx160.name",
+  "display": "fibers:arx160_display",
+  "data": "fibers:arx160_data",
+  "type": "rifle",
+  "tooltip": "fibers.gun.arx160.desc",
+  "sort": 1
+}

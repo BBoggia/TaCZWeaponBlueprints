@@ -1,0 +1,14 @@
+{
+    
+    "name": "oldgun.gun.lee.name",
+   
+    "display": "oldgun:lee_display",
+
+    "data": "oldgun:lee_data",
+   
+    "type": "rifle",
+
+    "item_type": "modern_kinetic",
+
+    "sort": 10
+}

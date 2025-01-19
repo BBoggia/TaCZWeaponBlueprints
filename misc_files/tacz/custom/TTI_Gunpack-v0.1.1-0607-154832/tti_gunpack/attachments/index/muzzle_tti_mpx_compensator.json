@@ -1,0 +1,6 @@
+{
+  "name": "tti_gunpack.attachment.muzzle_tti_mpx_compensator",
+  "display": "tti_gunpack:muzzle_tti_mpx_compensator_display",
+  "data": "tti_gunpack:muzzle_tti_mpx_compensator_data",
+  "type": "muzzle"
+}

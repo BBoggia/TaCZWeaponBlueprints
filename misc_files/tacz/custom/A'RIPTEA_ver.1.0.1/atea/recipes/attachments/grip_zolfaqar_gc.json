@@ -1,0 +1,20 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 55
+    },
+    {
+      "item": {
+        "tag": "forge:leather"
+      },
+      "count": 7
+    }
+  ],
+  "result": {
+    "type": "attachment",
+    "id": "atea:grip_zolfaqar_gc"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "atea.attachment.muzzle_osprey45.name",
+  "tooltip": "atea.attachment.muzzle_osprey45.desc",
+  "display": "atea:muzzle_osprey45_display",
+  "data": "atea:muzzle_suppt_data",
+  "type": "muzzle"
+}

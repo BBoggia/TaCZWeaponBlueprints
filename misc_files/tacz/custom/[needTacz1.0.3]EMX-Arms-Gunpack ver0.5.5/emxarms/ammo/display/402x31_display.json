@@ -1,0 +1,26 @@
+{
+  "model": "emxarms:ammo/402x31_geo",
+  "texture": "emxarms:ammo/uv/402x31",
+  "slot": "emxarms:ammo/slot/402x31",
+  
+  "tracer_color": "#deffd7",
+  "transform": {
+    "scale": {
+      "thirdperson": [
+        0.4,
+        0.4,
+        0.4
+      ],
+      "ground": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "fixed": [
+        1,
+        1,
+        1
+      ]
+    }
+  }
+}

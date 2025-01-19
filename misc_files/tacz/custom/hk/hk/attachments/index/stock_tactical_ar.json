@@ -1,0 +1,7 @@
+{
+  "name": "hk.attachment.stock_tactical_ar.name",
+  "display": "hk:stock_tactical_ar_display",
+  "data": "hk:stock_tactical_ar_data",
+  "tooltip": "§oPrecision in close quarter combat.",
+  "type": "stock"
+}

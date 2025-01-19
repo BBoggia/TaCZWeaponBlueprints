@@ -1,0 +1,26 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 59
+    },
+    {
+      "item": {
+        "tag": "forge:ingots/gold"
+      },
+      "count": 7
+    },
+    {
+      "item": {
+        "tag": "forge:gems/lapis"
+      },
+      "count": 62
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "tti_gunpack:tti_tr9"
+  }
+}

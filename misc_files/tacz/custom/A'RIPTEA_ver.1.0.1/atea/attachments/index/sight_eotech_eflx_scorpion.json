@@ -1,0 +1,7 @@
+{
+  "name": "atea.attachment.sight_eotech_eflx_scorpion.name",
+  "tooltip": "atea.attachment.sight_eotech_eflx_scorpion.desc",
+  "display": "atea:sight_eotech_eflx_scorpion_display",
+  "data": "atea:sight1_mini_data",
+  "type": "scope"
+}

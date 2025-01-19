@@ -1,0 +1,21 @@
+{
+	"weight": 3.0,
+	"ads": {
+		"addend": 0.2
+	},
+	"silence": {
+		"distance_addend": -32,
+		"use_silence_sound": true
+	},
+	"recoil": {
+		"pitch": {
+			"percent": -0.2
+		},
+		"yaw": {
+			"percent": -0.2
+		}
+	},
+	"ammo_speed": {
+		"addend": 25
+	}
+}

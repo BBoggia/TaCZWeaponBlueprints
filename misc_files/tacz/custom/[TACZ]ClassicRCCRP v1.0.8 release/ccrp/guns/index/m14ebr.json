@@ -1,0 +1,8 @@
+{
+  "name": "ccrp.gun.m14ebr.name",
+  "display": "ccrp:m14ebr_display",
+  "data": "ccrp:m14ebr_data",
+  "tooltip": "ccrp.gun.m14ebr.desc",
+  "type": "rifle",
+  "sort": 10
+}

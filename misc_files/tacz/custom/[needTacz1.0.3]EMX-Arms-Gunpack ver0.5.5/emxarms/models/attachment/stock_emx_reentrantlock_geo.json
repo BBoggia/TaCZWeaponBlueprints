@@ -1,0 +1,123 @@
+{
+	"format_version": "1.12.0",
+	"minecraft:geometry": [
+		{
+			"description": {
+				"identifier": "geometry.unknown",
+				"texture_width": 16,
+				"texture_height": 16,
+				"visible_bounds_width": 20,
+				"visible_bounds_height": 1.5,
+				"visible_bounds_offset": [0, 0.25, 0]
+			},
+			"bones": [
+				{
+					"name": "emx_tac_bat",
+					"pivot": [-0.36601, -0.32638, 0.75002]
+				},
+				{
+					"name": "bol_illuminated",
+					"parent": "emx_tac_bat",
+					"pivot": [0, -0.03125, -1.07812],
+					"cubes": [
+						{
+							"origin": [-1, -0.07812, 1.10938],
+							"size": [2, 0.15625, 0.15625],
+							"pivot": [0, 0, 1.1875],
+							"rotation": [-45, 0, 0],
+							"uv": {
+								"east": {"uv": [0, 0], "uv_size": [1, 1]},
+								"west": {"uv": [0, 1], "uv_size": [1, 1]}
+							}
+						},
+						{
+							"origin": [-1, -0.03125, 1.35938],
+							"size": [2, 0.0625, 0.28125],
+							"pivot": [0, 0, 1.1875],
+							"rotation": [-45, 0, 0],
+							"uv": {
+								"east": {"uv": [1, 0], "uv_size": [1, 1]},
+								"west": {"uv": [1, 1], "uv_size": [1, 1]}
+							}
+						},
+						{
+							"origin": [-1, 0.17188, 1.15625],
+							"size": [2, 0.28125, 0.0625],
+							"pivot": [0, 0, 1.1875],
+							"rotation": [-45, 0, 0],
+							"uv": {
+								"east": {"uv": [1, 2], "uv_size": [1, 1]},
+								"west": {"uv": [2, 1], "uv_size": [1, 1]}
+							}
+						},
+						{
+							"origin": [-1, -0.03125, 0.73437],
+							"size": [2, 0.0625, 0.28125],
+							"pivot": [0, 0, 1.1875],
+							"rotation": [45, 0, 0],
+							"uv": {
+								"east": {"uv": [2, 0], "uv_size": [-1, 1]},
+								"west": {"uv": [2, 1], "uv_size": [-1, 1]}
+							}
+						},
+						{
+							"origin": [-1, 0.17188, 1.15625],
+							"size": [2, 0.28125, 0.0625],
+							"pivot": [0, 0, 1.1875],
+							"rotation": [45, 0, 0],
+							"uv": {
+								"east": {"uv": [2, 2], "uv_size": [-1, 1]},
+								"west": {"uv": [3, 1], "uv_size": [-1, 1]}
+							}
+						},
+						{
+							"origin": [-1, -0.03125, 1.42188],
+							"size": [2, 0.0625, 0.46875],
+							"pivot": [0, 0, 1.4375],
+							"rotation": [-45, 0, 0],
+							"uv": {
+								"east": {"uv": [1, 0], "uv_size": [1, 1]},
+								"west": {"uv": [1, 1], "uv_size": [1, 1]}
+							}
+						},
+						{
+							"origin": [-1, -0.01562, 1.40625],
+							"size": [2, 0.46875, 0.0625],
+							"pivot": [0, 0, 1.4375],
+							"rotation": [-45, 0, 0],
+							"uv": {
+								"east": {"uv": [1, 2], "uv_size": [1, 1]},
+								"west": {"uv": [2, 1], "uv_size": [1, 1]}
+							}
+						},
+						{
+							"origin": [-1, -0.03125, 0.48437],
+							"size": [2, 0.0625, 0.46875],
+							"pivot": [0, 0, 0.9375],
+							"rotation": [45, 0, 0],
+							"uv": {
+								"east": {"uv": [2, 0], "uv_size": [-1, 1]},
+								"west": {"uv": [2, 1], "uv_size": [-1, 1]}
+							}
+						},
+						{
+							"origin": [-1, -0.01562, 0.90625],
+							"size": [2, 0.46875, 0.0625],
+							"pivot": [0, 0, 0.9375],
+							"rotation": [45, 0, 0],
+							"uv": {
+								"east": {"uv": [2, 2], "uv_size": [-1, 1]},
+								"west": {"uv": [3, 1], "uv_size": [-1, 1]}
+							}
+						}
+					]
+				},
+				{
+					"name": "bol2_illuminated",
+					"parent": "emx_tac_bat",
+					"pivot": [0, -0.03125, 0.17188]
+				}
+			]
+		}
+	]
+}

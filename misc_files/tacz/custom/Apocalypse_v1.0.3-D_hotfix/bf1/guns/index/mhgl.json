@@ -1,0 +1,8 @@
+{
+  "name": "bf1.gun.mhgl.name",
+  "display": "bf1:mhgl_display",
+  "data": "bf1:mhgl_data",
+  "tooltip": "bf1.gun.mhgl.desc",
+  "type": "rpg",
+  "sort": 4
+}

@@ -1,0 +1,7 @@
+{
+  "name": "cib.gun.ssg08.name",
+  "display": "cib:ssg08_display",
+  "data": "cib:ssg08_data",
+  "tooltip": "cib.gun.ssg08.desc",
+  "type": "sniper"
+}

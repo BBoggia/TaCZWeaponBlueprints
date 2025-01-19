@@ -1,0 +1,35 @@
+{
+  "materials": [
+    {
+      "item": {
+        // forge 提供的宽松型 NBT 写法，只要输入物品符合其中的 NBT，即可合成
+        "type": "forge:partial_nbt",
+        // 默认枪械物品 id
+        "item": "tacz:ammo",
+        // 附加的 NBT 数值
+        // 这里我们填写了枪械 id
+        "nbt": {
+          "AmmoId": "emxarms:1045x103"
+        }
+      },
+      "count": 10
+    },
+    {
+      "item": {
+        "item": "minecraft:iron_ingot"
+      },
+      "count": 2
+    },
+    {
+      "item": {
+        "item": "minecraft:blaze_powder"
+      },
+      "count": 1
+    }
+  ],
+  "result": {
+    "type": "ammo",
+    "id": "emxarms:1045x103belt",
+    "count": 10
+  }
+}

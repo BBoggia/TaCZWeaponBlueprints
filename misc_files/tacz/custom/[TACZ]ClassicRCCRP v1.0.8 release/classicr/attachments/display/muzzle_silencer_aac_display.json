@@ -1,0 +1,9 @@
+{
+  "slot": "classicr:attachment/slot/muzzle_silencer_aac",
+  "model": "classicr:attachment/muzzle_silencer_aac_geo",
+  "texture": "classicr:attachment/uv/muzzle_silencer_aac",
+  "sounds": {
+    "install": "tacz:attachments/muzzle_general",
+    "uninstall": "tacz:attachments/muzzle_general"
+  }
+}

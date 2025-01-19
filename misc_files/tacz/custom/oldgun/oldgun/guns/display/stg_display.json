@@ -1,0 +1,68 @@
+{
+    // 使用我们放入的模型文件：models/gun/ak47_geo.json。注意，不需要包含文件后缀，也不要包含开头的 "models/"。
+    "model": "oldgun:gun/stg_geo",
+    // 使用我们放入的模型贴图：textures/gun/uv/ak47.png。注意，不需要包含文件后缀，也不要包含开头的 "textures/"。
+    "texture": "oldgun:gun/uv/stg",
+    // 使用我们放入的背包 2D 贴图：textures/gun/slot/ak47.png。注意，不需要包含文件后缀，也不要包含开头的 "textures/"。
+    "slot": "oldgun:gun/slot/stg",
+    "hud": "oldgun:gun/hud/stg",
+    "sounds": {
+        "shoot": "tacz:ak47/ak47_shoot",
+        "dry_fire": "tacz:dry_fire",
+        "shoot_3p": "tacz:ak47/ak47_shoot_3p",
+        "reload_empty": "tacz:ak47/ak47_reload_empty",
+        "reload_tactical": "tacz:ak47/ak47_reload_tactical",
+        "inspect": "tacz:ak47/ak47_inspect",
+        "inspect_empty": "tacz:ak47/ak47_inspect_empty",
+        "draw": "tacz:ak47/ak47_draw",
+        "put_away": "tacz:ak47/ak47_put_away",
+        "silence": "tacz:ak47/ak47_silence",
+        "silence_3p": "tacz:ak47/ak47_silence_3p"
+    },
+    "animation": "oldgun:stg",
+  // 指定使用缺省动画tacz:ak47，oldgun:ppsh41可为空。如果上文指定的动画文件里缺少某个动画，如 draw 动画，则会从缺省动画拷贝。
+  // 值可为 rifle、pistol
+    "use_default_animation": "rifle",
+    "muzzle_flash": {
+      // 枪口火焰贴图路径
+      "texture": "tacz:flash/common_muzzle_flash",
+      // 缩放系数
+      "scale": 1
+    },
+    "shell": {
+        // 抛壳的初速度的 xyz 值
+        "initial_velocity": [5, 2, 1],
+        // 抛壳随机变化的运动速度 xyz 值，从 0 ~ 1 随机缩放后叠加在初速度上。
+        "random_velocity": [1, 1, 0.25],
+        // 抛壳的加速度
+        "acceleration": [0.0, -10, 0.0],
+        // 抛壳的三轴角速度，从 0.5 ~ 1 随机缩放。
+        "angular_velocity": [360, -1200, 90],
+        // 抛壳渲染存活时间，单位为秒
+        "living_time": 1.0
+    },
+    "transform": {
+        "scale": {
+            // 第三人称手部
+            "thirdperson": [
+                0.6,
+                0.6,
+                0.6
+            ],
+            // 掉落物
+            "ground": [
+                0.6,
+                0.6,
+                0.6
+            ],
+            // 展示框
+            "fixed": [
+                1.2,
+                1.2,
+                1.2
+            ]
+        }
+    },
+    // 第三人称持枪动画，直接填入default
+    "third_person_animation": "default"
+}

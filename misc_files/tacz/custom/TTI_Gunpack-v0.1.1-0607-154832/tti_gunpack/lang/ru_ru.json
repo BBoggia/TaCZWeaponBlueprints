@@ -1,0 +1,11 @@
+{
+  "pack.tti_gunpack.name": "§lПак \"Taran Tactical\"",
+  "pack.tti_gunpack.desc": "Передовые пистолеты, произведённые Taran Tactical\n§o*Пожалуйста, проверьте законы Вашей страны перед покупкой. Если Ваш заказ должен быть возвращён из-за проблем с соблюдением законов, взимается сбор за обработку в размере 3%.\n§rПереводчики: SfortzaPhantom, DeepVoid",
+  "tti_gunpack.gun.tti_tr1": "Скоростная винтовка TTI TR-1",
+  "tti_gunpack.gun.tti_tr9": "Скоростной пистолет-пулемёт TTI TR-9",
+  "tti_gunpack.gun.tlg19": "Пистолет TLG19",
+  "tti_gunpack.gun.g34_copperhead": "G34 \"Медная голова\"",
+  "tti_gunpack.gun.g45_snake_eye": "G45 \"Змеиный глаз\"",
+  "tti_gunpack.attachment.lpvo.name": "Прицел LPVO 1-6x",
+  "tti_gunpack.attachment.muzzle_tti_mpx_compensator": "Компенсатор TTI MPX"
+}

@@ -1,0 +1,7 @@
+{
+  "name": "emxarms.gun.emx_expel32se.name",
+  "display": "emxarms:emx_expel32se_display",
+  "data": "emxarms:emx_expel32se_data",
+  "tooltip": "emxarms.gun.emx_expel32se.desc",
+  "type": "smg"
+}

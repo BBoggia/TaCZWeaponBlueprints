@@ -1,0 +1,14 @@
+{
+    
+    "name": "oldgun.gun.w1895.name",
+   
+    "display": "oldgun:w1895_display",
+
+    "data": "oldgun:w1895_data",
+   
+    "type": "rifle",
+
+    "item_type": "modern_kinetic",
+
+    "sort": 10
+}

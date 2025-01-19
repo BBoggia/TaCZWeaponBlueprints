@@ -1,0 +1,161 @@
+{
+  "model": "emxarms:gun/emx_sf7b_geo",
+  "texture": "emxarms:gun/uv/emx_sf7b",
+//  "lod": {
+//    "model": "tacz:gun/lod/m4a1",
+//    "texture": "tacz:gun/lod/m4a1"
+//  },
+  "hud": "emxarms:gun/hud/emx_sf7b",
+  "slot": "emxarms:gun/slot/emx_sf7b",
+  "animation": "emxarms:emx_sf7b",
+  "use_default_animation": "rifle",
+  "third_person_animation": "default",
+  // 显示准星，默认情况下瞄准会隐藏准星，将其设置为 true 则不会
+  "show_crosshair": true,
+  "transform": {
+    "scale": {
+      "thirdperson": [1.0, 1.0, 1.0],
+      "ground": [0.6, 0.6, 0.6],
+      "fixed": [1.2, 1.2, 1.2]
+    }
+  },
+  "muzzle_flash": {
+    "texture": "emxarms:flash/emx_muzzle_flash",
+    "scale": 1.0
+  },
+  "shell": {
+    "initial_velocity": [5, 2, 1],
+    "random_velocity": [1, 1, 0.25],
+    "acceleration": [0.0, -10, 0.0],
+    "angular_velocity": [360, -1200, 90],
+    "living_time": 1.0
+  },
+  "sounds": {
+    "shoot": "emxarms:emx_sf7b/emx_sf7b_shoot1",
+    "shoot_3p": "emxarms:emx_sf7b/emx_sf7b_shoot1",
+    "silence": "emxarms:emx_sf7b/sf7bsup1",
+    "silence_3p": "emxarms:emx_sf7b/sf7bsup1",
+    "put_away": "emxarms:emx_sf7b/aa12_put_away",
+    "dry_fire": "emxarms:emx_dw",
+    "fire_select": "emxarms:emx_mode",
+	"kill": "emxarms:emx_hit1"
+  },
+    // 抛壳的渲染数据，可为空，若为空，则枪械不抛壳
+    "shell": {
+        // 抛壳的初速度的 xyz 值
+        "initial_velocity": [5, 2, 1],
+        // 抛壳随机变化的运动速度 xyz 值，从 0 ~ 1 随机缩放后叠加在初速度上。
+        "random_velocity": [1, 1, 0.25],
+        // 抛壳的加速度
+        "acceleration": [0.0, -10, 0.0],
+        // 抛壳的三轴角速度，从 0.5 ~ 1 随机缩放。
+        "angular_velocity": [360, -1200, 90],
+        // 抛壳渲染存活时间，单位为秒
+        "living_time": 1.5
+    },
+  "text_show": {
+    // 作用的组名，该组的旋转点决定文本的位置和朝向
+    "ammo_show_pos": {
+      // 文本缩放，默认大小对于 BlockBench 里的 1
+      "scale": 0.6,
+      // 对齐方式：right，center，left
+      "align": "center",
+      // 阴影
+      "shadow": false,
+      // 文本颜色
+      "color": "#53f9af",
+      // 亮度：1-15
+      "light": 15,
+      // 本地化，且支持PlaceholderAPI 风格的占位符
+      // 目前仅支持两个：%player_name% %ammo_count%
+      "text": "%ammo_count%"
+    },
+    "ammotext_show_pos": {
+      // 文本缩放，默认大小对于 BlockBench 里的 1
+      "scale": 0.3,
+      // 对齐方式：right，center，left
+      "align": "center",
+      // 阴影
+      "shadow": false,
+      // 文本颜色
+      "color": "#53f9af",
+      // 亮度：1-15
+      "light": 15,
+      // 本地化，且支持PlaceholderAPI 风格的占位符
+      // 目前仅支持两个：%player_name% %ammo_count%
+      "text": "-ammo-"
+    },
+    "load1": {
+      // 文本缩放，默认大小对于 BlockBench 里的 1
+      "scale": 0.34,
+      // 对齐方式：right，center，left
+      "align": "center",
+      // 阴影
+      "shadow": false,
+      // 文本颜色
+      "color": "#53f9af",
+      // 亮度：1-15
+      "light": 15,
+      // 本地化，且支持PlaceholderAPI 风格的占位符
+      // 目前仅支持两个：%player_name% %ammo_count%
+      "text": "Loading Ammo."
+    },
+    "load2": {
+      // 文本缩放，默认大小对于 BlockBench 里的 1
+      "scale": 0.34,
+      // 对齐方式：right，center，left
+      "align": "center",
+      // 阴影
+      "shadow": false,
+      // 文本颜色
+      "color": "#53f9af",
+      // 亮度：1-15
+      "light": 15,
+      // 本地化，且支持PlaceholderAPI 风格的占位符
+      // 目前仅支持两个：%player_name% %ammo_count%
+      "text": "Loading Ammo..."
+    },
+    "load3": {
+      // 文本缩放，默认大小对于 BlockBench 里的 1
+      "scale": 0.34,
+      // 对齐方式：right，center，left
+      "align": "center",
+      // 阴影
+      "shadow": false,
+      // 文本颜色
+      "color": "#53f9af",
+      // 亮度：1-15
+      "light": 15,
+      // 本地化，且支持PlaceholderAPI 风格的占位符
+      // 目前仅支持两个：%player_name% %ammo_count%
+      "text": "Loading Ammo....."
+    },
+    "load4": {
+      // 文本缩放，默认大小对于 BlockBench 里的 1
+      "scale": 0.3,
+      // 对齐方式：right，center，left
+      "align": "center",
+      // 阴影
+      "shadow": false,
+      // 文本颜色
+      "color": "#53f9af",
+      // 亮度：1-15
+      "light": 15,
+      // 本地化，且支持PlaceholderAPI 风格的占位符
+      // 目前仅支持两个：%player_name% %ammo_count%
+      "text": "Loading Completed."
+    }
+  },
+  "offhand_show": {
+    "pos": [0, 18, 5],
+    "rotate": [-20, 0, 30],
+    "scale": [1.0, 0.5, 0.5]
+  },
+  "hotbar_show": {
+    "0": {
+      "pos": [-4, 24, 4],
+      "rotate": [-90, -5, -90],
+      "scale": [1.0, 0.5, 0.5]
+    }
+  }
+}

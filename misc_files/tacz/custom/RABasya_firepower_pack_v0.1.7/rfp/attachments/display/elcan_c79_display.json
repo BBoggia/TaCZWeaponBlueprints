@@ -1,0 +1,14 @@
+{
+  "slot": "rfp:attachment/slot/elcan_c79",
+  "model": "rfp:attachment/elcan_c79",
+  "texture": "rfp:attachment/uv/elcan_c79",
+  "zoom": [
+    3.4
+  ],
+  "scope": true,
+  "fov": 70.0,
+  "sounds": {
+    "install": "tacz:attachments/scope_general_b",
+    "uninstall": "tacz:attachments/scope_general_b"
+  }
+}

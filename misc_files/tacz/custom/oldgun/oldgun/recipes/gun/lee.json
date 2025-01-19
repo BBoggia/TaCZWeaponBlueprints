@@ -1,0 +1,26 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 98
+    },
+    {
+      "item": {
+        "tag": "forge:gems/lapis"
+      },
+      "count": 40
+    },
+    {
+      "item": {
+        "tag": "minecraft:logs"
+      },
+      "count": 102
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "oldgun:lee"
+  }
+}

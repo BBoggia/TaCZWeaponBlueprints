@@ -1,0 +1,26 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 101
+    },
+    {
+      "item": {
+        "tag": "forge:gems/lapis"
+      },
+      "count": 15
+    },
+    {
+      "item": {
+        "tag": "minecraft:logs"
+      },
+      "count": 51
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "qkl:lmg31"
+  }
+}

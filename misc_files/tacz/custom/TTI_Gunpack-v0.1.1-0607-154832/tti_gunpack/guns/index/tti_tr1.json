@@ -1,0 +1,7 @@
+{
+    "name": "tti_gunpack.gun.tti_tr1",
+    "display": "tti_gunpack:tti_tr1_display",
+    "data": "tti_gunpack:tti_tr1_data",
+    "type": "rifle",
+    "sort": 200
+}

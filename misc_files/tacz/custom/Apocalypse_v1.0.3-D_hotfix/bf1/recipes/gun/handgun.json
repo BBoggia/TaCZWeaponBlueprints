@@ -1,0 +1,21 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "minecraft:dirt"
+      },
+      "count": 8
+    },
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 8
+    }
+
+  ],
+  "result": {
+    "type": "gun",
+    "id": "bf1:handgun"
+  }
+}

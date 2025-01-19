@@ -1,0 +1,8 @@
+{
+  "name": "classicr.gun.colt_python.name",
+  "display": "classicr:colt_python_display",
+  "data": "classicr:colt_python_data",
+  "tooltip": "classicr.gun.colt_python.desc",
+  "type": "pistol",
+  "sort": 10
+}

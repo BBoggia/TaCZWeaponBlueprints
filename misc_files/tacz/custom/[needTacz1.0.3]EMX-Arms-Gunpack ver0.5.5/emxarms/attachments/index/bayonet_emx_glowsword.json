@@ -1,0 +1,7 @@
+{
+  "name": "emxarms.attachment.bayonet_emx_glowsword.name",
+  "tooltip": "emxarms.attachment.bayonet_emx_glowsword.tooltip",
+  "display": "emxarms:bayonet_emx_glowsword_display",
+  "data": "emxarms:bayonet_emx_glowsword_data",
+  "type": "muzzle"
+}

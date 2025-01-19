@@ -1,0 +1,8 @@
+{
+  "name": "classicr.gun.m82a2.name",
+  "display": "classicr:m82a2_display",
+  "data": "classicr:m82a2_data",
+  "tooltip": "classicr.gun.m82a2.desc",
+  "type": "sniper",
+  "sort": 10
+}

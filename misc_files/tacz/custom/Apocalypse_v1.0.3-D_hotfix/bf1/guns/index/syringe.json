@@ -1,0 +1,7 @@
+{
+  "name": "bf1.gun.syringe.name",
+  "display": "bf1:syringe_display",
+  "data": "bf1:syringe_data",
+  "tooltip": "bf1.gun.syringe.desc",
+  "type": "rpg"
+}

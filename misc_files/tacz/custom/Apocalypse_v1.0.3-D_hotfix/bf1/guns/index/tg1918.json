@@ -1,0 +1,16 @@
+{
+
+  "name": "bf1.gun.tg1918.name",
+
+  "display": "bf1:tg1918_display",
+
+  "data": "bf1:tg1918_data",
+
+  "tooltip": "bf1.gun.tg1918.desc",
+
+  "type": "sniper",
+
+  "item_type": "modern_kinetic",
+
+  "sort": 4
+}

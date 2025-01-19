@@ -1,0 +1,46 @@
+# Don't change this! Version used to track needed updates.
+version = 0
+enableBlueprints = true
+blueprintSpawnChance = 0.1
+minBlueprints = 1
+maxBlueprints = 1
+gunBlacklist = [
+    "ccrp:aug_hbar",
+    "ccrp:keltec_p50",
+    "ccrp:mp9_thunder",
+    "cib:ar2",
+    "cib:m4",
+    "classicr:aa410",
+    "classicr:minigun",
+    "emxarms:emx_draftsman",
+    "emxarms:emx_enforcer",
+    "emxarms:emx_expel32",
+    "emxarms:emx_expel32se",
+    "emxarms:emx_mg57",
+    "emxarms:emx_mg90",
+    "emxarms:emx_mk88",
+    "emxarms:emx_mk951l",
+    "emxarms:emx_mk951lmg",
+    "emxarms:emx_mk951r",
+    "emxarms:emx_pmg90",
+    "emxarms:emx_rivet",
+    "emxarms:emx_scgraves",
+    "emxarms:emx_sf7b",
+    "emxarms:emx_umx32",
+    "emxarms:emx_umx57",
+    "fibers:raygun",
+    "gz:lightweight_m4",
+    "gz:police_m4",
+    "lradd:bam4",
+    "lradd:gauss_rifle",
+    "lradd:pp19",
+    "lradd:txc",
+    "oldgun:pf60",
+    "tacz:aug",
+    "tacz:deagle_golden",
+    "tacz:ump45"
+]
+ammoBlacklist = [
+    "oldgun:pf60_ammo"
+]
+attachmentBlacklist = [  ]

@@ -1,0 +1,10 @@
+{
+  "slot": "hk:attachment/slot/b5_slot",
+  "model": "hk:attachment/b5_stock_geo",
+  "texture": "hk:attachment/uv/b5_stock",
+  "adapter": "ar_stock_adapter",
+  "sounds": {
+    "install": "tacz:attachments/attachment_general_a",
+    "uninstall": "tacz:attachments/attachment_general_uninstall"
+  }
+}

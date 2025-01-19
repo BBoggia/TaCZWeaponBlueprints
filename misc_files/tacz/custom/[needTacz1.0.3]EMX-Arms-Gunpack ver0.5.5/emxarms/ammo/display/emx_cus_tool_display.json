@@ -1,0 +1,25 @@
+{
+  "slot": "emxarms:ammo/slot/emx_cus_tool",
+  "model": "emxarms:ammo/emx_cus_tool_geo",
+  "texture": "emxarms:ammo/uv/emx_cus_tool",
+  "tracer_color": "#deffd7",
+  "transform": {
+    "scale": {
+      "thirdperson": [
+        0.4,
+        0.4,
+        0.4
+      ],
+      "ground": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "fixed": [
+        1,
+        1,
+        1
+      ]
+    }
+  }
+}

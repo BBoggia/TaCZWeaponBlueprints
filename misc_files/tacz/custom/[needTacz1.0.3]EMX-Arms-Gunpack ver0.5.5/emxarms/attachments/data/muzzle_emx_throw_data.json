@@ -1,0 +1,8 @@
+{
+  "weight": 0.15,
+  "inaccuracy_addend": -0.16,
+  "recoil_modifier": {
+    // 水平方向偏转削减程度的大小，范围-1~0
+    "yaw": -0.25
+  }
+}

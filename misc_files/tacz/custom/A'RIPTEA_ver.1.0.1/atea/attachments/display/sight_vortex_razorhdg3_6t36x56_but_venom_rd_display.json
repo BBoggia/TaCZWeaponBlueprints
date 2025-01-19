@@ -1,0 +1,19 @@
+{
+  "slot": "atea:attachment/slot/sight_vortex_razorhdg3_6t36x56_but_venom_rd",
+  "model": "atea:attachment/sight_vortex_razorhdg3_6t36x56_but_venom_rd_geo",
+  "texture": "atea:attachment/uv/sight_vortex_razorhdg3_6t36x56",
+  "lod": {
+    "model": "atea:attachment/lod/sight_vortex_razorhdg3_6t36x56_lod",
+    "texture": "atea:attachment/lod/sight_vortex_razorhdg3_6t36x56_lod"
+  },
+  "zoom": [
+    1.2
+  ],
+  "scope": false,
+  "sight": true,
+  "fov": 70.0,
+  "sounds": {
+    "install": "tacz:attachments/scope_general_a",
+    "uninstall": "tacz:attachments/scope_general_a"
+  }
+}

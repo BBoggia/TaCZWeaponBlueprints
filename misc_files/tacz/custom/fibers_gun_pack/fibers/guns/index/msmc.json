@@ -1,0 +1,7 @@
+{
+    "name": "fibers.gun.msmc.name",
+    "display": "fibers:msmc_display",
+    "data": "fibers:msmc_data",
+    "type": "smg",
+    "tooltip": "fibers.gun.msmc.desc"
+}

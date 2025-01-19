@@ -1,0 +1,190 @@
+v.0.1.8
+警告: 该附属包不再支持TaCZ的1.0.2-release以及更早的版本
+
+添加:
+ARIP | "Coercion the first step" Hyper AmmoMod & ExtMag
+ARIP | "Open Z" Holographic Scope
+
+调整:
+ARIP | "Disillusioned Elegy" AA-12 Fore Kit 的性能与配方
+部分ARIP前缀物品的贴图，感谢 @koei(https://space.bilibili.com/407541278)
+#tacz:scope_pistol的兼容变更为#tacz:pistol_muzzle, 以适应即将到来的本体更新
+muzzle_massdriver调整为mass_si_md
+arip_ammo_mod_coercion调整为arip_coercion
+
+移除:
+FORT | Vant-VM Shield 的用户相关资产, 交由“双倍火力”附属包借用
+ARIP | "Vicissitude" Complex Suppressor (Prototype)
+ARIP | "Empowered" Complex Telescope (Prototype)
+
+————————————————————
+v.0.1.7_hotfix4 (对外名称为 v.0.1.7_previous)
+修复:
+性能词条格式异常带来的非正常平衡
+部分贴图异常上色或叠面或缺面
+
+添加:
+labPBR 材质支持 (Vicissitude , Empowered 除外)
+ARIP | "Vicissitude" Complex Suppressor (Prototype)
+ARIP | "Empowered" Complex Telescope (Prototype)
+Izhmash |  6Kh5 1991 Bayonet
+EOTech | HHS-Ⅵ (Mounted on: Leatherwood | AR-15/M16 Scope Mount)
+
+调整:
+简体中文, 名称简化, 描述延长
+美式英文, 名称简化, 描述增加换行
+部分贴图, 如 HHS-Ⅷ 调整为沙色打底
+所有性能，其中 Kriss Vector 配套枪口装置系列的调整尤为显著
+ARIP | "Arrogance" Muzzle Brake & Compensator & Choke 的模型与性能
+ARIP | "Disillusioned Elegy" AA-12 Fore Kit 的性能与配方
+
+移除:
+ARIP | "Breach" Compensator & Choke 及其相关所有资产
+EOTech | OGL Laser Sight 相关于其本身的所有资产
+
+————————————————————
+v.0.1.6_hotfix4 (对外名称为 v.0.1.6_desc)
+添加：
+OKP-7 Picatinny Reflex Sight
+
+调整: 
+全描述支持
+
+————————————————————
+v.0.1.6 (除hotfix4/desc之外)
+添加:
+FORT | Vant-VM Shield *Still in Progress*
+ARIP | "Disillusioned Elegy" AA-12 Fore Kit
+Strike Industries | MOD2 Buttstock
+Strike Industries | Cookie Cutter Compensator
+Maxim Defense | Hate Brake Muzzle Booster
+Maxim Defense | Soup Can Suppressor
+T-Eagle | MR PRO 3X30 IR Optical Sight
+Schmidt & Bender | CMⅡ High Performance 10-60x56mm Optical Sight (Mounted on: Spuhr | ISMS SP4804)
+
+调整性能:
+Kriss | Vector CRB 16" Barrel and Shroud & MK1 Handguard
+Kriss | Vector CRB Canadian 18.6" Barrel and Shroud
+
+重做:
+ARIP | "Breach" Compensator & Choke
+
+修复:
+手枪瞄具无法适配格洛克
+部分配方导致在按下合成界面翻页按钮时游戏崩溃
+
+————————————————————
+v.0.1.5
+添加以下:
+Izhevsk | «6Kh4» 1972 AKM Bayonet
+Zenit | PT-1 Buttstock
+Zenit | PT-1S Buttstock (Extended)
+Zenit | PT-3 Buttstock
+Zenit | PT-3S Buttstock (Extended)
+Kriss | Vector Gen2.1 Ambidextrous Folding Buttstock
+Kriss | Vertical Foregrip with Intergrated Finger Stop
+Kriss | Vector 6.5" Barrel & MK5M Handguard
+Kriss | Vector 10" Barrel & MK9 Handguard
+Kriss | Vector 12" Barrel & MK11 Handguard
+Kriss | Vector 14" Barrel & MK3 Handguard
+Kriss | Vector CRB 16" Barrel and Shroud & MK1 Handguard
+Kriss | Vector CRB Canadian 18.6" Barrel and Shroud
+Fischer Development | FD917 Suppressor
+Fischer Development | FD919 Suppressor
+Silencer Co. | Osprey-45 2.0 Suppressor
+Silencer Co. | Omega-300 DTM Suppressor
+Silencer Co. | Hybrid-46M Multi-Caliber Suppressor (Extended Configuration)
+EOTech | [HHS-Ⅴ] EXPS3-4 Holographic Sight & G45 5x Magnifier & OGL Laser Sight (Mounted on: Unity & GBRS | FAST FTC 291 OMNI, GBRS | Hydra for EOTech; Magnifier Switched)
+EOTech | [HHS-Ⅷ] EXPS3-0 Holographic Sight & G33 3x Magnifier (Mounted on: EOTech | STS; Magnifier Switched)
+
+————————————————————
+v.0.1.4
+添加"ARIP | "Sangfroid\" Complex Foregrip"，
+添加"Tula | SKS Bayonet"和"Tula | «6Kh2» 1955 AK-47 TypeⅢ Bayonet"，前者仅能用于TaCZ内的SKS战术型，后者则为AKM所用。
+添加"Silencer Co. | Osprey-9 Suppressor"和"Silencer Co. | Salvo-12 Suppressor"，前者并未做出实际的口径限定，后者如是。
+添加"EOTech | [HHS-Ⅷ] EXPS3-0 Holographic Sight & G33 3x Magnifier (Mounted on: EOTech | STS)"，
+添加"EOTech | [HHS-Ⅴ] EXPS3-4 Holographic Sight & G45 5x Magnifier & OGL Laser Sight (Mounted on: Unity & GBRS | FAST FTC 291 OMNI, GBRS | Hydra for EOTech)"，以及其激光侧面瞄准姿态版本；
+重做"Vortex | Venom Mini Red Dot Sight (Mounted on Picatinny)"为"Vortex | Venom Mini Red Dot Sight (Mounted on: Strike Industries | Ambush Offset)"，
+重做"Phantom | XL RD310 Reflex Sight (Reticle: Anti-Air; Mounted on: GBRS | Hydra Riser for EOTech)"为"Phantom | XL RD310 Reflex Sight (Reticle: Anti-Air)"；
+移除"Trijicon | SRO Mini Red Dot Sight (Mounted on Picatinny)"，
+移除"EOTech | OGL Laser Sight (Slot: Scope)"；
+微调模型，并为所有scope类添加LOD模型及其对应贴图；
+微调部分名字，调整部分配件性能，调整部分标签所属，重做所有配方。
+
+————————————————————
+v.0.1.3
+添加"Strike Industries | Mass Driver Compensator"，
+添加"EOTech | EFLX Mini Red Dot Sight (Mounted on: Strike Industries | G-SURF Mount)"，
+添加"Vortex | Viper Mini Red Dot Sight (Mounted on: Strike Industries | R.EX Riser)"；
+引入"#tacz:muzzle_glock"、"#tacz:scope_pistol"、"#tacz:scope_sniper"；
+修复v.0.1.0时期添加内容无法为TaCZ内容物合适安装的问题；
+调整部分配件性能；
+重做部分贴图，移除了以下涂装："Experimental Frame"、Blue、Orange、Pink、Purple，过往版本的更新日志藉此调整。
+
+————————————————————
+v.0.1.2
+修复针对TaCZ的配件系统更新适配，并实验性的植入本体tag；
+重做描述，为部分瞄具使用非白颜色的工具提示，过往版本的更新日志藉此调整。
+
+————————————————————
+v.0.1.1
+添加"ARIP | \"Sangfroid\" Complex Foregrip (Added on: Ballistic-proof Shield)"，需要指出的是其并不能提供防弹能力，
+添加"EOTech | Vudu 5-25x50mm FFP Optical Sight (Mounted on: EOTech | PRS)"。
+
+————————————————————
+v.0.1.0
+#现在内容已涵盖除激光指示器与供弹扩容改件以外的所有配件槽位！
+添加理应适用于手枪的"Vortex | Venom Mini Red Dot Sight"、"EOTech | EFLX Mini Red Dot Sight"、"Vortex | Viper Mini Red Dot Sight"，
+添加侧面瞄准用途的"EOTech | OGL Laser Sight (Slot: Scope)"，
+添加理应适用于AR托芯的"TACCOM | M&P 15-22 Cheek Riser Adjustable Buttstock"，
+添加"ARIP | \"Breach\" Compensator"，
+添加"ARIP | \"Arrogance\" Muzzle Brake & Compensator"，特别地，其后座减免较高，
+添加"Thunder Beast Armament Co. | Ultra-50 Suppressor"；
+针对配件性能进行调整。
+
+————————————————————
+v.0.0.9
+添加"Fortis Mfg. | Shift Foregrip"，
+添加"Fortis Mfg. | Shift Short Foregrip"，
+添加"DIO | Zolfaqar Angled Foregrip"，
+添加"DIO | Zolfaqar Gripod"；
+剔除了会导致在不使用光影加载器时诱发崩溃或贴图错误的因素。
+
+————————————————————
+v.0.0.8
+添加"SureFire | M900A Vertical Foregrip Weaponlight (Mounted on: A.R.M.S. Throw-Lever)"，
+添加"DIO | Zolfaqar Combo Foregrips"；
+修改简中文本。
+
+————————————————————
+v.0.0.7
+添加"ARIP | \"Open\" Reflex Sight"；
+调整部分瞄准具的模型相对原点位置与瞄准位置。
+
+————————————————————
+v.0.0.6
+添加"Phantom | XL RD310 Reflex Sight (Reticle: Anti-Air; Mounted on: GBRS | Hydra Riser for EOTech)"。
+
+————————————————————
+v.0.0.5
+修复打包错误。
+
+————————————————————
+v.0.0.4
+添加"Vortex | Razor HD Gen III 1-10x24mm FFP Optical Sight (Mounted on: Reptilia | AUS)"，
+添加"Vortex | Viper Mini Red Dot Sight (Painted: \"Skywards Dream\"; Mounted on: Strike Industries | R.EX Riser)"。
+
+————————————————————
+v.0.0.3
+添加"Vortex | Venom Mini Red Dot Sight (Mounted on: Razor HD Gen III 6-36)"即更早版本资产中的实用侧瞄版本，
+还添加基于TaCZ资产改模而来的"Trijicon | SRO Mini Red Dot Sight (Mounted on Picatinny)"；
+所有内容物的制造可用，均保持为18份铁锭。
+
+————————————————————
+v.0.0.2
+添加"Vortex | Venom Mini Red Dot Sight (Mounted on Picatinny)"，
+添加"EOTech | EFLX Mini Red Dot Sight (Mounted on Picatinny)"。
+
+————————————————————
+v.0.0.1
+添加"Vortex | Razor HD Gen III 6-36x56mm FFP Optical Sight & Impact 4000 Laser Rangefinder"，其作为唯一资产。

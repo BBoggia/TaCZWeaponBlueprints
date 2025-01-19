@@ -1,0 +1,8 @@
+{
+  "name": "classicr.gun.fn_fal.name",
+  "display": "classicr:fn_fal_display",
+  "data": "classicr:fn_fal_data",
+  "tooltip": "classicr.gun.fn_fal.desc",
+  "type": "rifle",
+  "sort": 10
+}

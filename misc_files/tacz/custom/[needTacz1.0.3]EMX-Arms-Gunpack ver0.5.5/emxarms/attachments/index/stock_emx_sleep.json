@@ -1,0 +1,7 @@
+{
+  "name": "emxarms.attachment.stock_emx_sleep.name",
+  "tooltip": "emxarms.attachment.stock_emx_sleep.tooltip",
+  "display": "emxarms:stock_emx_sleep_display",
+  "data": "emxarms:stock_emx_sleep_data",
+  "type": "stock"
+}

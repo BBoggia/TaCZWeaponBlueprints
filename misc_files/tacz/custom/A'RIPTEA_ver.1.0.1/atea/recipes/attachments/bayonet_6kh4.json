@@ -1,0 +1,14 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 21
+    }
+  ],
+  "result": {
+    "type": "attachment",
+    "id": "atea:bayonet_6kh4"
+  }
+}

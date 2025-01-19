@@ -1,0 +1,10 @@
+{
+  "slot": "oldgun:attachment/slot/m1905",
+  "model": "oldgun:attachment/m1905_geo",
+  "texture": "oldgun:attachment/uv/m1905",
+  "show_muzzle": true,
+  "sounds": {
+    "install": "tacz:attachments/bayonet_install",
+    "uninstall": "tacz:attachments/bayonet_uninstall"
+  }
+}

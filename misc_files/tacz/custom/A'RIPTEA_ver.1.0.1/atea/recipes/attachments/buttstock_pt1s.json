@@ -1,0 +1,20 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 63
+    },
+    {
+      "item": {
+        "tag": "forge:leather"
+      },
+      "count": 8
+    }
+  ],
+  "result": {
+    "type": "attachment",
+    "id": "atea:buttstock_pt1s"
+  }
+}

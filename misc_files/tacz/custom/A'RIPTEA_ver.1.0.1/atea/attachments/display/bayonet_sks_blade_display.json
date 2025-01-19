@@ -1,0 +1,10 @@
+{
+  "slot": "atea:attachment/slot/bayonet_sks_blade",
+  "model": "atea:attachment/bayonet_sks_blade_geo",
+  "texture": "atea:attachment/uv/bayonet_sks_blade",
+  "show_muzzle": true,
+  "sounds": {
+    "install": "tacz:attachments/bayonet_install",
+    "uninstall": "tacz:attachments/bayonet_uninstall"
+  }
+}

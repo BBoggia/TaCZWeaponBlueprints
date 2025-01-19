@@ -1,0 +1,8 @@
+{
+  "name": "ccrp.gun.chisato_m1911.name",
+  "display": "ccrp:chisato_m1911_display",
+  "data": "ccrp:chisato_m1911_data",
+  "tooltip": "ccrp.gun.chisato_m1911.desc",
+  "type": "pistol",
+  "sort": 10
+}

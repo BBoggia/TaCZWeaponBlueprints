@@ -1,0 +1,119 @@
+{
+  "model": "emxarms:gun/emx_mg90_geo",
+  "texture": "emxarms:gun/uv/emx_mg90",
+//  "lod": {
+//    "model": "tacz:gun/lod/m4a1",
+//    "texture": "tacz:gun/lod/m4a1"
+//  },
+  "hud": "emxarms:gun/hud/emx_mg90",
+  "slot": "emxarms:gun/slot/emx_mg90",
+  "animation": "emxarms:emx_mg90",
+  "use_default_animation": "rifle",
+  "third_person_animation": "default",
+  "transform": {
+    "scale": {
+      "thirdperson": [0.6, 0.6, 0.6],
+      "ground": [0.6, 0.6, 0.6],
+      "fixed": [1.2, 1.2, 1.2]
+    }
+  },
+  "muzzle_flash": {
+    "texture": "emxarms:flash/emx_muzzle_flash",
+    "scale": 1.55
+  },
+  "shell": {
+    "initial_velocity": [5, 2, 1],
+    "random_velocity": [1, 1, 0.25],
+    "acceleration": [0.0, -10, 0.0],
+    "angular_velocity": [360, -1200, 90],
+    "living_time": 1.0
+  },
+  "sounds": {
+    "shoot": "emxarms:emx_mg90/nomad_shoot8",
+    "shoot_3p": "emxarms:emx_mg90/nomad_shoot8",
+    "silence": "emxarms:emx_mg90/aa12_silence",
+    "silence_3p": "emxarms:emx_mg90/aa12_silence_3p",
+    "reload_empty": "emxarms:emx_mg90/emx_mg90_reload_empty",
+    "reload_tactical": "emxarms:emx_mg90/emx_mg90_reload_tactical",
+    "draw": "emxarms:emx_mg90/aa12_draw",
+    "put_away": "emxarms:emx_mg90/aa12_put_away",
+    "dry_fire": "emxarms:emx_dw",
+    "fire_select": "emxarms:emx_mode",
+	"kill": "emxarms:emx_hit1"
+  },
+  "text_show": {
+    // 作用的组名，该组的旋转点决定文本的位置和朝向
+    "ammo_show_pos": {
+      // 文本缩放，默认大小对于 BlockBench 里的 1
+      "scale": 0.5,
+      // 对齐方式：right，center，left
+      "align": "center",
+      // 阴影
+      "shadow": false,
+      // 文本颜色
+      "color": "#53f9af",
+      // 亮度：1-15
+      "light": 15,
+      // 本地化，且支持PlaceholderAPI 风格的占位符
+      // 目前仅支持两个：%player_name% %ammo_count%
+      "text": "%ammo_count%"
+    },
+    "ammotext_show_pos": {
+      // 文本缩放，默认大小对于 BlockBench 里的 1
+      "scale": 0.25,
+      // 对齐方式：right，center，left
+      "align": "center",
+      // 阴影
+      "shadow": false,
+      // 文本颜色
+      "color": "#53f9af",
+      // 亮度：1-15
+      "light": 15,
+      // 本地化，且支持PlaceholderAPI 风格的占位符
+      // 目前仅支持两个：%player_name% %ammo_count%
+      "text": "-ammo-"
+    },
+    "user_show_pos": {
+      // 文本缩放，默认大小对于 BlockBench 里的 1
+      "scale": 0.5,
+      // 对齐方式：right，center，left
+      "align": "right",
+      // 阴影
+      "shadow": false,
+      // 文本颜色
+      "color": "#53f9af",
+      // 亮度：1-15
+      "light": 15,
+      // 本地化，且支持PlaceholderAPI 风格的占位符
+      // 目前仅支持两个：%player_name% %ammo_count%
+      "text": "%player_name%"
+    },
+    "user_text_pos": {
+      // 文本缩放，默认大小对于 BlockBench 里的 1
+      "scale": 0.5,
+      // 对齐方式：right，center，left
+      "align": "right",
+      // 阴影
+      "shadow": false,
+      // 文本颜色
+      "color": "#53f9af",
+      // 亮度：1-15
+      "light": 15,
+      // 本地化，且支持PlaceholderAPI 风格的占位符
+      // 目前仅支持两个：%player_name% %ammo_count%
+      "text": "-User-"
+    }
+  },
+  "offhand_show": {
+    "pos": [0, 18, 5],
+    "rotate": [-20, 0, 30],
+    "scale": [0.5, 0.5, 0.5]
+  },
+  "hotbar_show": {
+    "0": {
+      "pos": [-4, 24, 4],
+      "rotate": [-90, -5, -90],
+      "scale": [0.5, 0.5, 0.5]
+    }
+  }
+}

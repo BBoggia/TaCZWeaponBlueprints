@@ -1,0 +1,14 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 24
+    }
+  ],
+  "result": {
+    "type": "attachment",
+    "id": "gucci_attachments:grip_rk2"
+  }
+}

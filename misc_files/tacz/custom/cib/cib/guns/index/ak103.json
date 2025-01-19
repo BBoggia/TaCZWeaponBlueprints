@@ -1,0 +1,9 @@
+{
+  "name": "cib.gun.ak103.name",
+  "display": "cib:ak103_display",
+  "data": "cib:ak103_data",
+  "tooltip": "cib.gun.ak103.desc",
+  "type": "rifle",
+  "item_type": "modern_kinetic",
+  "sort": 10
+}

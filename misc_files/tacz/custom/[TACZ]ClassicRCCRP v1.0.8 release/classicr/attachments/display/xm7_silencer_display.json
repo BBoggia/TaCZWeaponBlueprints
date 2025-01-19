@@ -1,0 +1,9 @@
+{
+  "slot": "classicr:attachment/slot/xm7_silencer",
+  "model": "classicr:attachment/xm7_silencer_geo",
+  "texture": "classicr:attachment/uv/xm7_silencer",
+  "sounds": {
+    "install": "tacz:attachments/muzzle_general",
+    "uninstall": "tacz:attachments/muzzle_general"
+  }
+}

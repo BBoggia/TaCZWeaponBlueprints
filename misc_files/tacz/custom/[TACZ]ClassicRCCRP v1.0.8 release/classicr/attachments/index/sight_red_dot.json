@@ -1,0 +1,7 @@
+{
+  "name": "classicr.attachment.sight_red_dot.name",
+  "tooltip":"classicr.attachment.sight_red_dot.desc",
+  "display": "classicr:sight_red_dot_display",
+  "data": "classicr:sight_red_dot_data",
+  "type": "scope"
+}

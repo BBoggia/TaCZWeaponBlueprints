@@ -1,0 +1,8 @@
+{
+  "name": "classicr.gun.mk18_mod1.name",
+  "display": "classicr:mk18_mod1_display",
+  "data": "classicr:mk18_mod1_data",
+  "tooltip": "classicr.gun.mk18_mod1.desc",
+  "type": "rifle",
+  "sort": 10
+}

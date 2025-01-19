@@ -1,0 +1,9 @@
+{
+  "slot": "atea:attachment/slot/grip_zolfaqar_gh",
+  "model": "atea:attachment/grip_zolfaqar_gh_geo",
+  "texture": "atea:attachment/uv/grip_zolfaqar",
+  "sounds": {
+    "install": "tacz:attachments/attachment_general_b",
+    "uninstall": "tacz:attachments/attachment_general_uninstall"
+  }
+}

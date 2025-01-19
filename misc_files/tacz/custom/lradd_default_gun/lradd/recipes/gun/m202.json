@@ -1,0 +1,32 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 215
+    },
+    {
+      "item": {
+        "tag": "forge:ingots/gold"
+      },
+      "count": 42
+    },
+    {
+      "item": {
+        "tag": "forge:gems/quartz"
+      },
+      "count": 38
+    },
+    {
+      "item": {
+        "tag": "forge:gems/diamond"
+      },
+      "count": 2
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "lradd:m202"
+  }
+}

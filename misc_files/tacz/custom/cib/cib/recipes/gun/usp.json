@@ -1,0 +1,14 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 34
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "cib:usp"
+  }
+}

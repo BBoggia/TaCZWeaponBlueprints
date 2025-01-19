@@ -1,0 +1,174 @@
+{
+  "ammo": "emxarms:x16sg",
+  "ammo_amount": 2,
+  "rpm": 200,
+  "bullet": {
+    "life": 0.3,
+    "bullet_amount": 16,
+    "damage": 41,
+    "tracer_count_interval": 0,
+    "extra_damage": {
+      "armor_ignore": 0.1,
+      "head_shot_multiplier": 1.33,
+      "damage_adjust": [
+        {
+          "distance": 15,
+          "damage": 41
+        },
+        {
+          "distance": 30,
+          "damage": 38
+        },
+        {
+          "distance": "infinite",
+          "damage": 32
+        }
+      ]
+    },
+    "ammo_amount": 2,
+    "ignite": false,
+    "ignite_entity_time": 16,
+    "speed": 120,
+    "gravity": 0.0245,
+    "knockback": 6.5,
+    "friction": 0.012,
+    "pierce": 1
+  },
+  "bolt": "open_bolt",
+  "reload": {
+    "type": "magazine",
+    "feed": {
+      "empty": 1.83,
+      "tactical": 1.23
+    },
+    "cooldown": {
+      "empty": 2.3,
+      "tactical": 1.6
+    }
+  },
+  "draw_time": 0.27,
+  "put_away_time": 0.203,
+  "aim_time": 0.1,
+  "sprint_time": 0.075,
+  "weight": 3.2,
+  "movement_speed": {
+    "base": 0.0,
+    "aim": 0.0,
+    "reload": 0.1
+  },
+  "fire_mode": [
+    "semi",
+    "burst"
+  ],
+  "burst_data": {
+    "continuous_shoot": false,
+    "count": 2,
+    "bpm": 600,
+    "min_interval": 0.5
+  },
+  "melee": {
+    "distance": 1,
+    "cooldown": 0.6,
+    "default": {
+      "animation_type": "melee_push",
+      "distance": 2,
+      "range_angle": 30,
+      "damage": 2.0,
+      "knockback": 0.5,
+      "prep": 0.1
+    }
+  },
+  "allow_attachment_types": [
+    "scope",
+    "stock",
+    "grip",
+    "extended_mag"
+  ],
+  "exclusive_attachments": {
+    "tacz:oem_stock_tactical": {
+      "weight": 2.0,
+      "ads_addend": 0.04,
+      "inaccuracy_addend": -0.125,
+      "recoil_modifier": {
+        "pitch": -0.3,
+        "yaw": -0.2
+      }
+    }
+  },
+  "recoil": {
+    "pitch": [
+      {
+        "time": 0,
+        "value": [
+          3.2,
+          3.5
+        ]
+      },
+      {
+        "time": 0.3,
+        "value": [
+          3.2,
+          3.5
+        ]
+      },
+      {
+        "time": 0.5,
+        "value": [
+          -1.15,
+          -1.15
+        ]
+      },
+      {
+        "time": 0.65,
+        "value": [
+          0,
+          0
+        ]
+      },
+      {
+        "time": 0.7,
+        "value": [
+          0,
+          0
+        ]
+      }
+    ],
+    "yaw": [
+      {
+        "time": 0,
+        "value": [
+          -2.5,
+          2.5
+        ]
+      },
+      {
+        "time": 0.3,
+        "value": [
+          -2.5,
+          2.5
+        ]
+      },
+      {
+        "time": 0.5,
+        "value": [
+          0.2,
+          0.2
+        ]
+      },
+      {
+        "time": 0.7,
+        "value": [
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  "inaccuracy": {
+    "stand": 1.625,
+    "move": 1.75,
+    "sneak": 1.25,
+    "lie": 1.75,
+    "aim": 1.15
+  }
+}

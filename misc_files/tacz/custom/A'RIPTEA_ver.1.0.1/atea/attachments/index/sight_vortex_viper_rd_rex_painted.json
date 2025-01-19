@@ -1,0 +1,7 @@
+{
+  "name": "atea.attachment.sight_vortex_viper_rd_rex_painted.name",
+  "tooltip": "atea.attachment.sight_vortex_viper_rd_rex_painted.desc",
+  "display": "atea:sight_vortex_viper_rd_rex_painted_display",
+  "data": "atea:sight1_mini_data",
+  "type": "scope"
+}

@@ -1,0 +1,38 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:gems/diamond"
+      },
+      "count": 12
+    },
+    {
+      "item": {
+        "tag": "forge:ingots/gold"
+      },
+      "count": 160
+    },
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 483
+    },
+    {
+      "item": {
+        "tag": "forge:gems/quartz"
+      },
+      "count": 50
+    },
+    {
+      "item": {
+        "tag": "forge:rods/blaze"
+      },
+      "count": 10
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "suffuse:m200"
+  }
+}

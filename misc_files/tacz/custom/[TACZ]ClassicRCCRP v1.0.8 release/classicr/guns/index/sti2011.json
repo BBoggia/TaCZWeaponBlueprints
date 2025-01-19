@@ -1,0 +1,8 @@
+{
+  "name": "classicr.gun.sti2011.name",
+  "display": "classicr:sti2011_display",
+  "data": "classicr:sti2011_data",
+  "tooltip": "classicr.gun.sti2011.desc",
+  "type": "pistol",
+  "sort": 10
+}

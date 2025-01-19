@@ -1,0 +1,16 @@
+{
+	"weight": 1.5,
+	"ads": {
+		"addend": 0.1
+	},
+	"inaccuracy": {
+		"addend": -0.3
+	},
+	"aim_inaccuracy": {
+		"addend": -0.2
+	},
+	"silence": {
+		"distance_addend": -16,
+		"use_silence_sound": true
+	}
+}

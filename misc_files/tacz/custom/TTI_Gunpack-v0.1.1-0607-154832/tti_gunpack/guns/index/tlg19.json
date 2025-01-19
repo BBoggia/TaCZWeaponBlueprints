@@ -1,0 +1,7 @@
+{
+    "name": "tti_gunpack.gun.tlg19",
+    "display": "tti_gunpack:tlg19_display",
+    "data": "tti_gunpack:tlg19_data",
+    "type": "pistol",
+    "sort": 200
+}

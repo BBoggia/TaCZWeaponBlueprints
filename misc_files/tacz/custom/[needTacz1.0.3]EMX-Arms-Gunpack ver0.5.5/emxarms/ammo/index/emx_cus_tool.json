@@ -1,0 +1,7 @@
+{
+  "name": "emxarms.ammo.emx_cus_tool.name",
+  "tooltip": "emxarms.ammo.emx_cus_tool.tooltip",
+  "display": "emxarms:emx_cus_tool_display",
+  "stack_size": 64
+}
+    

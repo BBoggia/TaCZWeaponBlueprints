@@ -1,0 +1,7 @@
+{
+  "slot": "emxarms:attachment/slot/ammo_sh2",
+  "sounds": {
+    "install": "emxarms:emx_sf7b/md4",
+    "uninstall": "emxarms:emx_sf7b/md5"
+  }
+}

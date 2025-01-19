@@ -1,0 +1,58 @@
+{
+  "model": "fibers:gun/renetti_geo",
+  "texture": "fibers:gun/uv/renetti",
+  "lod": {
+    "model": "fibers:gun/lod/renetti",
+    "texture": "fibers:gun/lod/renetti"
+  },
+  "hud": "fibers:gun/hud/renetti",
+  "slot": "fibers:gun/slot/renetti",
+  "animation": "fibers:renetti",
+  "use_default_animation": "pistol",
+  "player_animator_3rd": "fibers:pistol_default.player_animation",
+  "transform": {
+    "scale": {
+      "thirdperson": [0.6, 0.6, 0.6],
+      "ground": [0.6, 0.6, 0.6],
+      "fixed": [1.2, 1.2, 1.2]
+    }
+  },
+  "shell": {
+    "initial_velocity": [6.0, 5.0, 0.5],
+    "random_velocity": [2, 1.5, 0.25],
+    "acceleration": [0.0, -20, 0.0],
+    "angular_velocity": [360, -720, 90],
+    "living_time": 1.0
+  },
+  "muzzle_flash": {
+    "texture": "tacz:flash/common_muzzle_flash",
+    "scale": 0.55
+  },
+  "sounds": {
+    "reload_empty": "fibers:renetti/renetti_reload_empty",
+    "reload_tactical": "fibers:renetti/renetti_reload_tactical",
+    "inspect": "fibers:renetti/renetti_inspect",
+    "inspect_empty": "fibers:renetti/renetti_inspect_empty",
+    "draw": "fibers:renetti/renetti_draw",
+    "put_away": "fibers:renetti/renetti_put_away",
+    "head_hit": "fibers:head_hit",
+    "flesh_hit": "fibers:flesh_hit",
+    "kill": "fibers:kill",
+    "shoot": "fibers:renetti/renetti_shoot",
+    "shoot_3p": "fibers:renetti/renetti_shoot_3p",
+    "silence": "fibers:renetti/renetti_silence",
+    "silence_3p": "fibers:renetti/renetti_silence_3p"
+  },
+  "offhand_show": {
+    "pos": [4, 13, -1],
+    "rotate": [-90, -35, 90],
+    "scale": [0.5, 0.5, 0.5]
+  },
+  "hotbar_show": {
+    "0": {
+      "pos": [-5, 13, -1],
+      "rotate": [-90, -35, 90],
+      "scale": [0.5, 0.5, 0.5]
+    }
+  }
+}

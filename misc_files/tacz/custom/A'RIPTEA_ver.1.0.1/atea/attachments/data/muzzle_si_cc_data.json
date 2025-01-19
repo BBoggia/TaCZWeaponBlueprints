@@ -1,0 +1,19 @@
+{
+	"weight": 0.1,
+	"recoil": {
+		"pitch": {
+			"percent": -0.1
+		},
+		"yaw": {
+			"percent": -0.3
+		}
+	},
+	"melee": {
+		"distance": 1.75,
+		"range_angle": 45,
+		"cooldown": 0,
+		"damage": 4,
+		"knockback": 0.4,
+		"prep": 0.1
+	}
+}

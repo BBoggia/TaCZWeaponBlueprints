@@ -1,0 +1,8 @@
+{
+  "name": "classicr.gun.m92fs.name",
+  "display": "classicr:m92fs_display",
+  "data": "classicr:m92fs_data",
+  "tooltip": "classicr.gun.m92fs.desc",
+  "type": "pistol",
+  "sort": 10
+}

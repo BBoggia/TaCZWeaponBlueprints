@@ -1,0 +1,19 @@
+{
+  "slot": "atea:attachment/slot/sight_vortex_venom_rd",
+  "model": "atea:attachment/sight_vortex_venom_rd_geo",
+  "texture": "atea:attachment/uv/sight_vortex_venom_rd",
+  "lod": {
+    "model": "atea:attachment/lod/sight_vortex_venom_rd_lod",
+    "texture": "atea:attachment/lod/sight_vortex_venom_rd_lod"
+  },
+  "zoom": [
+    1.2
+  ],
+  "scope": false,
+  "sight": true,
+  "fov": 70.0,
+  "sounds": {
+    "install": "tacz:attachments/scope_general_e",
+    "uninstall": "tacz:attachments/scope_general_e"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 28
+    },
+    {
+      "item": {
+        "tag": "forge:rods/blaze"
+      }
+    },
+    {
+      "item": {
+        "tag": "minecraft:logs"
+      },
+      "count": 4
+    }
+    /*   {
+      "item": {
+        "tag": "minecraft:swords"
+      }
+    }
+  */
+  ],
+  "result": {
+    "type": "gun",
+    "id": "bf1:sw_model3"
+  }
+}

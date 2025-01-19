@@ -1,0 +1,17 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "compatibilityLevel": "JAVA_17",
+  "package": "com.gamergaming.taczweaponblueprints.mixin",
+  "refmap": "/META-INF/taczweaponblueprints.refmap.json",
+  "mixins": [
+    "GunSmithTableScreenMixin",
+    "IScreenAccessor",
+    "IAbstractContainerScreenAccessor",
+    "IGunSmithTableRecipeAccessor"
+    ],
+  "injectors": {
+    "defaultRequire": 1,
+    "defaultObfuscationEnv": "named"
+  }
+}

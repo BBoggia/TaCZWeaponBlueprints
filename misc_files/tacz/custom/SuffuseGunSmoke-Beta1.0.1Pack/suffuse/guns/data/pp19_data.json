@@ -1,0 +1,151 @@
+{
+  "aim_time": 0.21,
+  "allow_attachment_types": [
+    "scope",
+    "stock",
+    "muzzle"
+  ],
+  "ammo": "tacz:9mm",
+  "ammo_amount": 64,
+  "bolt": "open_bolt",
+  "bullet": {
+    "life": 0.6,
+    "bullet_amount": 1,
+    "damage": 4.93,
+    "tracer_count_interval": 0,
+    "extra_damage": {
+      "armor_ignore": 0.1,
+      "head_shot_multiplier": 1.25,
+      "damage_adjust": [
+        {
+          "distance": 9,
+          "damage": 4.93
+        },
+        {
+          "distance": 18.5,
+          "damage": 4.65
+        },
+        {
+          "distance": 25,
+          "damage": 4.22
+        },
+        {
+          "distance": 35,
+          "damage": 3.79
+        },
+        {
+          "distance": 45,
+          "damage": 3.23
+        },
+        {
+          "distance": "infinite",
+          "damage": 2.8
+        }
+      ]
+    },
+    "speed": 190,
+    "gravity": 0.0245,
+    "knockback": 0,
+    "friction": 0.012,
+    "ignite": false,
+    "pierce": 1
+  },
+  "burst_data": {
+    "continuous_shoot": false,
+    "count": 3,
+    "bpm": 900,
+    "min_interval": 0.3
+  },
+  "draw_time": 0.45,
+  "extended_mag_ammo_amount": [
+    40,
+    50,
+    60
+  ],
+  "fire_mode": [
+    "auto",
+    "semi"
+  ],
+  "inaccuracy": {
+    "stand": 3.2,
+    "move": 4.5,
+    "sneak": 1.5,
+    "lie": 0.8,
+    "aim": 0.29
+  },
+  "movement_speed": {
+    "base": 0,
+    "aim": -0.15,
+    "reload": -0.05
+  },
+  "put_away_time": 0.35,
+  "recoil": {
+    "pitch": [
+      {
+        "time": 0,
+        "value": [
+          0.7,
+          0.7
+        ]
+      },
+      {
+        "time": 0.25,
+        "value": [
+          0.7,
+          0.7
+        ]
+      },
+      {
+        "time": 0.45,
+        "value": [
+          -0.175,
+          -0.175
+        ]
+      },
+      {
+        "time": 0.6,
+        "value": [
+          0,
+          0
+        ]
+      }
+    ],
+    "yaw": [
+      {
+        "time": 0,
+        "value": [
+          -0.35,
+          -0.15
+        ]
+      },
+      {
+        "time": 0.25,
+        "value": [
+          -0.35,
+          -0.15
+        ]
+      },
+      {
+        "time": 0.45,
+        "value": [
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  "reload": {
+    "type": "magazine",
+    "feed": {
+      "empty": 2.96,
+      "tactical": 2.18
+    },
+    "cooldown": {
+      "empty": 3.46,
+      "tactical": 2.67
+    }
+  },
+  "rpm": 690,
+  "sprint_time": 0.2,
+  "weight": 3
+}

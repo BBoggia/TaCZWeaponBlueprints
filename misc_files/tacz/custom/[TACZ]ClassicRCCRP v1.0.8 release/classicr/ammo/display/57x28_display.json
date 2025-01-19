@@ -1,0 +1,8 @@
+{
+  "slot": "classicr:ammo/slot/57x28",
+    "shell": {
+    "model": "classicr:shell/57x28_shell",
+    "texture": "classicr:shell/57x28_shell"
+  }
+}
+    

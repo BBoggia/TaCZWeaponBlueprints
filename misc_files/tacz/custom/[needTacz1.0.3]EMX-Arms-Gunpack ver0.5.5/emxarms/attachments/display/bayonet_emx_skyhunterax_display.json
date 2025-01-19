@@ -1,0 +1,10 @@
+{
+  "slot": "emxarms:attachment/slot/bayonet_emx_skyhunterax",
+  "model": "emxarms:attachment/bayonet_emx_skyhunterax_geo",
+  "texture": "emxarms:attachment/uv/emx_skyhunterax",
+  "show_muzzle": true,
+  "sounds": {
+    "install": "tacz:attachments/bayonet_install",
+    "uninstall": "tacz:attachments/bayonet_uninstall"
+  }
+}

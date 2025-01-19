@@ -1,0 +1,7 @@
+{
+  "name": "emxarms.attachment.emx_sfmag_3if.name",
+  "tooltip": "emxarms.attachment.ammo_sfmag.tooltip",
+  "display": "emxarms:emx_sfmag_3if_display",
+  "data": "emxarms:emx_sfmag_3if_data",
+  "type": "extended_mag"
+}

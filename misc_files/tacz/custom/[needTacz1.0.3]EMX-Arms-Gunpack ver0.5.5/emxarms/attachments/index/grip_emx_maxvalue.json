@@ -1,0 +1,7 @@
+{
+  "name": "emxarms.attachment.grip_emx_maxvalue.name",
+  "tooltip": "emxarms.attachment.grip_emx_maxvalue.tooltip",
+  "display": "emxarms:grip_emx_maxvalue_display",
+  "data": "emxarms:grip_emx_maxvalue_data",
+  "type": "grip"
+}

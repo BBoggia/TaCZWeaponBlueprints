@@ -1,0 +1,18 @@
+{
+  "slot": "atea:attachment/slot/sight_eotech_hhs5_ogl_ftc",
+  "model": "atea:attachment/sight_eotech_hhs5_ogl_ftc_geo",
+  "texture": "atea:attachment/uv/sight_eotech_hhs5_ogl_ftc",
+  "lod": {
+    "model": "atea:attachment/lod/sight_eotech_hhs5_ogl_ftc_lod",
+    "texture": "atea:attachment/lod/sight_eotech_hhs5_ogl_ftc_lod"
+  },
+  "zoom": [
+    5.0
+  ],
+  "scope": true,
+  "fov": 70.0,
+  "sounds": {
+    "install": "tacz:attachments/scope_general_b",
+    "uninstall": "tacz:attachments/scope_general_b"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "pack.tti_gunpack.name": "§l\"Taran Tactical\" Gunpack",
+  "pack.tti_gunpack.desc": "Some cutting edge guns made by Taran Tactical\n§o*Please check your local and state laws before purchasing. If your order needs to be refunded due to compliance issues, there will be a 3% processing fee.",
+  "tti_gunpack.gun.tti_tr1": "TTI TR-1 Racing Rifle",
+  "tti_gunpack.gun.tti_tr9": "TTI TR-9 Racing SMG",
+  "tti_gunpack.gun.tlg19": "TLG19 Pistol",
+  "tti_gunpack.gun.g34_copperhead": "G34\"CopperHead\"",
+  "tti_gunpack.gun.g45_snake_eye": "G45\"Snake Eye\"",
+  "tti_gunpack.attachment.lpvo.name": "LPVO 1-6x Scope",
+  "tti_gunpack.attachment.muzzle_tti_mpx_compensator": "TTI MPX Compensator"
+}

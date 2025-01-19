@@ -1,0 +1,41 @@
+{
+  "model": "cib:gun/usp_geo",
+  "texture": "cib:gun/uv/usp",
+  "slot": "cib:gun/slot/usp",
+  "hud": "cib:gun/hud/usp",
+  "animation": "cib:usp",
+  "use_default_animation": "rifle",
+  "third_person_animation": "default",
+  "transform": {
+    "scale": {
+      "thirdperson": [0.6, 0.6, 0.6],
+      "ground": [0.6, 0.6, 0.6],
+      "fixed": [1.0, 1.0, 1.0]
+    }
+  },
+  "muzzle_flash": {
+    "texture": "tacz:flash/common_muzzle_flash",
+    "scale": 1
+  },
+  "shell": {
+    "initial_velocity": [5, 2, 1],
+    "random_velocity": [1, 1, 0.25],
+    "acceleration": [0.0, -10, 0.0],
+    "angular_velocity": [360, -1200, 90],
+    "living_time": 1.0
+  },
+  "sounds": {
+    "shoot": "cib:usp/usp_shoot",
+    "shoot_3p": "cib:usp/usp_shoot_3p",
+    "silence": "cib:usp/usp_silence",
+    "silence_3p": "cib:usp/usp_silence_3p",
+    "draw": "cib:usp/usp_draw",
+    "put_away": "cib:usp/usp_put_away",
+    "reload_empty": "cib:usp/usp_reload_empty",
+    "reload_tactical": "cib:usp/usp_reload_tactical",
+    "inspect": "cib:usp/usp_inspect",
+    "inspect_empty": "cib:usp/usp_inspect_empty",
+    "flesh_hit": "cib:flesh_hit",
+    "kill": "cib:kill"
+  }
+}

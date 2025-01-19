@@ -1,0 +1,6 @@
+{
+  "name": "classicr.attachment.muzzle_silencer_block.name",
+  "display": "classicr:muzzle_silencer_block_display",
+  "data": "classicr:muzzle_silencer_block_data",
+  "type": "muzzle"
+}

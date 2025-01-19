@@ -1,0 +1,8 @@
+{
+  "name": "ccrp.gun.m249_saw.name",
+  "display": "ccrp:m249_saw_display",
+  "data": "ccrp:m249_saw_data",
+  "tooltip": "ccrp.gun.m249_saw.desc",
+  "type": "mg",
+  "sort": 10
+}

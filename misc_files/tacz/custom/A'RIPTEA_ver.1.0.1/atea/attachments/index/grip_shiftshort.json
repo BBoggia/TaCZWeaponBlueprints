@@ -1,0 +1,7 @@
+{
+  "name": "atea.attachment.grip_shiftshort.name",
+  "tooltip": "atea.attachment.grip_shiftshort.desc",
+  "display": "atea:grip_shiftshort_display",
+  "data": "atea:grip_shiftshort_data",
+  "type": "grip"
+}

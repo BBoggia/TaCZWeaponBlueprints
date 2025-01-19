@@ -1,0 +1,32 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:gems/diamond"
+      },
+      "count": 13
+    },
+    {
+      "item": {
+        "tag": "forge:ingots/gold"
+      },
+      "count": 175
+    },
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 317
+    },
+    {
+      "item": {
+        "tag": "forge:rods/blaze"
+      },
+      "count": 11
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "lradd:ultimax100"
+  }
+}

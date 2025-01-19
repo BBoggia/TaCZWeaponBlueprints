@@ -1,0 +1,21 @@
+{
+  "pack.fibers.name": "Оружие Fibers для TACZ",
+  "pack.fibers.desc": "Пак оружия Fibers для TACZ, создан с преданностью и усилиями, чтобы добавить любимое оружие в Minecraft навсегда",
+
+  "fibers.gun.m55_rumbler.name": "M55 Рамблер",
+  "fibers.gun.ax94.name": "AN-94",
+  "fibers.gun.raygun.name": "§dРэй-ган",
+  "fibers.gun.renetti.name": "Ренетти (MW2019)",
+  "fibers.gun.msmc.name": "MSMC",
+  "fibers.gun.bal27.name": "BaL-27",
+  "fibers.gun.arx160.name": "ARX-160",
+
+  "fibers.ammo.raygun_projectile.name" : "§dБоеприпасы для Рэй-гана",
+
+  "fibers.gun.arx160.desc" : "ARX-160, любимый всеми, вдохновлен оружием из Call of Duty: Ghosts",
+  "fibers.gun.ax94.desc" : "Встречайте знаменитый AN-94 из Call of Duty: Black Ops 2",
+  "fibers.gun.raygun.desc" : "§dРэй-ган, известный по зомби-режиму Call of Duty, теперь в Minecraft",
+  "fibers.gun.bal27.desc" : "Настоящее оружие будущего — BaL-27",
+  "fibers.gun.msmc.desc" : "Скорострельный пистолет-пулемет из Call of Duty: Black Ops 2, который изначально появился в Индии",
+  "fibers.gun.renetti.desc" : "Ренетти из Call of Duty: Modern Warfare 2019, основанный на Beretta 92FS"
+}

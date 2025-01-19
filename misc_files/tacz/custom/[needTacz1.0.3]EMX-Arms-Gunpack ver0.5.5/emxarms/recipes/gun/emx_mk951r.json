@@ -1,0 +1,40 @@
+{
+//材料
+  "materials": [
+    {
+      "item": {
+//材料类型
+        "tag": "forge:gems/diamond"
+      },
+      "count": 8
+    },
+    {
+      "item": {
+//特定的某种材料
+        "item": "minecraft:copper_ingot"
+      },
+      "count": 125
+    },
+    {
+      "item": {
+//特定的某种材料
+        "item": "minecraft:lime_dye"
+      },
+      "count": 6
+    },
+    {
+      "item": {
+//特定的某种材料
+        "item": "minecraft:iron_ingot"
+      },
+      "count": 80
+    }
+  ],
+ //输出结果
+  "result": {
+ //类型
+    "type": "gun",
+//输出物品
+    "id": "emxarms:emx_mk951r"
+  }
+}

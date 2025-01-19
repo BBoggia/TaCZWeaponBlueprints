@@ -1,0 +1,403 @@
+buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        maven { url = "https://plugins.gradle.org/m2/" }
+        maven { url = 'https://maven.minecraftforge.net' }
+        maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
+    }
+    dependencies {
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '[6.0,6.2)', changing: true
+        classpath 'org.spongepowered:mixingradle:0.7-SNAPSHOT'
+    }
+}
+
+plugins {
+    id 'java'
+    id 'idea'
+    id 'maven-publish'
+    id 'net.minecraftforge.gradle' version '[6.0,6.2)'
+    id 'org.spongepowered.mixin' version '0.7.+'
+    // id 'org.parchmentmc.librarian.forgegradle' version '1.+'
+}
+
+
+version = mod_version
+group = mod_group_id
+
+base {
+    archivesName = mod_id
+}
+
+// Mojang ships Java 17 to end users in 1.18+, so your mod should target Java 17.
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+
+mixin {
+    add sourceSets.main, "/META-INF/${mod_id}.refmap.json"
+
+    config "${mod_id}.mixins.json"
+
+    // debug = true
+    // verbose = true
+}
+
+println "Java: ${System.getProperty 'java.version'}, JVM: ${System.getProperty 'java.vm.version'} (${System.getProperty 'java.vendor'}), Arch: ${System.getProperty 'os.arch'}"
+minecraft {
+    // The mappings can be changed at any time and must be in the following format.
+    // Channel:   Version:
+    // official   MCVersion             Official field/method names from Mojang mapping files
+    // parchment  YYYY.MM.DD-MCVersion  Open community-sourced parameter names and javadocs layered on top of official
+    //
+    // You must be aware of the Mojang license when using the 'official' or 'parchment' mappings.
+    // See more information here: https://github.com/MinecraftForge/MCPConfig/blob/master/Mojang.md
+    //
+    // Parchment is an unofficial project maintained by ParchmentMC, separate from MinecraftForge
+    // Additional setup is needed to use their mappings: https://parchmentmc.org/docs/getting-started
+    //
+    // Use non-default mappings at your own risk. They may not always work.
+    // Simply re-run your setup task after changing the mappings to update your workspace.
+    mappings channel: mapping_channel, version: mapping_version
+    //  mappings channel: 'parchment', version: '2023.09.03-1.20.1'
+
+    // When true, this property will have all Eclipse/IntelliJ IDEA run configurations run the "prepareX" task for the given run configuration before launching the game.
+    // In most cases, it is not necessary to enable.
+    // enableEclipsePrepareRuns = true
+    // enableIdeaPrepareRuns = true
+
+    // This property allows configuring Gradle's ProcessResources task(s) to run on IDE output locations before launching the game.
+    // It is REQUIRED to be set to true for this template to function.
+    // See https://docs.gradle.org/current/dsl/org.gradle.language.jvm.tasks.ProcessResources.html
+    copyIdeResources = true
+
+    // When true, this property will add the folder name of all declared run configurations to generated IDE run configurations.
+    // The folder name can be set on a run configuration using the "folderName" property.
+    // By default, the folder name of a run configuration is the name of the Gradle project containing it.
+    // generateRunFolders = true
+
+    // This property enables access transformers for use in development.
+    // They will be applied to the Minecraft artifact.
+    // The access transformer file can be anywhere in the project.
+    // However, it must be at "META-INF/accesstransformer.cfg" in the final mod jar to be loaded by Forge.
+    // This default location is a best practice to automatically put the file in the right place in the final jar.
+    // See https://docs.minecraftforge.net/en/latest/advanced/accesstransformers/ for more information.
+    // accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
+    // accessTransformer = project.file('src/main/resources/META-INF/accesstransformer.cfg')
+
+    // Default run configurations.
+    // These can be tweaked, removed, or duplicated as needed.
+    runs {
+        // applies to all the run configs below
+        configureEach {
+            workingDirectory project.file('run')
+
+            // Recommended logging data for a userdev environment
+            // The markers can be added/remove as needed separated by commas.
+            // "SCAN": For mods scan.
+            // "REGISTRIES": For firing of registry events.
+            // "REGISTRYDUMP": For getting the contents of all registries.
+            property 'forge.logging.markers', 'REGISTRIES'
+
+            // Recommended logging level for the console
+            // You can set various levels here.
+            // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
+            property 'forge.logging.console.level', 'debug'
+
+            mods {
+                "${mod_id}" {
+                    source sourceSets.main
+                }
+            }
+        }
+
+        client {
+            // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
+            property 'forge.enabledGameTestNamespaces', mod_id
+            
+            // EMI API is required for client-side mods
+            // property 'mixin.env.remapRefMap', 'true'
+            // property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+        }
+
+        server {
+            property 'forge.enabledGameTestNamespaces', mod_id
+            // property 'mixin.env.remapRefMap', 'true'
+            // property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+            // args '--nogui'
+        }
+
+        // This run config launches GameTestServer and runs all registered gametests, then exits.
+        // By default, the server will crash when no gametests are provided.
+        // The gametest system is also enabled by default for other run configs under the /test command.
+        gameTestServer {
+            property 'forge.enabledGameTestNamespaces', mod_id
+        }
+
+        data {
+            // example of overriding the workingDirectory set in configureEach above
+            workingDirectory project.file('run-data')
+
+            // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
+            args '--mod', mod_id, '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
+        }
+    }
+}
+
+sourceSets {
+    main {
+        ext.refMap = "/META-INF/${mod_id}.refmap.json"
+    }
+}
+
+// Include resources generated by data generators.
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+repositories {
+    // Put repositories for dependencies here
+    // ForgeGradle automatically adds the Forge maven and Maven Central for you
+
+    flatDir {
+        dir 'libs'
+    }
+
+    maven {
+        // Add curse maven to repositories
+        name = "Curse Maven"
+        url = "https://www.cursemaven.com"
+        content {
+            includeGroup "curse.maven"
+        }
+    }
+    maven {
+        url = "https://thedarkcolour.github.io/KotlinForForge/"
+    }
+    maven {
+        name = "FzzyMaven"
+        url = "https://maven.fzzyhmstrs.me/"
+    }
+    maven {
+        // location of the maven that hosts JEI files before January 2023
+        name = "Progwml6's maven"
+        url = "https://dvs1.progwml6.com/files/maven/"
+    }
+    maven {
+        // location of the maven that hosts JEI files since January 2023
+        name = "Jared's maven"
+        url = "https://maven.blamejared.com/"
+    }
+    maven {
+        name = "Roughly Enough Items"
+        url = "https://maven.shedaniel.me"
+    }
+    maven {
+        name = "EMI"
+        url = uri("https://maven.terraformersmc.com/")
+    }
+    maven {
+        // location of a maven mirror for JEI files, as a fallback
+        name = "ModMaven"
+        url = "https://modmaven.dev"
+    }
+}
+
+dependencies {
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+    annotationProcessor "net.minecraftforge:forge:${minecraft_version}-${forge_version}:userdev"
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+
+    implementation 'org.apache.commons:commons-math3:3.6.1'
+
+    implementation fg.deobf('curse.maven:timeless-and-classics-zero-1028108:5722050-sources-5529578') {
+        exclude group: 'org.apache.commons', module: 'commons-math3'
+    }
+
+    // implementation fg.deobf("me.shedaniel.cloth:basic-math:+")
+    // implementation fg.deobf("me.shedaniel.cloth:cloth-config-forge:${cloth_config_version}")
+
+    implementation fg.deobf("me.fzzyhmstrs:fzzy_config:${fzzyConfigVersion}+forge")
+    implementation("thedarkcolour:kotlinforforge:4.11.0")
+
+    // Forge (see below block as well if you use Forge Gradle)
+	// compileOnly fg.deobf("dev.emi:emi-forge:${emi_version}:api")
+	// runtimeOnly fg.deobf("dev.emi:emi-forge:${emi_version}") 
+
+    // implementation fg.deobf("curse.maven:balm-531761:5644976")
+
+    // implementation fg.deobf("curse.maven:libipn-679177:5208511")
+    // implementation fg.deobf("curse.maven:inventory-profiles-next-495267:5806368")
+
+    // implementation fg.deobf("curse.maven:async-locator-625069:4603343")
+
+    if (false) {
+        implementation fg.deobf("curse.maven:when-dungeons-arise-442508:4983862")
+        implementation fg.deobf("curse.maven:yungs-api-421850:5769971")
+        implementation fg.deobf("curse.maven:yungs-better-dungeons-510089:5271360")
+        implementation fg.deobf("curse.maven:yungs-better-mineshafts-forge-389665:4769063")
+        implementation fg.deobf("curse.maven:yungs-better-desert-temples-631016:4769439")
+        implementation fg.deobf("curse.maven:yungs-better-nether-fortresses-817651:5193465")
+        implementation fg.deobf("curse.maven:yungs-better-jungle-temples-897669:5331760")
+        implementation fg.deobf("curse.maven:yungs-better-ocean-monuments-689238:4883003")
+        implementation fg.deobf("curse.maven:yungs-better-strongholds-465575:4769083")
+        implementation fg.deobf("curse.maven:yungs-better-witch-huts-631401:4769489")
+        implementation fg.deobf("curse.maven:yungs-extras-480006:4769514")
+        implementation fg.deobf("curse.maven:lithostitched-936015:5960783")
+        implementation fg.deobf("curse.maven:choicetheorems-overhauled-village-623908:5893957")
+        
+        implementation fg.deobf("curse.maven:endremastered-404183:5598990")
+        implementation fg.deobf("curse.maven:supermartijn642s-core-lib-454372:5668859")
+        implementation fg.deobf("curse.maven:formations-915115:5929305")
+        implementation fg.deobf("curse.maven:formations-overworld-915324:5550414")
+        implementation fg.deobf("curse.maven:formations-nether-918840:5550420")
+        implementation fg.deobf("curse.maven:library-ferret-forge-532727:4601234")
+        implementation fg.deobf("curse.maven:awesome-dungeon-the-end-forge-575406:4601238")
+        implementation fg.deobf("curse.maven:awesome-dungeon-nether-forge-566649:4601246")
+        implementation fg.deobf("curse.maven:bygone-nether-576124:4747444")
+        implementation fg.deobf("curse.maven:curios-309927:5843594")
+        implementation fg.deobf("curse.maven:lionfish-api-1001614:5922047")
+        implementation fg.deobf("curse.maven:lendercataclysm-551586:5924796")
+        implementation fg.deobf("curse.maven:dungeon-crawl-324973:4612224")
+        implementation fg.deobf("curse.maven:when-dungeons-arise-seven-seas-953637:4981380")
+        implementation fg.deobf("curse.maven:ametrin-670599:4582509")
+        implementation fg.deobf("curse.maven:structure-gel-api-378802:5278429")
+        implementation fg.deobf("curse.maven:dungeonsenhanced-480715:5893371")
+        implementation fg.deobf("curse.maven:dungeons-plus-377794:5026070")
+        implementation fg.deobf("curse.maven:dungeons-plus-377794:5026070")
+
+
+        implementation fg.deobf("curse.maven:underground-villages-stoneholm-1123746:5887917")
+        implementation fg.deobf("curse.maven:ruins-569737:6017822")
+        implementation fg.deobf("curse.maven:dungeon-and-taverns-853794:5206484")
+        // Supports Mo' Structures when has support for NeoForge
+        implementation fg.deobf("curse.maven:monobank-817257:5086245")
+
+        implementation fg.deobf("curse.maven:create-328085:5838779")
+        implementation fg.deobf("curse.maven:selene-499980:6023899")
+        implementation fg.deobf("curse.maven:supplementaries-412082:5948497")
+        implementation fg.deobf("curse.maven:zeta-968868:5597406")
+        implementation fg.deobf("curse.maven:quark-243121:5594847")
+        implementation fg.deobf("curse.maven:integrated-api-817709:5241489")
+        implementation fg.deobf("curse.maven:idas-605375:6021141")
+        implementation fg.deobf("curse.maven:integrated-stronghold-815548:5178479")
+        implementation fg.deobf("curse.maven:integrated-villages-661376:6021241")
+
+        implementation fg.deobf("curse.maven:good-ending-690161:5024405")
+        implementation fg.deobf("curse.maven:geckolib-388172:6027567")
+        implementation fg.deobf("curse.maven:the-graveyard-forge-531188:5114579")
+        // implementation "curse.maven:immersive-structures-637201:4579791"
+        implementation fg.deobf("libs:imst:2.1.0")
+        // implementation fg.deobf("curse.maven:infernal-expansion-395078:4002091")
+        implementation fg.deobf("curse.maven:cristel-lib-856996:5869180")
+        implementation fg.deobf("curse.maven:towns-and-towers-626761:4923828")
+
+        implementation fg.deobf("curse.maven:valhelsia-core-416935:5189548")
+        implementation fg.deobf("curse.maven:valhelsia-structures-347488:5195707")
+        implementation fg.deobf("curse.maven:wares-839158:5726352")
+        implementation fg.deobf("curse.maven:expanded-ecosphere-490686:5004493")
+        implementation fg.deobf("curse.maven:william-wythers-overhauled-overworld-921022:4793728")
+
+        // implementation fg.deobf("curse.maven:unstructured-575348:4443672")
+
+        implementation fg.deobf("curse.maven:underground-bunkers-961418:5727027")
+        // implementation "curse.maven:towers-of-the-wild-modded-859365:5239660"
+        implementation fg.deobf("libs:totw_modded-forge:1.20.1-1.0.5")
+        implementation fg.deobf("curse.maven:towers-of-the-wild-additions-560091:4666394")
+        implementation fg.deobf("curse.maven:the-lost-castle-687118:4614797")
+        implementation fg.deobf("curse.maven:it-takes-a-pillage-635843:4981343")
+    }
+
+    // implementation fg.deobf("curse.maven:packet-fixer-689467:5416166")
+
+    // compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}-common-api:${jei_version}")
+    // compileOnly(fg.deobf("mezz.jei:jei-${minecraft_version}-forge-api:${jei_version}"))
+    // runtimeOnly fg.deobf("mezz.jei:jei-${minecraft_version}-forge:${jei_version}")
+
+    // implementation fg.deobf("curse.maven:tacz-gucci-vuitton-attachments-1103436:5728618") {
+    //     exclude group: 'org.apache.commons', module: 'commons-math3'
+    // }
+
+    // runtimeOnly fg.deobf("curse.maven:fibers-guns-pack-for-tacz-1062174:5746600") {
+    //     exclude group: 'org.apache.commons', module: 'commons-math3'
+    // }
+
+    // implementation fg.deobf("curse.maven:timeless-and-classics-guns-lesraisins-append-pack-931523:5728516") {
+    //     exclude group: 'org.apache.commons', module: 'commons-math3'
+    // }
+
+    // runtimeOnly fg.deobf("curse.maven:hoths-tacz-attributes-1091062:5741059") {
+    //     exclude group: 'org.apache.commons', module: 'commons-math3'
+    // }
+
+    configurations.all {
+        resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+            if (details.requested.group == 'org.apache.commons' && details.requested.name == 'commons-math3') {
+                details.useVersion '3.6.1'
+            }
+        }
+    }
+}
+
+tasks.named('processResources', ProcessResources).configure {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            forge_version          : forge_version,
+            forge_version_range    : forge_version_range,
+            loader_version_range   : loader_version_range,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+            mod_authors            : mod_authors,
+            mod_description        : mod_description,
+    ]
+
+    inputs.properties replaceProperties
+
+    filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {
+        expand replaceProperties + [project: project]
+    }
+
+    dependsOn ':compileJava'
+    from("$buildDir/classes/java/main") {
+        include "${mod_id}.refmap.json"
+        into 'META-INF'
+    }
+}
+
+tasks.named('jar', Jar).configure {
+    manifest {
+        attributes([
+                'Specification-Title'     : mod_id,
+                'Specification-Vendor'    : mod_authors,
+                'Specification-Version'   : '1', // We are version 1 of ourselves
+                'Implementation-Title'    : project.name,
+                'Implementation-Version'  : project.jar.archiveVersion,
+                'Implementation-Vendor'   : mod_authors,
+                'Implementation-Timestamp': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
+
+                // Add this line to specify your Mixin config file
+                'MixinConfigs'            : "${mod_id}.mixins.json",
+        ])
+    }
+
+    // This is the preferred method to reobfuscate your jar file
+    finalizedBy 'reobfJar'
+}
+
+// Example configuration to allow publishing using the maven-publish plugin
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            artifact jar
+        }
+    }
+    repositories {
+        maven {
+            url "file://${project.projectDir}/mcmodsrepo"
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
+}

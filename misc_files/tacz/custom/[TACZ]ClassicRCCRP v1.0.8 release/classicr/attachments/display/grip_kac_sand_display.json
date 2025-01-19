@@ -1,0 +1,9 @@
+{
+  "slot": "classicr:attachment/slot/grip_kac_sand",
+  "model": "classicr:attachment/grip_kac_sand",
+  "texture": "classicr:attachment/uv/grip_kac_sand",
+  "sounds": {
+    "install": "tacz:attachments/attachment_general_b",
+    "uninstall": "tacz:attachments/attachment_general_uninstall"
+  }
+}

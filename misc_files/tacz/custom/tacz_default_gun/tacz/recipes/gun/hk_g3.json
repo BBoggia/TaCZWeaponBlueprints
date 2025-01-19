@@ -1,0 +1,29 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/gold"
+      },
+      "count": 44
+    },
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 126
+    },
+    {
+      "item": {
+        "tag": "forge:gems/quartz"
+      },
+      "count": 10
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "tacz:hk_g3",
+    "attachments": {
+      "stock": "tacz:oem_stock_tactical"
+    }
+  }
+}

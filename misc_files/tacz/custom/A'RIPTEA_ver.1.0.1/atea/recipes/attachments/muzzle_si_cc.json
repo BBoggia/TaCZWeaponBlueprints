@@ -1,0 +1,14 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 33
+    }
+  ],
+  "result": {
+    "type": "attachment",
+    "id": "atea:muzzle_si_cc"
+  }
+}

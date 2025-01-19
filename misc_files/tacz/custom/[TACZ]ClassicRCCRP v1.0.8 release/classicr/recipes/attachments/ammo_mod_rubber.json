@@ -1,0 +1,31 @@
+{
+  // 材料
+  "materials": [
+    {
+      "item": {
+        // 材料类型
+        "tag": "forge:gems/lapis"
+      },
+      "count": 6
+    },
+    {
+      "item": {
+        "tag": "forge:dusts/redstone"
+      },
+      "count": 4
+    },
+    {
+      "item": {
+        "tag": "forge:gems/quartz"
+      },
+      "count": 3
+    }
+  ],
+  // 输出结果
+  "result": {
+    // 类型，枪械的类型固定为 gun
+    "type": "attachment",
+    // 输出的枪械的 id
+    "id": "classicr:ammo_mod_rubber"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 900
+    },
+    {
+      "item": {
+        "tag": "forge:ingots/gold"
+      },
+      "count": 34
+    },
+    {
+      "item": {
+        "tag": "forge:gems/quartz"
+      },
+      "count": 29
+    },
+    {
+      "item": {
+        "tag": "forge:gems/diamond"
+      },
+      "count": 10
+    },
+    {
+      "item": {
+        "tag": "forge:ingots/netherite"
+      },
+      "count": 6
+    },
+    {
+      "item": {
+        "tag": "forge:rods/blaze"
+      },
+      "count": 7
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "cib:mini"
+  }
+}

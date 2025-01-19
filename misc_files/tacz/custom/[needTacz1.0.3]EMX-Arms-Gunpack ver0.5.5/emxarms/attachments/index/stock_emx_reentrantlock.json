@@ -1,0 +1,7 @@
+{
+  "name": "emxarms.attachment.stock_emx_reentrantlock.name",
+  "tooltip": "emxarms.attachment.stock_emx_reentrantlock.tooltip",
+  "display": "emxarms:stock_emx_reentrantlock_display",
+  "data": "emxarms:stock_emx_reentrantlock_data",
+  "type": "stock"
+}

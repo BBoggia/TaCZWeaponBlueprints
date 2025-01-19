@@ -1,0 +1,24 @@
+| 4.6x30mm                 | 4.30  
+| 5.7x28mm                 | 4.18  
+| 9x19mm                   | 3.93  
+| .45 ACP                  | 3.86  
+| .357 Magnum              | 5.45  
+| .50 AE                   | 8.74  
+| 5.56x45mm NATO           | 8.45  
+| 5.8x42mm                 | 8.58  
+| 7.62x39mm                | 8.96  
+| 7.92x33mm Kurz           | 8.17  
+| .300 AAC Blackout        | 8.74  
+| 6.5x50mm Arisaka         | 9.68  
+| 7.62x51mm NATO (.308 Win)| 10.86 
+| 7.62x54mmR               | 11.10 
+| 7.92x57mm Mauser         | 11.10 
+| .303 British             | 10.45 
+| 6.8x51mm (.277 Fury)     | 12.14 
+| .30-06 Springfield       | 10.86 
+| .458 SOCOM               | 10.64 
+| .338 Lapua Magnum        | 13.04 
+| .416 Barrett             | 15.17 
+| .50 BMG                  | 16.02 
+| **12 Gauge (Buckshot)**  | **9.96
+| **12 Gauge (Slug)**      | **9.68

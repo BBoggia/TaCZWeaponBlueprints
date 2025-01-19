@@ -1,0 +1,8 @@
+{
+  "name": "ccrp.gun.x95r.name",
+  "display": "ccrp:x95r_display",
+  "data": "ccrp:x95r_data",
+  "type": "rifle",
+  "tooltip": "ccrp.gun.x95r.desc",
+  "sort": 10
+}

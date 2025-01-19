@@ -1,0 +1,9 @@
+{
+  "name": "cib.gun.fal.name",
+  "display": "cib:fal_display",
+  "data": "cib:fal_data",
+  "tooltip": "cib.gun.fal.desc",
+  "type": "rifle",
+  "item_type": "modern_kinetic",
+  "sort": 10
+}

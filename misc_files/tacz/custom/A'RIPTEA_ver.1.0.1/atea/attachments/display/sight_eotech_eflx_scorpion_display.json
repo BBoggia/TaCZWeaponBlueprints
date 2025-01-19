@@ -1,0 +1,19 @@
+{
+  "slot": "atea:attachment/slot/sight_eotech_eflx_scorpion",
+  "model": "atea:attachment/sight_eotech_eflx_scorpion_geo",
+  "texture": "atea:attachment/uv/sight_eotech_eflx_scorpion",
+  "lod": {
+    "model": "atea:attachment/lod/sight_eotech_eflx_scorpion_lod",
+    "texture": "atea:attachment/lod/sight_eotech_eflx_lod"
+  },
+  "zoom": [
+    1.2
+  ],
+  "scope": false,
+  "sight": true,
+  "fov": 70.0,
+  "sounds": {
+    "install": "tacz:attachments/scope_general_e",
+    "uninstall": "tacz:attachments/scope_general_e"
+  }
+}

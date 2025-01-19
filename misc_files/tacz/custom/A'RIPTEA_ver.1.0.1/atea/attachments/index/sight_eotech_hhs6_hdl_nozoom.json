@@ -1,0 +1,7 @@
+{
+  "name": "atea.attachment.sight_eotech_hhs6_hdl_nozoom.name",
+  "tooltip": "atea.attachment.sight_eotech_hhs6_hdl_nozoom.desc",
+  "display": "atea:sight_eotech_hhs6_hdl_nozoom_display",
+  "data": "atea:sight3_medium_data",
+  "type": "scope"
+}

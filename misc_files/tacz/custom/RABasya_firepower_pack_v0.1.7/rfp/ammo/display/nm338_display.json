@@ -1,0 +1,29 @@
+{
+  "model":"rfp:ammo/nm338",
+  "texture":"rfp:ammo/uv/nm338",
+  "slot": "rfp:ammo/slot/nm338",
+  "shell":{
+    "model":"rfp:shell/nm338_shell",
+    "texture":"rfp:shell/nm338_shell"
+  },
+  "tracer_color": "#ef3846",
+  "transform": {
+    "scale": {
+      "thirdperson": [
+        0.6,
+        0.6,
+        0.6
+      ],
+      "ground": [
+        0.6,
+        0.6,
+        0.6
+      ],
+      "fixed": [
+        1.2,
+        1.2,
+        1.2
+      ]
+    }
+  }
+}

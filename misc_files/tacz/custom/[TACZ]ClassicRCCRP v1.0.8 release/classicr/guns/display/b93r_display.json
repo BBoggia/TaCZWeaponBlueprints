@@ -1,0 +1,54 @@
+{
+  "model": "classicr:gun/b93r_geo",
+  "texture": "classicr:gun/uv/b93r",
+  "lod": {
+    "model": "classicr:gun/lod/b93r",
+    "texture": "classicr:gun/lod/b93r"
+  },
+  "hud": "classicr:gun/hud/b93r",
+  "slot": "classicr:gun/slot/b93r",
+  "animation": "classicr:b93r",
+  "use_default_animation": "pistol",
+  "player_animator_3rd": "tacz:pistol_default.player_animation",
+  "transform": {
+    "scale": {
+      "thirdperson": [0.6, 0.6, 0.6],
+      "ground": [0.6, 0.6, 0.6],
+      "fixed": [1.2, 1.2, 1.2]
+    }
+  },
+  "shell": {
+    "initial_velocity": [6.0, 5.0, 0.5],
+    "random_velocity": [2, 1.5, 0.25],
+    "acceleration": [0.0, -20, 0.0],
+    "angular_velocity": [360, -720, 90],
+    "living_time": 1.0
+  },
+  "muzzle_flash": {
+    "texture": "tacz:flash/common_muzzle_flash",
+    "scale": 0.55
+  },
+  "sounds": {
+    "shoot": "classicr:b93r/b93r_fire",
+    "shoot_3p": "tacz:cz75/cz75_shoot_3p",
+    "silence": "classicr:b93r/b93r_fire_s",
+    "silence_3p": "tacz:cz75/cz75_silence_3p",
+    "dry_fire": "tacz:dry_fire",
+    "fire_select": "tacz:fire_select",
+    "head_hit": "classicr:head_hit",
+    "flesh_hit": "classicr:flesh_hit",
+    "kill": "classicr:kill"
+  },
+  "offhand_show": {
+    "pos": [4, 13, -1],
+    "rotate": [-90, -35, 90],
+    "scale": [0.5, 0.5, 0.5]
+  },
+  "hotbar_show": {
+    "0": {
+      "pos": [-5, 13, -1],
+      "rotate": [-90, -35, 90],
+      "scale": [0.5, 0.5, 0.5]
+    }
+  }
+}

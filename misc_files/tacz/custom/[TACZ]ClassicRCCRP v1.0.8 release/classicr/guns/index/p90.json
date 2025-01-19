@@ -1,0 +1,8 @@
+{
+  "name": "classicr.gun.p90.name",
+  "display": "classicr:p90_display",
+  "data": "classicr:p90_data",
+  "tooltip": "classicr.gun.p90.desc",
+  "type": "smg",
+  "sort": 10
+}

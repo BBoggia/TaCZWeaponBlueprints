@@ -1,0 +1,8 @@
+{
+  "name": "classicr.gun.minigun.name",
+  "display": "classicr:minigun_display",
+  "data": "classicr:minigun_data",
+  "tooltip": "classicr.gun.minigun.desc",
+  "type": "mg",
+  "sort": 10
+}

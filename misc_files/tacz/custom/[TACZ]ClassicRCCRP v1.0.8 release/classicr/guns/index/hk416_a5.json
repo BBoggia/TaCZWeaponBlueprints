@@ -1,0 +1,8 @@
+{
+  "name": "classicr.gun.hk416_a5.name",
+  "display": "classicr:hk416_a5_display",
+  "data": "classicr:hk416_a5_data",
+  "type": "rifle",
+  "tooltip": "classicr.gun.hk416_a5.desc",
+  "sort": 10
+}

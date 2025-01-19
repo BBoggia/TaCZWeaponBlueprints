@@ -1,0 +1,7 @@
+{
+  "name": "atea.attachment.buttstock_pt1s.name",
+  "tooltip": "atea.attachment.buttstock_pt1s.desc",
+  "display": "atea:buttstock_pt1s_display",
+  "data": "atea:buttstock_pt1s_data",
+  "type": "stock"
+}

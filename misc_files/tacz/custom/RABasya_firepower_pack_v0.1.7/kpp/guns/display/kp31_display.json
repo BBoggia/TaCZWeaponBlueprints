@@ -1,0 +1,51 @@
+{
+  "model": "kpp:gun/kp31_geo",
+  "texture": "kpp:gun/uv/kp31",
+  "hud": "kpp:gun/hud/kp31",
+  "slot": "kpp:gun/slot/kp31",
+  "animation": "kpp:kp31",
+  "use_default_animation": "rifle",
+  "player_animator_3rd": "tacz:rifle_default.player_animation",
+  "transform": {
+    "scale": {
+      "thirdperson": [0.6, 0.6, 0.6],
+      "ground": [0.6, 0.6, 0.6],
+      "fixed": [1.2, 1.2, 1.2]
+    }
+  },
+  "shell": {
+    "initial_velocity": [6.0, 5.0, 0.5],
+    "random_velocity": [2, 1.5, 0.25],
+    "acceleration": [0.0, -20, 0.0],
+    "angular_velocity": [360, -720, 90],
+    "living_time": 1.0
+  },
+  "muzzle_flash": {
+    "texture": "tacz:flash/common_muzzle_flash",
+    "scale": 0.55
+  },
+  "sounds": {
+    "shoot": "kpp:kp31/shoot",
+    "shoot_3p": "kpp:kp31/shoot_3p",
+    "silence": "tacz:cz75/cz75_silence",
+    "silence_3p": "tacz:cz75/cz75_silence_3p",
+    "draw": "tacz:ump45/ump45_draw",
+    "reload_empty": "tacz:ump45/ump45_reload_empty",
+    "reload_tactical": "tacz:ump45/ump45_reload_tactical",
+    "inspect": "tacz:ump45/ump45_inspect_empty",
+    "inspect_empty": "tacz:ump45/ump45_inspect",
+    "put_away": "tacz:ump45/ump45_put_away"
+  },
+  "offhand_show": {
+    "pos": [4, 13, -1],
+    "rotate": [-90, -35, 90],
+    "scale": [0.5, 0.5, 0.5]
+  },
+  "hotbar_show": {
+    "0": {
+      "pos": [-5, 13, -1],
+      "rotate": [-90, -35, 90],
+      "scale": [0.5, 0.5, 0.5]
+    }
+  }
+}

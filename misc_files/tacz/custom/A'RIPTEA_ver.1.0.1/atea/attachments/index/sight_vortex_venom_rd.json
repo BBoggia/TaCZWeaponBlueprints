@@ -1,0 +1,7 @@
+{
+  "name": "atea.attachment.sight_vortex_venom_rd.name",
+  "tooltip": "atea.attachment.sight_vortex_venom_rd.desc",
+  "display": "atea:sight_vortex_venom_rd_display",
+  "data": "atea:sight0_micro_data",
+  "type": "scope"
+}

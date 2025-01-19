@@ -1,0 +1,53 @@
+{
+  "model": "fibers:gun/m1216_geo",
+  "texture": "fibers:gun/uv/m1216",
+  "lod": {
+    "model": "fibers:gun/lod/m1216",
+    "texture": "fibers:gun/lod/m1216"
+  },
+  "hud": "fibers:gun/hud/m1216",
+  "slot": "fibers:gun/slot/m1216",
+  "animation": "fibers:m1216",
+  "use_default_animation": "rifle",
+  "transform": {
+    "scale": {
+      "thirdperson": [0.6, 0.6, 0.6],
+      "ground": [0.6, 0.6, 0.6],
+      "fixed": [1.2, 1.2, 1.2]
+    }
+  },
+  "muzzle_flash": {
+    "texture": "tacz:flash/common_muzzle_flash",
+    "scale": 1.5
+  },
+  "sounds": {
+    "reload_empty": "fibers:m1216/m1216_reload_empty",
+    "reload_tactical": "fibers:m1216/m1216_reload_tactical",
+    "inspect": "fibers:m1216/m1216_inspect",
+    "inspect_empty": "fibers:m1216/m1216_inspect_empty",
+    "draw": "fibers:m1216/m1216_draw",
+    "shoot": "fibers:m1216/m1216_shoot",
+    "shoot_3p": "fibers:m1216/m1216_shoot_3p",
+    "silence": "fibers:m1216/m1216_silence",
+    "silence_3p": "fibers:m1216/m1216_silence_3p",
+    "bolt": "fibers:m1216/m1216_bolt",
+    "put_away": "fibers:m1216/m1216_put_away",
+    "melee_push": "fibers:melee_stock/melee_stock_02",
+    "head_hit": "fibers:head_hit",
+    "flesh_hit": "fibers:flesh_hit",
+    "kill": "fibers:kill",
+    "melee_stock": "fibers:melee_stock/melee_stock_03"
+  },
+  "offhand_show": {
+    "pos": [-2, 20, 4],
+    "rotate": [0, 0, 45],
+    "scale": [0.5, 0.5, 0.5]
+  },
+  "hotbar_show": {
+    "0": {
+      "pos": [-4, 26, 3],
+      "rotate": [-90, -5, -90],
+      "scale": [0.5, 0.5, 0.5]
+    }
+  }
+}

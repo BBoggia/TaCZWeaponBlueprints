@@ -1,0 +1,9 @@
+{
+  "name": "cib.gun.r8.name",
+  "display": "cib:r8_display",
+  "data": "cib:r8_data",
+  "type": "pistol",
+  "tooltip": "cib.gun.r8.desc",
+  "item_type": "modern_kinetic",
+  "sort": 10
+}

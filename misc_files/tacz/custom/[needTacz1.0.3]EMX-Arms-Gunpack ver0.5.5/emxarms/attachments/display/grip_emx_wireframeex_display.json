@@ -1,0 +1,11 @@
+{
+  "slot": "emxarms:attachment/slot/grip_emx_wireframeex",
+  // 配件的默认模型，不可为空
+  "model": "emxarms:attachment/grip_emx_wireframeex_geo",
+  // 配件默认模型使用的材质，不可为空
+  "texture": "emxarms:attachment/uv/grip_emx_wireframeex",
+  "sounds": {
+    "install": "tacz:attachments/laser_general",
+    "uninstall": "tacz:attachments/attachment_general_uninstall"
+  }
+}

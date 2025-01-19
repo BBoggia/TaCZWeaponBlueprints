@@ -1,0 +1,9 @@
+{
+  "slot": "emxarms:attachment/slot/muzzle_emx_encapsulationse",
+  "model": "emxarms:attachment/muzzle_emx_encapsulationse_geo",
+  "texture": "emxarms:attachment/uv/emx_encapsulation",
+  "sounds": {
+    "install": "emxarms:attachments/emxsystemload",
+    "uninstall": "emxarms:attachments/emxsystemout"
+  }
+}

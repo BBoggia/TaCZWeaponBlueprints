@@ -1,0 +1,143 @@
+{
+  "ammo": "tacz:9mm",
+  "ammo_amount": 17,
+  "extended_mag_ammo_amount": [
+    25,
+    30,
+    35
+  ],
+  "bolt": "closed_bolt",
+  "rpm": 900,
+  "bullet": {
+    "life": 1,
+    "bullet_amount": 1,
+    "damage": 4.93,
+    "tracer_count_interval": 0,
+    "extra_damage": {
+      "armor_ignore": 0.1,
+      "head_shot_multiplier": 1.5,
+      "damage_adjust": [
+        {
+          "distance": 0.5,
+          "damage": 4.93
+        },
+        {
+          "distance": 10,
+          "damage": 4.11
+        },
+        {
+          "distance": 20,
+          "damage": 3.56
+        },
+        {
+          "distance": 30,
+          "damage": 3.01
+        },
+        {
+          "distance": "infinite",
+          "damage": 2.46
+        }
+      ]
+    },
+    "speed": 240,
+    "gravity": 0.0245,
+    "knockback": 0,
+    "friction": 0.01,
+    "ignite": false,
+    "pierce": 1
+  },
+  "reload": {
+    "type": "magazine",
+    "feed": {
+      "empty": 2.17,
+      "tactical": 1.75
+    },
+    "cooldown": {
+      "empty": 3,
+      "tactical": 2.5
+    }
+  },
+  "draw_time": 0.3,
+  "put_away_time": 0.43,
+  "aim_time": 0.15,
+  "sprint_time": 0.2,
+  "fire_mode": [
+    "semi",
+    "burst"
+  ],
+  "burst_data": {
+    "continuous_shoot": false,
+    "count": 3,
+    "bpm": 900,
+    "min_interval": 0.3
+  },
+  "recoil": {
+    "pitch": [
+      {
+        "time": 0,
+        "value": [
+          0.2,
+          0.2
+        ]
+      },
+      {
+        "time": 0.3,
+        "value": [
+          0.2,
+          0.2
+        ]
+      },
+      {
+        "time": 0.5,
+        "value": [
+          -0.07,
+          -0.07
+        ]
+      },
+      {
+        "time": 0.65,
+        "value": [
+          0,
+          0
+        ]
+      }
+    ],
+    "yaw": [
+      {
+        "time": 0,
+        "value": [
+          0.07,
+          0.15
+        ]
+      },
+      {
+        "time": 0.3,
+        "value": [
+          0.07,
+          0.15
+        ]
+      },
+      {
+        "time": 0.5,
+        "value": [
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  "inaccuracy": {
+    "stand": 1.5,
+    "move": 2,
+    "sneak": 0.7,
+    "lie": 0.3,
+    "aim": 0.1
+  },
+  "allow_attachment_types": [
+    "scope",
+    "stock",
+    "grip",
+    "muzzle",
+    "extended_mag"
+  ]
+}

@@ -1,0 +1,52 @@
+{
+//材料
+  "materials": [
+    {
+      "item": {
+//材料类型
+        "tag": "forge:gems/diamond"
+      },
+      "count": 16
+    },
+    {
+      "item": {
+//特定的某种材料
+        "item": "minecraft:copper_ingot"
+      },
+      "count": 200
+    },
+	{
+      "item": {
+//特定的某种材料
+        "item": "minecraft:netherite_scrap"
+      },
+      "count": 16
+    },
+    {
+      "item": {
+//特定的某种材料
+        "item": "minecraft:lime_dye"
+      },
+      "count": 10
+    },
+    {
+      "item": {
+//特定的某种材料
+        "item": "minecraft:iron_ingot"
+      },
+      "count": 320
+    }
+  ],
+ //输出结果
+  "result": {
+ //类型
+    "type": "gun",
+//输出物品
+    "id": "emxarms:emx_pmg90",
+	"attachments": {
+       // 配件类型：配件 id
+       "scope": "emxarms:sight_emx_array",
+	   "extended_mag": "emxarms:emx_lightweight_mag_2"
+    }
+  }
+}

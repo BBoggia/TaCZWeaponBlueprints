@@ -1,0 +1,4 @@
+# Don't change this! Version used to track needed updates.
+version = 0
+# Enable or disable debug mode
+debugMode = false

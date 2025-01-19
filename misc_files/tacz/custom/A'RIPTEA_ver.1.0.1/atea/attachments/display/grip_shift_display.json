@@ -1,0 +1,9 @@
+{
+  "slot": "atea:attachment/slot/grip_shift",
+  "model": "atea:attachment/grip_shift_geo",
+  "texture": "atea:attachment/uv/grip_shift",
+  "sounds": {
+    "install": "tacz:attachments/attachment_general_b",
+    "uninstall": "tacz:attachments/attachment_general_uninstall"
+  }
+}

@@ -1,0 +1,8 @@
+[
+    { "name": "RPG-7", "score": 0.004, "id": "tacz:rpg7"},
+    { "name": "MGL 40mm Grenade Launcher", "score": 0.008407, "id": "classicr:mgl_40mm"},
+    { "name": "M202", "score": 0.02016, "id": "lradd:m202"},
+    { "name": "Barrett M82A1", "score": 0.040728, "id": "classicr:m82a2"},
+    { "name": "M95 .50 Cal Anti-Material", "score": 0.042773, "id": "tacz:m95"},
+    { "name": "M134 Minigun", "score": 0.067172, "id": "classicr:minigun"}
+]

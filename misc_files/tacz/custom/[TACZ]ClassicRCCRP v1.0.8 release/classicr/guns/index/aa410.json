@@ -1,0 +1,8 @@
+{
+  "name": "classicr.gun.aa410.name",
+  "display": "classicr:aa410_display",
+  "data": "classicr:aa410_data",
+  "tooltip": "classicr.gun.aa410.desc",
+  "type": "shotgun",
+  "sort": 10
+}

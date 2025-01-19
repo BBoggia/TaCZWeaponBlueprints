@@ -1,0 +1,19 @@
+{
+  "weight": 0.1,
+  "ads": {
+    // 加数（多个配件的数值相加，作为第一个乘区）
+    "addend": 0.05
+  },
+  "inaccuracy": {
+    "multiplier": 0.8
+  },
+  "aim_inaccuracy": {
+    "multiplier": 0.8
+  },
+  "rpm": {
+    "multiplier": 0.85
+//  },
+//   "sprint_time": {
+//    "multiplier": 1.85
+  }
+}

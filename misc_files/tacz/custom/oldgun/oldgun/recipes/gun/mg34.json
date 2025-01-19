@@ -1,0 +1,38 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 291
+    },
+    {
+      "item": {
+        "tag": "forge:ingots/gold"
+      },
+      "count": 26
+    },
+    {
+      "item": {
+        "tag": "forge:gems/quartz"
+      },
+      "count": 31
+    },
+    {
+      "item": {
+        "tag": "forge:gems/diamond"
+      },
+      "count": 5
+    },
+    {
+      "item": {
+        "tag": "forge:rods/blaze"
+      },
+      "count": 3
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "oldgun:mg34"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/gold"
+      },
+      "count": 29
+    },
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 89
+    },
+    {
+      "item": {
+        "tag": "forge:gems/quartz"
+      },
+      "count": 21
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "lradd:mk47"
+  }
+}

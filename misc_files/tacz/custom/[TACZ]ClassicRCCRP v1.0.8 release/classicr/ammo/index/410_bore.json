@@ -1,0 +1,6 @@
+{
+  "name": "classicr.ammo.410_bore.name",
+  "display": "classicr:410_bore_display",
+  // 堆叠数量
+  "stack_size": 60
+}

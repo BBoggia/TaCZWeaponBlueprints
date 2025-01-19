@@ -1,0 +1,9 @@
+{
+  "name": "cib.gun.usp.name",
+  "display": "cib:usp_display",
+  "data": "cib:usp_data",
+  "type": "pistol",
+  "tooltip": "cib.gun.usp.desc",
+  "item_type": "modern_kinetic",
+  "sort": 10
+}

@@ -1,0 +1,11 @@
+{
+	"weight": 0.2,
+	"recoil": {
+		"pitch": {
+			"percent": -0.25
+		},
+		"yaw": {
+			"percent": -0.25
+		}
+	}
+}

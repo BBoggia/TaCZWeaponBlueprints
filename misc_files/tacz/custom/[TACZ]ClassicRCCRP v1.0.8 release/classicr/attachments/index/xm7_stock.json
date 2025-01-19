@@ -1,0 +1,8 @@
+{
+    "hidden":true,
+    "name": "classicr.attachment.xm7_stock.name",
+    "tooltip": "classicr.attachment.xm7_stock.desc",
+    "display": "classicr:xm7_stock_display",
+    "data": "classicr:xm7_stock_data",
+    "type": "stock"
+  }

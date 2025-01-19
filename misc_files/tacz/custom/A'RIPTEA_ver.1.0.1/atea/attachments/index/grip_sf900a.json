@@ -1,0 +1,7 @@
+{
+  "name": "atea.attachment.grip_sf900a.name",
+  "tooltip": "atea.attachment.grip_sf900a.desc",
+  "display": "atea:grip_sf900a_display",
+  "data": "atea:grip_sf900a_data",
+  "type": "grip"
+}

@@ -1,0 +1,9 @@
+{
+  "slot": "arip:attachment/slot/sangfroid",
+  "model": "arip:attachment/sangfroid_geo",
+  "texture": "arip:attachment/uv/sangfroid",
+  "sounds": {
+    "install": "tacz:attachments/attachment_general_b",
+    "uninstall": "tacz:attachments/attachment_general_uninstall"
+  }
+}

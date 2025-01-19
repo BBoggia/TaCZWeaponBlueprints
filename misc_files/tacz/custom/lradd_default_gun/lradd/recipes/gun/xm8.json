@@ -1,0 +1,32 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:gems/lapis"
+      },
+      "count": 75
+    },
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 103
+    },
+    {
+      "item": {
+        "tag": "forge:gems/quartz"
+      },
+      "count": 29
+    },
+    {
+      "item": {
+        "item": "minecraft:glass_pane"
+      },
+      "count": 2
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "lradd:xm8"
+  }
+}

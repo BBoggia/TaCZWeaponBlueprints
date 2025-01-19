@@ -1,0 +1,29 @@
+{
+  "model": "oldgun:ammo/303",
+  "texture": "oldgun:ammo/uv/303",
+  "slot": "oldgun:ammo/slot/303",
+  "shell": {
+    "model": "tacz:shell/308_shell",
+    "texture": "tacz:shell/308_shell"
+  },
+  "tracer_color": "#871f24",
+  "transform": {
+    "scale": {
+      "thirdperson": [
+        0.6,
+        0.6,
+        0.6
+      ],
+      "ground": [
+        0.6,
+        0.6,
+        0.6
+      ],
+      "fixed": [
+        1.2,
+        1.2,
+        1.2
+      ]
+    }
+  }
+}

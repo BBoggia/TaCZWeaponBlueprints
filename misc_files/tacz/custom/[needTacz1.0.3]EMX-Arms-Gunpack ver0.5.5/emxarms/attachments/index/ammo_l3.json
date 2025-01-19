@@ -1,0 +1,7 @@
+{
+  "name": "emxarms.attachment.ammo_l3.name",
+  "tooltip": "emxarms.attachment.ammo_l1.tooltip",
+  "display": "emxarms:ammo_l3_display",
+  "data": "emxarms:ammo_l3_data",
+  "type": "extended_mag"
+}

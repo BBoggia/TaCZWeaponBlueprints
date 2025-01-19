@@ -1,0 +1,7 @@
+{
+  "name": "atea.attachment.muzzle_si_cc.name",
+  "tooltip": "atea.attachment.muzzle_si_cc.desc",
+  "display": "atea:muzzle_si_cc_display",
+  "data": "atea:muzzle_si_cc_data",
+  "type": "muzzle"
+}

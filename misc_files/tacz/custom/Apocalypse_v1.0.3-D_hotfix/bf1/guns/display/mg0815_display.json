@@ -1,0 +1,63 @@
+{
+  "model": "bf1:gun/mg0815_geo",
+  "texture": "bf1:gun/uv/mg0815",
+  "hud": "bf1:gun/hud/mg0815",
+  "slot": "bf1:gun/slot/mg0815",
+  "animation": "bf1:mg0815",
+  "use_default_animation": "rifle",
+  "third_person_animation": "default",
+  "show_crosshair": false,
+  "lod": {
+    "model": "bf1:gun/lod/mg0815",
+    "texture": "bf1:gun/lod/mg0815"
+  },
+  "transform": {
+    "scale": {
+      "thirdperson": [ 0.6, 0.6, 0.6 ],
+      "ground": [ 0.6, 0.6, 0.6 ],
+      "fixed": [ 1.2, 1.2, 1.2 ]
+    }
+  },
+  "muzzle_flash": {
+    "texture": "tacz:flash/common_muzzle_flash",
+    "scale": 3
+  },
+  "shell": {
+    "initial_velocity": [ 3, -0.5, 0.25 ],
+    "random_velocity": [ 3, 0.5, 0.25 ],
+    "acceleration": [ 0.0, -10, 0.0 ],
+    "angular_velocity": [ 360, -3000, 90 ],
+    "living_time": 1.0
+  },
+  "sounds": {
+    "shoot": "bf1:mg0815/shoot",
+    "shoot_3p": "bf1:mg0815/shoot_3p",
+    "silence": "tacz:scar_l/scar_l_shoot",
+    "silence_3p": "tacz:scar_l/scar_l_shoot_3p",
+    //"dry_fire": "bf1:request_ammo",
+    "reload_empty": "bf1:mg0815/reload_empty",
+    "reload_tactical": "bf1:mg0815/reload_tactical",
+    //    "inspect": "bf1:draw",
+    //    "inspect_empty": "bf1:draw",
+    "draw": "bf1:draw",
+    "put_away": "bf1:put_away",
+
+    "melee_push": "tacz:melee_stock/melee_stock_02",
+    "melee_stock": "tacz:melee_stock/melee_stock_03",
+    "head_hit": "bf1:head_hit",
+    "flesh_hit": "bf1:flesh_hit",
+    "kill": "bf1:kill"
+  },
+  "offhand_show": {
+    "pos": [ 0, 18, 5 ],
+    "rotate": [ -20, 0, 30 ],
+    "scale": [ 0.5, 0.5, 0.5 ]
+  },
+  "hotbar_show": {
+    "0": {
+      "pos": [ -4, 24, 4 ],
+      "rotate": [ -90, -5, -90 ],
+      "scale": [ 0.5, 0.5, 0.5 ]
+    }
+  }
+}

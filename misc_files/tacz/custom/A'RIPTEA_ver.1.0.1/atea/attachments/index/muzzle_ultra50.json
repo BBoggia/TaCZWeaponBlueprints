@@ -1,0 +1,7 @@
+{
+  "name": "atea.attachment.muzzle_ultra50.name",
+  "tooltip": "atea.attachment.muzzle_ultra50.desc",
+  "display": "atea:muzzle_ultra50_display",
+  "data": "atea:muzzle_ultra50_data",
+  "type": "muzzle"
+}

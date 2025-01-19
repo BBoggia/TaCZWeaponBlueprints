@@ -1,0 +1,7 @@
+{
+    "name": "classicr.attachment.ammo_mod_snake_shot.name",
+    "tooltip": "classicr.attachment.ammo_mod_snake_shot.desc",
+    "display": "classicr:ammo_mod_snake_shot_display",
+    "data": "classicr:ammo_mod_snake_shot_data",
+    "type": "extended_mag"
+  }

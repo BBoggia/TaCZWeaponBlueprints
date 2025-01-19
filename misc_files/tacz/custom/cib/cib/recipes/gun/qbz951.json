@@ -1,0 +1,26 @@
+{
+    "materials": [
+        {
+          "item": {
+            "tag": "forge:ingots/iron"
+          },
+          "count": 45
+        },
+        {
+          "item": {
+            "tag": "forge:ingots/gold"
+          },
+          "count": 22
+        },
+        {
+          "item": {
+            "tag": "forge:gems/quartz"
+          },
+          "count": 34
+        }
+      ],
+    "result": {
+      "type": "gun",
+      "id": "cib:qbz951"
+    }
+  }

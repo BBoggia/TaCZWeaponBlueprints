@@ -1,0 +1,51 @@
+{
+  "model": "suffuse:gun/n4_geo",
+  "texture": "suffuse:gun/uv/n4",
+  "hud": "suffuse:gun/hud/n4",
+  "slot": "suffuse:gun/slot/n4",
+  "animation": "suffuse:n4",
+  "use_default_animation": "rifle",
+  "third_person_animation": "default",
+  "transform": {
+    "scale": {
+      "thirdperson": [0.6, 0.6, 0.6],
+      "ground": [0.6, 0.6, 0.6],
+      "fixed": [1.2, 1.2, 1.2]
+    }
+  },
+  "muzzle_flash": {
+    "texture": "tacz:flash/common_muzzle_flash",
+    "scale": 0.75
+  },
+  "shell": {
+    "initial_velocity": [5, 2, 1],
+    "random_velocity": [1, 1, 0.25],
+    "acceleration": [0.0, -10, 0.0],
+    "angular_velocity": [360, -1200, 90],
+    "living_time": 1.0
+  },
+  "sounds": {
+    "shoot": "suffuse:n4/n4_fire",
+    "shoot_3p": "suffuse:n4/n4_fire",
+    "reload_empty": "suffuse:n4/n4_reload_empty",
+    "reload_tactical": "suffuse:n4/n4_reload_tactical",
+    "inspect": "suffuse:n4/n4_inspect",
+    "inspect_empty": "suffuse:n4/n4_inspect_empty",
+    "draw": "tacz:m4a1/m4a1_draw",
+    "put_away": "tacz:m4a1/m4a1_put_away",
+    "silence": "suffuse:n4/n4_silence",
+    "silence_3p": "suffuse:n4/n4_silence_3p"
+  },
+  "offhand_show": {
+    "pos": [1, 19, 4],
+    "rotate": [0, 0, 50],
+    "scale": [0.5, 0.5, 0.5]
+  },
+  "hotbar_show": {
+    "0": {
+      "pos": [-1, 19, 3],
+      "rotate": [-180, 0, 130],
+      "scale": [0.5, 0.5, 0.5]
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{
+    "name": "classicr.attachment.grip_shift.name",
+    "tooltip": "classicr.attachment.grip_shift.desc",
+    "display": "classicr:grip_shift_display",
+    "data": "classicr:grip_shift_data",
+    "type": "grip"
+  }

@@ -1,0 +1,10 @@
+{
+  "slot": "emxarms:attachment/slot/stock_emx_reentrantlock",
+  "model": "emxarms:attachment/stock_emx_reentrantlock_geo",
+  "texture": "emxarms:attachment/uv/emx_encapsulation",
+  "show_muzzle": true,
+  "sounds": {
+    "install": "tacz:attachments/bayonet_install",
+    "uninstall": "tacz:attachments/bayonet_uninstall"
+  }
+}

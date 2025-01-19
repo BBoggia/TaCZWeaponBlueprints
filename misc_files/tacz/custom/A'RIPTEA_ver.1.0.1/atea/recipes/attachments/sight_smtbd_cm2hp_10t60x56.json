@@ -1,0 +1,26 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 95
+    },
+    {
+      "item": {
+        "tag": "forge:gems/amethyst"
+      },
+      "count": 45
+    },
+    {
+      "item": {
+        "tag": "forge:dusts/redstone"
+      },
+      "count": 21
+    }
+  ],
+  "result": {
+    "type": "attachment",
+    "id": "atea:sight_smtbd_cm2hp_10t60x56"
+  }
+}

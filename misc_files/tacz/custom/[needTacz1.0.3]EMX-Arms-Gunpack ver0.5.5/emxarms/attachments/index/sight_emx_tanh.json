@@ -1,0 +1,7 @@
+{
+	"name": "emxarms.attachment.sight_emx_tanh.name",
+	"tooltip": "emxarms.attachment.sight_emx_tanh.tooltip",
+	"display": "emxarms:sight_emx_tanh_display",
+	"data": "emxarms:sight_emx_tanh_data",
+	"type": "scope"
+}

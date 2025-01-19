@@ -1,0 +1,14 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 61
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "suffuse:tti2011"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "classicr.gun.scar_mk20.name",
+  "display": "classicr:scar_mk20_display",
+  "data": "classicr:scar_mk20_data",
+  "tooltip": "classicr.gun.scar_mk20.desc",
+  "type": "sniper",
+  "sort": 10
+}

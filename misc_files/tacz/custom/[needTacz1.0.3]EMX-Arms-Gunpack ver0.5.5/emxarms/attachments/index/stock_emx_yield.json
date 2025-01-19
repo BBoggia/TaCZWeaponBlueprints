@@ -1,0 +1,7 @@
+{
+  "name": "emxarms.attachment.stock_emx_yield.name",
+  "tooltip": "emxarms.attachment.stock_emx_yield.tooltip",
+  "display": "emxarms:stock_emx_yield_display",
+  "data": "emxarms:stock_emx_yield_data",
+  "type": "stock"
+}

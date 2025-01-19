@@ -1,0 +1,14 @@
+{
+    
+    "name": "oldgun.gun.g88.name",
+   
+    "display": "oldgun:g88_display",
+
+    "data": "oldgun:g88_data",
+   
+    "type": "rifle",
+
+    "item_type": "modern_kinetic",
+
+    "sort": 10
+}

@@ -1,0 +1,8 @@
+{
+  "name": "classicr.gun.glock_18.name",
+  "display": "classicr:glock_18_display",
+  "data": "classicr:glock_18_data",
+  "tooltip": "classicr.gun.glock_18.desc",
+  "type": "pistol",
+  "sort": 10
+}

@@ -1,0 +1,20 @@
+{
+	"weight": 1.0,
+	"ads": {
+		"addend": 0.1
+	},
+	"inaccuracy": {
+		"addend": -0.8
+	},
+	"aim_inaccuracy": {
+		"addend": -0.3
+	},
+	"recoil": {
+		"pitch": {
+			"percent": -0.3
+		},
+		"yaw": {
+			"percent": -0.6
+		}
+	}
+}

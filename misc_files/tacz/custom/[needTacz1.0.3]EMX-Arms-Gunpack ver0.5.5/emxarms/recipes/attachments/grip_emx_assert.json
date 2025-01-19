@@ -1,0 +1,19 @@
+{
+//材料
+  "materials": [
+    {
+      "item": {
+//特定的某种材料
+        "item": "minecraft:iron_ingot"
+      },
+      "count": 6
+    }
+  ],
+ //输出结果
+  "result": {
+ //类型
+    "type": "attachment",
+//输出物品
+    "id": "emxarms:grip_emx_assert"
+  }
+}

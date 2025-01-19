@@ -1,0 +1,7 @@
+{
+  "name": "atea.attachment.bayonet_6kh5.name",
+  "tooltip": "atea.attachment.bayonet_6kh5.desc",
+  "display": "atea:bayonet_6kh5_display",
+  "data": "atea:bayonets_data",
+  "type": "muzzle"
+}

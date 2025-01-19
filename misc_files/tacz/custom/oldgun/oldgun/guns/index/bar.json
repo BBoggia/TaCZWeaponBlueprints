@@ -1,0 +1,14 @@
+{
+    
+    "name": "oldgun.gun.bar.name",
+   
+    "display": "oldgun:bar_display",
+
+    "data": "oldgun:bar_data",
+   
+    "type": "rifle",
+
+    "item_type": "modern_kinetic",
+
+    "sort": 10
+}

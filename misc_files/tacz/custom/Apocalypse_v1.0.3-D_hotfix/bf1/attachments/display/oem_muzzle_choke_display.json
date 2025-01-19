@@ -1,0 +1,8 @@
+{
+  "slot": "bf1:attachment/slot/oem_muzzle_choke",
+  "adapter": "choke",
+  "sounds": {
+    "install": "tacz:attachments/attachment_general_a",
+    "uninstall": "tacz:attachments/attachment_general_uninstall"
+  }
+}

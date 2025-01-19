@@ -1,0 +1,8 @@
+{
+  "name": "classicr.gun.mgl_40mm.name",
+  "display": "classicr:mgl_40mm_display",
+  "data": "classicr:mgl_40mm_data",
+  "tooltip": "classicr.gun.mgl_40mm.desc",
+  "type": "rpg",
+  "sort": 10
+}

@@ -1,0 +1,10 @@
+{
+  "slot": "oldgun:attachment/slot/type_30",
+  "model": "oldgun:attachment/type_30_geo",
+  "texture": "oldgun:attachment/uv/type_30",
+  "show_muzzle": true,
+  "sounds": {
+    "install": "tacz:attachments/bayonet_install",
+    "uninstall": "tacz:attachments/bayonet_uninstall"
+  }
+}

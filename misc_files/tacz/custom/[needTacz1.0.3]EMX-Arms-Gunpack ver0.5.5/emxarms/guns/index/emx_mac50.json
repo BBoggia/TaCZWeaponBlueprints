@@ -1,0 +1,7 @@
+{
+  "name": "emxarms.gun.emx_mac50.name",
+  "display": "emxarms:emx_mac50_display",
+    "tooltip": "emxarms.gun.emx_mac50.desc",
+  "data": "emxarms:emx_mac50_data",
+  "type": "pistol"
+}

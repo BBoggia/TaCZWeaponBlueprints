@@ -1,0 +1,74 @@
+{
+  "ammo": "rfp:nm338",
+  "ammo_amount": 75,
+  "bolt": "open_bolt",
+  "rpm": 500,
+  "bullet": {
+    "life": 10,
+    "damage": 35,
+    "speed": 500,
+    "gravity": 0,
+    "knockback": 0,
+    "friction": 0.01,
+    "tracer_count_interval": 2,
+    "ignite": false,
+    "pierce": 3,
+    "extra_damage": {
+      "armor_ignore": 1.00,
+      "head_shot_multiplier": 2,
+      "damage_adjust": [
+        {"distance": 50, "damage": 35},
+        {"distance": 100, "damage": 32},
+        {"distance": "infinite", "damage": 30}
+      ]
+    }
+    },
+  "reload": {
+    "type": "magazine",
+    "feed": {
+      "empty": 5.4,
+      "tactical": 4.2
+    },
+    "cooldown": {
+      "empty": 7,
+      "tactical": 5.4
+    }
+  },
+  "draw_time": 0.9,
+  "put_away_time": 1.4,
+  "aim_time": 0.3,
+  "sprint_time": 0.6,
+  "fire_mode": [
+    "auto"
+  ],
+  "recoil": {
+    "pitch": [
+      {"time": 0, "value": [1, 1]},
+      {"time": 0.25, "value": [1.125, 1.125]},
+      {"time": 0.45, "value": [-0.175, -0.175]},
+      {"time": 0.6, "value": [0, 0]}
+    ],
+    "yaw": [
+      {"time": 0, "value": [-0.35, -0.15]},
+      {"time": 0.25, "value": [-0.35, -0.15]},
+      {"time": 0.45, "value": [0, 0]}
+    ]
+  },
+  "inaccuracy": {
+    "stand": 3,
+    "move": 5,
+    "sneak": 1.5,
+    "lie": 0.2,
+    "aim": 0.1
+  },
+  "allow_attachment_types": [
+    "scope",
+    "muzzle",
+    "extended_mag"
+  ],
+  "extended_mag_ammo_amount": [
+    100,
+    150,
+    200
+  ]
+}

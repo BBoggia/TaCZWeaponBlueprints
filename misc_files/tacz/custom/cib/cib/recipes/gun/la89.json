@@ -1,0 +1,26 @@
+{
+    "materials": [
+        {
+          "item": {
+            "tag": "forge:ingots/iron"
+          },
+          "count": 55
+        },
+        {
+          "item": {
+            "tag": "forge:ingots/gold"
+          },
+          "count": 25
+        },
+        {
+          "item": {
+            "tag": "forge:gems/quartz"
+          },
+          "count": 30
+        }
+      ],
+    "result": {
+      "type": "gun",
+      "id": "cib:la89"
+    }
+  }

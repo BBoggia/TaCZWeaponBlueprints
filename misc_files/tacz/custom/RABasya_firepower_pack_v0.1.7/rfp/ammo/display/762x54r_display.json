@@ -1,0 +1,29 @@
+{
+  "model":"rfp:ammo/762x54r",
+  "texture":"rfp:ammo/uv/762x54r",
+  "slot": "rfp:ammo/slot/762x54r",
+  "shell":{
+    "model":"rfp:shell/762x54r_shell",
+    "texture":"rfp:shell/762x54r_shell"
+  },
+  "tracer_color": "#47ef38",
+  "transform": {
+    "scale": {
+      "thirdperson": [
+        0.6,
+        0.6,
+        0.6
+      ],
+      "ground": [
+        0.6,
+        0.6,
+        0.6
+      ],
+      "fixed": [
+        1.2,
+        1.2,
+        1.2
+      ]
+    }
+  }
+}

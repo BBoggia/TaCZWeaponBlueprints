@@ -1,0 +1,18 @@
+{
+  // 版本
+  "version": "1.0.0",
+  // 名称，支持本地化
+  "name": "§c§lLX.INC",
+  // 描述文本，支持本地化
+  "desc": "§bThe Well Beloved Child",
+  // 许可证
+  "license": "§aCC BY-NC-ND 4.0",
+  // 作者
+  "authors": [
+    "Lanixius"
+  ],
+  // 日期：ISO 8601 标准，即 YYYY-MM-DD
+  "date": "2024-11-22",
+  // URL 链接，可以在枪械合成台看到，点击按钮可以访问网络链接
+  "url": ""
+}

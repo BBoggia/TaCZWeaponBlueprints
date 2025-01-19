@@ -1,0 +1,8 @@
+{
+  "name": "classicr.gun.m1a1.name",
+  "display": "classicr:m1a1_display",
+  "data": "classicr:m1a1_data",
+  "tooltip": "classicr.gun.m1a1.desc",
+  "type": "smg",
+  "sort": 10
+}

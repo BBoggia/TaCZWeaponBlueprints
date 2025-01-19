@@ -1,0 +1,26 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/gold"
+      },
+      "count": 97
+    },
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 48
+    },
+    {
+      "item": {
+        "tag": "forge:gems/lapis"
+      },
+      "count": 23
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "suffuse:python"
+  }
+}

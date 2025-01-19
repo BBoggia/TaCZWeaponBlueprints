@@ -1,0 +1,7 @@
+{
+  "name": "emxarms.attachment.muzzle_sf7b_uac9000.name",
+  "tooltip": "emxarms.attachment.muzzle_sf7b_uac9000.tooltip",
+  "display": "emxarms:muzzle_sf7b_uac9000_display",
+  "data": "emxarms:muzzle_sf7b_uac9000_data",
+  "type": "muzzle"
+}

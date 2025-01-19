@@ -1,0 +1,7 @@
+{
+  "name": "fibers.gun.renetti.name",
+  "display": "fibers:renetti_display",
+  "data": "fibers:renetti_data",
+  "tooltip": "fibers.gun.renetti.desc",
+  "type": "pistol"
+}

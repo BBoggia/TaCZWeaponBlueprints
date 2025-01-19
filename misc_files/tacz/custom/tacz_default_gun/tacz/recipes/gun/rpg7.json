@@ -1,0 +1,32 @@
+{
+  "materials": [
+    {
+      "item": {
+        "tag": "forge:ingots/gold"
+      },
+      "count": 27
+    },
+    {
+      "item": {
+        "tag": "forge:ingots/iron"
+      },
+      "count": 149
+    },
+    {
+      "item": {
+        "tag": "forge:gems/lapis"
+      },
+      "count": 17
+    },
+    {
+      "item": {
+        "tag": "minecraft:logs"
+      },
+      "count": 56
+    }
+  ],
+  "result": {
+    "type": "gun",
+    "id": "tacz:rpg7"
+  }
+}

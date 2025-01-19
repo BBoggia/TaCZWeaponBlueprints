@@ -1,0 +1,9 @@
+{
+  "slot": "atea:attachment/slot/muzzle_omega300",
+  "model": "atea:attachment/muzzle_omega300_geo",
+  "texture": "atea:attachment/uv/muzzle_omega300",
+  "sounds": {
+    "install": "tacz:attachments/muzzle_general",
+    "uninstall": "tacz:attachments/muzzle_general"
+  }
+}

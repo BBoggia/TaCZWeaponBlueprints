@@ -1,0 +1,21 @@
+{
+  "pack.rfp.name": "TaCZ RABasya火力包",
+  "pack.rfp.desc": "RABasya的机枪库，提供极致火力",
+  "rfp.gun.6p41bp.name": "无托 6P41 机枪",
+  "rfp.gun.6p41bp.desc":"机枪？俄式冲锋枪！",
+  "rfp.ammo.762x54r.name":"7N13 762x54R 钢壳机枪弹",
+  "rfp.gun.lwmmg.name": "LWMMG 通用机枪",
+  "rfp.ammo.nm338.name":".338诺玛马格南",
+  "rfp.gun.lwmmg.desc":"用.338也能把你的敌人和他的掩体都送上天",
+  "rfp.attachment.scope_acog_ta648.name":"Trijicon ACOG TA648 6X48",
+  "rfp.attachment.scope_acog_ta648.tooltip":"Trijicon生产的机枪瞄具，提供优秀的远距离射击精度以及出色的低光可见度\n§4该瞄准镜的分划板为红色荧光的.50Chevron分划板",
+  "rfp.attachment.scope_acog_ta648_1.tooltip":"Trijicon生产的机枪瞄具，提供优秀的远距离射击精度以及出色的低光可见度\n§4该瞄准镜的分划板为红色荧光的.308 Horseshoe/Dot分划板",
+  "rfp.attachment.elcan_c79.name":"ELCAN SpecterOS 3.4× C79A2",
+  "rfp.attachment.elcan_c79.tooltip":"由ELCAN生产的表面覆胶轻武器光学瞄准镜,可以在低亮度下瞄准\n§a该瞄准镜的分划板为绿色荧光的5.56 C79A2 标准分划板",
+  "rfp.attachment.elcan_c79_1.name":"ELCAN SpecterOS 4× C79",
+  "rfp.attachment.elcan_c79_1.tooltip":"由ELCAN生产的表面覆胶轻武器光学瞄准镜\n该瞄准镜的分划板为5.56 C79 标准分划板",
+  "rfp.attachment.elcan_c79_2.tooltip":"由ELCAN生产的表面覆胶轻武器光学瞄准镜\n该瞄准镜的分划板为5.56 HRN 111-00 分划板",
+  "rfp.attachment.elcan_c79_3.tooltip":"由ELCAN生产的表面覆胶轻武器光学瞄准镜\n该瞄准镜的分划板为7.62 MG3 分划板",
+  "rfp.gun.m2hb.name":"FN M2HB QCB",
+  "rfp.gun.m2hb.desc":"Hey! It's a machine gun!"
+}

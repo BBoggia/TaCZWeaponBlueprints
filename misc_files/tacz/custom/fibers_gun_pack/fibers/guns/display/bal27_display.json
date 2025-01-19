@@ -1,0 +1,58 @@
+{
+  "model": "fibers:gun/bal27_geo",
+  "texture": "fibers:gun/uv/bal27",
+  "lod": {
+    "model": "fibers:gun/lod/bal27",
+    "texture": "fibers:gun/lod/bal27"
+  },
+  "hud": "fibers:gun/hud/bal27",
+  "slot": "fibers:gun/slot/bal27",
+  "animation": "fibers:bal27",
+  "use_default_animation": "rifle",
+  "third_person_animation": "default",
+  "transform": {
+    "scale": {
+      "thirdperson": [0.6, 0.6, 0.6],
+      "ground": [0.6, 0.6, 0.6],
+      "fixed": [1.2, 1.2, 1.2]
+    }
+  },
+  "muzzle_flash": {
+    "texture": "tacz:flash/common_muzzle_flash",
+    "scale": 0.75
+  },
+  "shell": {
+    "initial_velocity": [5, 2, 1],
+    "random_velocity": [1, 1, 0.25],
+    "acceleration": [0.0, -10, 0.0],
+    "angular_velocity": [360, -1200, 90],
+    "living_time": 1.0
+  },
+  "sounds": {
+    "shoot": "fibers:bal27/bal27_shoot",
+    "shoot_3p": "fibers:bal27/bal27_shoot_3p",
+    "reload_empty": "fibers:bal27/bal27_reload_empty",
+    "reload_tactical": "fibers:bal27/bal27_reload_tactical",
+    "inspect": "fibers:bal27/bal27_inspect",
+    "inspect_empty": "fibers:bal27/bal27_inspect_empty",
+    "head_hit": "fibers:head_hit",
+    "flesh_hit": "fibers:flesh_hit",
+    "kill": "fibers:kill",
+    "draw": "fibers:bal27/bal27_draw",
+    "put_away": "fibers:bal27/bal27_put_away",
+    "silence": "fibers:bal27/bal27_silence",
+    "silence_3p": "fibers:bal27/bal27_silence_3p"
+  },
+  "offhand_show": {
+    "pos": [1, 19, 4],
+    "rotate": [0, 0, 50],
+    "scale": [0.5, 0.5, 0.5]
+  },
+  "hotbar_show": {
+    "0": {
+      "pos": [-1, 19, 3],
+      "rotate": [-180, 0, 130],
+      "scale": [0.5, 0.5, 0.5]
+    }
+  }
+}

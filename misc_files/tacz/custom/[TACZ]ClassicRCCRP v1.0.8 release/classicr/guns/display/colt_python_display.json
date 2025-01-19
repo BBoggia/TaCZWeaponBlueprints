@@ -1,0 +1,56 @@
+{
+  "model": "classicr:gun/colt_python_geo",
+  "texture": "classicr:gun/uv/colt_python",
+  "lod": {
+    "model": "classicr:gun/lod/colt_python",
+    "texture": "classicr:gun/lod/colt_python"
+  },
+  "hud": "classicr:gun/hud/colt_python",
+  "slot": "classicr:gun/slot/colt_python",
+  "animation": "classicr:colt_python",
+  "use_default_animation": "pistol",
+  "player_animator_3rd": "tacz:pistol_default.player_animation",
+  "transform": {
+    "scale": {
+      "thirdperson": [0.6, 0.6, 0.6],
+      "ground": [0.6, 0.6, 0.6],
+      "fixed": [1.2, 1.2, 1.2]
+    }
+  },
+  "shell": {
+    "initial_velocity": [8.0, 5.0, -0.5],
+    "random_velocity": [2.5, 1.5, 0.25],
+    "acceleration": [0.0, -20, 0.0],
+    "angular_velocity": [360, -720, 90],
+    "living_time": 1.0
+  },
+  "muzzle_flash": {
+    "texture": "tacz:flash/common_muzzle_flash",
+    "scale": 0.5
+  },
+  "sounds": {
+    "reload_empty": "classicr:colt_python/colt_python_reload",
+    "reload_tactical": "classicr:colt_python/colt_python_reload",
+    "inspect": "classicr:colt_python/colt_python_inspect",
+    "inspect_empty": "classicr:colt_python/colt_python_inspect",
+    "draw": "classicr:colt_python/colt_python_draw",
+    "shoot": "classicr:colt_python/colt_python_fire",
+    "shoot_3p": "classicr:colt_python/colt_python_fire",
+    "fire_select": "tacz:fire_select",
+    "head_hit": "tacz:head_hit",
+    "flesh_hit": "classicr:flesh_hit",
+    "kill": "classicr:kill"
+  },
+  "offhand_show": {
+    "pos": [4, 13, -1],
+    "rotate": [-90, -35, 90],
+    "scale": [0.5, 0.5, 0.5]
+  },
+  "hotbar_show": {
+    "0": {
+      "pos": [-5, 13, -1],
+      "rotate": [-90, -35, 90],
+      "scale": [0.5, 0.5, 0.5]
+    }
+  }
+}
