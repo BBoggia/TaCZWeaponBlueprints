@@ -1,8 +1,0 @@
-{
-    "name": "emxarms.gun.emx_rivet.name",
-    "display": "emxarms:emx_rivet_display",
-    "tooltip": "emxarms.gun.emx_rivet.desc",
-    "data": "emxarms:emx_rivet_data",
-    "type": "rifle",
-    "sort": 2
-}

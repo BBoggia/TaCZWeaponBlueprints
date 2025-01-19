@@ -1,9 +1,0 @@
-{
-  "name": "cib.gun.cs_ak47.name",
-  "display": "cib:cs_ak47_display",
-  "data": "cib:cs_ak47_data",
-  "tooltip": "cib.gun.cs_ak47.desc",
-  "type": "rifle",
-  "item_type": "modern_kinetic",
-  "sort": 10
-}

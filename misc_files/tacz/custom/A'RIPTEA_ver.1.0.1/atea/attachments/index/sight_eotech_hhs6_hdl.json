@@ -1,7 +1,0 @@
-{
-  "name": "atea.attachment.sight_eotech_hhs6_hdl.name",
-  "tooltip": "atea.attachment.sight_eotech_hhs6_hdl.desc",
-  "display": "atea:sight_eotech_hhs6_hdl_display",
-  "data": "atea:sight3_medium_data",
-  "type": "scope"
-}

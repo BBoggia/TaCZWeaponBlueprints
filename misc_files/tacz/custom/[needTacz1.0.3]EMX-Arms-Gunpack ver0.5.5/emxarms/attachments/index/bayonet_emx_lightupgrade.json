@@ -1,7 +1,0 @@
-{
-  "name": "emxarms.attachment.bayonet_emx_lightupgrade.name",
-  "tooltip": "emxarms.attachment.bayonet_emx_lightupgrade.tooltip",
-  "display": "emxarms:bayonet_emx_lightupgrade_display",
-  "data": "emxarms:bayonet_emx_lightupgrade_data",
-  "type": "stock"
-}

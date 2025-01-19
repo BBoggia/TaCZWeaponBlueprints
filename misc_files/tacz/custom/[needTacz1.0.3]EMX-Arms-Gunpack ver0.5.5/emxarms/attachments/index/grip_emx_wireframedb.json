@@ -1,7 +1,0 @@
-{
-  "name": "emxarms.attachment.grip_emx_wireframedb.name",
-  "tooltip": "emxarms.attachment.grip_emx_wireframedb.tooltip",
-  "display": "emxarms:grip_emx_wireframedb_display",
-  "data": "emxarms:grip_emx_wireframedb_data",
-  "type": "grip"
-}

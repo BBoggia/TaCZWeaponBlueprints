@@ -1,9 +1,0 @@
-{
-  "name": "cib.gun.p250.name",
-  "display": "cib:p250_display",
-  "data": "cib:p250_data",
-  "type": "pistol",
-  "item_type": "modern_kinetic",
-  "tooltip": "cib.gun.p250.desc",
-  "sort": 10
-}

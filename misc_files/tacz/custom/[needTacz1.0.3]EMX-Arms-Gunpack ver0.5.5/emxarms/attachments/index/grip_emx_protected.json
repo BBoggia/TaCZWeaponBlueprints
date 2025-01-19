@@ -1,7 +1,0 @@
-{
-  "name": "emxarms.attachment.grip_emx_protected.name",
-  "tooltip": "emxarms.attachment.grip_emx_protected.tooltip",
-  "display": "emxarms:grip_emx_protected_display",
-  "data": "emxarms:grip_emx_protected_data",
-  "type": "grip"
-}

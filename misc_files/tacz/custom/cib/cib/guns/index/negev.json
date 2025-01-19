@@ -1,9 +1,0 @@
-{
-  "name": "cib.gun.negev.name",
-  "display": "cib:negev_display",
-  "data": "cib:negev_data",
-  "type": "mg",
-  "item_type": "modern_kinetic",
-  "tooltip": "cib.gun.negev.desc",
-  "sort": 10
-}

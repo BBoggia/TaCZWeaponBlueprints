@@ -1,7 +1,0 @@
-{
-	"name": "emxarms.attachment.sight_emx_laterano.name",
-	"tooltip": "emxarms.attachment.sight_emx_laterano.tooltip",
-	"display": "emxarms:sight_emx_laterano_display",
-	"data": "emxarms:sight_emx_laterano_data",
-	"type": "scope"
-}

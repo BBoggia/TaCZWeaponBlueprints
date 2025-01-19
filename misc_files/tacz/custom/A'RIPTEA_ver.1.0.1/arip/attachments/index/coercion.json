@@ -1,7 +1,0 @@
-{
-  "name": "arip.attachment.coercion.name",
-  "tooltip": "arip.attachment.coercion.desc",
-  "display": "arip:coercion_display",
-  "data": "arip:coercion_data",
-  "type": "extended_mag"
-}

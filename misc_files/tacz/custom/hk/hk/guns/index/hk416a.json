@@ -1,8 +1,0 @@
-{
-  "name": "hk.gun.hk416a.name",
-  "display": "hk:hk416a_display",
-  "data": "hk:hk416a_data",
-  "type": "rifle",
-  "tooltip": "hk.gun.hk416a.desc",
-  "sort": 200
-}

@@ -1,7 +1,0 @@
-{
-  "name": "emxarms.attachment.emx_sfmag_2.name",
-  "tooltip": "emxarms.attachment.emx_sfmag.tooltip",
-  "display": "emxarms:emx_sfmag_2_display",
-  "data": "emxarms:emx_sfmag_2_data",
-  "type": "extended_mag"
-}

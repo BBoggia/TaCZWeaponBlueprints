@@ -1,8 +1,0 @@
-{
-  "name": "bf1.gun.model10.name",
-  "display": "bf1:model10_display",
-  "data": "bf1:model10_data",
-  "tooltip": "bf1.gun.model10.desc",
-  "type": "shotgun",
-  "sort": 4
-}

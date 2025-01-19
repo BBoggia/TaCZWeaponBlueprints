@@ -1,7 +1,0 @@
-{
-  "name": "atea.attachment.buttstock_crab.name",
-  "tooltip": "atea.attachment.buttstock_crab.desc",
-  "display": "atea:buttstock_crab_display",
-  "data": "atea:buttstock_crab_data",
-  "type": "stock"
-}

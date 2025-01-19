@@ -1,8 +1,0 @@
-{
-  "name": "ccrp.gun.p90.name",
-  "display": "ccrp:p90_display",
-  "data": "ccrp:p90_data",
-  "tooltip": "ccrp.gun.p90.desc",
-  "type": "smg",
-  "sort": 10
-}

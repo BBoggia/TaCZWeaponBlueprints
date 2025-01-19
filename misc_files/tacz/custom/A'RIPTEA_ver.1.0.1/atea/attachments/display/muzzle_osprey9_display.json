@@ -1,9 +1,0 @@
-{
-  "slot": "atea:attachment/slot/muzzle_osprey9",
-  "model": "atea:attachment/muzzle_osprey9_geo",
-  "texture": "atea:attachment/uv/muzzle_osprey2",
-  "sounds": {
-    "install": "tacz:attachments/muzzle_general",
-    "uninstall": "tacz:attachments/muzzle_general"
-  }
-}

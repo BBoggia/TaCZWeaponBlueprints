@@ -1,9 +1,0 @@
-{
-    "name": "rfp.gun.lwmmg.name",
-    "display": "rfp:lwmmg_display",
-    "data": "rfp:lwmmg_data",
-    "type": "mg",
-    "item_type": "modern_kinetic",
-    "sort": 10,
-    "tooltip":"rfp.gun.lwmmg.desc"
-}

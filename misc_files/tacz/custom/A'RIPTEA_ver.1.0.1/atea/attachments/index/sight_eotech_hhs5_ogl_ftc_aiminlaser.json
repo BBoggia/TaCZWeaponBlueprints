@@ -1,7 +1,0 @@
-{
-  "name": "atea.attachment.sight_eotech_hhs5_ogl_ftc_aiminlaser.name",
-  "tooltip": "atea.attachment.sight_eotech_hhs5_ogl_ftc_aiminlaser.desc",
-  "display": "atea:sight_eotech_hhs5_ogl_ftc_aiminlaser_display",
-  "data": "atea:sight4_mediumlong_ilaser_data",
-  "type": "scope"
-}

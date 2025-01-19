@@ -1,9 +1,0 @@
-{
-  "name": "cib.gun.evo3.name",
-  "display": "cib:evo3_display",
-  "data": "cib:evo3_data",
-  "type": "smg",
-  "tooltip": "cib.gun.evo3.desc",
-  "item_type": "modern_kinetic",
-  "sort": 10
-}

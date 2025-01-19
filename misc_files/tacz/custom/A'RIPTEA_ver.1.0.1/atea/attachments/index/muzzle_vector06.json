@@ -1,7 +1,0 @@
-{
-  "name": "atea.attachment.muzzle_vector06.name",
-  "tooltip": "atea.attachment.muzzle_vector06.desc",
-  "display": "atea:muzzle_vector06_display",
-  "data": "atea:muzzle_vector06_data",
-  "type": "muzzle"
-}

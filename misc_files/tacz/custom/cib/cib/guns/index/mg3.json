@@ -1,9 +1,0 @@
-{
-  "name": "cib.gun.mg3.name",
-  "display": "cib:mg3_display",
-  "data": "cib:mg3_data",
-  "type": "mg",
-  "item_type": "modern_kinetic",
-  "tooltip": "cib.gun.mg3.desc",
-  "sort": 10
-}
