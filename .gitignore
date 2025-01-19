@@ -20,6 +20,10 @@ build
 # other
 eclipse
 run
+test
+logs
+.luarc.json
 
 # Files from Forge MDK
 forge*changelog.txt
+/temp/
