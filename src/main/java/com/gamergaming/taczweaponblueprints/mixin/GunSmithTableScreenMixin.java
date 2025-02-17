@@ -125,7 +125,7 @@ public abstract class GunSmithTableScreenMixin  {
             this.recipeKeys = new ArrayList<>();
         }
 
-        // Add default categories even if there are no recipes
+        // Add creative categories
         putRecipeType(ModCreativeTabs.AMMO_TAB);
         putRecipeType(ModCreativeTabs.ATTACHMENT_EXTENDED_MAG_TAB);
         putRecipeType(ModCreativeTabs.ATTACHMENT_SCOPE_TAB);
@@ -140,7 +140,6 @@ public abstract class GunSmithTableScreenMixin  {
         putRecipeType(ModCreativeTabs.GUN_RPG_TAB);
         putRecipeType(ModCreativeTabs.GUN_MG_TAB);
 
-        // Ensure each category in recipeKeys has an entry in recipes
         for (String key : this.recipeKeys) {
             this.recipes.putIfAbsent(key, new ArrayList<>());
         }
@@ -225,7 +224,6 @@ public abstract class GunSmithTableScreenMixin  {
     @Inject(method = "addIndexButtons", at = @At("HEAD"), cancellable = true, remap = false)
     private void onAddIndexButtons(CallbackInfo ci) {
         if (selectedRecipeList == null || selectedRecipeList.isEmpty()) {
-            // No recipes to display, perhaps add a message or simply return
             return;
         }
         for (int i = 0; i < 6; i++) {
@@ -354,7 +352,7 @@ public abstract class GunSmithTableScreenMixin  {
 
     @Inject(method = "updateIngredientCount", at = @At("TAIL"), remap = false)
     private void onUpdateIngredientCount(CallbackInfo ci) {
-        // After updating ingredient counts, re-initialize the GUI
+        // Re-init GUI after updating ingredient counts
         this.init();
     }
 
@@ -399,7 +397,6 @@ public abstract class GunSmithTableScreenMixin  {
     
     
     // private void getSelectedRecipeInject(ResourceLocation recipeId, CallbackInfoReturnable<GunSmithTableRecipe> ci) {
-    //     // If the selected recipe list is null, return null else let the method continue
     //     if (this.selectedRecipeList == null) {
     //         ci.setReturnValue(null);
     //         ci.cancel();
