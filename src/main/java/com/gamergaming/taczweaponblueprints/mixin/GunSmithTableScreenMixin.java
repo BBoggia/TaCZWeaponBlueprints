@@ -29,8 +29,9 @@ import com.tacz.guns.client.gui.components.smith.ResultButton;
 import com.tacz.guns.client.gui.components.smith.TypeButton;
 import com.tacz.guns.crafting.GunSmithTableRecipe;
 import com.tacz.guns.init.ModCreativeTabs;
+import com.tacz.guns.init.ModRecipe;
 import com.tacz.guns.inventory.GunSmithTableMenu;
-import com.tacz.guns.resource.CommonAssetManager;
+import com.tacz.guns.resource.CommonAssetsManager;
 import com.tacz.guns.resource.pojo.AttachmentIndexPOJO;
 import com.tacz.guns.resource.pojo.GunIndexPOJO;
 
@@ -45,6 +46,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.registries.RegistryObject;
 
@@ -106,7 +108,7 @@ public abstract class GunSmithTableScreenMixin  {
 
     @Inject(method = "<init>", at = @At("TAIL"), remap = false)
     private void onInit(GunSmithTableMenu menu, Inventory inventory, Component title, CallbackInfo ci) {
-        // Ensure recipes and recipeKeys are initialized
+        // Init recipes and recipeKeys if theyre null
         if (this.recipes == null) {
             this.recipes = new HashMap<>();
         }
@@ -117,7 +119,6 @@ public abstract class GunSmithTableScreenMixin  {
 
     @Inject(method = "classifyRecipes", at = @At("HEAD"), cancellable = true, remap = false)
     private void onClassifyRecipes(CallbackInfo ci) {
-        // Initialize recipes and recipeKeys if they are null
         if (this.recipes == null) {
             this.recipes = new HashMap<>();
         }
@@ -125,7 +126,7 @@ public abstract class GunSmithTableScreenMixin  {
             this.recipeKeys = new ArrayList<>();
         }
 
-        // Add default categories even if there are no recipes
+        // Add creative categories 
         putRecipeType(ModCreativeTabs.AMMO_TAB);
         putRecipeType(ModCreativeTabs.ATTACHMENT_EXTENDED_MAG_TAB);
         putRecipeType(ModCreativeTabs.ATTACHMENT_SCOPE_TAB);
@@ -140,29 +141,38 @@ public abstract class GunSmithTableScreenMixin  {
         putRecipeType(ModCreativeTabs.GUN_RPG_TAB);
         putRecipeType(ModCreativeTabs.GUN_MG_TAB);
 
-        // Ensure each category in recipeKeys has an entry in recipes
         for (String key : this.recipeKeys) {
             this.recipes.putIfAbsent(key, new ArrayList<>());
         }
         LocalPlayer player = Minecraft.getInstance().player;
 
-        final Map<ResourceLocation, GunSmithTableRecipe> availableRecipes;
+        final List<GunSmithTableRecipe> availableRecipes;
 
         LazyOptional<IPlayerRecipeData> recipeData = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA);
+        RecipeManager recipeManager;
 
+        if (Minecraft.getInstance().level != null) {
+            recipeManager = Minecraft.getInstance().level.getRecipeManager();
+        } else if (Minecraft.getInstance().getConnection() != null) {
+            recipeManager = Minecraft.getInstance().getConnection().getRecipeManager();
+        } else {
+            recipeManager = CommonAssetsManager.getInstance().recipeManager;
+            
+        }
+   
         if (!ModConfigs.BLUEPRINT.enableBlueprints.get()) {
-            availableRecipes = CommonAssetManager.INSTANCE.getAllRecipes();
+            // availableRecipes = CommonAssetsManager.getInstance().recipeManager.getAllRecipesFor(ModRecipe.GUN_SMITH_TABLE_CRAFTING.get());
+            availableRecipes = recipeManager.getAllRecipesFor(ModRecipe.GUN_SMITH_TABLE_CRAFTING.get());
         } else if (recipeData.isPresent()) {
-            availableRecipes = CommonAssetManager.INSTANCE.getAllRecipes().entrySet().stream()
-                .filter(entry -> recipeData.orElseThrow(() -> new IllegalStateException("Player recipe data not present"))
-                                           .hasRecipe(entry.getKey().toString()))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+            availableRecipes = recipeManager.getAllRecipesFor(ModRecipe.GUN_SMITH_TABLE_CRAFTING.get()).stream()
+                .filter(recipe -> recipeData.orElseThrow(() -> new IllegalStateException("Player recipe data not present")).hasRecipe(recipe.getId().toString()))
+                .collect(Collectors.toList());
         } else {
             // TaCZWeaponBlueprints.LOGGER.info("INSIDE ELSE STATEMENT: " + ModConfigs.BLUEPRINT.startingBlueprints.get().toString());
             // availableRecipes = CommonAssetManager.INSTANCE.getAllRecipes().entrySet().stream()
             //     .filter(entry -> ModConfigs.BLUEPRINT.startingBlueprints.get().contains(entry.getKey().toString()))
             //     .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-            availableRecipes = new HashMap<>();
+            availableRecipes = new ArrayList<>();
         }
 
         // if (ModConfigs.BLUEPRINT.startingBlueprints.get().size() > 0 && !availableRecipes.keySet().containsAll(ModConfigs.BLUEPRINT.startingBlueprints.get())) {
@@ -173,23 +183,23 @@ public abstract class GunSmithTableScreenMixin  {
         //     availableRecipes.putAll(defaultRecipesToAdd);
         // }
 
-        TimelessAPI.getAllRecipes().forEach((id, recipe) -> {
+        recipeManager.getAllRecipesFor(ModRecipe.GUN_SMITH_TABLE_CRAFTING.get()).forEach((recipe) -> {
             final String[] groupNameHolder = { recipe.getResult().getGroup() };
             if (groupNameHolder[0] == null || groupNameHolder[0].isEmpty()) {
-                String kind = id.toString().split(":")[1];
+                String kind = recipe.getId().toString().split(":")[1];
                 kind = kind.split("/")[0];
                 switch (kind) {
                     case "ammo":
                         groupNameHolder[0] = "ammo";
                         break;
                     case "attachment":
-                        TimelessAPI.getCommonAttachmentIndex(new ResourceLocation(id.toString().split(":")[0] + ":" + id.toString().split("/")[1])).ifPresent(attachmentIndex -> {
+                        TimelessAPI.getCommonAttachmentIndex(new ResourceLocation(recipe.getId().toString().split(":")[0] + ":" + recipe.getId().toString().split("/")[1])).ifPresent(attachmentIndex -> {
                             AttachmentIndexPOJO pojo = attachmentIndex.getPojo();
                             groupNameHolder[0] = pojo.getType().name();
                         });
                         break;
                     case "gun":
-                        TimelessAPI.getCommonGunIndex(new ResourceLocation(id.toString().split(":")[0] + ":" + id.toString().split("/")[1])).ifPresent(gunIndex -> {
+                        TimelessAPI.getCommonGunIndex(new ResourceLocation(recipe.getId().toString().split(":")[0] + ":" + recipe.getId().toString().split("/")[1])).ifPresent(gunIndex -> {
                             GunIndexPOJO pojo = gunIndex.getPojo();
                             groupNameHolder[0] = pojo.getType();
                         });
@@ -202,8 +212,8 @@ public abstract class GunSmithTableScreenMixin  {
             String groupName = groupNameHolder[0];
             
             // TaCZWeaponBlueprints.LOGGER.info("Classifying recipe " + id + " with groupName: " + groupName);
-            if (this.recipeKeys.contains(groupName) && availableRecipes.containsKey(id)) {
-                recipes.computeIfAbsent(groupName, g -> new ArrayList<>()).add(id);
+            if (this.recipeKeys.contains(groupName) && availableRecipes.stream().anyMatch(r -> r.getId().equals(recipe.getId()))) {
+                recipes.computeIfAbsent(groupName, g -> new ArrayList<>()).add(recipe.getId());
                 // TaCZWeaponBlueprints.LOGGER.info("Added recipe " + id + " to group " + groupName);
             } else {
                 TaCZWeaponBlueprints.LOGGER.warn("Group name " + groupName + " not found in recipeKeys: {}", this.recipeKeys);
@@ -219,13 +229,12 @@ public abstract class GunSmithTableScreenMixin  {
         //     }
         // });
 
-        ci.cancel(); // Cancel the original method to prevent duplicate execution
+        ci.cancel(); // Cancel original method 
     }
 
     @Inject(method = "addIndexButtons", at = @At("HEAD"), cancellable = true, remap = false)
     private void onAddIndexButtons(CallbackInfo ci) {
         if (selectedRecipeList == null || selectedRecipeList.isEmpty()) {
-            // No recipes to display, perhaps add a message or simply return
             return;
         }
         for (int i = 0; i < 6; i++) {

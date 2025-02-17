@@ -20,7 +20,6 @@ public class RootCommand {
         // root.then(DummyAmmoCommand.get());
         // root.then(OverwriteCommand.get());
         // root.then(ReloadCommand.get());
-        // root.then(HideTooltipPartCommand.get());
 
         dispatcher.register(root);
     }

@@ -15,7 +15,7 @@ import com.gamergaming.taczweaponblueprints.network.SyncPlayerRecipeDataPacket;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.gamergaming.taczweaponblueprints.util.ItemNameFilterHelper;
 import com.tacz.guns.crafting.GunSmithTableRecipe;
-import com.tacz.guns.resource.CommonAssetManager;
+import com.tacz.guns.resource.CommonAssetsManager;
 
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.nbt.CompoundTag;

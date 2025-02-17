@@ -3,7 +3,7 @@ package com.gamergaming.taczweaponblueprints.command.compat.tacz;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import com.tacz.guns.resource.CommonAssetManager;
+import com.tacz.guns.resource.CommonAssetsManager;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -21,7 +21,8 @@ public class ClearRecipesCommand {
     }
 
     private static int clearAllRecipes(CommandContext<CommandSourceStack> context) {
-        CommonAssetManager.INSTANCE.clearRecipes();
+        
+        //CommonAssetManager.INSTANCE.clearRecipes();
         if (context.getSource().getEntity() instanceof ServerPlayer serverPlayer) {
             serverPlayer.sendSystemMessage(Component.translatable("commands.taczweaponblueprints.clear_tacz_recipes.success"));
         }

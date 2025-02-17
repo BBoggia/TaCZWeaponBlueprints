@@ -14,6 +14,7 @@ import com.ibm.icu.impl.Pair;
 import com.tacz.guns.crafting.GunSmithTableRecipe;
 
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 
 public class BlueprintDataManager {
 
@@ -23,9 +24,42 @@ public class BlueprintDataManager {
 
     private BlueprintDataManager() { }
 
-    public void initialize() {
+    // public void initialize() {
+    //     // Collect blueprint data from loaded recipes
+    //     Map<ResourceLocation, Triple<GunSmithTableRecipe, String, Pair<String, String>>> recipeMap = RecipeResourceLoader.loadRecipes();
+
+    //     for (Map.Entry<ResourceLocation, Triple<GunSmithTableRecipe, String, Pair<String, String>>> entry : recipeMap.entrySet()) {
+    //         ResourceLocation recipeId = entry.getKey();
+    //         if (ModConfigs.BLUEPRINT.isItemRecipeBlacklisted(recipeId.toString())) {
+    //             continue;
+    //         }
+    //         GunSmithTableRecipe recipe = entry.getValue().getLeft();
+    //         String itemPath = recipeId.getPath().split("/")[1];
+    //         String itemId = recipeId.getNamespace() + ":" + itemPath;
+    //         String itemType = entry.getValue().getRight().first;
+    //         if (itemType == null) {
+    //             itemType = "gun";
+    //         }
+    //         String itemSlotDisplayKey = entry.getValue().getRight().second;
+    //         String bpId = itemId;
+    //         String nameKey = entry.getValue().getMiddle();
+    //         if (nameKey == null) {
+    //             continue;
+    //         } else if (ModConfigs.BLUEPRINT.isItemRecipeBlacklisted(recipeId.toString())) {
+    //             continue;
+    //         }
+            
+    //          //recipeId.getNamespace() + "." + itemType + "." + gunPath + ".name";
+    //         String tooltipKey = "item.taczweaponblueprints.blueprint.tooltip";
+
+    //         BlueprintData data = new BlueprintData(bpId, nameKey, tooltipKey, recipeId, recipe, itemType, itemSlotDisplayKey);
+    //         blueprintDataMap.put(bpId, data);
+    //     }
+    // }
+
+    public void initialize(MinecraftServer server) {
         // Collect blueprint data from loaded recipes
-        Map<ResourceLocation, Triple<GunSmithTableRecipe, String, Pair<String, String>>> recipeMap = RecipeResourceLoader.loadRecipes();
+        Map<ResourceLocation, Triple<GunSmithTableRecipe, String, Pair<String, String>>> recipeMap = RecipeResourceLoader.loadRecipes(server);
 
         for (Map.Entry<ResourceLocation, Triple<GunSmithTableRecipe, String, Pair<String, String>>> entry : recipeMap.entrySet()) {
             ResourceLocation recipeId = entry.getKey();
@@ -33,23 +67,22 @@ public class BlueprintDataManager {
                 continue;
             }
             GunSmithTableRecipe recipe = entry.getValue().getLeft();
-            String itemPath = recipeId.getPath().split("/")[1];
+            String itemPath = recipeId.getPath().substring("recipes/".length());
             String itemId = recipeId.getNamespace() + ":" + itemPath;
             String itemType = entry.getValue().getRight().first;
             if (itemType == null) {
                 itemType = "gun";
             }
             String itemSlotDisplayKey = entry.getValue().getRight().second;
+
             String bpId = itemId;
             String nameKey = entry.getValue().getMiddle();
             if (nameKey == null) {
                 continue;
-            // Check if the recipe is in the list of recipes to remove
             } else if (ModConfigs.BLUEPRINT.isItemRecipeBlacklisted(recipeId.toString())) {
                 continue;
             }
-            
-             //recipeId.getNamespace() + "." + itemType + "." + gunPath + ".name";
+
             String tooltipKey = "item.taczweaponblueprints.blueprint.tooltip";
 
             BlueprintData data = new BlueprintData(bpId, nameKey, tooltipKey, recipeId, recipe, itemType, itemSlotDisplayKey);

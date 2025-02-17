@@ -3,8 +3,8 @@ package com.gamergaming.taczweaponblueprints.command.compat.tacz;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import com.tacz.guns.resource.CommonAssetManager;
-import com.tacz.guns.resource.CommonGunPackLoader;
+// import com.tacz.guns.resource.CommonAssetManager;
+// import com.tacz.guns.resource.GunPackLoader;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -22,8 +22,8 @@ public class ReloadRecipesCommand {
     }
 
     private static int reloadAllRecipes(CommandContext<CommandSourceStack> context) {
-        CommonAssetManager.INSTANCE.clearRecipes();
-        CommonGunPackLoader.reloadRecipes();
+        // CommonAssetManager.INSTANCE.clearRecipes();
+        // CommonGunPackLoader.reloadRecipes();
         if (context.getSource().getEntity() instanceof ServerPlayer serverPlayer) {
             serverPlayer.sendSystemMessage(Component.translatable("commands.taczweaponblueprints.reload_tacz_recipes.success"));
         }

@@ -78,10 +78,4 @@ public class LootTableResourceLoader implements ResourceManagerReloadListener {
                 })
                 .collect(Collectors.toList());
     }
-
-    // Register your listener
-    // public static void register(ResourceManagerReloadListener listener) {
-    //     // Registration logic, depends on your mod setup
-    //     // For Forge mods, you can register during the common setup event
-    // }
 }

@@ -101,7 +101,8 @@ public class ModGlobalLootModifiersProvider extends GlobalLootModifierProvider {
         InputStreamReader reader = new InputStreamReader(stream);
         JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
         List<BlueprintSpawnRate> spawnRates = new ArrayList<>();
-        // Iterate over each key in the JSON object. Each keys value is an array of json objects which map to a BlueprintSpawnRate
+        // Iterate over each key in JSON object
+        // Each keys value is an array of json objects which map to a BlueprintSpawnRate
         for (Map.Entry<String, JsonElement> entry : json.entrySet()) {
             JsonArray array = entry.getValue().getAsJsonArray();
             TaCZWeaponBlueprints.LOGGER.info("Loading " + array.size() + " blueprint spawn rates for " + entry.getKey());

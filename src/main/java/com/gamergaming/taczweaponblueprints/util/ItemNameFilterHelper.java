@@ -81,7 +81,6 @@ public class ItemNameFilterHelper {
             name = name.replace("Tactical", "").strip();
         }
 
-        // check if it ends with assault rifle but ignore case
         if (name.toLowerCase().endsWith("assault rifle")) {
             name = name.substring(0, name.length() - 13).strip();
 
@@ -128,7 +127,6 @@ public class ItemNameFilterHelper {
         Matcher matcher = pattern.matcher(name);
         
         if (matcher.find()) {
-            // Replace only the first match
             StringBuffer sb = new StringBuffer();
             matcher.appendReplacement(sb, " \"");
             matcher.appendTail(sb);

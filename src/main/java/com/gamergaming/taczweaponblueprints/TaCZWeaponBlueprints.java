@@ -10,7 +10,7 @@ import com.gamergaming.taczweaponblueprints.loot.ModLootModifier;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.mojang.logging.LogUtils;
-import com.tacz.guns.resource.CommonAssetManager;
+import com.tacz.guns.resource.CommonAssetsManager;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
@@ -43,7 +43,6 @@ public class TaCZWeaponBlueprints {
 
         ModConfigs.init();
 
-        // Register ourselves for server and other game events we are interested in
         MinecraftForge.EVENT_BUS.register(this);
 
         // Register ForgeConfigSpec
@@ -57,30 +56,26 @@ public class TaCZWeaponBlueprints {
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
-        // Some common setup code
         LOGGER.info("HELLO FROM COMMON SETUP");
     }
 
     @SubscribeEvent
     public void onPlayerJoin(PlayerLoggedInEvent event) {
-        // Do something when the player joins
         LOGGER.info("HELLO from player join");
-        BlueprintDataManager.INSTANCE.initialize();
-        CommonAssetManager.INSTANCE.clearRecipes();
+        // BlueprintDataManager.INSTANCE.initialize();
+        BlueprintDataManager.INSTANCE.initialize(event.getEntity().getServer());
+        // CommonAssetsManager.INSTANCE.clearRecipes();
     }
 
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
-        // Do something when the server starts
         LOGGER.info("HELLO from server starting");
     }
 
-    // You can use EventBusSubscriber to automatically register all static methods in the class annotated with @SubscribeEvent
     @Mod.EventBusSubscriber(modid = MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static class ClientModEvents {
         @SubscribeEvent
         public static void onClientSetup(FMLClientSetupEvent event) {
-            // Some client setup code
             LOGGER.info("HELLO FROM CLIENT SETUP");
         }
     }
