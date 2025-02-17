@@ -42,10 +42,8 @@ public class ServerEvents {
 
         for (ResourceLocation resourceLocation : resources) {
 
-            // Adjust the ResourceLocation to get the loot table ID
             String path = resourceLocation.getPath();
 
-            // Ensure the path starts with "loot_tables/"
             if (path.startsWith("loot_tables/") && path.endsWith(".json")) {
 
                 // Remove "loot_tables/" prefix and ".json" suffix
