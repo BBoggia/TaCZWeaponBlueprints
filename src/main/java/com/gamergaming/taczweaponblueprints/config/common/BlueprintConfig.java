@@ -26,7 +26,7 @@ public class BlueprintConfig {
             builder.pop();
     }
 
-    // Returns a list of all chest loot tables pulled using forge
+    // Returns list of all chest loot tables pulled using forge
     private static List<String> getLootTables() {
         List<String> lootTables = LootTable.DEFAULT_PARAM_SET.getAllowed().stream().filter((resourceLocation) -> {
             return resourceLocation.getName().getPath().startsWith("chests/");
