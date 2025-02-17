@@ -48,26 +48,23 @@ public class BlueprintConfig extends Config {
 
     @Override
     public void update(int deserializedVersion) {
-        // Ensure that maxBlueprints >= minBlueprints
+        // Makes sure maxBlueprints >= minBlueprints
         int minValue = minBlueprints.get();
         int maxValue = maxBlueprints.get();
         
         if (maxValue < minValue) {
             maxBlueprints.setAndUpdate(minValue);
-            // Optionally, log a warning
             // LOGGER.warn("maxBlueprints was less than minBlueprints; adjusted to match minBlueprints value.");
         }
     }
 
     @Override
     public void onUpdateClient() {
-        // Ensure that maxBlueprints >= minBlueprints
         int minValue = minBlueprints.get();
         int maxValue = maxBlueprints.get();
         
         if (maxValue < minValue) {
             maxBlueprints.setAndUpdate(minValue);
-            // Optionally, log a warning
             // LOGGER.warn("maxBlueprints was less than minBlueprints; adjusted to match minBlueprints value.");
         }
     }
