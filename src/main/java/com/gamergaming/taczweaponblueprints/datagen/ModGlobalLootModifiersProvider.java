@@ -101,7 +101,8 @@ public class ModGlobalLootModifiersProvider extends GlobalLootModifierProvider {
         InputStreamReader reader = new InputStreamReader(stream);
         JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
         List<BlueprintSpawnRate> spawnRates = new ArrayList<>();
-        // Iterate over each key in the JSON object. Each keys value is an array of json objects which map to a BlueprintSpawnRate
+        // Iterates over each key in the JSON object
+        // Each keys value is an array of json objects which map to a BlueprintSpawnRate
         for (Map.Entry<String, JsonElement> entry : json.entrySet()) {
             JsonArray array = entry.getValue().getAsJsonArray();
             TaCZWeaponBlueprints.LOGGER.info("Loading " + array.size() + " blueprint spawn rates for " + entry.getKey());
@@ -160,45 +161,3 @@ public class ModGlobalLootModifiersProvider extends GlobalLootModifierProvider {
     }
     
 }
-
-
-
-
-
-
-
-
-
-
-
-
-    // @Override
-    // protected void start() {
-    //     List<BlueprintSpawnRate> spawnRates = getBlueprintSpawnRates();
-    //     List<Pair<ItemStack, Float>> bpItemsWithChances = new ArrayList<>();
-
-    //     for (BlueprintSpawnRate spawnRate : spawnRates) {
-    //         try {
-    //             ItemStack bpItem = BlueprintItem.createBlueprint(spawnRate.id());
-
-    //             // Add NBT data to the ItemStack
-    //             CompoundTag nbtTag = bpItem.getOrCreateTag();
-    //             nbtTag.putString("bpId", spawnRate.id());
-    //             bpItem.setTag(nbtTag);
-
-    //             bpItemsWithChances.add(Pair.of(bpItem, spawnRate.score()));
-
-    //         } catch (Exception e) {
-    //             TaCZWeaponBlueprints.LOGGER.error("Failed to add blueprint spawn rate: " + e.getMessage());
-    //         }
-    //     }
-
-    //     add("blueprint_spawn_rates",
-    //         new AddItemsModifier(
-    //             new LootItemCondition[]{
-    //                 new LootTableIdCondition.Builder(new ResourceLocation("chests/village/village_armorer")).build()
-    //             },
-    //             bpItemsWithChances
-    //         )
-    //     );
-    // }
