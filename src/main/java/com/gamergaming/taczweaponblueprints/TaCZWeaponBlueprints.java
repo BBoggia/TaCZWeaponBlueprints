@@ -37,13 +37,11 @@ public class TaCZWeaponBlueprints {
 
         LOGGER.info("HELLO FROM TaCZ Weapon Blueprints INITIALIZATION");
 
-        // Register the commonSetup method for modloading
         modEventBus.addListener(this::commonSetup);
         // modEventBus.addListener(this::onAddReloadListeners);
 
         ModConfigs.init();
 
-        // Register ourselves for server and other game events we are interested in
         MinecraftForge.EVENT_BUS.register(this);
 
         // Register ForgeConfigSpec
@@ -57,13 +55,11 @@ public class TaCZWeaponBlueprints {
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
-        // Some common setup code
         LOGGER.info("HELLO FROM COMMON SETUP");
     }
 
     @SubscribeEvent
     public void onPlayerJoin(PlayerLoggedInEvent event) {
-        // Do something when the player joins
         LOGGER.info("HELLO from player join");
         BlueprintDataManager.INSTANCE.initialize();
         CommonAssetManager.INSTANCE.clearRecipes();
@@ -71,16 +67,13 @@ public class TaCZWeaponBlueprints {
 
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
-        // Do something when the server starts
         LOGGER.info("HELLO from server starting");
     }
 
-    // You can use EventBusSubscriber to automatically register all static methods in the class annotated with @SubscribeEvent
     @Mod.EventBusSubscriber(modid = MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static class ClientModEvents {
         @SubscribeEvent
         public static void onClientSetup(FMLClientSetupEvent event) {
-            // Some client setup code
             LOGGER.info("HELLO FROM CLIENT SETUP");
         }
     }
