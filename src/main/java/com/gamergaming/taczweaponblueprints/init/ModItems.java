@@ -19,7 +19,6 @@ public class ModItems {
                         new Item.Properties()
                         .stacksTo(1)
                 ));
-        // Create a new item called empty_blueprint and give it the texture located at: src/main/resources/assets/taczweaponblueprints/textures/item/blueprint_base.png
         public static final RegistryObject<Item> EMPTY_BLUEPRINT_ITEM =
                 ITEMS.register("empty_blueprint", () -> new Item(
                         new Item.Properties()
