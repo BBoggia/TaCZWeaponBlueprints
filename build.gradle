@@ -29,7 +29,6 @@ base {
     archivesName = mod_id
 }
 
-// Mojang ships Java 17 to end users in 1.18+, so your mod should target Java 17.
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
 
@@ -385,11 +384,9 @@ tasks.named('jar', Jar).configure {
         ])
     }
 
-    // This is the preferred method to reobfuscate your jar file
     finalizedBy 'reobfJar'
 }
 
-// Example configuration to allow publishing using the maven-publish plugin
 publishing {
     publications {
         register('mavenJava', MavenPublication) {
