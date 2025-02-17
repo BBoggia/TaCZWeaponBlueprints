@@ -44,7 +44,7 @@ public class BlueprintDataManager {
             String nameKey = entry.getValue().getMiddle();
             if (nameKey == null) {
                 continue;
-            // Check if the recipe is in the list of recipes to remove
+            // Checks if recipe is in list of recipes to remove
             } else if (ModConfigs.BLUEPRINT.isItemRecipeBlacklisted(recipeId.toString())) {
                 continue;
             }
