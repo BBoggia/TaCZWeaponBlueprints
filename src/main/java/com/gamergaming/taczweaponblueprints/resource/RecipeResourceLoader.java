@@ -23,10 +23,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public class RecipeResourceLoader {
 
@@ -39,40 +39,40 @@ public class RecipeResourceLoader {
      */
     public static Map<ResourceLocation, Triple<GunSmithTableRecipe, String, Pair<String, String>>> loadRecipes(MinecraftServer server) {
         Map<ResourceLocation, Triple<GunSmithTableRecipe, String, Pair<String, String>>> recipes = new HashMap<>();
-        // ResourceManager resourceManager = server.getResourceManager();
+        ResourceManager resourceManager = server.getResourceManager();
 
         // List all recipe JSON files
         try {
             // You might need to adjust the path here
             List<GunSmithTableRecipe> recipeLocations = CommonAssetsManager.getInstance().recipeManager.getAllRecipesFor(ModRecipe.GUN_SMITH_TABLE_CRAFTING.get());
-        
+
             for (GunSmithTableRecipe recipeLocation : recipeLocations) {
                 // Process only recipes under the "tac" namespace or other gun pack namespaces
                 if (!isGunPackNamespace(recipeLocation.getId().getNamespace())) {
                     continue;
                 }
 
-                // Load the recipe JSON
-                Resource resource;
-
-                
+                Optional<Resource> optionalResource = resourceManager.getResource(recipeLocation.getId());
+                if (optionalResource.isEmpty()) {
+                    continue;
+                }
+                Resource resource = optionalResource.get();
 
                 try (InputStream stream = resource.open()) {
                     JsonObject json = GsonHelper.parse(new InputStreamReader(stream, StandardCharsets.UTF_8));
-                    GunSmithTableRecipe recipe = parseRecipe(recipeLocation, json);
+                    GunSmithTableRecipe recipe = parseRecipe(recipeLocation.getId(), json);
                     if (recipe == null) {
                         continue;
                     }
 
                     // Get corresponding index data
-                    Triple<String, String, String> indexData = loadIndexData(resourceManager, recipeLocation);
+                    Triple<String, String, String> indexData = loadIndexData(resourceManager, recipeLocation.getId());
                     if (indexData == null) {
                         continue;
                     }
 
-                    recipes.put(recipeLocation, Triple.of(recipe, indexData.getLeft(), Pair.of(indexData.getMiddle(), indexData.getRight())));
+                    recipes.put(recipeLocation.getId(), Triple.of(recipe, indexData.getLeft(), Pair.of(indexData.getMiddle(), indexData.getRight())));
                 }
-
             }
 
         } catch (IOException e) {
@@ -108,17 +108,14 @@ public class RecipeResourceLoader {
 
             ResourceLocation indexLocation = new ResourceLocation(recipeLocation.getNamespace(), indexPath);
 
-            // Load index JSON
-            Resource resource;
-
-            if (resourceManager.getResource(indexLocation).isPresent()) {
-                resource = resourceManager.getResource(indexLocation).get();
-            } else {
+            Optional<Resource> optionalResource = resourceManager.getResource(indexLocation);
+            if (optionalResource.isEmpty()) {
                 return null;
             }
+            Resource resource = optionalResource.get();
 
+            // Load index JSON
             try (InputStream stream = resource.open()) {
-            //try (Resource resource = resourceManager.getResource(indexLocation);
                 JsonObject json = GsonHelper.parse(new InputStreamReader(stream, StandardCharsets.UTF_8));
                 String name = GsonHelper.getAsString(json, "name");
                 String type = GsonHelper.getAsString(json, "type", "gun"); // default to "gun"
@@ -134,5 +131,4 @@ public class RecipeResourceLoader {
             return null;
         }
     }
-
 }
