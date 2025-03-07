@@ -110,17 +110,20 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
             renderTexturedQuad(poseStack, bufferSource, light, overlay, BLUEPRINT_TEXTURE, baseZLevel, xOffset, yOffset, baseScale, displayContext, true);
 
             switch (data.getItemType()) {
-                case "grip", "smg":
+                case "smg", "pistol":
                     overlayScale = 0.97f;
                     break;
-                case "muzzle", "pistol":
-                    overlayScale = 0.95f;
+                case "muzzle", "grip":
+                    overlayScale = 0.92f;
+                    break;
+                case "scope":
+                    overlayScale = 0.83f;
                     break;
                 case "stock":
-                    overlayScale = 0.93f;
+                    overlayScale = 0.85f;
                     break;
                 case "ammo":
-                    overlayScale = 0.85f;
+                    overlayScale = 0.8f;
                     break;
                 case "extended_mag":
                     overlayScale = 0.7f;
@@ -137,75 +140,114 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
             float overlayZLevel = baseZLevel + 0.01f;
             float baseScale = 1.2f;
             float overlayScale = 1.0f;
-            float xOffset = 0.0f;
-            float yOffset = 0.0f;
+
+            float baseXOffset = 0.0f;
+            float baseYOffset = 0.0f;
+
+            float overlayXOffset = 0.0f;
+            float overlayYOffset = 0.0f;
 
             switch (data.getItemType()) {
                 case "smg", "pistol":
-                    overlayScale = 0.95f;
+                    overlayScale = 0.9f;
                     break;
                 case "grip", "ammo":
-                    overlayScale = 0.8f;
+                    overlayScale = 0.6f;
                     break;
-                case "stock", "muzzle", "scope":
-                    overlayScale = 0.9f;
+                case "stock":
+                    overlayScale = 0.52f;
+                    break;
+                case "muzzle":
+                    overlayScale = 0.55f;
+                    break;
+                case "scope", "extended_mag":
+                    overlayScale = 0.5f;
                     break;
 //                case "ammo":
 //                    overlayScale = 0.8f;
 //                    break;
-                case "extended_mag":
-                    overlayScale = 0.50f;
-                    break;
                 default:
                     break;
             }
 
+            switch (data.getItemType()) {
+                case "extended_mag":
+                    overlayXOffset -= 0.275f;
+                    overlayYOffset += 0.1f;
+                    break;
+                case "scope":
+                    overlayXOffset -= 0.24f;
+                    overlayYOffset += 0.115f;
+                    break;
+                case "stock":
+                    overlayXOffset -= 0.23f;
+                    overlayYOffset += 0.11f;
+                    break;
+                case "grip":
+                    overlayXOffset -= 0.23f;
+                    overlayYOffset += 0.10f;
+                    break;
+                case "muzzle":
+                    overlayXOffset -= 0.225f;
+                    overlayYOffset += 0.12f;
+                case "ammo":
+                    overlayXOffset -= 0.24f;
+                    overlayYOffset += 0.12f;
+                    break;
+                default:
+                    overlayXOffset -= 0.14f;
+                    overlayYOffset -= 0.07f;
+            }
+
             // Render base blueprint texture
-            renderTexturedQuad(poseStack, bufferSource, light, overlay, BLUEPRINT_TEXTURE, baseZLevel, xOffset, yOffset, baseScale, displayContext, false);
+            renderTexturedQuad(poseStack, bufferSource, light, overlay, BLUEPRINT_TEXTURE, baseZLevel, baseXOffset, baseYOffset, baseScale, displayContext, false);
 
             // Render overlay at same Z-level
-            renderTexturedQuad(poseStack, bufferSource, light, overlay, overlayTexture, overlayZLevel, xOffset, yOffset, overlayScale, displayContext, false);
+            renderTexturedQuad(poseStack, bufferSource, light, overlay, overlayTexture, overlayZLevel, overlayXOffset, overlayYOffset, overlayScale, displayContext, false);
         }
     }
 
     private void renderTexturedQuad(PoseStack poseStack, MultiBufferSource bufferSource, int light, int overlay, ResourceLocation texture, float zLevel, float xOffset, float yOffset, float scale, ItemDisplayContext displayContext, boolean flipOverlay) {
         boolean isGuiContext = (displayContext == ItemDisplayContext.GUI ||
-                                displayContext == ItemDisplayContext.GROUND ||
-                                displayContext == ItemDisplayContext.FIXED ||
-                                displayContext == ItemDisplayContext.NONE);
-        
+                displayContext == ItemDisplayContext.GROUND ||
+                displayContext == ItemDisplayContext.FIXED ||
+                displayContext == ItemDisplayContext.NONE);
+
         RenderType renderType;
         if (isGuiContext) {
             renderType = RenderType.entityTranslucent(texture);
         } else {
             renderType = RenderType.entityCutout(texture);
         }
-    
+
         VertexConsumer vertexConsumer = bufferSource.getBuffer(renderType);
-    
+
         poseStack.pushPose();
 
         poseStack.translate(xOffset, yOffset, 0.0f);
-    
+
+        // Translate to the center of the quad
+        poseStack.translate(0.5f, 0.5f, 0.0f);
+
+        // Apply scaling
         poseStack.scale(scale, scale, scale);
-    
-        float deltaX = 0.5f * (1 - scale);
-        float deltaY = 0.5f * (1 - scale);
-        poseStack.translate(deltaX, deltaY, 0.0f);
-    
+
+        // Translate back to the original position
+        poseStack.translate(-0.5f, -0.5f, 0.0f);
+
         if (displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND) {
             // Translate slightly left and up
             poseStack.translate(-0.25f, 0.2f, 0.0f);
         }
-    
+
         Matrix4f matrix = poseStack.last().pose();
         Matrix3f normalMatrix = poseStack.last().normal();
-    
+
         float minX = 0.0f;
         float minY = 0.0f;
         float maxX = 1.0f;
         float maxY = 1.0f;
-    
+
         float normalX = 0.0F;
         float normalY = 0.0F;
         float normalZ = -1.0F;
@@ -219,7 +261,7 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
                 .uv(u1, 1.0f)
                 .overlayCoords(overlay)
                 .uv2(light)
-                .normal(normalMatrix, 0.0f, 0.0f, -1.0f)
+                .normal(normalMatrix, normalX, normalY, normalZ)
                 .endVertex();
 
         vertexConsumer.vertex(matrix, maxX, minY, zLevel)
@@ -227,7 +269,7 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
                 .uv(u2, 1.0f)
                 .overlayCoords(overlay)
                 .uv2(light)
-                .normal(normalMatrix, 0.0f, 0.0f, -1.0f)
+                .normal(normalMatrix, normalX, normalY, normalZ)
                 .endVertex();
 
         vertexConsumer.vertex(matrix, maxX, maxY, zLevel)
@@ -235,7 +277,7 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
                 .uv(u2, 0.0f)
                 .overlayCoords(overlay)
                 .uv2(light)
-                .normal(normalMatrix, 0.0f, 0.0f, -1.0f)
+                .normal(normalMatrix, normalX, normalY, normalZ)
                 .endVertex();
 
         vertexConsumer.vertex(matrix, minX, maxY, zLevel)
@@ -243,41 +285,90 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
                 .uv(u1, 0.0f)
                 .overlayCoords(overlay)
                 .uv2(light)
-                .normal(normalMatrix, 0.0f, 0.0f, -1.0f)
+                .normal(normalMatrix, normalX, normalY, normalZ)
                 .endVertex();
-    
-//        vertexConsumer.vertex(matrix, minX, minY, zLevel)
-//                      .color(255, 255, 255, 255)
-//                      .uv(1.0f, 1.0f)
-//                      .overlayCoords(overlay)
-//                      .uv2(light)
-//                      .normal(normalMatrix, normalX, normalY, normalZ)
-//                      .endVertex();
-//
-//        vertexConsumer.vertex(matrix, maxX, minY, zLevel)
-//                      .color(255, 255, 255, 255)
-//                      .uv(0.0f, 1.0f)
-//                      .overlayCoords(overlay)
-//                      .uv2(light)
-//                      .normal(normalMatrix, normalX, normalY, normalZ)
-//                      .endVertex();
-//
-//        vertexConsumer.vertex(matrix, maxX, maxY, zLevel)
-//                      .color(255, 255, 255, 255)
-//                      .uv(0.0f, 0.0f)
-//                      .overlayCoords(overlay)
-//                      .uv2(light)
-//                      .normal(normalMatrix, normalX, normalY, normalZ)
-//                      .endVertex();
-//
-//        vertexConsumer.vertex(matrix, minX, maxY, zLevel)
-//                      .color(255, 255, 255, 255)
-//                      .uv(1.0f, 0.0f)
-//                      .overlayCoords(overlay)
-//                      .uv2(light)
-//                      .normal(normalMatrix, normalX, normalY, normalZ)
-//                      .endVertex();
-    
+
         poseStack.popPose();
     }
+
+//    private void renderTexturedQuad(PoseStack poseStack, MultiBufferSource bufferSource, int light, int overlay, ResourceLocation texture, float zLevel, float xOffset, float yOffset, float scale, ItemDisplayContext displayContext, boolean flipOverlay) {
+//        boolean isGuiContext = (displayContext == ItemDisplayContext.GUI ||
+//                                displayContext == ItemDisplayContext.GROUND ||
+//                                displayContext == ItemDisplayContext.FIXED ||
+//                                displayContext == ItemDisplayContext.NONE);
+//
+//        RenderType renderType;
+//        if (isGuiContext) {
+//            renderType = RenderType.entityTranslucent(texture);
+//        } else {
+//            renderType = RenderType.entityCutout(texture);
+//        }
+//
+//        VertexConsumer vertexConsumer = bufferSource.getBuffer(renderType);
+//
+//        poseStack.pushPose();
+//
+//        poseStack.translate(xOffset, yOffset, 0.0f);
+//
+//        poseStack.scale(scale, scale, scale);
+//
+//        float deltaX = 0.5f * (1 - scale);
+//        float deltaY = 0.5f * (1 - scale);
+//        poseStack.translate(deltaX, deltaY, 0.0f);
+//
+//        if (displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND) {
+//            // Translate slightly left and up
+//            poseStack.translate(-0.25f, 0.2f, 0.0f);
+//        }
+//
+//        Matrix4f matrix = poseStack.last().pose();
+//        Matrix3f normalMatrix = poseStack.last().normal();
+//
+//        float minX = 0.0f;
+//        float minY = 0.0f;
+//        float maxX = 1.0f;
+//        float maxY = 1.0f;
+//
+//        float normalX = 0.0F;
+//        float normalY = 0.0F;
+//        float normalZ = -1.0F;
+//
+//        // Decide whether to flip horizontally based on flipOverlay
+//        float u1 = flipOverlay ? 0.0f : 1.0f;
+//        float u2 = flipOverlay ? 1.0f : 0.0f;
+//
+//        vertexConsumer.vertex(matrix, minX, minY, zLevel)
+//                .color(255, 255, 255, 255)
+//                .uv(u1, 1.0f)
+//                .overlayCoords(overlay)
+//                .uv2(light)
+//                .normal(normalMatrix, 0.0f, 0.0f, -1.0f)
+//                .endVertex();
+//
+//        vertexConsumer.vertex(matrix, maxX, minY, zLevel)
+//                .color(255, 255, 255, 255)
+//                .uv(u2, 1.0f)
+//                .overlayCoords(overlay)
+//                .uv2(light)
+//                .normal(normalMatrix, 0.0f, 0.0f, -1.0f)
+//                .endVertex();
+//
+//        vertexConsumer.vertex(matrix, maxX, maxY, zLevel)
+//                .color(255, 255, 255, 255)
+//                .uv(u2, 0.0f)
+//                .overlayCoords(overlay)
+//                .uv2(light)
+//                .normal(normalMatrix, 0.0f, 0.0f, -1.0f)
+//                .endVertex();
+//
+//        vertexConsumer.vertex(matrix, minX, maxY, zLevel)
+//                .color(255, 255, 255, 255)
+//                .uv(u1, 0.0f)
+//                .overlayCoords(overlay)
+//                .uv2(light)
+//                .normal(normalMatrix, 0.0f, 0.0f, -1.0f)
+//                .endVertex();
+//
+//        poseStack.popPose();
+//    }
 }
