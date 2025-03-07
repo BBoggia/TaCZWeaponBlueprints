@@ -11,9 +11,9 @@ public class BlueprintData {
     private final ResourceLocation recipeId;
     private final GunSmithTableRecipe recipe;
     private final String itemType;
-    private final String displaySlotKey;
+    private final ResourceLocation displaySlotKey;
 
-    public BlueprintData(String bpId, String nameKey, String tooltipKey, ResourceLocation recipeId, GunSmithTableRecipe recipe, String itemType, String displaySlotKey) {
+    public BlueprintData(String bpId, String nameKey, String tooltipKey, ResourceLocation recipeId, GunSmithTableRecipe recipe, String itemType, ResourceLocation displaySlotKey) {
         this.bpId = bpId;
         this.nameKey = nameKey;
         this.tooltipKey = tooltipKey;
@@ -48,7 +48,7 @@ public class BlueprintData {
         return itemType;
     }
 
-    public String getDisplaySlotKey() {
+    public ResourceLocation getDisplaySlotKey() {
         return displaySlotKey;
     }
 }

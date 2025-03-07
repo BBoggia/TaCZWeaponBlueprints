@@ -64,11 +64,9 @@ public class BlueprintItem extends Item {
         if (data != null) {
             Component firstHalfName = Component.translatable("item.taczweaponblueprints.blueprint");
             String nameKey = data.getNameKey();
-            if (nameKey.contains("attachments")) {
-                nameKey = nameKey.replace(".attachments.", ".attachment.");
-            }
+
             Component secondHalfName = Component.translatable(nameKey);
-            if (secondHalfName.getString().strip() == nameKey.strip()) {
+            if (secondHalfName.getString().strip().equals(nameKey.strip())) {
                 secondHalfName = Component.translatable(nameKey.replace(".name", ""));
             }
 
@@ -77,11 +75,11 @@ public class BlueprintItem extends Item {
                 case "rifle", "shotgun", "pistol", "sniper", "smg", "mg", "rpg":
                     itemName = firstHalfName.getString() + ItemNameFilterHelper.filterGunName(secondHalfName.getString());
                     break;
-                
+
                 case "ammo":
                     itemName = firstHalfName.getString() + ItemNameFilterHelper.filterAmmoName(secondHalfName.getString());
                     break;
-            
+
                 default:
                     itemName = firstHalfName.getString() + secondHalfName.getString();
                     break;
@@ -89,6 +87,7 @@ public class BlueprintItem extends Item {
 
             return Component.literal(itemName);
         } else {
+
             return Component.translatable("item.taczweaponblueprints.blueprint.invalid");
         }
     }
@@ -109,7 +108,7 @@ public class BlueprintItem extends Item {
                 case "ammo":
                     itemName = ItemNameFilterHelper.filterAmmoName(itemName);
                     break;
-            
+
                 default:
                     break;
             }
@@ -138,7 +137,7 @@ public class BlueprintItem extends Item {
     //     if (data != null) {
     //         GunSmithTableRecipe recipe = data.getRecipe();
     //         TaCZWeaponBlueprints.LOGGER.info("BlueprintItem handleBlueprintUse: " + data.getRecipeId() + " - " + recipe.getResult().getResult().getDisplayName().getString());
-            
+
     //         if (recipe != null && !CommonAssetManager.INSTANCE.getRecipe(data.getRecipeId()).isPresent()) {
     //             CommonAssetManager.INSTANCE.putRecipe(data.getRecipeId(), recipe);
     //             player.displayClientMessage(Component.translatable("message.taczweaponblueprints.blueprint.unlocked", Component.translatable(data.getNameKey())), true);

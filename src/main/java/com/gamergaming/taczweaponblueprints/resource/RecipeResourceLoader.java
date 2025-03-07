@@ -1,5 +1,18 @@
 package com.gamergaming.taczweaponblueprints.resource;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import org.apache.commons.lang3.tuple.Triple;
+import org.apache.logging.log4j.Marker;
+import org.apache.logging.log4j.MarkerManager;
+
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
@@ -15,18 +28,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.GsonHelper;
-import org.apache.commons.lang3.tuple.Triple;
-import org.apache.logging.log4j.Marker;
-import org.apache.logging.log4j.MarkerManager;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 public class RecipeResourceLoader {
 
@@ -84,13 +85,10 @@ public class RecipeResourceLoader {
 
     private static boolean isGunPackNamespace(String namespace) {
         // Check if the namespace corresponds to TaCZ gun packs
-        // You might need to adjust this depending on the actual namespaces used
-        return true; // For example purposes, we process all namespaces
+        return true;
     }
 
     private static GunSmithTableRecipe parseRecipe(ResourceLocation id, JsonObject json) {
-        // Parse your GunSmithTableRecipe from the JSON
-        // Adjust this to match your actual recipe parsing logic
         try {
             TableRecipe tableRecipe = CommonGunPackLoader.GSON.fromJson(json, TableRecipe.class);
             return new GunSmithTableRecipe(id, tableRecipe);
@@ -118,7 +116,7 @@ public class RecipeResourceLoader {
             try (InputStream stream = resource.open()) {
                 JsonObject json = GsonHelper.parse(new InputStreamReader(stream, StandardCharsets.UTF_8));
                 String name = GsonHelper.getAsString(json, "name");
-                String type = GsonHelper.getAsString(json, "type", "gun"); // default to "gun"
+                String type = GsonHelper.getAsString(json, "type", "gun"); 
                 String displayId = GsonHelper.getAsString(json, "display");
                 if (displayId != null) {
                     displayId = new ResourceLocation(displayId).getPath();
