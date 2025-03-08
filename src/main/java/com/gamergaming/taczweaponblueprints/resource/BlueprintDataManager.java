@@ -96,6 +96,11 @@ public class BlueprintDataManager {
 
             TaCZWeaponBlueprints.LOGGER.info("FOR REAL ADDING Blueprint Recipe {} to recipe {} with item type: {}", itemId, recipe.getId(), itemType);
 
+            if (nameKey.isEmpty() || itemId == null || displaySlotKey == null) {
+                TaCZWeaponBlueprints.LOGGER.error("Failed to add Blueprint Recipe {} to recipe {} with item type: {}", itemId, recipe.getId(), itemType);
+                continue;
+            }
+
             BlueprintData data = new BlueprintData(itemId.toString(), nameKey, tooltipKey, recipe.getId(), recipe, itemType, displaySlotKey);
             blueprintDataMap.put(itemId, data);
 
