@@ -57,37 +57,43 @@ public class BlueprintDataManager {
 
             switch (splitId) {
                 case "gun" -> {
-                    IGun gun = (IGun) itemStack.getItem();
-                    CommonGunIndex indx = CommonAssetsManager.getInstance().getGunIndex(gun.getGunId(itemStack));
-
-                    assert indx != null;
-                    nameKey = indx.getPojo().getName();
-                    tooltipKey = indx.getPojo().getTooltip();
-                    itemId = gun.getGunId(itemStack);
-                    itemType = indx.getType();
-                    displaySlotKey = indx.getPojo().getDisplay();
+                    if (itemStack.getItem() instanceof IGun gun) {
+                        CommonGunIndex indx = CommonAssetsManager.getInstance().getGunIndex(gun.getGunId(itemStack));
+                        assert indx != null;
+                        nameKey = indx.getPojo().getName();
+                        tooltipKey = indx.getPojo().getTooltip();
+                        itemId = gun.getGunId(itemStack);
+                        itemType = indx.getType();
+                        displaySlotKey = indx.getPojo().getDisplay();
+                    } else {
+                        TaCZWeaponBlueprints.LOGGER.error("Item is not an instance of IGun: {}", itemStack.getItem().getClass().getName());
+                    }
                 }
                 case "ammo" -> {
-                    IAmmo ammo = (IAmmo) itemStack.getItem();
-                    CommonAmmoIndex indx = CommonAssetsManager.getInstance().getAmmoIndex(ammo.getAmmoId(itemStack));
-
-                    assert indx != null;
-                    nameKey = indx.getPojo().getName();
-                    tooltipKey = indx.getPojo().getTooltip();
-                    itemId = ammo.getAmmoId(itemStack);
-                    itemType = "ammo";
-                    displaySlotKey = indx.getPojo().getDisplay();
+                    if (itemStack.getItem() instanceof IAmmo ammo) {
+                        CommonAmmoIndex indx = CommonAssetsManager.getInstance().getAmmoIndex(ammo.getAmmoId(itemStack));
+                        assert indx != null;
+                        nameKey = indx.getPojo().getName();
+                        tooltipKey = indx.getPojo().getTooltip();
+                        itemId = ammo.getAmmoId(itemStack);
+                        itemType = "ammo";
+                        displaySlotKey = indx.getPojo().getDisplay();
+                    } else {
+                        TaCZWeaponBlueprints.LOGGER.error("Item is not an instance of IAmmo: {}", itemStack.getItem().getClass().getName());
+                    }
                 }
                 case "attachments" -> {
-                    IAttachment attachment = (IAttachment) itemStack.getItem();
-                    CommonAttachmentIndex indx = CommonAssetsManager.getInstance().getAttachmentIndex(attachment.getAttachmentId(itemStack));
-
-                    assert indx != null;
-                    nameKey = indx.getPojo().getName();
-                    tooltipKey = indx.getPojo().getTooltip();
-                    itemId = attachment.getAttachmentId(itemStack);
-                    itemType = indx.getType().name().toLowerCase();
-                    displaySlotKey = indx.getPojo().getDisplay();
+                    if (itemStack.getItem() instanceof IAttachment attachment) {
+                        CommonAttachmentIndex indx = CommonAssetsManager.getInstance().getAttachmentIndex(attachment.getAttachmentId(itemStack));
+                        assert indx != null;
+                        nameKey = indx.getPojo().getName();
+                        tooltipKey = indx.getPojo().getTooltip();
+                        itemId = attachment.getAttachmentId(itemStack);
+                        itemType = indx.getType().name().toLowerCase();
+                        displaySlotKey = indx.getPojo().getDisplay();
+                    } else {
+                        TaCZWeaponBlueprints.LOGGER.error("Item is not an instance of IAttachment: {}", itemStack.getItem().getClass().getName());
+                    }
                 }
                 default -> TaCZWeaponBlueprints.LOGGER.info("Unknown item type: {}", splitId);
             }
