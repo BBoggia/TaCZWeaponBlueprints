@@ -35,3 +35,5 @@ forge*changelog.txt
 /misc_files/gunPropertyBalancing/
 /misc_files/villagerTradeData/
 /misc_files/balanced_weapon_data.json
+
+.DS_Store

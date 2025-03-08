@@ -10,7 +10,8 @@ import java.util.stream.Collectors;
 
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
-import com.tacz.guns.resource.CommonGunPackLoader;
+import com.tacz.guns.resource.CommonAssetsManager;
+import com.tacz.guns.resource.GunPackLoader;
 
 import me.fzzyhmstrs.fzzy_config.annotations.Translation;
 import me.fzzyhmstrs.fzzy_config.annotations.WithPerms;
@@ -22,6 +23,7 @@ import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedBoolean;
 import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedString;
 import me.fzzyhmstrs.fzzy_config.validation.number.ValidatedDouble;
 import me.fzzyhmstrs.fzzy_config.validation.number.ValidatedInt;
+import net.minecraft.resources.ResourceLocation;
 
 @Translation(prefix = ModConfigs.BASE_KEY + "blueprint")
 public class BlueprintConfig extends Config {
@@ -48,7 +50,8 @@ public class BlueprintConfig extends Config {
 
     @Override
     public void update(int deserializedVersion) {
-        // Makes sure maxBlueprints >= minBlueprints
+        // Make sure maxBlueprints >= minBlueprints
+
         int minValue = minBlueprints.get();
         int maxValue = maxBlueprints.get();
         
@@ -119,9 +122,19 @@ public class BlueprintConfig extends Config {
                attachmentBlacklist.get().stream().map(item -> item.replace(":", ":attachment/")).collect(Collectors.toList()).contains(recipeId);
     }
 
+    private static Predicate<String> createGunIdFilter() {
+       return gunId -> {
+           return CommonAssetsManager.getInstance().getAllGuns()
+               .stream()
+               .map(gun -> gun.getKey().toString())
+               .collect(Collectors.toSet())
+               .contains(gunId);
+       };
+   }
+
     private static Predicate<String> createAttachmentIdFilter() {
         return attachmentId -> {
-            return CommonGunPackLoader.getAllAttachments()
+            return CommonAssetsManager.getInstance().getAllAttachments()
                 .stream()
                 .map(attachment -> attachment.getKey().toString())
                 .collect(Collectors.toList())
@@ -131,7 +144,7 @@ public class BlueprintConfig extends Config {
 
     private static Predicate<String> createAmmoIdFilter() {
         return ammoId -> {
-            return CommonGunPackLoader.getAllAmmo()
+            return CommonAssetsManager.getInstance().getAllAmmos()
                 .stream()
                 .map(ammo -> ammo.getKey().toString())
                 .collect(Collectors.toList())
@@ -139,20 +152,10 @@ public class BlueprintConfig extends Config {
         };
     }
 
-    private static Predicate<String> createGunIdFilter() {
-        return gunId -> {
-            return CommonGunPackLoader.getAllGuns()
-                .stream()
-                .map(gun -> gun.getKey().toString())
-                .collect(Collectors.toList())
-                .contains(gunId);
-        };
-    }
-
     private static Supplier<List<String>> getAttachmentItemIdStrings() {
         return () -> {
             List<String> attachmentIds = new ArrayList<>();
-            CommonGunPackLoader.getAllAttachments().forEach(attachment -> attachmentIds.add(attachment.getKey().toString()));
+            CommonAssetsManager.getInstance().getAllAttachments().forEach(attachment -> attachmentIds.add(attachment.getKey().toString()));
             return attachmentIds;
         };
     }
@@ -160,7 +163,7 @@ public class BlueprintConfig extends Config {
     private static Supplier<List<String>> getAmmoItemIdStrings() {
         return () -> {
             List<String> ammoIds = new ArrayList<>();
-            CommonGunPackLoader.getAllAmmo().forEach(ammo -> ammoIds.add(ammo.getKey().toString()));
+            CommonAssetsManager.getInstance().getAllAmmos().forEach(ammo -> ammoIds.add(ammo.getKey().toString()));
             return ammoIds;
         };
     }
@@ -168,7 +171,7 @@ public class BlueprintConfig extends Config {
     private static Supplier<List<String>> getGunItemIdStrings() {
         return () -> {
             List<String> gunIds = new ArrayList<>();
-            CommonGunPackLoader.getAllGuns().forEach(gun -> gunIds.add(gun.getKey().toString()));
+            CommonAssetsManager.getInstance().getAllGuns().forEach(gun -> gunIds.add(gun.getKey().toString()));
             return gunIds;
         };
     }

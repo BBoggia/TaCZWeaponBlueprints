@@ -10,7 +10,7 @@ import com.gamergaming.taczweaponblueprints.loot.ModLootModifier;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.mojang.logging.LogUtils;
-import com.tacz.guns.resource.CommonAssetManager;
+import com.tacz.guns.resource.CommonAssetsManager;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
@@ -61,8 +61,9 @@ public class TaCZWeaponBlueprints {
     @SubscribeEvent
     public void onPlayerJoin(PlayerLoggedInEvent event) {
         LOGGER.info("HELLO from player join");
-        BlueprintDataManager.INSTANCE.initialize();
-        CommonAssetManager.INSTANCE.clearRecipes();
+        // BlueprintDataManager.INSTANCE.initialize();
+        BlueprintDataManager.INSTANCE.initialize(event.getEntity().getServer());
+        // CommonAssetsManager.INSTANCE.clearRecipes();
     }
 
     @SubscribeEvent

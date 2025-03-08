@@ -17,7 +17,7 @@ public class ModLootTableHelper {
     //     List<ResourceLocation> lootTableLists = getResourceLocationsFromClassFields(ModLootTables.BlueprintLootTableLists.class);
     //     Map<String, Map<String, String>> lootTableMap = new HashMap<>();
     //     for (ResourceLocation lootTableList : lootTableLists) {
-    //         // Only get path after last slash
+
     //         String[] pathParts = lootTableList.getPath().split("/");
     //         String lootTableListName = pathParts[pathParts.length - 1];
     //         lootTableMap.put(lootTableListName, new HashMap<>());

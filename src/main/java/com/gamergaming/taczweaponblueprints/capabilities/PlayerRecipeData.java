@@ -2,6 +2,7 @@ package com.gamergaming.taczweaponblueprints.capabilities;
 
 import java.util.HashSet;
 import java.util.Set;
+
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
@@ -45,7 +46,7 @@ public class PlayerRecipeData implements IPlayerRecipeData {
         learnedRecipes.clear();
         if (nbt.contains("Recipes"))
         {
-            ListTag list = nbt.getList("Recipes", 8); // 8 is the ID for StringTag
+            ListTag list = nbt.getList("Recipes", 8); 
             for (int i = 0; i < list.size(); i++) {
                 learnedRecipes.add(list.getString(i));
             }
