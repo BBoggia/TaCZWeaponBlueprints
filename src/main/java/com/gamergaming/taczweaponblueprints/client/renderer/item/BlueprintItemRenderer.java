@@ -61,6 +61,9 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
         // Get overlay texture
         ResourceLocation overlayTexture;
 
+        boolean flipOverlay = true;
+        boolean rotateOverlay = false;
+
         switch (itemCategory) {
             case "gun" -> {
                 Optional<ClientGunIndex> index = TimelessAPI.getClientGunIndex(new ResourceLocation(data.getBpId()));
@@ -95,51 +98,95 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
             }
         }
 
+        float overlayScale = 1.0f;
+
+        switch (data.getItemType()) {
+            case "pistol":
+                overlayScale = 0.375f;
+                break;
+            case "smg":
+                overlayScale = 0.44f;
+                break;
+            case "rifle":
+                overlayScale = 0.46f;
+                break;
+            case "shotgun":
+                overlayScale = 0.42f;
+                break;
+            case "mg", "sniper":
+                overlayScale = 0.45f;
+                break;
+            case "rpg":
+                overlayScale = 0.435f;
+                break;
+            case "grip":
+                overlayScale = 0.33f;
+                break;
+            case "stock", "muzzle", "ammo":
+                overlayScale = 0.35f;
+                break;
+            case "scope":
+                overlayScale = 0.38f;
+                break;
+            case "extended_mag":
+                overlayScale = 0.275f;
+                break;
+            default:
+                break;
+        }
+
+        // Render the blueprint item in inventory, GUI, or on the ground
         if (isGuiContext) {
             int light = LightTexture.FULL_BRIGHT;
             float baseZLevel = 0.0f;
             float overlayZLevel = baseZLevel - 0.01f; 
 
             float baseScale = 1.3f;  // 1.175f
-            float overlayScale = 1.0f; 
 
             float xOffset = 0.0f;
             float yOffset = 0.0f;
 
-            // Render the base blueprint texture with larger size
-            renderTexturedQuad(poseStack, bufferSource, light, overlay, BLUEPRINT_TEXTURE, baseZLevel, xOffset, yOffset, baseScale, displayContext, true);
+            overlayScale *= 2.0f;
 
-            switch (data.getItemType()) {
-                case "smg", "pistol":
-                    overlayScale = 0.97f;
-                    break;
-                case "muzzle", "grip":
-                    overlayScale = 0.92f;
-                    break;
-                case "scope":
-                    overlayScale = 0.83f;
-                    break;
-                case "stock":
-                    overlayScale = 0.85f;
-                    break;
-                case "ammo":
-                    overlayScale = 0.8f;
-                    break;
-                case "extended_mag":
-                    overlayScale = 0.7f;
-                    break;
-                default:
-                    break;
+            if (data.getItemType().equals("ammo")) {
+                flipOverlay = false;
             }
 
+//            switch (data.getItemType()) {
+//                case "smg", "pistol":
+//                    overlayScale = 0.97f;
+//                    break;
+//                case "muzzle", "grip":
+//                    overlayScale = 0.92f;
+//                    break;
+//                case "scope":
+//                    overlayScale = 0.83f;
+//                    break;
+//                case "stock":
+//                    overlayScale = 0.85f;
+//                    break;
+//                case "ammo":
+//                    flipOverlay = false;
+//                    overlayScale = 0.8f;
+//                    break;
+//                case "extended_mag":
+//                    overlayScale = 0.7f;
+//                    break;
+//                default:
+//                    break;
+//            }
+
+            // Render the base blueprint texture with larger size
+            renderTexturedQuad(poseStack, bufferSource, light, overlay, BLUEPRINT_TEXTURE, baseZLevel, xOffset, yOffset, baseScale, displayContext, true, false);
+
             // Render overlay with dynamic scaling
-            renderTexturedQuad(poseStack, bufferSource, light, overlay, overlayTexture, overlayZLevel, xOffset, yOffset, overlayScale, displayContext, true);
-        } else {
+            renderTexturedQuad(poseStack, bufferSource, light, overlay, overlayTexture, overlayZLevel, xOffset, yOffset, overlayScale, displayContext, flipOverlay, rotateOverlay);
+
+        } else { // Render the blueprint item in first-person view when holding
             int light = packedLight;
             float baseZLevel = 0.0f;
             float overlayZLevel = baseZLevel + 0.01f;
             float baseScale = 1.2f;
-            float overlayScale = 1.0f;
 
             float baseXOffset = 0.0f;
             float baseYOffset = 0.0f;
@@ -147,67 +194,81 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
             float overlayXOffset = 0.0f;
             float overlayYOffset = 0.0f;
 
-            switch (data.getItemType()) {
-                case "smg", "pistol":
-                    overlayScale = 0.9f;
-                    break;
-                case "grip", "ammo":
-                    overlayScale = 0.6f;
-                    break;
-                case "stock":
-                    overlayScale = 0.52f;
-                    break;
-                case "muzzle":
-                    overlayScale = 0.55f;
-                    break;
-                case "scope", "extended_mag":
-                    overlayScale = 0.5f;
-                    break;
-//                case "ammo":
-//                    overlayScale = 0.8f;
-//                    break;
-                default:
-                    break;
+            flipOverlay = false;
+
+            if (itemCategory.equals("gun")) {
+                rotateOverlay = true;
             }
 
             switch (data.getItemType()) {
-                case "extended_mag":
-                    overlayXOffset -= 0.275f;
-                    overlayYOffset += 0.1f;
+                case "pistol":
+                    overlayXOffset -= 0.0325f;
+                    overlayYOffset += 0.2025f;
                     break;
-                case "scope":
-                    overlayXOffset -= 0.24f;
-                    overlayYOffset += 0.115f;
+                case "smg":
+                    overlayXOffset -= 0.071f;
+                    overlayYOffset += 0.16f;
                     break;
-                case "stock":
-                    overlayXOffset -= 0.23f;
-                    overlayYOffset += 0.11f;
+                case "rifle":
+                    overlayXOffset -= 0.08f;
+                    overlayYOffset += 0.1625f;
+                    break;
+                case "shotgun":
+                    overlayXOffset -= 0.0625f;
+                    overlayYOffset += 0.155f;
+                    break;
+                case "mg":
+                    overlayXOffset -= 0.08f;
+                    overlayYOffset += 0.155f;
+                    break;
+                case "sniper":
+                    overlayXOffset -= 0.085f;
+                    overlayYOffset += 0.155f;
+                break;
+                case "rpg":
+                    overlayXOffset -= 0.07f;
+                    overlayYOffset += 0.158f;
                     break;
                 case "grip":
-                    overlayXOffset -= 0.23f;
-                    overlayYOffset += 0.10f;
+                    overlayXOffset -= 0.22f;
+                    overlayYOffset += 0.145f;
+                    break;
+                case "stock":
+                    overlayXOffset -= 0.225f;
+                    overlayYOffset += 0.16f;
                     break;
                 case "muzzle":
-                    overlayXOffset -= 0.225f;
-                    overlayYOffset += 0.12f;
-                case "ammo":
                     overlayXOffset -= 0.24f;
-                    overlayYOffset += 0.12f;
+                    overlayYOffset += 0.15f;
+                    break;
+                case "scope":
+                    overlayXOffset -= 0.25f;
+                    overlayYOffset += 0.16f;
+                    break;
+                case "extended_mag":
+                    overlayXOffset -= 0.275f;
+                    overlayYOffset += 0.175f;
+                    break;
+                case "ammo":
+                    flipOverlay = true;
+                    overlayXOffset -= 0.24f;
+                    overlayYOffset += 0.18f;
                     break;
                 default:
                     overlayXOffset -= 0.14f;
                     overlayYOffset -= 0.07f;
+                    break;
             }
 
             // Render base blueprint texture
-            renderTexturedQuad(poseStack, bufferSource, light, overlay, BLUEPRINT_TEXTURE, baseZLevel, baseXOffset, baseYOffset, baseScale, displayContext, false);
+            renderTexturedQuad(poseStack, bufferSource, light, overlay, BLUEPRINT_TEXTURE, baseZLevel, baseXOffset, baseYOffset, baseScale, displayContext, false, false);
 
             // Render overlay at same Z-level
-            renderTexturedQuad(poseStack, bufferSource, light, overlay, overlayTexture, overlayZLevel, overlayXOffset, overlayYOffset, overlayScale, displayContext, false);
+            renderTexturedQuad(poseStack, bufferSource, light, overlay, overlayTexture, overlayZLevel, overlayXOffset, overlayYOffset, overlayScale, displayContext, flipOverlay, rotateOverlay);
         }
     }
 
-    private void renderTexturedQuad(PoseStack poseStack, MultiBufferSource bufferSource, int light, int overlay, ResourceLocation texture, float zLevel, float xOffset, float yOffset, float scale, ItemDisplayContext displayContext, boolean flipOverlay) {
+    private void renderTexturedQuad(PoseStack poseStack, MultiBufferSource bufferSource, int light, int overlay, ResourceLocation texture, float zLevel, float xOffset, float yOffset, float scale, ItemDisplayContext displayContext, boolean flipOverlay, boolean rotateOverlay) {
         boolean isGuiContext = (displayContext == ItemDisplayContext.GUI ||
                 displayContext == ItemDisplayContext.GROUND ||
                 displayContext == ItemDisplayContext.FIXED ||
@@ -228,6 +289,13 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
 
         // Translate to the center of the quad
         poseStack.translate(0.5f, 0.5f, 0.0f);
+
+        if (rotateOverlay) {
+            // Rotate overlay texture 90 degrees
+            poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(-75F));
+            poseStack.translate(-0.05f, -0.335f, 0.0f);
+
+        }
 
         // Apply scaling
         poseStack.scale(scale, scale, scale);
