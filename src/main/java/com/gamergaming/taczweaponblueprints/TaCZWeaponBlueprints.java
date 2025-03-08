@@ -37,7 +37,6 @@ public class TaCZWeaponBlueprints {
 
         LOGGER.info("HELLO FROM TaCZ Weapon Blueprints INITIALIZATION");
 
-        // Register the commonSetup method for modloading
         modEventBus.addListener(this::commonSetup);
         // modEventBus.addListener(this::onAddReloadListeners);
 

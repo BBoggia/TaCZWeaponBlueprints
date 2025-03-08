@@ -363,7 +363,7 @@ public abstract class GunSmithTableScreenMixin  {
 
     @Inject(method = "updateIngredientCount", at = @At("TAIL"), remap = false)
     private void onUpdateIngredientCount(CallbackInfo ci) {
-        // After updating ingredient counts, re-initialize the GUI
+        // Re-init GUI after updating ingredient counts
         this.init();
     }
 
@@ -408,7 +408,6 @@ public abstract class GunSmithTableScreenMixin  {
     
     
     // private void getSelectedRecipeInject(ResourceLocation recipeId, CallbackInfoReturnable<GunSmithTableRecipe> ci) {
-    //     // If the selected recipe list is null, return null else let the method continue
     //     if (this.selectedRecipeList == null) {
     //         ci.setReturnValue(null);
     //         ci.cancel();

@@ -51,6 +51,7 @@ public class BlueprintConfig extends Config {
     @Override
     public void update(int deserializedVersion) {
         // Make sure maxBlueprints >= minBlueprints
+
         int minValue = minBlueprints.get();
         int maxValue = maxBlueprints.get();
         

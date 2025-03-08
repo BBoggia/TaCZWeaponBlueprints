@@ -141,10 +141,12 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
             float baseZLevel = 0.0f;
             float overlayZLevel = baseZLevel - 0.01f; 
 
+
             float baseScale = 1.3f;  // 1.175f
 
             float xOffset = 0.0f;
             float yOffset = 0.0f;
+
 
             overlayScale *= 2.0f;
 
@@ -258,6 +260,7 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
                     overlayXOffset -= 0.14f;
                     overlayYOffset -= 0.07f;
                     break;
+
             }
 
             // Render base blueprint texture
@@ -269,6 +272,7 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
     }
 
     private void renderTexturedQuad(PoseStack poseStack, MultiBufferSource bufferSource, int light, int overlay, ResourceLocation texture, float zLevel, float xOffset, float yOffset, float scale, ItemDisplayContext displayContext, boolean flipOverlay, boolean rotateOverlay) {
+
         boolean isGuiContext = (displayContext == ItemDisplayContext.GUI ||
                 displayContext == ItemDisplayContext.GROUND ||
                 displayContext == ItemDisplayContext.FIXED ||
@@ -302,6 +306,7 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
 
         // Translate back to the original position
         poseStack.translate(-0.5f, -0.5f, 0.0f);
+
 
         if (displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND) {
             // Translate slightly left and up
