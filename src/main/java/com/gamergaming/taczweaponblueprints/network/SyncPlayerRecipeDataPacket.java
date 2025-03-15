@@ -4,7 +4,6 @@ import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.client.Minecraft;
-import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.Set;
@@ -35,12 +34,12 @@ public class SyncPlayerRecipeDataPacket {
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            // Client-side handling
-            LazyOptional<IPlayerRecipeData> playerCap = Minecraft.getInstance().player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA);
-            playerCap.ifPresent(cap -> {
-                cap.getLearnedRecipes().clear();
-                cap.getLearnedRecipes().addAll(learnedRecipes);
-            });
+            if (ctx.get().getDirection().getReceptionSide().isClient()) {
+                Minecraft.getInstance().player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).ifPresent(cap -> {
+                    cap.getLearnedRecipes().clear();
+                    cap.getLearnedRecipes().addAll(learnedRecipes);
+                });
+            }
         });
         ctx.get().setPacketHandled(true);
     }

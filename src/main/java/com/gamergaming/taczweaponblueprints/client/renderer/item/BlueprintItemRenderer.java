@@ -12,6 +12,7 @@ import org.joml.Matrix4f;
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
+import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
@@ -50,6 +51,11 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
         int overlay = OverlayTexture.NO_OVERLAY;
 
         BlueprintData data = BlueprintDataManager.INSTANCE.getBlueprintData(BlueprintItem.getBpId(itemStack));
+
+        if (data == null) {
+            TaCZWeaponBlueprints.LOGGER.error("BlueprintData is null for itemStack: {}", itemStack);
+            return;
+        }
 
         boolean isGuiContext = (displayContext == ItemDisplayContext.GUI ||
                                 displayContext == ItemDisplayContext.GROUND ||
@@ -139,7 +145,7 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
         if (isGuiContext) {
             int light = LightTexture.FULL_BRIGHT;
             float baseZLevel = 0.0f;
-            float overlayZLevel = baseZLevel - 0.01f; 
+            float overlayZLevel = baseZLevel - 0.01f;
 
 
             float baseScale = 1.3f;  // 1.175f
