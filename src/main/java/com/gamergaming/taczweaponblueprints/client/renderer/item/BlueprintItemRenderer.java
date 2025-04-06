@@ -1,5 +1,6 @@
 package com.gamergaming.taczweaponblueprints.client.renderer.item;
 
+import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.tacz.guns.api.TimelessAPI;
 import com.tacz.guns.client.resource.index.ClientAmmoIndex;
 import com.tacz.guns.client.resource.index.ClientAttachmentIndex;
