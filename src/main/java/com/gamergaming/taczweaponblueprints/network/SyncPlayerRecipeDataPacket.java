@@ -5,7 +5,6 @@ import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.client.Minecraft;
-import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.Set;
@@ -50,6 +49,7 @@ public class SyncPlayerRecipeDataPacket {
         ctx.get().enqueueWork(() -> {
             // Client-side handling
             Minecraft mc = Minecraft.getInstance();
+          // maybe add this if issue with players keeping bps after death: ctx.get().getDirection().getReceptionSide().isClient()
             if (mc.player != null) {
                 mc.player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).ifPresent(cap -> {
                     cap.getLearnedRecipes().clear();
