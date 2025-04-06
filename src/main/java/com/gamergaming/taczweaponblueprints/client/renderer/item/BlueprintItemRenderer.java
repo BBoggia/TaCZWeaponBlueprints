@@ -1,5 +1,6 @@
 package com.gamergaming.taczweaponblueprints.client.renderer.item;
 
+import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.tacz.guns.api.TimelessAPI;
 import com.tacz.guns.client.resource.index.ClientAmmoIndex;
 import com.tacz.guns.client.resource.index.ClientAttachmentIndex;
@@ -50,6 +51,11 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
         int overlay = OverlayTexture.NO_OVERLAY;
 
         BlueprintData data = BlueprintDataManager.INSTANCE.getBlueprintData(BlueprintItem.getBpId(itemStack));
+
+        if (data == null) {
+            TaCZWeaponBlueprints.LOGGER.error("BlueprintData is null for itemStack: {}", itemStack);
+            return;
+        }
 
         boolean isGuiContext = (displayContext == ItemDisplayContext.GUI ||
                                 displayContext == ItemDisplayContext.GROUND ||

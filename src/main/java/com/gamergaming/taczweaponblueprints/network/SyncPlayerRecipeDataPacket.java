@@ -50,7 +50,7 @@ public class SyncPlayerRecipeDataPacket {
         ctx.get().enqueueWork(() -> {
             // Client-side handling
             Minecraft mc = Minecraft.getInstance();
-            if (mc.player != null) {
+            if (mc.player != null && ctx.get().getDirection().getReceptionSide().isClient()) {
                 mc.player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).ifPresent(cap -> {
                     cap.getLearnedRecipes().clear();
                     cap.getLearnedRecipes().addAll(learnedRecipes);
