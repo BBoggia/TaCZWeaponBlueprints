@@ -2,6 +2,8 @@ package com.gamergaming.taczweaponblueprints.event;
 
 import java.util.Set;
 
+import com.gamergaming.taczweaponblueprints.network.SyncBlueprintDataPacket;
+import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import org.slf4j.Logger;
 
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
@@ -25,6 +27,14 @@ public class ModEventHandler {
     @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
+            BlueprintDataManager.INSTANCE.initialize(serverPlayer.getServer());
+
+            // Sends blueprint data to client
+            NetworkHandler.INSTANCE.send(
+                    PacketDistributor.PLAYER.with(() -> serverPlayer),
+                    new SyncBlueprintDataPacket(BlueprintDataManager.INSTANCE.getBlueprintDataMap())
+            );
+
             LazyOptional<IPlayerRecipeData> playerLearnedRecipes = serverPlayer.getCapability(ModCapabilities.PLAYER_RECIPE_DATA);
             playerLearnedRecipes.ifPresent(recipeData -> {
                 NetworkHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> serverPlayer), new SyncPlayerRecipeDataPacket(recipeData.getLearnedRecipes()));

@@ -14,20 +14,16 @@ import com.tacz.guns.resource.index.CommonAmmoIndex;
 import com.tacz.guns.resource.index.CommonAttachmentIndex;
 import com.tacz.guns.resource.index.CommonGunIndex;
 import net.minecraft.world.item.ItemStack;
-import org.apache.commons.lang3.tuple.Triple;
 
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
-
-import com.ibm.icu.impl.Pair;
 
 import com.tacz.guns.crafting.GunSmithTableRecipe;
 import com.tacz.guns.resource.CommonAssetsManager;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.world.item.ItemStack;
 
 public class BlueprintDataManager {
 
@@ -39,15 +35,22 @@ public class BlueprintDataManager {
 
     public void initialize(MinecraftServer server) {
         TaCZWeaponBlueprints.LOGGER.info("Initializing Blueprint Data Manager");
-
         assert CommonAssetsManager.getInstance() != null;
-
         TaCZWeaponBlueprints.LOGGER.info("Recipe Manager is not null");
+        blueprintDataMap.clear();
+
         List<GunSmithTableRecipe> recipes = CommonAssetsManager.getInstance().recipeManager.getAllRecipesFor(ModRecipe.GUN_SMITH_TABLE_CRAFTING.get());
 
         for (GunSmithTableRecipe recipe : recipes) {
             ItemStack itemStack = recipe.getResult().getResult();
-            String splitId = recipe.getId().toString().split(":")[1].split("/")[0];
+
+            String recipeIdStr = recipe.getId().toString();
+
+            if (!recipeIdStr.contains(":") || !recipeIdStr.contains("/")) {
+                TaCZWeaponBlueprints.LOGGER.warn("Recipe ID {} is malformed, skipping.", recipeIdStr);
+                continue;
+            }
+            String splitId = recipeIdStr.split(":")[1].split("/")[0];
 
             String nameKey = "";
             String tooltipKey = "";
@@ -58,6 +61,12 @@ public class BlueprintDataManager {
             switch (splitId) {
                 case "gun" -> {
                     if (itemStack.getItem() instanceof IGun gun) {
+                        itemId = gun.getGunId(itemStack);
+
+                        if (itemId == null) {
+                            TaCZWeaponBlueprints.LOGGER.warn("Gun item in recipe {} returned null ID, skipping.", recipeIdStr);
+                            continue;
+                        }
                         CommonGunIndex indx = CommonAssetsManager.getInstance().getGunIndex(gun.getGunId(itemStack));
                         assert indx != null;
                         nameKey = indx.getPojo().getName();
@@ -100,7 +109,7 @@ public class BlueprintDataManager {
 
             tooltipKey = "item.taczweaponblueprints.blueprint.tooltip";
 
-            TaCZWeaponBlueprints.LOGGER.info("FOR REAL ADDING Blueprint Recipe {} to recipe {} with item type: {}", itemId, recipe.getId(), itemType);
+//            TaCZWeaponBlueprints.LOGGER.info("FOR REAL ADDING Blueprint Recipe {} to recipe {} with item type: {}", itemId, recipe.getId(), itemType);
 
             if (nameKey.isEmpty() || itemId == null || displaySlotKey == null) {
                 TaCZWeaponBlueprints.LOGGER.error("Failed to add Blueprint Recipe {} to recipe {} with item type: {}", itemId, recipe.getId(), itemType);
@@ -113,11 +122,24 @@ public class BlueprintDataManager {
         }
     }
 
+    public Map<ResourceLocation, BlueprintData> getBlueprintDataMap() {
+        return blueprintDataMap;
+    }
+
+    public void setBlueprintDataMap(Map<ResourceLocation, BlueprintData> blueprintDataMap) {
+        this.blueprintDataMap.clear();
+        this.blueprintDataMap.putAll(blueprintDataMap);
+    }
+
     public static String getBlueprintIdFromResourceLocation(ResourceLocation recipeId) {
         return recipeId.getNamespace() + ":" + recipeId.getPath().split("/")[1];
     }
 
     public BlueprintData getBlueprintData(String bpId) {
+        if (bpId == null || bpId.isEmpty()) {
+            TaCZWeaponBlueprints.LOGGER.error("Blueprint ID is null or empty");
+            return null;
+        }
         return blueprintDataMap.get(new ResourceLocation(bpId));
     }
 

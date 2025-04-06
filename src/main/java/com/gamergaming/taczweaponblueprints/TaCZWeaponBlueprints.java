@@ -38,6 +38,7 @@ public class TaCZWeaponBlueprints {
         LOGGER.info("HELLO FROM TaCZ Weapon Blueprints INITIALIZATION");
 
         modEventBus.addListener(this::commonSetup);
+        modEventBus.addListener(this::clientSetup);
         // modEventBus.addListener(this::onAddReloadListeners);
 
         ModConfigs.init();
@@ -52,17 +53,23 @@ public class TaCZWeaponBlueprints {
         ModItems.register(modEventBus);
         ModCreativeTabs.register(modEventBus);
         ModLootModifier.register(modEventBus);
+
+        modEventBus.addListener(ModCreativeTabs::buildCreativeModeTabs);
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
-        LOGGER.info("HELLO FROM COMMON SETUP");
+//        BlueprintDataManager.INSTANCE.initialize();
+    }
+
+    private void clientSetup(final FMLClientSetupEvent event) {
+//        BlueprintDataManager.INSTANCE.initialize();
     }
 
     @SubscribeEvent
     public void onPlayerJoin(PlayerLoggedInEvent event) {
         LOGGER.info("HELLO from player join");
         // BlueprintDataManager.INSTANCE.initialize();
-        BlueprintDataManager.INSTANCE.initialize(event.getEntity().getServer());
+        // BlueprintDataManager.INSTANCE.initialize(event.getEntity().getServer());
         // CommonAssetsManager.INSTANCE.clearRecipes();
     }
 
