@@ -1,20 +1,17 @@
 package com.gamergaming.taczweaponblueprints.event;
 
 import java.util.Set;
+import org.slf4j.Logger;
 
 import com.gamergaming.taczweaponblueprints.network.SyncBlueprintDataPacket;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
-import org.slf4j.Logger;
-
+import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
-import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.network.SyncPlayerRecipeDataPacket;
-import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -22,7 +19,6 @@ import net.minecraftforge.network.PacketDistributor;
 
 @Mod.EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class ModEventHandler {
-    private static final Logger LOGGER = TaCZWeaponBlueprints.LOGGER;
 
     @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
@@ -54,7 +50,8 @@ public class ModEventHandler {
     public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
             serverPlayer.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).ifPresent(recipeData -> {
-                NetworkHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> serverPlayer), new SyncPlayerRecipeDataPacket(recipeData.getLearnedRecipes()));
+                NetworkHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> serverPlayer),
+                        new SyncPlayerRecipeDataPacket(recipeData.getLearnedRecipes()));
             });
         }
     }
