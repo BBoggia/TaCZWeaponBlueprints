@@ -1,5 +1,6 @@
 package com.gamergaming.taczweaponblueprints.network;
 
+import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
 import net.minecraft.network.FriendlyByteBuf;
@@ -32,13 +33,32 @@ public class SyncPlayerRecipeDataPacket {
         }
     }
 
+//    public void handle(Supplier<NetworkEvent.Context> ctx) {
+//        ctx.get().enqueueWork(() -> {
+//            // Client-side handling
+//            LazyOptional<IPlayerRecipeData> playerCap = Minecraft.getInstance().player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA);
+//            playerCap.ifPresent(cap -> {
+//                cap.getLearnedRecipes().clear();
+//                cap.getLearnedRecipes().addAll(learnedRecipes);
+//            });
+//        });
+//        ctx.get().setPacketHandled(true);
+//    }
+
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            if (ctx.get().getDirection().getReceptionSide().isClient()) {
-                Minecraft.getInstance().player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).ifPresent(cap -> {
+            // Client-side handling
+            Minecraft mc = Minecraft.getInstance();
+          // maybe add this if issue with players keeping bps after death: ctx.get().getDirection().getReceptionSide().isClient()
+            if (mc.player != null) {
+                mc.player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).ifPresent(cap -> {
                     cap.getLearnedRecipes().clear();
                     cap.getLearnedRecipes().addAll(learnedRecipes);
+                    // Log the synchronization
+                    TaCZWeaponBlueprints.LOGGER.debug("Synchronized learned recipes: " + learnedRecipes);
                 });
+            } else {
+                TaCZWeaponBlueprints.LOGGER.warn("Player entity is null during recipe data synchronization.");
             }
         });
         ctx.get().setPacketHandled(true);

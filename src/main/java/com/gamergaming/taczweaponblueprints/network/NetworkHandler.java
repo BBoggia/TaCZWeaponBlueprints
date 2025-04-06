@@ -21,15 +21,36 @@ public class NetworkHandler {
         PROTOCOL_VERSION::equals
     );
 
+//    public static void registerPackets() {
+//        //INSTANCE.registerMessage(ID_COUNT.getAndIncrement(), GunSoundPacket.class, GunSoundPacket::encode, GunSoundPacket::decode, GunSoundPacket::handle);
+//        int id = 0;
+//        INSTANCE.registerMessage(id++, SyncPlayerRecipeDataPacket.class,
+//                SyncPlayerRecipeDataPacket::toBytes, SyncPlayerRecipeDataPacket::new,
+//                SyncPlayerRecipeDataPacket::handle,
+//                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+//
+//        INSTANCE.registerMessage(ID_COUNT.getAndIncrement(), ServerMessageSound.class, ServerMessageSound::encode, ServerMessageSound::decode, ServerMessageSound::handle,
+//                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+//    }
+
     public static void registerPackets() {
-        //INSTANCE.registerMessage(ID_COUNT.getAndIncrement(), GunSoundPacket.class, GunSoundPacket::encode, GunSoundPacket::decode, GunSoundPacket::handle);
         int id = 0;
+
+        // Register PlayerRecipeDataSyncPacket
         INSTANCE.registerMessage(id++, SyncPlayerRecipeDataPacket.class,
                 SyncPlayerRecipeDataPacket::toBytes, SyncPlayerRecipeDataPacket::new,
                 SyncPlayerRecipeDataPacket::handle,
                 Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-                
-        INSTANCE.registerMessage(ID_COUNT.getAndIncrement(), ServerMessageSound.class, ServerMessageSound::encode, ServerMessageSound::decode, ServerMessageSound::handle,
+
+        // Register the SyncBlueprintDataPacket
+        INSTANCE.registerMessage(id++, SyncBlueprintDataPacket.class,
+                SyncBlueprintDataPacket::toBytes, SyncBlueprintDataPacket::new,
+                SyncBlueprintDataPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+
+        // Register ServerMessageSound with the next ID
+        INSTANCE.registerMessage(id++, ServerMessageSound.class,
+                ServerMessageSound::encode, ServerMessageSound::decode, ServerMessageSound::handle,
                 Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 }

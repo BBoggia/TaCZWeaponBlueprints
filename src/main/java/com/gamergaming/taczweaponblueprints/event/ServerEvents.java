@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
+import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -19,6 +20,11 @@ public class ServerEvents {
     @SubscribeEvent
     public static void onServerStarting(ServerStartingEvent event) {
         MinecraftServer server = event.getServer();
+
+        TaCZWeaponBlueprints.LOGGER.info("Server starting, initializing BlueprintDataManager...");
+        BlueprintDataManager.INSTANCE.initialize(server);
+        TaCZWeaponBlueprints.LOGGER.info("BlueprintDataManager initialized.");
+
         Set<ResourceLocation> chestLootTables;
 
         try {
@@ -37,7 +43,7 @@ public class ServerEvents {
 
         String lootTablePrefix = "loot_tables/chests";
 
-        // List all resources under "loot_tables/chests" that end with ".json"
+        // Lists all resources under "loot_tables/chests" that end with ".json"
         Collection<ResourceLocation> resources = resourceManager.listResources(lootTablePrefix, resourcePath -> resourcePath.getPath().endsWith(".json")).keySet();
 
         for (ResourceLocation resourceLocation : resources) {
@@ -45,8 +51,6 @@ public class ServerEvents {
             String path = resourceLocation.getPath();
 
             if (path.startsWith("loot_tables/") && path.endsWith(".json")) {
-
-                // Remove "loot_tables/" prefix and ".json" suffix
                 String lootTablePath = path.substring("loot_tables/".length(), path.length() - ".json".length());
 
                 ResourceLocation lootTableId = new ResourceLocation(resourceLocation.getNamespace(), lootTablePath);

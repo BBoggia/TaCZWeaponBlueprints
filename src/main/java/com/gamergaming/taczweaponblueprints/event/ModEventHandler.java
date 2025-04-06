@@ -1,10 +1,16 @@
 package com.gamergaming.taczweaponblueprints.event;
 
+import java.util.Set;
+import org.slf4j.Logger;
+
+import com.gamergaming.taczweaponblueprints.network.SyncBlueprintDataPacket;
+import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.network.SyncPlayerRecipeDataPacket;
+
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -16,6 +22,32 @@ public class ModEventHandler {
 
     @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof ServerPlayer serverPlayer) {
+            BlueprintDataManager.INSTANCE.initialize(serverPlayer.getServer());
+
+            // Sends blueprint data to client
+            NetworkHandler.INSTANCE.send(
+                    PacketDistributor.PLAYER.with(() -> serverPlayer),
+                    new SyncBlueprintDataPacket(BlueprintDataManager.INSTANCE.getBlueprintDataMap())
+            );
+
+            LazyOptional<IPlayerRecipeData> playerLearnedRecipes = serverPlayer.getCapability(ModCapabilities.PLAYER_RECIPE_DATA);
+            playerLearnedRecipes.ifPresent(recipeData -> {
+                NetworkHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> serverPlayer), new SyncPlayerRecipeDataPacket(recipeData.getLearnedRecipes()));
+            });
+            
+            // Check if playerLearnedRecipes is not present or if the player is joining for the first time
+            // LOGGER.info("\n\n\nChecking if player has learned recipes\n\n\n");
+            // if (!playerLearnedRecipes.isPresent() || playerLearnedRecipes.map(data -> data.getLearnedRecipes().isEmpty()).orElse(true)) {
+            //     NetworkHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> serverPlayer),
+            //         new SyncPlayerRecipeDataPacket((Set<String>) ModConfigs.BLUEPRINT.startingBlueprints.get()));
+            //     LOGGER.info("INSIDE IF STATEMENT: " + ModConfigs.BLUEPRINT.startingBlueprints.get().toString());
+            // }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
             serverPlayer.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).ifPresent(recipeData -> {
                 NetworkHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> serverPlayer),

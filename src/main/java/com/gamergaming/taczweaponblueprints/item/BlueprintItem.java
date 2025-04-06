@@ -46,6 +46,9 @@ public class BlueprintItem extends Item {
     }
 
     public static String getBpId(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) {
+            return "NULL";
+        }
         CompoundTag tag = stack.getTag();
         return (tag != null && tag.contains("bpId")) ? tag.getString("bpId") : "NULL";
     }
@@ -60,6 +63,9 @@ public class BlueprintItem extends Item {
     @Override
     public Component getName(ItemStack stack) {
         String bpId = getBpId(stack);
+        if (bpId == null || bpId.equals("NULL")) {
+            return super.getName(stack);
+        }
         BlueprintData data = BlueprintDataManager.INSTANCE.getBlueprintData(bpId);
         if (data != null) {
             Component firstHalfName = Component.translatable("item.taczweaponblueprints.blueprint");
@@ -157,7 +163,8 @@ public class BlueprintItem extends Item {
                 if (!recipeData.hasRecipe(data.getRecipeId().toString())) {
                     recipeData.addRecipe(data.getRecipeId().toString());
                     player.displayClientMessage(Component.translatable("message.taczweaponblueprints.blueprint.unlocked", Component.translatable(data.getNameKey())), true);
-                    stack.shrink(1); // Consume one blueprint item
+                    // Consume one blueprint item
+                    stack.shrink(1);
 
                     // Sync to client
                     if (player instanceof ServerPlayer serverPlayer) {
