@@ -137,7 +137,13 @@ public class BlueprintDataManager {
 
     public BlueprintData getBlueprintData(String bpId) {
         if (bpId == null || bpId.isEmpty()) {
-            TaCZWeaponBlueprints.LOGGER.error("Blueprint ID is null or empty");
+            TaCZWeaponBlueprints.LOGGER.error("Blueprint ID is null or empty: {}", bpId);
+            return null;
+        }
+
+        ResourceLocation bpRes = new ResourceLocation(bpId);
+        if (!blueprintDataMap.containsKey(bpRes)) {
+            TaCZWeaponBlueprints.LOGGER.error("Blueprint ID {} not found in map, returning null.", bpId);
             return null;
         }
         return blueprintDataMap.get(new ResourceLocation(bpId));

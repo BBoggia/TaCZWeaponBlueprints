@@ -36,5 +36,9 @@ forge*changelog.txt
 /misc_files/villagerTradeData/
 /misc_files/balanced_weapon_data.json
 
+# MacOS specific files
 .DS_Store
-*DS_Store*
+.DS_Store?
+/**/.DS_Store
+
+/run-data

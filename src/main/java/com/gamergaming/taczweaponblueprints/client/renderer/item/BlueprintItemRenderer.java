@@ -51,10 +51,11 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
                              @NotNull MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
         int overlay = OverlayTexture.NO_OVERLAY;
 
+
         BlueprintData data = BlueprintDataManager.INSTANCE.getBlueprintData(BlueprintItem.getBpId(itemStack));
 
         if (data == null) {
-            TaCZWeaponBlueprints.LOGGER.error("BlueprintData is null for itemStack: {}", itemStack);
+            TaCZWeaponBlueprints.LOGGER.error("BlueprintData is null for itemStack: {}. Tags: {}, {}", itemStack, itemStack.getTag(), BlueprintItem.getBpId(itemStack));
             return;
         }
 

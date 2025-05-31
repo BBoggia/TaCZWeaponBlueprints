@@ -34,7 +34,7 @@ public class ServerEvents {
             return;
         }
 
-        TaCZWeaponBlueprints.LOGGER.info("Found following chest loot tables: " + chestLootTables.toArray().toString());
+        TaCZWeaponBlueprints.LOGGER.info("Found following chest loot tables: " + chestLootTables.toString());
     }
 
     public static Set<ResourceLocation> getAllChestLootTables(MinecraftServer server) throws IOException {

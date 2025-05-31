@@ -21,6 +21,6 @@ public class ModConfigs {
     }
 
     private static <T extends Config> T register(Supplier<T> supplier) {
-        return ConfigApiJava.registerAndLoadConfig(supplier, RegisterType.CLIENT);
+        return ConfigApiJava.registerAndLoadConfig(supplier, RegisterType.BOTH);
     }
 }

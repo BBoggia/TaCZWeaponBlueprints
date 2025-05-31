@@ -50,7 +50,7 @@ public class LootTableResourceLoader implements ResourceManagerReloadListener {
         TaCZWeaponBlueprints.LOGGER.info("Loading loot table list: " + lootTableListPath);
         InputStream stream = LootTableResourceLoader.class.getResourceAsStream(lootTableListPath);
         if (stream == null) {
-            TaCZWeaponBlueprints.LOGGER.error("Failed to load loot table list: " + lootTableListPath);
+            TaCZWeaponBlueprints.LOGGER.error("Failed to load loot table list in getJsonArray: " + lootTableListPath);
             return null;
         }
         return JsonParser.parseReader(new InputStreamReader(stream)).getAsJsonArray();
@@ -60,7 +60,7 @@ public class LootTableResourceLoader implements ResourceManagerReloadListener {
         TaCZWeaponBlueprints.LOGGER.info("Loading loot table list: " + lootTableListPath);
         InputStream stream = LootTableResourceLoader.class.getResourceAsStream(lootTableListPath);
         if (stream == null) {
-            TaCZWeaponBlueprints.LOGGER.error("Failed to load loot table list: " + lootTableListPath);
+            TaCZWeaponBlueprints.LOGGER.error("Failed to load loot table list in getJsonObject: " + lootTableListPath);
             return null;
         }
         return JsonParser.parseReader(new InputStreamReader(stream)).getAsJsonObject();

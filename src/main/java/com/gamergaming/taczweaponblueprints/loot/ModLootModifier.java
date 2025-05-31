@@ -10,8 +10,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 
 public class ModLootModifier {
-    public static final DeferredRegister<Codec<? extends IGlobalLootModifier>> LOOT_MODIFIER_SERIALIZERS =
-        DeferredRegister.create(ForgeRegistries.Keys.GLOBAL_LOOT_MODIFIER_SERIALIZERS, TaCZWeaponBlueprints.MODID);
+    public static final DeferredRegister<Codec<? extends IGlobalLootModifier>> LOOT_MODIFIER_SERIALIZERS = DeferredRegister.create(ForgeRegistries.Keys.GLOBAL_LOOT_MODIFIER_SERIALIZERS, TaCZWeaponBlueprints.MODID);
     
     public static final RegistryObject<Codec<AddItemsModifier>> ADD_ITEMS_MODIFIER =
         LOOT_MODIFIER_SERIALIZERS.register("add_items", AddItemsModifier.CODEC);

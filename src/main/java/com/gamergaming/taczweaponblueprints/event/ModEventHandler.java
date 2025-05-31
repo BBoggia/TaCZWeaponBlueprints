@@ -31,8 +31,7 @@ public class ModEventHandler {
                     new SyncBlueprintDataPacket(BlueprintDataManager.INSTANCE.getBlueprintDataMap())
             );
 
-            LazyOptional<IPlayerRecipeData> playerLearnedRecipes = serverPlayer.getCapability(ModCapabilities.PLAYER_RECIPE_DATA);
-            playerLearnedRecipes.ifPresent(recipeData -> {
+            serverPlayer.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).ifPresent(recipeData -> {
                 NetworkHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> serverPlayer), new SyncPlayerRecipeDataPacket(recipeData.getLearnedRecipes()));
             });
             
