@@ -1,12 +1,14 @@
 package com.gamergaming.taczweaponblueprints.mixin;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.LinkedHashMap;
 
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -22,6 +24,8 @@ import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 
+import com.google.common.collect.Maps;
+
 import com.tacz.guns.GunMod;
 import com.tacz.guns.api.TimelessAPI;
 import com.tacz.guns.client.gui.GunSmithTableScreen;
@@ -34,6 +38,7 @@ import com.tacz.guns.inventory.GunSmithTableMenu;
 import com.tacz.guns.resource.CommonAssetsManager;
 import com.tacz.guns.resource.pojo.AttachmentIndexPOJO;
 import com.tacz.guns.resource.pojo.GunIndexPOJO;
+import com.tacz.guns.resource.pojo.data.block.TabConfig;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -55,11 +60,11 @@ public abstract class GunSmithTableScreenMixin  {
 
     @Shadow(remap = false)
     @Final
-    private Map<String, List<ResourceLocation>> recipes;
+    private Map<ResourceLocation, List<ResourceLocation>> recipes;
 
     @Shadow(remap = false)
     @Final
-    private List<String> recipeKeys;
+    private LinkedHashMap<ResourceLocation, TabConfig> recipeKeys;
 
     @Shadow(remap = false)
     private List<ResourceLocation> selectedRecipeList;
@@ -68,7 +73,7 @@ public abstract class GunSmithTableScreenMixin  {
     private GunSmithTableRecipe selectedRecipe;
 
     @Shadow(remap = false)
-    private String selectedType;
+    private ResourceLocation selectedType = null;
 
     @Shadow(remap = false)
     private int typePage;
@@ -81,9 +86,6 @@ public abstract class GunSmithTableScreenMixin  {
 
     @Shadow(remap = false)
     private void getPlayerIngredientCount(GunSmithTableRecipe recipe) {}
-
-    @Shadow(remap = false)
-    private void putRecipeType(RegistryObject<CreativeModeTab> tab) {}
 
     @Shadow(remap = false)
     private GunSmithTableRecipe getSelectedRecipe(ResourceLocation recipeId) {
@@ -113,7 +115,7 @@ public abstract class GunSmithTableScreenMixin  {
             this.recipes = new HashMap<>();
         }
         if (this.recipeKeys == null) {
-            this.recipeKeys = new ArrayList<>();
+            this.recipeKeys = Maps.newLinkedHashMap();
         }
     }
 
@@ -123,25 +125,10 @@ public abstract class GunSmithTableScreenMixin  {
             this.recipes = new HashMap<>();
         }
         if (this.recipeKeys == null) {
-            this.recipeKeys = new ArrayList<>();
+            this.recipeKeys = Maps.newLinkedHashMap();
         }
 
-        // Add creative categories 
-        putRecipeType(ModCreativeTabs.AMMO_TAB);
-        putRecipeType(ModCreativeTabs.ATTACHMENT_EXTENDED_MAG_TAB);
-        putRecipeType(ModCreativeTabs.ATTACHMENT_SCOPE_TAB);
-        putRecipeType(ModCreativeTabs.ATTACHMENT_MUZZLE_TAB);
-        putRecipeType(ModCreativeTabs.ATTACHMENT_STOCK_TAB);
-        putRecipeType(ModCreativeTabs.ATTACHMENT_GRIP_TAB);
-        putRecipeType(ModCreativeTabs.GUN_PISTOL_TAB);
-        putRecipeType(ModCreativeTabs.GUN_SNIPER_TAB);
-        putRecipeType(ModCreativeTabs.GUN_RIFLE_TAB);
-        putRecipeType(ModCreativeTabs.GUN_SHOTGUN_TAB);
-        putRecipeType(ModCreativeTabs.GUN_SMG_TAB);
-        putRecipeType(ModCreativeTabs.GUN_RPG_TAB);
-        putRecipeType(ModCreativeTabs.GUN_MG_TAB);
-
-        for (String key : this.recipeKeys) {
+        for (ResourceLocation key : this.recipeKeys.keySet()) {
             this.recipes.putIfAbsent(key, new ArrayList<>());
         }
         LocalPlayer player = Minecraft.getInstance().player;
@@ -184,7 +171,7 @@ public abstract class GunSmithTableScreenMixin  {
         // }
 
         recipeManager.getAllRecipesFor(ModRecipe.GUN_SMITH_TABLE_CRAFTING.get()).forEach((recipe) -> {
-            final String[] groupNameHolder = { recipe.getResult().getGroup() };
+            final String[] groupNameHolder = { recipe.getResult().getGroup().toString() };
             if (groupNameHolder[0] == null || groupNameHolder[0].isEmpty()) {
                 String kind = recipe.getId().toString().split(":")[1];
                 kind = kind.split("/")[0];
@@ -212,15 +199,14 @@ public abstract class GunSmithTableScreenMixin  {
             String groupName = groupNameHolder[0];
             
             // TaCZWeaponBlueprints.LOGGER.info("Classifying recipe " + id + " with groupName: " + groupName);
-            if (this.recipeKeys.contains(groupName) && availableRecipes.stream().anyMatch(r -> r.getId().equals(recipe.getId()))) {
-                recipes.computeIfAbsent(groupName, g -> new ArrayList<>()).add(recipe.getId());
+            if (this.recipeKeys.containsKey(new ResourceLocation(groupName)) && availableRecipes.stream().anyMatch(r -> r.getId().equals(recipe.getId()))) {
+                recipes.computeIfAbsent(new ResourceLocation(groupName), g -> new ArrayList<>()).add(recipe.getId());
                 // TaCZWeaponBlueprints.LOGGER.info("Added recipe " + id + " to group " + groupName);
             } else {
                 TaCZWeaponBlueprints.LOGGER.warn("Group name " + groupName + " not found in recipeKeys: {}", this.recipeKeys);
             }
         });
 
-        // Proceed to classify recipes normally
         // TimelessAPI.getAllRecipes().forEach((id, recipe) -> {
         //     String groupName = recipe.getResult().getGroup();
         //     TaCZWeaponBlueprints.LOGGER.info("RECIPE: " + id + " GROUP: " + groupName);
@@ -229,7 +215,7 @@ public abstract class GunSmithTableScreenMixin  {
         //     }
         // });
 
-        ci.cancel(); // Cancel original method 
+        ci.cancel();
     }
 
     @Inject(method = "addIndexButtons", at = @At("HEAD"), cancellable = true, remap = false)
@@ -285,45 +271,40 @@ public abstract class GunSmithTableScreenMixin  {
     //     ci.cancel();
     // }
 
-    @Inject(method = "addTypeButtons", at = @At("HEAD"), cancellable = true, remap = false)
-    private void onAddTypeButtons(CallbackInfo ci) {
-        for (int i = 0; i < 7; i++) {
-            int typeIndex = typePage * 7 + i;
-            if (typeIndex >= recipeKeys.size()) {
-                break;
-            }
-            String type = recipeKeys.get(typeIndex);
-            int xOffset = ((IAbstractContainerScreenAccessor) this).getLeftPos() + 157 + 24 * i;
+    // @Inject(method = "addTypeButtons", at = @At("HEAD"), cancellable = true, remap = false)
+    // private void onAddTypeButtons(CallbackInfo ci) {
+    //     var list = Arrays.asList(recipeKeys.values().toArray(new TabConfig[0]));
+    //     for (int i = 0; i < 7; i++) {
+    //         int typeIndex = typePage * 7 + i;
+    //         if (typeIndex >= recipes.size()) {
+    //             return;
+    //         }
+    //         TabConfig tabConfig = list.get(typeIndex);
+    //         ResourceLocation type = tabConfig.id();
+    //         int xOffset = ((IAbstractContainerScreenAccessor) this).getLeftPos() + 157 + 24 * i;
 
-            ItemStack icon = ItemStack.EMPTY;
-            ResourceLocation tabId = new ResourceLocation(GunMod.MOD_ID, type);
-            CreativeModeTab modTab = BuiltInRegistries.CREATIVE_MODE_TAB.get(tabId);
-            if (modTab != null) {
-                icon = modTab.getIconItem();
-            }
+    //         ItemStack icon = tabConfig.icon();
+            
+    //         TypeButton typeButton = new TypeButton(xOffset, ((IAbstractContainerScreenAccessor) this).getTopPos() + 2, icon, b -> {
+    //             this.selectedType = type;
+    //             this.selectedRecipeList = recipes.get(type);
+    //             this.indexPage = 0;
+    //             this.selectedRecipe = getSelectedRecipe(this.selectedRecipeList.isEmpty() ? null : this.selectedRecipeList.get(0));
+    //             this.getPlayerIngredientCount(this.selectedRecipe);
+    //             this.init();
+    //         });
+    //         typeButton.setTooltip(Tooltip.create(tabConfig.getName(), tabConfig.getName()));
+    //         if (this.selectedType.equals(type)) {
+    //             typeButton.setSelected(true);
+    //         }
 
-            TypeButton typeButton = new TypeButton(xOffset, ((IAbstractContainerScreenAccessor) this).getTopPos() + 2, icon, b -> {
-                this.selectedType = type;
-                this.selectedRecipeList = recipes.get(type);
-                this.indexPage = 0;
-                if (this.selectedRecipeList != null && !this.selectedRecipeList.isEmpty()) {
-                    this.selectedRecipe = getSelectedRecipe(this.selectedRecipeList.get(0));
-                    this.getPlayerIngredientCount(this.selectedRecipe);
-                } else {
-                    this.selectedRecipe = null;
-                }
-                this.init();
-            });
-            if (this.selectedType.equals(type)) {
-                typeButton.setSelected(true);
-            }
-            // ((IScreenAccessor) this).invokeAddRenderableWidget(typeButton);
-            ((IScreenAccessor) this).getRenderables().add(typeButton);
-            ((IScreenAccessor) this).getChildren().add(typeButton);
-            ((IScreenAccessor) this).getNarratables().add(typeButton);
-        }
-        ci.cancel();
-    }
+    //         // ((IScreenAccessor) this).invokeAddRenderableWidget(typeButton);
+    //         ((IScreenAccessor) this).getRenderables().add(typeButton);
+    //         ((IScreenAccessor) this).getChildren().add(typeButton);
+    //         ((IScreenAccessor) this).getNarratables().add(typeButton);
+    //     }
+    //     ci.cancel();
+    // }
     
     
     // private void addTypeButtons(CallbackInfo ci) {
@@ -414,12 +395,12 @@ public abstract class GunSmithTableScreenMixin  {
     //     }
     // }
 
-    @Inject(method = "putRecipeType", at = @At("HEAD"), cancellable = true, remap = false)
-    private void onPutRecipeType(RegistryObject<CreativeModeTab> tab, CallbackInfo ci) {
-        String name = tab.getId().getPath();
-        if (!this.recipeKeys.contains(name)) {
-            this.recipeKeys.add(name);
-        }
-        ci.cancel();
-    }
+    // @Inject(method = "putRecipeType", at = @At("HEAD"), cancellable = true, remap = false)
+    // private void onPutRecipeType(RegistryObject<CreativeModeTab> tab, CallbackInfo ci) {
+    //     String name = tab.getId().getPath();
+    //     if (!this.recipeKeys.contains(name)) {
+    //         this.recipeKeys.add(name);
+    //     }
+    //     ci.cancel();
+    // }
 }
