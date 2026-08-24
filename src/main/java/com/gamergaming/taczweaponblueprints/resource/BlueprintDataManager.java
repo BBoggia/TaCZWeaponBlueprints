@@ -264,8 +264,8 @@ public class BlueprintDataManager {
     }
 
     /**
-     * @deprecated Prefer carrying the blueprint output ID directly. TaCZ 1.1.5
-     *             recipe IDs do not encode their output IDs.
+     * @deprecated Prefer carrying the blueprint output ID directly. TaCZ recipe
+     *             IDs do not reliably encode their output IDs.
      */
     @Deprecated
     public static String getBlueprintIdFromResourceLocation(ResourceLocation recipeId) {

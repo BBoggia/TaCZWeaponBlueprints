@@ -13,16 +13,16 @@ Forge, not the superseded `1.1.8-release` artifact.
 - Sources SHA-1: `b73081734e9f51ce0976515cee2547586c6a78a7`
 
 This assessment was performed from the published `v1.0.3-beta7` commit on the
-`codex/tacz-1.1.8-support` branch. Compatibility probes used an isolated copy;
-the branch's production dependency was not changed during discovery.
+`codex/tacz-1.1.8-support` branch. Compatibility probes first used an isolated
+copy; the changes were then implemented and validated on the support branch.
 
 ## Result
 
 The current add-on is source- and startup-compatible with TaCZ 1.1.8-hotfix.
 No catalog, progression, networking, crafting-enforcement, or loot-policy
-rewrite is required. The release should still include a small dependency
-migration, removal of redundant client mixin hooks, focused interaction tests,
-and documentation updates before declaring 1.1.8 support.
+rewrite was required. The dependency migration, redundant client-mixin removal,
+focused filter tests, renderer hardening, and documentation updates described
+below are implemented on the support branch.
 
 ## Upstream changes relevant to this add-on
 
@@ -59,9 +59,9 @@ Two existing blueprint injections duplicate guards already present in TaCZ:
 - the cancellable `getPlayerIngredientCount` injection duplicates TaCZ's null
   recipe guard.
 
-They compile and apply on 1.1.8, but should be removed to reduce coupling. The
-`getSelectedRecipe` null guard should remain because TaCZ can call that method
-with a null ID during empty-screen initialization.
+They compiled and applied on 1.1.8, but were removed to reduce coupling. The
+`getSelectedRecipe` null guard remains because TaCZ can call that method with a
+null ID during empty-screen initialization.
 
 ### Lazy client resources
 
@@ -71,9 +71,9 @@ attachment slot textures remain eagerly populated, and gun displays are now
 created on demand through TaCZ's own `ClientIndexManager`. The existing fallback
 to the catalog's synchronized slot texture remains valid.
 
-The gun-display lookup should be evaluated once per render instead of calling
+The gun-display lookup is now evaluated once per render instead of calling
 `getDefaultDisplay()` repeatedly. This is a small hardening/clarity change, not
-a current correctness failure.
+a correction for a known rendering failure.
 
 ### Common resources and loot
 
@@ -109,11 +109,41 @@ TaCZ 1.1.8-hotfix Modrinth artifact.
 The startup probes validate class loading and mixin application. They do not
 replace an interactive gunsmith-screen and blueprint-rendering acceptance pass.
 
+## Implemented branch validation
+
+The support branch now resolves the official Modrinth
+`1.1.8-hotfix_mapped_official_1.20.1` artifact in normal development builds and
+declares the bounded runtime range `[1.1.8,1.2)` in the packaged metadata.
+
+- automated tests: 50 passed, 0 failed, 0 skipped;
+- `cleanTest test build`: passed;
+- `verifyReleaseArtifact`: passed, including the expected reduced client mixin
+  surface and packaged dependency range;
+- `verifyPublicationReadiness`: passed;
+- dedicated server: reached `Done (2.024s)` with the server menu mixin applied;
+- current development content set: 481 registered blueprints from 724 TaCZ
+  recipes, with 235 duplicates ignored and 8 invalid results skipped;
+- dynamic loot: 6 pools, 6 rules, and 748 exact bindings loaded;
+- client with lazy loading enabled: reached the render loop with the gunsmith
+  screen mixin applied;
+- client with lazy loading disabled: reached the render loop with the gunsmith
+  screen mixin applied.
+
+The eager client probe revealed malformed filenames and missing animation
+runtimes in the installed third-party Suffuse content pack. They are upstream
+pack-data problems and occur independently of this add-on. No add-on exception,
+mixin application error, or injection error occurred in either asset mode.
+
+An interactive world pass is still required to visually confirm representative
+gun, ammunition, and attachment blueprint icons, the held-item/search/tab/pack
+filter combinations, live unlock/revocation behavior, crafting, and migration
+of a real existing player save.
+
 ## Implementation plan
 
 ### 1. Pin the supported development artifact
 
-- Add an exclusively scoped Modrinth Maven repository.
+- Add a Modrinth Maven repository scoped to the `maven.modrinth` group.
 - Replace the CurseMaven TaCZ artifact declaration with the verified
   `1.1.8-hotfix` artifact.
 - Remove the obsolete `tacz_curse_artifact` property.

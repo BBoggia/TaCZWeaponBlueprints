@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Updated the development and runtime compatibility target to TaCZ 1.1.8-hotfix (`[1.1.8,1.2)`).
+- Switched the pinned TaCZ development artifact from CurseMaven to the official Modrinth Maven endpoint.
+- Let TaCZ own gunsmith result-button registration and ingredient-count null handling instead of replacing those paths with redundant client mixin injections.
+- Resolved lazily created gun displays once per blueprint render while retaining the synchronized catalog texture fallback.
+
+### Compatibility
+
+- TaCZ 1.1.8-hotfix compiles successfully and passes the complete automated test suite.
+- Dedicated-server and client startup probes load the blueprint menu and screen mixins without an injection error.
+- Existing learned blueprint data, datapack formats, loot policies, and network formats are unchanged.
+
 ## 1.0.3-beta7 - 2026-08-24
 
 ### Added

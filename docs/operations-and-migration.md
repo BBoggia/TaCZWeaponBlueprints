@@ -2,7 +2,9 @@
 
 ## Supported runtime
 
-The current release candidate is built for Minecraft 1.20.1, Forge 47.x, TaCZ 1.1.5, and Fzzy Config 0.5.9. Declared dependency ranges intentionally stop before TaCZ 1.2 and Fzzy Config 0.6 because those API lines have not been validated.
+The current development line is built for Minecraft 1.20.1, Forge 47.x, TaCZ 1.1.8-hotfix, and Fzzy Config 0.5.9. Declared dependency ranges intentionally stop before TaCZ 1.2 and Fzzy Config 0.6 because those API lines have not been validated.
+
+TaCZ 1.1.8 can inject a Model 943 revolver and ammunition into a world's optional bonus chest. Obtaining those items does not unlock their gun-smithing recipes; blueprint progression and server-side crafting enforcement continue to operate normally.
 
 Install the blueprint mod and required dependencies on both client and server. TaCZ gun content packs remain normal TaCZ resources and do not need to be declared as Forge mods.
 

@@ -2,6 +2,7 @@ package com.gamergaming.taczweaponblueprints.client.renderer.item;
 
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.tacz.guns.api.TimelessAPI;
+import com.tacz.guns.client.resource.GunDisplayInstance;
 import com.tacz.guns.client.resource.index.ClientAmmoIndex;
 import com.tacz.guns.client.resource.index.ClientAttachmentIndex;
 import com.tacz.guns.client.resource.index.ClientGunIndex;
@@ -99,11 +100,11 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
         switch (itemCategory) {
             case "gun" -> {
                 Optional<ClientGunIndex> index = TimelessAPI.getClientGunIndex(new ResourceLocation(data.getBpId()));
+                GunDisplayInstance display = index.map(ClientGunIndex::getDefaultDisplay).orElse(null);
 
                 overlayTexture = data.getDisplaySlotKey();
-                if (index.isPresent() && index.get().getDefaultDisplay() != null
-                        && index.get().getDefaultDisplay().getSlotTexture() != null) {
-                    overlayTexture = index.get().getDefaultDisplay().getSlotTexture();
+                if (display != null && display.getSlotTexture() != null) {
+                    overlayTexture = display.getSlotTexture();
                 }
             }
             case "ammo" -> {

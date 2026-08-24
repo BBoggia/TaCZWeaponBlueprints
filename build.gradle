@@ -151,6 +151,13 @@ repositories {
     }
 
     maven {
+        name = "Modrinth"
+        url = "https://api.modrinth.com/maven"
+        content {
+            includeGroup "maven.modrinth"
+        }
+    }
+    maven {
         // Add curse maven to repositories
         name = "Curse Maven"
         url = "https://www.cursemaven.com"
@@ -202,7 +209,7 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
 
-    implementation fg.deobf("curse.maven:timeless-and-classics-zero-1028108:${tacz_curse_artifact}") {
+    implementation fg.deobf("maven.modrinth:timeless-and-classics-zero:${tacz_version}") {
         exclude group: 'org.apache.commons', module: 'commons-math3'
     }
 
@@ -413,6 +420,7 @@ tasks.register('verifyReleaseArtifact') {
             def names = entries.collect { it.name }
             def forbidden = names.findAll {
                 it == '.DS_Store' || it.endsWith('/.DS_Store') || it == '.cache/' || it.startsWith('.cache/') || it.contains('/.cache/')
+                        || it == 'com/gamergaming/taczweaponblueprints/mixin/IScreenAccessor.class'
             }
             if (!forbidden.isEmpty()) {
                 throw new GradleException("Release artifact contains forbidden metadata: ${forbidden}")
@@ -422,8 +430,11 @@ tasks.register('verifyReleaseArtifact') {
                     'com/gamergaming/taczweaponblueprints/loot/DynamicBlueprintLootModifier.class',
                     'com/gamergaming/taczweaponblueprints/loot/BlueprintLootPolicyResolver.class',
                     'com/gamergaming/taczweaponblueprints/command/sub/BlueprintLootCommand.class',
+                    'com/gamergaming/taczweaponblueprints/client/BlueprintRecipeFilter.class',
+                    'com/gamergaming/taczweaponblueprints/mixin/GunSmithTableScreenMixin.class',
                     'data/taczweaponblueprints/loot_modifiers/dynamic_blueprints.json',
                     'data/forge/loot_modifiers/global_loot_modifiers.json',
+                    'taczweaponblueprints.mixins.json',
                     'META-INF/mods.toml',
                     'META-INF/MANIFEST.MF',
                     'LICENSE.txt'
@@ -457,6 +468,19 @@ tasks.register('verifyReleaseArtifact') {
                 } catch (Exception exception) {
                     throw new GradleException("Invalid packaged JSON ${entry.name}", exception)
                 }
+            }
+
+            def mixinEntry = zip.getEntry('taczweaponblueprints.mixins.json')
+            def mixinConfig = zip.getInputStream(mixinEntry).withCloseable { stream ->
+                jsonParser.parse(stream, 'UTF-8')
+            }
+            def expectedClientMixins = [
+                    'GunSmithTableScreenMixin',
+                    'ICreativeModeTabsAccessor',
+                    'IAbstractContainerScreenAccessor'
+            ] as Set
+            if (!(mixinConfig.client instanceof List) || mixinConfig.client.toSet() != expectedClientMixins) {
+                throw new GradleException("Packaged client mixin surface does not match ${expectedClientMixins}")
             }
 
             def globalEntry = zip.getEntry('data/forge/loot_modifiers/global_loot_modifiers.json')

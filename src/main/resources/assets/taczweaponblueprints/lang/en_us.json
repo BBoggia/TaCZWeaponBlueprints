@@ -12,6 +12,9 @@
     "message.taczweaponblueprints.blueprint.invalid_blueprint": "This blueprint is invalid.",
     "message.taczweaponblueprints.blueprint.data_unavailable": "Your blueprint data is unavailable. The blueprint was not consumed.",
 
+    "gui.taczweaponblueprints.gun_smith_table.no_recipes": "No recipes",
+    "gui.taczweaponblueprints.gun_smith_table.available": "available",
+
     "commands.taczweaponblueprints.blueprint.give.success": "Successfully gave %s a blueprint for %s.",
     "commands.taczweaponblueprints.blueprint.give.invalid_player": "Invalid player.",
     "commands.taczweaponblueprints.blueprint.give.invalid_blueprint": "Invalid blueprint.",

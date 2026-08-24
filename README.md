@@ -8,7 +8,7 @@ The mod is server-authoritative: the client UI hides locked recipes for convenie
 
 - Minecraft 1.20.1
 - Forge 47.x (validated with 47.3.0)
-- Timeless and Classics Zero 1.1.5 (`[1.1.5,1.2)`)
+- Timeless and Classics Zero 1.1.8-hotfix (`[1.1.8,1.2)`)
 - Fzzy Config 0.5.9 (`[0.5.9,0.6)`)
 - Kotlin for Forge 4.11.x, required by Fzzy Config
 
