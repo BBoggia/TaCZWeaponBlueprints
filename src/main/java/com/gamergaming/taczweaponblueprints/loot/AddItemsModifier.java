@@ -1,7 +1,6 @@
 package com.gamergaming.taczweaponblueprints.loot;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -9,25 +8,28 @@ import java.util.function.Supplier;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 
-import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
+import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
+import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
+import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintLootDataManager;
 import com.google.common.base.Suppliers;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import it.unimi.dsi.fastutil.objects.ObjectArrayList; 
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import net.minecraftforge.common.loot.IGlobalLootModifier;
 import net.minecraftforge.common.loot.LootModifier;
-import net.minecraftforge.fml.ModList;
 
 public class AddItemsModifier extends LootModifier {
     private final List<Pair<ItemStack, Float>> itemsWithWeights;
-    private final Map<String, Integer> randomRollRange; 
-    private final Float poolProbability; 
+    // Retained in the codec so existing generated modifier JSON remains compatible.
+    // Runtime chance and roll bounds come from the live synchronized config.
+    private final Map<String, Integer> randomRollRange;
+    private final Float poolProbability;
 
     private static final Codec<Map<String, Integer>> RANDOM_ROLL_RANGE_CODEC = RecordCodecBuilder.create(instance ->
         instance.group(
@@ -55,7 +57,7 @@ public class AddItemsModifier extends LootModifier {
 
     public AddItemsModifier(LootItemCondition[] conditionsIn, List<Pair<ItemStack, Float>> itemsWithWeights, int min, int max, float poolProbability) {
         super(conditionsIn);
-        this.itemsWithWeights = itemsWithWeights;
+        this.itemsWithWeights = snapshotItems(itemsWithWeights);
         this.randomRollRange = Map.of("min", min, "max", max);
         this.poolProbability = poolProbability;
     }
@@ -65,94 +67,73 @@ public class AddItemsModifier extends LootModifier {
         return CODEC.get();
     }
 
-    public LootItemCondition[] getConditions() {
-        return conditions;
-    }
-
     @Override
     protected @NotNull ObjectArrayList<ItemStack> doApply(ObjectArrayList<ItemStack> generatedLoot, LootContext context) {
-        if (!Arrays.stream(this.conditions).allMatch(condition -> condition.test(context))) {
+        // Phase 4 compatibility bridge: keep decoding legacy modifiers, but do not
+        // apply them while a valid dynamic datapack snapshot owns distribution.
+        if (BlueprintLootDataManager.INSTANCE.ownsLootDistribution(context.getQueriedLootTableId())) {
+            return generatedLoot;
+        }
+        if (!ModConfigs.BLUEPRINT.enableBlueprints.get()) {
             return generatedLoot;
         }
 
         RandomSource random = context.getRandom();
+        float poolChance = BlueprintLootSelector.sanitizeProbability(ModConfigs.BLUEPRINT.blueprintSpawnChance.get());
+        if (random.nextFloat() >= poolChance) {
+            return generatedLoot;
+        }
 
-        // Check if pool should be activated based on its probability
-        if (random.nextFloat() < this.poolProbability) {
+        List<BlueprintLootSelector.WeightedEntry<ItemStack>> candidates = new ArrayList<>();
+        for (Pair<ItemStack, Float> item : this.itemsWithWeights) {
+            BlueprintLootSelector.createEntry(
+                    BlueprintItem.getBpId(item.getLeft()),
+                    item.getLeft(),
+                    item.getRight()).ifPresent(candidates::add);
+        }
+        List<BlueprintLootSelector.WeightedEntry<ItemStack>> availableItems = BlueprintLootSelector.filterEligible(
+                candidates,
+                blueprintId -> BlueprintDataManager.SERVER.getBlueprintData(blueprintId.toString()) != null
+                        && !ModConfigs.BLUEPRINT.isItemBlacklisted(blueprintId.toString()));
+        if (availableItems.isEmpty()) {
+            return generatedLoot;
+        }
 
-            // Filter items based on if mod loaded at runtime
-            List<Pair<ItemStack, Float>> availableItems = new ArrayList<>();
-            for (Pair<ItemStack, Float> itemWeightPair : this.itemsWithWeights) {
-                ItemStack potentialItem = itemWeightPair.getLeft();
-                String bpId = BlueprintItem.getBpId(potentialItem); 
+        int existingBlueprints = (int) generatedLoot.stream()
+                .filter(stack -> stack.getItem() instanceof BlueprintItem)
+                .count();
+        int remainingBudget = BlueprintLootSelector.remainingBlueprintBudget(existingBlueprints);
+        if (remainingBudget == 0) {
+            return generatedLoot;
+        }
 
-                if (bpId == null || bpId.equals("NULL") || bpId.isEmpty()) {
-                    TaCZWeaponBlueprints.LOGGER.warn("BlueprintItem has invalid bpId in AddItemsModifier: {}", potentialItem.getDisplayName().getString());
-                    continue;
-                }
+        BlueprintLootSelector.RollRange rollRange = BlueprintLootSelector.sanitizeRollRange(
+                ModConfigs.BLUEPRINT.minBlueprints.get(),
+                ModConfigs.BLUEPRINT.maxBlueprints.get());
+        int rolls = rollRange.min();
+        if (rollRange.max() > rollRange.min()) {
+            rolls += random.nextInt(rollRange.max() - rollRange.min() + 1);
+        }
+        rolls = BlueprintLootSelector.constrainRollsToBudget(rolls, remainingBudget);
 
-                String[] idParts = bpId.split(":", 2);
-                if (idParts.length < 2) {
-                    TaCZWeaponBlueprints.LOGGER.warn("Malformed blueprint ID (missing namespace) in AddItemsModifier: {}. Full ID: {}", potentialItem.getDisplayName().getString(), bpId);
-                    continue;
-                }
-                String itemNamespace = idParts[0];
-
-                if (ModList.get().isLoaded(itemNamespace)) {
-                    availableItems.add(itemWeightPair);
-                } else {
-                    // TaCZWeaponBlueprints.LOGGER.debug("Skipping item {} for loot generation as mod {} is not loaded.", bpId, itemNamespace);
-                }
-            }
-
-            if (availableItems.isEmpty()) {
-                return generatedLoot; 
-            }
-
-            int minRolls = this.randomRollRange.get("min");
-            int maxRolls = this.randomRollRange.get("max");
-            int rolls = 0;
-            if (maxRolls > minRolls) {
-                rolls = minRolls + random.nextInt(maxRolls - minRolls + 1);
-            } else if (maxRolls == minRolls) {
-                rolls = minRolls;
-            }
-            rolls = Math.max(0, rolls);
-
-
-            if (rolls > 0 && !availableItems.isEmpty()) {
-
-                float totalWeight = 0f;
-                for (Pair<ItemStack, Float> pair : availableItems) {
-                    totalWeight += pair.getRight();
-                }
-
-                if (totalWeight > 0) { 
-                    for (int i = 0; i < rolls; ++i) {
-                        float randomPick = random.nextFloat() * totalWeight;
-                        float cumulativeWeight = 0f;
-                        ItemStack selectedItem = null;
-
-                        for (Pair<ItemStack, Float> pair : availableItems) {
-                            cumulativeWeight += pair.getRight();
-                            if (randomPick <= cumulativeWeight) {
-                                selectedItem = pair.getLeft();
-                                break;
-                            }
-                        }
-                        
-                        if (selectedItem != null) {
-                            generatedLoot.add(selectedItem.copy());
-                        } else if (!availableItems.isEmpty()) {
-                            // Falback to first item is selection failed
-                             TaCZWeaponBlueprints.LOGGER.warn("Weighted selection failed in AddItemsModifier, falling back to first available item. TotalWeight: {}, RandomPick: {}", totalWeight, randomPick);
-                            generatedLoot.add(availableItems.get(0).getLeft().copy());
-                             TaCZWeaponBlueprints.LOGGER.warn("Weighted selection failed in AddItemsModifier, falling back to first available item. TotalWeight: {}, RandomPick: {}", totalWeight, randomPick);
-                        }
-                    }
-                }
-            }
+        for (int i = 0; i < rolls; i++) {
+            BlueprintLootSelector.selectWeighted(availableItems, random.nextFloat())
+                    .ifPresent(selected -> generatedLoot.add(selected.value().copy()));
         }
         return generatedLoot;
     }
+
+    private static List<Pair<ItemStack, Float>> snapshotItems(List<Pair<ItemStack, Float>> items) {
+        if (items == null) {
+            return List.of();
+        }
+        List<Pair<ItemStack, Float>> snapshot = new ArrayList<>();
+        for (Pair<ItemStack, Float> item : items) {
+            if (item != null && item.getLeft() != null) {
+                snapshot.add(Pair.of(item.getLeft().copy(), item.getRight()));
+            }
+        }
+        return List.copyOf(snapshot);
+    }
+
 }

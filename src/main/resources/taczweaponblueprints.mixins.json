@@ -5,10 +5,12 @@
   "package": "com.gamergaming.taczweaponblueprints.mixin",
   "refmap": "/META-INF/taczweaponblueprints.refmap.json",
   "mixins": [
-    "IGunSmithTableRecipeAccessor"
+    "IGunSmithTableRecipeAccessor",
+    "GunSmithTableMenuMixin"
     ],
   "client": [
     "GunSmithTableScreenMixin",
+    "ICreativeModeTabsAccessor",
     "IScreenAccessor",
     "IAbstractContainerScreenAccessor"
   ],

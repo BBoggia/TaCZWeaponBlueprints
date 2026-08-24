@@ -1,0 +1,129 @@
+{
+  "format": 1,
+  "entries": [
+    {
+      "blueprint": "oldgun:g43",
+      "weight": 8.179
+    },
+    {
+      "blueprint": "oldgun:stg",
+      "weight": 8.602
+    },
+    {
+      "blueprint": "oldgun:m1",
+      "weight": 9.674
+    },
+    {
+      "blueprint": "lradd:mag7",
+      "weight": 10.13
+    },
+    {
+      "blueprint": "oldgun:m1891",
+      "weight": 13.094
+    },
+    {
+      "blueprint": "oldgun:38type",
+      "weight": 13.44
+    },
+    {
+      "blueprint": "oldgun:w1895",
+      "weight": 13.54
+    },
+    {
+      "blueprint": "oldgun:g88",
+      "weight": 13.559
+    },
+    {
+      "blueprint": "oldgun:lee",
+      "weight": 13.577
+    },
+    {
+      "blueprint": "tacz:uzi",
+      "weight": 13.659
+    },
+    {
+      "blueprint": "classicr:mac10",
+      "weight": 14.44
+    },
+    {
+      "blueprint": "suffuse:tti2011",
+      "weight": 14.678
+    },
+    {
+      "blueprint": "fibers:renetti",
+      "weight": 14.793
+    },
+    {
+      "blueprint": "tacz:cz75",
+      "weight": 14.797
+    },
+    {
+      "blueprint": "cib:686",
+      "weight": 14.815
+    },
+    {
+      "blueprint": "tacz:db_long",
+      "weight": 14.844
+    },
+    {
+      "blueprint": "oldgun:luger_carbine",
+      "weight": 14.863
+    },
+    {
+      "blueprint": "tacz:db_short",
+      "weight": 14.957
+    },
+    {
+      "blueprint": "cib:r8",
+      "weight": 15.054
+    },
+    {
+      "blueprint": "oldgun:p38",
+      "weight": 15.088
+    },
+    {
+      "blueprint": "cib:usp",
+      "weight": 15.125
+    },
+    {
+      "blueprint": "ccrp:chisato_m1911",
+      "weight": 15.223
+    },
+    {
+      "blueprint": "classicr:m92fs",
+      "weight": 15.457
+    },
+    {
+      "blueprint": "tacz:glock_17",
+      "weight": 15.463
+    },
+    {
+      "blueprint": "oldgun:p08",
+      "weight": 15.466
+    },
+    {
+      "blueprint": "cib:p250",
+      "weight": 15.466
+    },
+    {
+      "blueprint": "suffuse:python",
+      "weight": 15.704
+    },
+    {
+      "blueprint": "oldgun:sten",
+      "weight": 15.739
+    },
+    {
+      "blueprint": "oldgun:m3",
+      "weight": 16.385
+    },
+    {
+      "blueprint": "classicr:m1a1_smg",
+      "weight": 16.476
+    },
+    {
+      "blueprint": "lradd:nailgun",
+      "weight": 20.0
+    }
+  ]
+}

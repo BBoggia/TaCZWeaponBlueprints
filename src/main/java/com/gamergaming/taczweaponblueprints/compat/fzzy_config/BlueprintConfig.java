@@ -3,7 +3,6 @@ package com.gamergaming.taczweaponblueprints.compat.fzzy_config;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -11,7 +10,6 @@ import java.util.stream.Collectors;
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.tacz.guns.resource.CommonAssetsManager;
-import com.tacz.guns.resource.GunPackLoader;
 
 import me.fzzyhmstrs.fzzy_config.annotations.Translation;
 import me.fzzyhmstrs.fzzy_config.annotations.WithPerms;
@@ -23,10 +21,10 @@ import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedBoolean;
 import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedString;
 import me.fzzyhmstrs.fzzy_config.validation.number.ValidatedDouble;
 import me.fzzyhmstrs.fzzy_config.validation.number.ValidatedInt;
-import net.minecraft.resources.ResourceLocation;
 
 @Translation(prefix = ModConfigs.BASE_KEY + "blueprint")
 public class BlueprintConfig extends Config {
+    public static final int MAX_BLUEPRINTS_PER_LOOT_CONTAINER = 64;
 
     @WithPerms(opLevel = 2)
     public ValidatedBoolean enableBlueprints = new ValidatedBoolean(true);
@@ -37,11 +35,11 @@ public class BlueprintConfig extends Config {
 
     // @Comment("Minimum number of blueprints that can spawn if spawn chance is met")
     @WithPerms(opLevel = 2)
-    public ValidatedInt minBlueprints = new ValidatedInt(1, Integer.MAX_VALUE, 0);
+    public ValidatedInt minBlueprints = new ValidatedInt(1, MAX_BLUEPRINTS_PER_LOOT_CONTAINER, 0);
 
     // @Comment("Maximum number of blueprints that can spawn if spawn chance is met")
     @WithPerms(opLevel = 2)
-    public ValidatedInt maxBlueprints = new ValidatedInt(2, Integer.MAX_VALUE, 0);
+    public ValidatedInt maxBlueprints = new ValidatedInt(2, MAX_BLUEPRINTS_PER_LOOT_CONTAINER, 0);
     
     public BlueprintConfig() {
         super(TaCZWeaponBlueprints.loc("blueprint"));
@@ -114,12 +112,6 @@ public class BlueprintConfig extends Config {
 
     public boolean isItemBlacklisted(String itemId) {
         return gunBlacklist.contains(itemId) || ammoBlacklist.contains(itemId) || attachmentBlacklist.contains(itemId);
-    }
-
-    public boolean isItemRecipeBlacklisted(String recipeId) {
-        return gunBlacklist.get().stream().map(item -> item.replace(":", ":gun/")).collect(Collectors.toList()).contains(recipeId) ||
-               ammoBlacklist.get().stream().map(item -> item.replace(":", ":ammo/")).collect(Collectors.toList()).contains(recipeId) ||
-               attachmentBlacklist.get().stream().map(item -> item.replace(":", ":attachment/")).collect(Collectors.toList()).contains(recipeId);
     }
 
     private static Predicate<String> createGunIdFilter() {

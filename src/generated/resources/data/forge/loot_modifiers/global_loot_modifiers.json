@@ -484,7 +484,8 @@
     "taczweaponblueprints:dungeons_arise/nether_chests_plague_asylum_plague_asylum_potions_blueprint_spawn_rates",
     "taczweaponblueprints:integrated_villages/village_chests_tavern_village_tavern_village_shepard_blueprint_spawn_rates",
     "taczweaponblueprints:minecraft/village_chests_village_village_armorer_blueprint_spawn_rates",
-    "taczweaponblueprints:dungeons_arise/village_chests_illager_campsite_illager_campsite_supply_blueprint_spawn_rates"
+    "taczweaponblueprints:dungeons_arise/village_chests_illager_campsite_illager_campsite_supply_blueprint_spawn_rates",
+    "taczweaponblueprints:dynamic_blueprints"
   ],
   "replace": false
 }

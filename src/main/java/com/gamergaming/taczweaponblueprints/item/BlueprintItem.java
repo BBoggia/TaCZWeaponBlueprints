@@ -4,18 +4,16 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 
-import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.client.ClientRendererRegistry;
+import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
 import com.gamergaming.taczweaponblueprints.init.ModItems;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
-import com.gamergaming.taczweaponblueprints.network.SyncPlayerRecipeDataPacket;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.gamergaming.taczweaponblueprints.util.ItemNameFilterHelper;
-import com.tacz.guns.crafting.GunSmithTableRecipe;
-import com.tacz.guns.resource.CommonAssetsManager;
 
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.nbt.CompoundTag;
@@ -24,7 +22,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.client.extensions.common.IClientItemExtensions;
-import net.minecraftforge.network.PacketDistributor;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
@@ -66,7 +63,7 @@ public class BlueprintItem extends Item {
         if (bpId == null || bpId.equals("NULL")) {
             return super.getName(stack);
         }
-        BlueprintData data = BlueprintDataManager.INSTANCE.getBlueprintData(bpId);
+        BlueprintData data = BlueprintDataManager.presentationCatalog().getBlueprintData(bpId);
         if (data != null) {
             Component firstHalfName = Component.translatable("item.taczweaponblueprints.blueprint");
             String nameKey = data.getNameKey();
@@ -94,16 +91,15 @@ public class BlueprintItem extends Item {
             return Component.literal(itemName);
         } else {
 
-            return Component.translatable("item.taczweaponblueprints.blueprint.invalid");
+            return Component.translatable("item.taczweaponblueprints.blueprint.invalid_name");
         }
     }
 
     @Override
     public void appendHoverText(ItemStack stack, Level world, List<Component> tooltip, TooltipFlag flag) {
         String bpId = getBpId(stack);
-        BlueprintData data = BlueprintDataManager.INSTANCE.getBlueprintData(bpId);
+        BlueprintData data = BlueprintDataManager.presentationCatalog().getBlueprintData(bpId);
         if (data != null) {
-            String tooltipTemplate = Component.translatable(data.getTooltipKey()).getString();
             String itemName = Component.translatable(data.getNameKey()).getString();
 
             switch (data.getItemType()) {
@@ -119,7 +115,7 @@ public class BlueprintItem extends Item {
                     break;
             }
 
-            tooltip.add(Component.literal(String.format(tooltipTemplate, itemName)));
+            tooltip.add(Component.translatable(data.getTooltipKey(), Component.literal(itemName)));
         } else {
             tooltip.add(Component.translatable("item.taczweaponblueprints.blueprint.tooltip.invalid"));
         }
@@ -132,50 +128,47 @@ public class BlueprintItem extends Item {
 
         if (!world.isClientSide) {
             String bpId = getBpId(stack);
-            handleBlueprintUse(world, player, stack, bpId);
+            handleBlueprintUse(player, stack, bpId);
         }
 
-        return InteractionResultHolder.success(stack);
+        return InteractionResultHolder.sidedSuccess(stack, world.isClientSide);
     }
 
-    // private void handleBlueprintUse(Level world, Player player, ItemStack stack, String bpId) {
-    //     BlueprintData data = BlueprintDataManager.INSTANCE.getBlueprintData(bpId);
-    //     if (data != null) {
-    //         GunSmithTableRecipe recipe = data.getRecipe();
-    //         TaCZWeaponBlueprints.LOGGER.info("BlueprintItem handleBlueprintUse: " + data.getRecipeId() + " - " + recipe.getResult().getResult().getDisplayName().getString());
-
-    //         if (recipe != null && !CommonAssetManager.INSTANCE.getRecipe(data.getRecipeId()).isPresent()) {
-    //             CommonAssetManager.INSTANCE.putRecipe(data.getRecipeId(), recipe);
-    //             player.displayClientMessage(Component.translatable("message.taczweaponblueprints.blueprint.unlocked", Component.translatable(data.getNameKey())), true);
-    //             stack.shrink(1); // Consume one blueprint item
-    //         } else {
-    //             player.displayClientMessage(Component.translatable("message.taczweaponblueprints.blueprint.already_known"), true);
-    //         }
-    //     } else {
-    //         player.displayClientMessage(Component.translatable("message.taczweaponblueprints.blueprint.invalid_blueprint"), true);
-    //     }
-    // }
-
-    private void handleBlueprintUse(Level world, Player player, ItemStack stack, String bpId) {
-        BlueprintData data = BlueprintDataManager.INSTANCE.getBlueprintData(bpId);
-        if (data != null) {
-            player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).ifPresent(recipeData -> {
-                if (!recipeData.hasRecipe(data.getRecipeId().toString())) {
-                    recipeData.addRecipe(data.getRecipeId().toString());
-                    player.displayClientMessage(Component.translatable("message.taczweaponblueprints.blueprint.unlocked", Component.translatable(data.getNameKey())), true);
-                    // Consume one blueprint item
-                    stack.shrink(1);
-
-                    // Sync to client
-                    if (player instanceof ServerPlayer serverPlayer) {
-                        NetworkHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> serverPlayer), new SyncPlayerRecipeDataPacket(recipeData.getLearnedRecipes()));
-                    }
-                } else {
-                    player.displayClientMessage(Component.translatable("message.taczweaponblueprints.blueprint.already_known"), true);
-                }
-            });
-        } else {
+    private void handleBlueprintUse(Player player, ItemStack stack, String bpId) {
+        BlueprintData data = BlueprintDataManager.SERVER.getBlueprintData(bpId);
+        if (data == null) {
             player.displayClientMessage(Component.translatable("message.taczweaponblueprints.blueprint.invalid_blueprint"), true);
+            return;
+        }
+
+        Optional<IPlayerRecipeData> recipeData = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve();
+        if (recipeData.isEmpty()) {
+            player.displayClientMessage(
+                    Component.translatable("message.taczweaponblueprints.blueprint.data_unavailable"),
+                    true);
+            return;
+        }
+
+        BlueprintDataManager.SERVER.migrateLegacyUnlocks(recipeData.get());
+        if (!recipeData.get().addBlueprint(bpId)) {
+            player.displayClientMessage(Component.translatable("message.taczweaponblueprints.blueprint.already_known"), true);
+            return;
+        }
+        // Retain the canonical recipe list for downgrade compatibility. New code
+        // uses the blueprint output ID as the durable progression identity.
+        recipeData.get().addRecipe(data.getRecipeId().toString());
+
+        if (!player.getAbilities().instabuild) {
+            stack.shrink(1);
+        }
+        player.displayClientMessage(
+                Component.translatable(
+                        "message.taczweaponblueprints.blueprint.unlocked",
+                        Component.translatable(data.getNameKey())),
+                true);
+
+        if (player instanceof ServerPlayer serverPlayer) {
+            NetworkHandler.syncPlayerRecipeData(serverPlayer);
         }
     }
 }

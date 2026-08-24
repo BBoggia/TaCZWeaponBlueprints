@@ -1,0 +1,273 @@
+{
+  "format": 1,
+  "entries": [
+    {
+      "blueprint": "tacz:m16a4",
+      "weight": 5.101
+    },
+    {
+      "blueprint": "lradd:mcx",
+      "weight": 6.203
+    },
+    {
+      "blueprint": "tacz:hk_g3",
+      "weight": 6.203
+    },
+    {
+      "blueprint": "tacz:scar_h",
+      "weight": 6.57
+    },
+    {
+      "blueprint": "lradd:sa58",
+      "weight": 6.57
+    },
+    {
+      "blueprint": "cib:asval",
+      "weight": 7.305
+    },
+    {
+      "blueprint": "lradd:sg553",
+      "weight": 7.452
+    },
+    {
+      "blueprint": "ccrp:type_95_longbow",
+      "weight": 7.672
+    },
+    {
+      "blueprint": "cib:qbz951",
+      "weight": 7.893
+    },
+    {
+      "blueprint": "cib:qbz191",
+      "weight": 7.893
+    },
+    {
+      "blueprint": "tacz:mk14",
+      "weight": 7.964
+    },
+    {
+      "blueprint": "ccrp:m249_saw",
+      "weight": 7.966
+    },
+    {
+      "blueprint": "ccrp:aug_hbar",
+      "weight": 7.966
+    },
+    {
+      "blueprint": "tacz:m249",
+      "weight": 7.966
+    },
+    {
+      "blueprint": "classicr:hk416_a5",
+      "weight": 8.039
+    },
+    {
+      "blueprint": "ccrp:honeybadger",
+      "weight": 8.039
+    },
+    {
+      "blueprint": "ccrp:x95r",
+      "weight": 8.039
+    },
+    {
+      "blueprint": "cib:galil",
+      "weight": 8.039
+    },
+    {
+      "blueprint": "cib:galilace",
+      "weight": 8.039
+    },
+    {
+      "blueprint": "lradd:famas",
+      "weight": 8.039
+    },
+    {
+      "blueprint": "lradd:acr",
+      "weight": 8.039
+    },
+    {
+      "blueprint": "lradd:xm8",
+      "weight": 8.039
+    },
+    {
+      "blueprint": "lradd:mk47",
+      "weight": 8.039
+    },
+    {
+      "blueprint": "lradd:bam4",
+      "weight": 8.039
+    },
+    {
+      "blueprint": "tacz:scar_l",
+      "weight": 8.174
+    },
+    {
+      "blueprint": "suffuse:n4",
+      "weight": 8.186
+    },
+    {
+      "blueprint": "cib:m4",
+      "weight": 8.186
+    },
+    {
+      "blueprint": "fibers:arx160",
+      "weight": 8.186
+    },
+    {
+      "blueprint": "fibers:bal27",
+      "weight": 8.186
+    },
+    {
+      "blueprint": "lradd:aug",
+      "weight": 8.186
+    },
+    {
+      "blueprint": "lradd:rfb",
+      "weight": 8.242
+    },
+    {
+      "blueprint": "hk:hk416a",
+      "weight": 8.26
+    },
+    {
+      "blueprint": "tacz:rpk",
+      "weight": 8.312
+    },
+    {
+      "blueprint": "classicr:mk18_mod1",
+      "weight": 8.333
+    },
+    {
+      "blueprint": "tacz:hk416d",
+      "weight": 8.333
+    },
+    {
+      "blueprint": "atea:mdx4",
+      "weight": 8.333
+    },
+    {
+      "blueprint": "atea:mdx5",
+      "weight": 8.333
+    },
+    {
+      "blueprint": "cib:origin12",
+      "weight": 8.333
+    },
+    {
+      "blueprint": "fibers:m1216",
+      "weight": 8.333
+    },
+    {
+      "blueprint": "tacz:aa12",
+      "weight": 8.407
+    },
+    {
+      "blueprint": "atea:mdx2",
+      "weight": 8.48
+    },
+    {
+      "blueprint": "cib:882",
+      "weight": 8.51
+    },
+    {
+      "blueprint": "classicr:mk47",
+      "weight": 8.716
+    },
+    {
+      "blueprint": "tacz:ak47",
+      "weight": 8.716
+    },
+    {
+      "blueprint": "lradd:ultimax100",
+      "weight": 8.768
+    },
+    {
+      "blueprint": "cib:sig556",
+      "weight": 8.842
+    },
+    {
+      "blueprint": "suffuse:m200",
+      "weight": 8.882
+    },
+    {
+      "blueprint": "cib:type20",
+      "weight": 8.895
+    },
+    {
+      "blueprint": "lradd:axmc",
+      "weight": 8.974
+    },
+    {
+      "blueprint": "tacz:ai_awp",
+      "weight": 8.974
+    },
+    {
+      "blueprint": "ccrp:p90",
+      "weight": 9.055
+    },
+    {
+      "blueprint": "lradd:p90",
+      "weight": 9.055
+    },
+    {
+      "blueprint": "qkl:clf10",
+      "weight": 9.347
+    },
+    {
+      "blueprint": "tti_gunpack:tti_tr1",
+      "weight": 10.265
+    },
+    {
+      "blueprint": "cib:9a91",
+      "weight": 10.457
+    },
+    {
+      "blueprint": "ccrp:ar57",
+      "weight": 10.55
+    },
+    {
+      "blueprint": "cib:evo3",
+      "weight": 10.937
+    },
+    {
+      "blueprint": "oldgun:ppsh41",
+      "weight": 11.144
+    },
+    {
+      "blueprint": "classicr:b93r",
+      "weight": 11.197
+    },
+    {
+      "blueprint": "classicr:tec_9",
+      "weight": 12.081
+    },
+    {
+      "blueprint": "ccrp:mp9_modernrized",
+      "weight": 12.097
+    },
+    {
+      "blueprint": "ccrp:keltec_p50",
+      "weight": 12.216
+    },
+    {
+      "blueprint": "classicr:mp9",
+      "weight": 12.331
+    },
+    {
+      "blueprint": "fibers:msmc",
+      "weight": 12.531
+    },
+    {
+      "blueprint": "classicr:glock_18",
+      "weight": 12.652
+    },
+    {
+      "blueprint": "ccrp:x95_smg",
+      "weight": 12.714
+    },
+    {
+      "blueprint": "cib:g18c",
+      "weight": 12.915
+    }
+  ]
+}

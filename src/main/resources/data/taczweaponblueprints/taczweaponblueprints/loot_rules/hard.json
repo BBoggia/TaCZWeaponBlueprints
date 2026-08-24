@@ -1,0 +1,24 @@
+{
+  "format": 1,
+  "pool": "taczweaponblueprints:hard",
+  "loot_tables": [
+    "minecraft:chests/stronghold_crossing",
+    "minecraft:chests/woodland_mansion",
+    "minecraft:chests/ancient_city",
+    "minecraft:chests/end_city_treasure",
+    "awesomedungeonend:chests/awesome_dungeon",
+    "cataclysm:entities/ender_guardian",
+    "cataclysm:entities/the_harbinger",
+    "dungeons_arise:chests/aviary/aviary_barrels",
+    "dungeons_arise:chests/aviary/aviary_normal",
+    "dungeons_arise:chests/aviary/aviary_treasure",
+    "dungeons_arise:chests/thornborn_towers/thornborn_towers_top_treasure",
+    "endrem:chests/treasure",
+    "nova_structures:chests/end_castle/greater_loot",
+    "nova_structures:chests/end_castle/treasure_lighthouse",
+    "nova_structures:chests/end_castle/vault_brigattine",
+    "nova_structures:chests/end_castle/vault_galleon",
+    "nova_structures:chests/end_castle/vault_slope",
+    "totw_additions:chests/end_tower/end_tower_chest"
+  ]
+}

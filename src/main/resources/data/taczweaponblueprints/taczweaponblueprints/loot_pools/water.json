@@ -1,0 +1,53 @@
+{
+  "format": 1,
+  "entries": [
+    {
+      "blueprint": "cib:origin12",
+      "weight": 8.333
+    },
+    {
+      "blueprint": "tacz:aa12",
+      "weight": 8.407
+    },
+    {
+      "blueprint": "classicr:mp7",
+      "weight": 8.965
+    },
+    {
+      "blueprint": "ccrp:p90",
+      "weight": 9.055
+    },
+    {
+      "blueprint": "lradd:p90",
+      "weight": 9.055
+    },
+    {
+      "blueprint": "oldgun:ppsh41",
+      "weight": 11.144
+    },
+    {
+      "blueprint": "ccrp:mp9_modernrized",
+      "weight": 12.097
+    },
+    {
+      "blueprint": "ccrp:keltec_p50",
+      "weight": 12.216
+    },
+    {
+      "blueprint": "classicr:mp9",
+      "weight": 12.331
+    },
+    {
+      "blueprint": "classicr:glock_18",
+      "weight": 12.652
+    },
+    {
+      "blueprint": "lradd:smg45",
+      "weight": 14.682
+    },
+    {
+      "blueprint": "cib:usp",
+      "weight": 15.125
+    }
+  ]
+}

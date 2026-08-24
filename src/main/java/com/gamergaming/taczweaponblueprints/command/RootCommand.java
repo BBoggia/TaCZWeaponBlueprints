@@ -2,6 +2,7 @@ package com.gamergaming.taczweaponblueprints.command;
 
 import com.gamergaming.taczweaponblueprints.command.compat.tacz.ClearRecipesCommand;
 import com.gamergaming.taczweaponblueprints.command.compat.tacz.ReloadRecipesCommand;
+import com.gamergaming.taczweaponblueprints.command.sub.BlueprintLootCommand;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 
@@ -17,9 +18,7 @@ public class RootCommand {
 
         root.then(ClearRecipesCommand.get());
         root.then(ReloadRecipesCommand.get());
-        // root.then(DummyAmmoCommand.get());
-        // root.then(OverwriteCommand.get());
-        // root.then(ReloadCommand.get());
+        root.then(BlueprintLootCommand.get());
 
         dispatcher.register(root);
     }

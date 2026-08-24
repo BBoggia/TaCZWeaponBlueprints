@@ -16,11 +16,12 @@ out
 # gradle
 build
 .gradle
+/src/generated/resources/.cache/
 
 # other
 eclipse
 run
-test
+/test/
 logs
 .luarc.json
 

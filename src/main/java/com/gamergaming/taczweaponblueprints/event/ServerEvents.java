@@ -1,63 +1,52 @@
 package com.gamergaming.taczweaponblueprints.event;
 
-import java.io.IOException;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
-
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
+import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintLootDataManager;
+import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintLootSnapshot;
 
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 @Mod.EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
-public class ServerEvents {
+public final class ServerEvents {
+    private ServerEvents() {
+    }
+
     @SubscribeEvent
     public static void onServerStarting(ServerStartingEvent event) {
         MinecraftServer server = event.getServer();
 
         TaCZWeaponBlueprints.LOGGER.info("Server starting, initializing BlueprintDataManager...");
-        BlueprintDataManager.INSTANCE.initialize(server);
-        TaCZWeaponBlueprints.LOGGER.info("BlueprintDataManager initialized.");
-
-        Set<ResourceLocation> chestLootTables;
-
-        try {
-            chestLootTables = getAllChestLootTables(server);
-        } catch (IOException e) {
-            TaCZWeaponBlueprints.LOGGER.error("Failed to get chest loot tables: " + e.getMessage());
-            return;
+        if (BlueprintDataManager.SERVER.initialize(server)) {
+            TaCZWeaponBlueprints.LOGGER.info("BlueprintDataManager initialized.");
+        } else {
+            TaCZWeaponBlueprints.LOGGER.error("BlueprintDataManager initialization failed.");
         }
 
-        TaCZWeaponBlueprints.LOGGER.info("Found following chest loot tables: " + chestLootTables.toString());
-    }
-
-    public static Set<ResourceLocation> getAllChestLootTables(MinecraftServer server) throws IOException {
-        Set<ResourceLocation> chestLootTables = new HashSet<>();
-        ResourceManager resourceManager = server.getResourceManager();
-
-        String lootTablePrefix = "loot_tables/chests";
-
-        // Lists all resources under "loot_tables/chests" that end with ".json"
-        Collection<ResourceLocation> resources = resourceManager.listResources(lootTablePrefix, resourcePath -> resourcePath.getPath().endsWith(".json")).keySet();
-
-        for (ResourceLocation resourceLocation : resources) {
-
-            String path = resourceLocation.getPath();
-
-            if (path.startsWith("loot_tables/") && path.endsWith(".json")) {
-                String lootTablePath = path.substring("loot_tables/".length(), path.length() - ".json".length());
-
-                ResourceLocation lootTableId = new ResourceLocation(resourceLocation.getNamespace(), lootTablePath);
-                chestLootTables.add(lootTableId);
-            }
+        BlueprintLootSnapshot lootSnapshot = BlueprintLootDataManager.INSTANCE.snapshot();
+        if (lootSnapshot.active()) {
+            TaCZWeaponBlueprints.LOGGER.info(
+                    "Dynamic blueprint loot distribution active: {} tags, {} pools, {} rules, "
+                            + "{} exact bindings, {} selector rules",
+                    lootSnapshot.tags().size(),
+                    lootSnapshot.pools().size(),
+                    lootSnapshot.rules().size(),
+                    lootSnapshot.bindingCount(),
+                    lootSnapshot.selectorBindings().size());
+        } else if (lootSnapshot.globallyDisablesDistribution()) {
+            TaCZWeaponBlueprints.LOGGER.info(
+                    "Dynamic blueprint loot distribution owns the system with no enabled bindings; "
+                            + "blueprint loot is disabled by datapack data");
+        } else if (lootSnapshot.ownsDistribution()) {
+            TaCZWeaponBlueprints.LOGGER.info(
+                    "Only targeted disabled blueprint loot rules are present; "
+                            + "legacy fallback remains active for untargeted loot tables");
+        } else {
+            TaCZWeaponBlueprints.LOGGER.warn(
+                    "No dynamic blueprint loot rules are active; retaining legacy modifier behavior");
         }
-
-        return chestLootTables;
     }
 }

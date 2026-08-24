@@ -5,7 +5,6 @@ import com.tacz.guns.api.TimelessAPI;
 import com.tacz.guns.client.resource.index.ClientAmmoIndex;
 import com.tacz.guns.client.resource.index.ClientAttachmentIndex;
 import com.tacz.guns.client.resource.index.ClientGunIndex;
-import com.tacz.guns.resource.CommonAssetsManager;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
@@ -13,7 +12,6 @@ import org.joml.Matrix4f;
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
-import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
@@ -31,12 +29,23 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 
 @OnlyIn(Dist.CLIENT)
 public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
 
     private static final ResourceLocation BLUEPRINT_TEXTURE = new ResourceLocation("taczweaponblueprints", "textures/item/blueprint_base.png");
+    private static final int MAX_REPORTED_MISSING_BLUEPRINTS = 256;
+    private static final Map<String, Boolean> REPORTED_MISSING_BLUEPRINTS =
+            Collections.synchronizedMap(new LinkedHashMap<>(MAX_REPORTED_MISSING_BLUEPRINTS + 1, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, Boolean> eldest) {
+                    return size() > MAX_REPORTED_MISSING_BLUEPRINTS;
+                }
+            });
 
     public BlueprintItemRenderer() {
         super(Minecraft.getInstance().getBlockEntityRenderDispatcher(), Minecraft.getInstance().getEntityModels());
@@ -52,19 +61,34 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
         int overlay = OverlayTexture.NO_OVERLAY;
 
 
-        BlueprintData data = BlueprintDataManager.INSTANCE.getBlueprintData(BlueprintItem.getBpId(itemStack));
-
-        if (data == null) {
-            TaCZWeaponBlueprints.LOGGER.error("BlueprintData is null for itemStack: {}. Tags: {}, {}", itemStack, itemStack.getTag(), BlueprintItem.getBpId(itemStack));
-            return;
-        }
-
         boolean isGuiContext = (displayContext == ItemDisplayContext.GUI ||
                                 displayContext == ItemDisplayContext.GROUND ||
                                 displayContext == ItemDisplayContext.FIXED ||
                                 displayContext == ItemDisplayContext.NONE);
+        String blueprintId = BlueprintItem.getBpId(itemStack);
+        BlueprintData data = BlueprintDataManager.CLIENT.getBlueprintData(blueprintId);
 
-        String itemCategory = data.getRecipeId().toString().split(":")[1].split("/")[0];
+        if (data == null) {
+            reportMissingBlueprintOnce(blueprintId);
+            renderTexturedQuad(
+                    poseStack,
+                    bufferSource,
+                    isGuiContext ? LightTexture.FULL_BRIGHT : packedLight,
+                    overlay,
+                    BLUEPRINT_TEXTURE,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    isGuiContext ? 1.3f : 1.2f,
+                    displayContext,
+                    isGuiContext,
+                    false);
+            return;
+        }
+
+        String recipePath = data.getRecipeId().getPath();
+        int categoryEnd = recipePath.indexOf('/');
+        String itemCategory = categoryEnd < 0 ? recipePath : recipePath.substring(0, categoryEnd);
 
         // Get overlay texture
         ResourceLocation overlayTexture;
@@ -76,28 +100,26 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
             case "gun" -> {
                 Optional<ClientGunIndex> index = TimelessAPI.getClientGunIndex(new ResourceLocation(data.getBpId()));
 
-                if (index.isPresent()) {
+                overlayTexture = data.getDisplaySlotKey();
+                if (index.isPresent() && index.get().getDefaultDisplay() != null
+                        && index.get().getDefaultDisplay().getSlotTexture() != null) {
                     overlayTexture = index.get().getDefaultDisplay().getSlotTexture();
-                } else {
-                    overlayTexture = data.getDisplaySlotKey();
                 }
             }
             case "ammo" -> {
                 Optional<ClientAmmoIndex> index = TimelessAPI.getClientAmmoIndex(new ResourceLocation(data.getBpId()));
 
-                if (index.isPresent()) {
+                overlayTexture = data.getDisplaySlotKey();
+                if (index.isPresent() && index.get().getSlotTextureLocation() != null) {
                     overlayTexture = index.get().getSlotTextureLocation();
-                } else {
-                    overlayTexture = data.getDisplaySlotKey();
                 }
             }
             case "attachments" -> {
                 Optional<ClientAttachmentIndex> index = TimelessAPI.getClientAttachmentIndex(new ResourceLocation(data.getBpId()));
 
-                if (index.isPresent()) {
+                overlayTexture = data.getDisplaySlotKey();
+                if (index.isPresent() && index.get().getSlotTexture() != null) {
                     overlayTexture = index.get().getSlotTexture();
-                } else {
-                    overlayTexture = data.getDisplaySlotKey();
                 }
             }
 
@@ -276,6 +298,16 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
 
             // Render overlay at same Z-level
             renderTexturedQuad(poseStack, bufferSource, light, overlay, overlayTexture, overlayZLevel, overlayXOffset, overlayYOffset, overlayScale, displayContext, flipOverlay, rotateOverlay);
+        }
+    }
+
+    private static void reportMissingBlueprintOnce(String blueprintId) {
+        String stableId = blueprintId == null ? "<missing>" : blueprintId;
+        synchronized (REPORTED_MISSING_BLUEPRINTS) {
+            if (REPORTED_MISSING_BLUEPRINTS.putIfAbsent(stableId, Boolean.TRUE) == null) {
+                TaCZWeaponBlueprints.LOGGER.warn(
+                        "Rendering the fallback texture for unavailable blueprint {}", stableId);
+            }
         }
     }
 
