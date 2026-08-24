@@ -33,6 +33,10 @@ public final class BlueprintResourceEvents {
 
         if (BlueprintDataManager.SERVER.initialize(event.getPlayerList().getServer())) {
             event.getPlayers().forEach(NetworkHandler::syncAllPlayerData);
+        } else {
+            // The catalog retains its last-known-good snapshot. Research data may
+            // still have changed, so republish Journals against that stable catalog.
+            event.getPlayers().forEach(NetworkHandler::syncJournalData);
         }
     }
 }

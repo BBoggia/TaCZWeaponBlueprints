@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
+import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionConfigSnapshot;
 import com.gamergaming.taczweaponblueprints.progression.DuplicateBlueprintPolicy;
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
@@ -106,6 +107,9 @@ public class BlueprintConfig extends Config {
     @Override
     public void onUpdateServer(ServerPlayer player) {
         normalizeAndPublish();
+        if (player != null) {
+            player.server.getPlayerList().getPlayers().forEach(NetworkHandler::syncJournalData);
+        }
     }
 
     @Override

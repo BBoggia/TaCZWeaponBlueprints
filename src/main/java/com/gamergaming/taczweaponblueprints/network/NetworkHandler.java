@@ -7,8 +7,11 @@ import java.util.concurrent.atomic.AtomicLong;
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModConfigs;
+import com.gamergaming.taczweaponblueprints.journal.BlueprintJournalBuilder;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionSyncScheduler;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchDataManager;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -18,7 +21,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public class NetworkHandler {
-    public static final String PROTOCOL_VERSION = "4";
+    public static final String PROTOCOL_VERSION = "5";
     // A random per-server seed prevents a partial chunk set from an earlier
     // connection being mistaken for a new sync after reconnecting.
     private static final AtomicLong SYNC_SEQUENCE =
@@ -47,6 +50,11 @@ public class NetworkHandler {
                 SyncPlayerProgressionPacket::toBytes, SyncPlayerProgressionPacket::new,
                 SyncPlayerProgressionPacket::handle,
                 Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+
+        INSTANCE.registerMessage(id++, SyncBlueprintJournalPacket.class,
+                SyncBlueprintJournalPacket::toBytes, SyncBlueprintJournalPacket::new,
+                SyncBlueprintJournalPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     public static void syncPlayerRecipeData(ServerPlayer player) {
@@ -68,6 +76,11 @@ public class NetworkHandler {
                 .ifPresent(recipeData -> sendPlayerProgressionData(player, recipeData));
     }
 
+    public static void syncJournalData(ServerPlayer player) {
+        player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
+                .ifPresent(recipeData -> sendJournalData(player, recipeData));
+    }
+
     public static void syncBlueprintData(ServerPlayer player) {
         SyncBlueprintDataPacket.split(
                         BlueprintDataManager.SERVER.getBlueprintDataMap(),
@@ -87,6 +100,18 @@ public class NetworkHandler {
                         recipeData.getDiscoveredBlueprints(),
                         recipeData.getResearchPoints(),
                         SYNC_SEQUENCE.incrementAndGet())
+                .forEach(packet -> INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), packet));
+        sendJournalData(player, recipeData);
+    }
+
+    private static void sendJournalData(ServerPlayer player, IPlayerRecipeData recipeData) {
+        var snapshot = BlueprintJournalBuilder.build(
+                BlueprintDataManager.SERVER.getBlueprintDataMap(),
+                BlueprintResearchDataManager.INSTANCE.snapshot(),
+                BlueprintResearchDataManager.INSTANCE.progressionConfig(),
+                recipeData,
+                ModConfigs.BLUEPRINT::isItemBlacklisted);
+        SyncBlueprintJournalPacket.split(snapshot, SYNC_SEQUENCE.incrementAndGet())
                 .forEach(packet -> INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), packet));
     }
 
