@@ -4,9 +4,11 @@ import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintLootDataManager;
 import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintLootSnapshot;
+import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionSyncScheduler;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraftforge.event.server.ServerStartingEvent;
+import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -48,5 +50,10 @@ public final class ServerEvents {
             TaCZWeaponBlueprints.LOGGER.warn(
                     "No dynamic blueprint loot rules are active; retaining legacy modifier behavior");
         }
+    }
+
+    @SubscribeEvent
+    public static void onServerStopped(ServerStoppedEvent event) {
+        BlueprintProgressionSyncScheduler.clearAll();
     }
 }

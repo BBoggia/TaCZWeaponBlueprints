@@ -111,6 +111,34 @@ class BlueprintResearchCodecTest {
                           ]
                         }
                         """);
+        assertDecodeFails(
+                BlueprintResearchRule.CODEC,
+                """
+                        {
+                          "format": 1,
+                          "profile": "test:profile",
+                          "target": {"selector": {"namespaces": ["test"], "weight": 2.0}}
+                        }
+                        """);
+        String oversizedId = "test:" + "a".repeat(252);
+        assertDecodeFails(
+                BlueprintResearchRule.CODEC,
+                """
+                        {
+                          "format": 1,
+                          "profile": "test:profile",
+                          "target": {"selector": {"exclude": ["%s"]}}
+                        }
+                        """.formatted(oversizedId));
+        assertDecodeFails(
+                BlueprintResearchRule.CODEC,
+                """
+                        {
+                          "format": 1,
+                          "profile": "test:profile",
+                          "target": {"selector": {"item_types": ["%s"]}}
+                        }
+                        """.formatted("x".repeat(257)));
     }
 
     @Test

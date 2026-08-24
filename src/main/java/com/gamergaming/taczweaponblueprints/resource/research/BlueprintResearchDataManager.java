@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
@@ -18,10 +19,14 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
 
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Items;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraftforge.registries.ForgeRegistries;
 
 public final class BlueprintResearchDataManager extends SimplePreparableReloadListener<BlueprintResearchSnapshot> {
     public static final BlueprintResearchDataManager INSTANCE = new BlueprintResearchDataManager();
@@ -55,7 +60,12 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
                 "research rule");
 
         try {
-            return BlueprintResearchSnapshot.create(tags, profiles, rules);
+            BlueprintResearchSnapshot snapshot = BlueprintResearchSnapshot.create(tags, profiles, rules);
+            BlueprintResearchIngredientValidator.validateExactItems(
+                    snapshot,
+                    id -> ForgeRegistries.ITEMS.containsKey(id)
+                            && ForgeRegistries.ITEMS.getValue(id) != Items.AIR);
+            return snapshot;
         } catch (IllegalArgumentException exception) {
             throw new IllegalStateException("Invalid blueprint research data: " + exception.getMessage(), exception);
         }
@@ -81,6 +91,17 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
             TaCZWeaponBlueprints.LOGGER.warn(
                     "Blueprint research snapshot does not define the default profile {}; research policy is disabled",
                     DEFAULT_PROFILE);
+        }
+        Set<ResourceLocation> unresolvedIngredientTags = BlueprintResearchIngredientValidator.unresolvedTags(
+                prepared,
+                id -> !ForgeRegistries.ITEMS.tags()
+                        .getTag(TagKey.create(Registries.ITEM, id))
+                        .isEmpty());
+        if (!unresolvedIngredientTags.isEmpty()) {
+            TaCZWeaponBlueprints.LOGGER.warn(
+                    "Blueprint research data references {} unresolved item tags; affected costs remain unavailable: {}",
+                    unresolvedIngredientTags.size(),
+                    unresolvedIngredientTags.stream().sorted().limit(12).toList());
         }
     }
 

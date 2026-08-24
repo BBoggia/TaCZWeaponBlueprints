@@ -285,9 +285,10 @@ public class PlayerRecipeData implements IPlayerRecipeData {
             }
             for (String value : values) {
                 String normalizedId = normalizeResourceId(value);
-                if (normalizedId != null) {
-                    normalized.add(normalizedId);
+                if (normalizedId == null) {
+                    return null;
                 }
+                normalized.add(normalizedId);
             }
         }
         return normalized;

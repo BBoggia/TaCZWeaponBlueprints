@@ -208,9 +208,10 @@ public final class SyncPlayerProgressionPacket {
             }
             for (String value : values) {
                 String normalizedId = PlayerRecipeData.normalizeResourceId(value);
-                if (normalizedId != null) {
-                    snapshot.add(normalizedId);
+                if (normalizedId == null) {
+                    throw new IllegalArgumentException("Invalid " + description + " ID to synchronize");
                 }
+                snapshot.add(normalizedId);
             }
         }
         return Collections.unmodifiableSet(snapshot);
@@ -232,7 +233,7 @@ public final class SyncPlayerProgressionPacket {
         }
     }
 
-    private record ProgressionSnapshot(
+    record ProgressionSnapshot(
             Set<String> learnedBlueprints,
             Set<String> discoveredBlueprints,
             int researchPoints) {
@@ -266,13 +267,13 @@ public final class SyncPlayerProgressionPacket {
         }
     }
 
-    private static final class ClientAccumulator {
+    static final class ClientAccumulator {
         private long syncId = Long.MIN_VALUE;
         private int expectedChunks;
         private int researchPoints;
         private final Map<Integer, ProgressionChunk> chunks = new TreeMap<>();
 
-        private synchronized Optional<ProgressionSnapshot> accept(SyncPlayerProgressionPacket packet) {
+        synchronized Optional<ProgressionSnapshot> accept(SyncPlayerProgressionPacket packet) {
             if (syncId != packet.syncId) {
                 syncId = packet.syncId;
                 expectedChunks = packet.chunkCount;

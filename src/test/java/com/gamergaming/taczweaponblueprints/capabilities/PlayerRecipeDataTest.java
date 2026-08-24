@@ -179,6 +179,14 @@ class PlayerRecipeDataTest {
         assertEquals(Set.of("test:old"), data.getDiscoveredBlueprints());
         assertEquals(10, data.getResearchPoints());
 
+        assertFalse(data.replaceProgression(
+                List.of("test:new", "not a resource location"),
+                List.of("test:new"),
+                25));
+        assertEquals(Set.of("test:old"), data.getLearnedBlueprints());
+        assertEquals(Set.of("test:old"), data.getDiscoveredBlueprints());
+        assertEquals(10, data.getResearchPoints());
+
         assertTrue(data.replaceProgression(
                 List.of("test:new"),
                 List.of("test:history"),

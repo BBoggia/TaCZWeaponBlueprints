@@ -61,6 +61,15 @@ The hard limits are:
 - 1,000,000,000 Research Points per value;
 - dependency depth of 64.
 
+The per-definition ceilings are reinforced by aggregate limits so many valid
+definitions cannot combine into an unsafe workload:
+
+- 65,536 total blueprint-tag values;
+- 65,536 total rule target terms;
+- 262,144 expanded rule-to-tag-value bindings;
+- 65,536 total ingredient terms;
+- 65,536 total prerequisite references.
+
 Self-dependencies, cycles, excessive dependency depth, missing profile or tag
 references, and invalid programmatically constructed definitions are rejected.
 Targets for content that is not currently installed remain valid but dormant.
@@ -84,6 +93,14 @@ Using one selected overlay instead of field-by-field rule merging keeps policy
 ownership understandable: a datapack author can identify the exact profile and
 rule responsible for every resolved value.
 
+Exact and expanded tag targets are compiled into immutable lookup indices once
+per snapshot/profile cache state. Selector rules remain in deterministic order
+and are evaluated only for the requested blueprint. Policy definitions are
+resolved lazily instead of eagerly calculating the Cartesian product of every
+catalog entry and rule. Up to eight snapshot/catalog/profile identities can be
+cached concurrently, preventing profile inspection from continuously replacing
+the active profile cache.
+
 ## Safety and publication
 
 Research preparation builds and validates an entire immutable
@@ -100,6 +117,13 @@ between snapshots.
 Economic validation requires an enabled research policy's point cost to exceed
 its recycling value. This prevents a direct research-and-recycle point-profit
 loop, including for rule overrides that are currently shadowed by another rule.
+
+Exact ingredient item IDs are checked against the item registry during reload.
+Missing or empty item tags are reported after tag application and leave the
+affected cost unavailable, allowing a tag supplied by the same reload to become
+valid without a false preparation failure. Research selectors use their own
+strict codec: loot-only `weight` is rejected, and every selector term and
+resource ID is length-bounded.
 
 ## Built-in profile
 
@@ -123,19 +147,26 @@ immutable base definition with the current authoritative catalog, synchronized
 blacklist, and Phase 1 player progression.
 
 The returned immutable policy reports availability, administrative blocking,
-learned/discovered state, prerequisite satisfaction, current point balance,
+player-data availability, learned/discovered state, prerequisite satisfaction, current point balance,
 visibility, costs, recycling value, selected rule, and target specificity.
 Learned entries are always `FULL`. Discovered entries are at least `PREVIEW`
 unless the selected rule explicitly restricts disclosure.
 
 The policy object exposes eligibility helpers, but later transaction phases
 must still re-resolve and validate the policy on the server at commit time.
+Research, point-affordability, and recycling helpers all fail closed when the
+player capability is unavailable.
+
+Phase 2 discovery synchronization is also hardened here: multiple unique
+discoveries in one player tick mark one dirty state and emit at most one full
+progression snapshot at tick end. Explicit progression synchronization consumes
+the same dirty state, and logout/server-stop cleanup prevents stale entries.
 
 ## Verification
 
 Phase 3 validation completed successfully with:
 
-- 79 automated tests;
+- 86 automated tests;
 - 0 failures, errors, or skipped tests;
 - strict codec and nested unknown-field tests;
 - exact, tag, selector, priority, ID, and tie-resolution tests;
@@ -143,6 +174,13 @@ Phase 3 validation completed successfully with:
 - self-reference, cycle, and maximum-depth tests;
 - economic-loop and shadowed-rule validation tests;
 - snapshot and catalog cache-identity tests;
+- multi-profile lazy-cache and aggregate-limit tests;
+- fail-closed capability and strict progression-replacement tests;
+- selector-length and research-only-schema tests;
+- exact-item and unresolved-tag validation tests;
+- coalesced discovery scheduler tests;
+- out-of-order, duplicate, and replaced progression-chunk tests;
+- failed reload preparation preserving the active publication;
 - built-in profile decoding and balance tests;
 - `clean build`, `verifyReleaseArtifact`, and
   `verifyPublicationReadiness`;

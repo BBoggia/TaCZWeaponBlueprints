@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionSyncScheduler;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 
 import net.minecraft.resources.ResourceLocation;
@@ -80,6 +81,7 @@ public class NetworkHandler {
     }
 
     private static void sendPlayerProgressionData(ServerPlayer player, IPlayerRecipeData recipeData) {
+        BlueprintProgressionSyncScheduler.clear(player);
         SyncPlayerProgressionPacket.split(
                         recipeData.getLearnedBlueprints(),
                         recipeData.getDiscoveredBlueprints(),

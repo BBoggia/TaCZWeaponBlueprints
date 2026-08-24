@@ -10,6 +10,7 @@ public record BlueprintResearchPolicy(
         ResourceLocation profileId,
         boolean available,
         boolean blocked,
+        boolean playerDataAvailable,
         boolean learned,
         boolean discovered,
         int researchPoints,
@@ -37,7 +38,8 @@ public record BlueprintResearchPolicy(
     }
 
     public boolean researchable() {
-        return available
+        return playerDataAvailable
+                && available
                 && !blocked
                 && researchEnabled
                 && !learned
@@ -46,11 +48,12 @@ public record BlueprintResearchPolicy(
     }
 
     public boolean canAffordPoints() {
-        return researchPoints >= researchCost.points();
+        return playerDataAvailable && researchPoints >= researchCost.points();
     }
 
     public boolean recyclable() {
-        return available
+        return playerDataAvailable
+                && available
                 && !blocked
                 && recyclingEnabled
                 && recyclingValue > 0

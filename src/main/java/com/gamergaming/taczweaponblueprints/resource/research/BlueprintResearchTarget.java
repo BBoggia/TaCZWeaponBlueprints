@@ -29,7 +29,7 @@ public record BlueprintResearchTarget(
                             .forGetter(BlueprintResearchTarget::blueprints),
                     optionalList("tags", BlueprintResearchCodecs.RESOURCE_LOCATION)
                             .forGetter(BlueprintResearchTarget::tags),
-                    new StrictOptionalFieldCodec<>("selector", BlueprintCatalogSelector.CODEC)
+                    new StrictOptionalFieldCodec<>("selector", BlueprintCatalogSelector.RESEARCH_CODEC)
                             .forGetter(BlueprintResearchTarget::selector))
                     .apply(instance, BlueprintResearchTarget::new));
 

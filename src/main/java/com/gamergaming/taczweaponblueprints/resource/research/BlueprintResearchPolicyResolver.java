@@ -1,21 +1,28 @@
 package com.gamergaming.taczweaponblueprints.resource.research;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.Predicate;
 
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
+import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintLootTag;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchSnapshot.RuleBinding;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchTarget.MatchSpecificity;
 
 import net.minecraft.resources.ResourceLocation;
 
 public final class BlueprintResearchPolicyResolver {
-    private static volatile CacheState cache = CacheState.EMPTY;
+    private static final int MAX_CACHE_STATES = 8;
+    private static volatile List<CacheState> caches = List.of();
 
     private BlueprintResearchPolicyResolver() {
     }
@@ -39,10 +46,11 @@ public final class BlueprintResearchPolicyResolver {
                 stableCatalog,
                 profileId,
                 blueprintId);
-        boolean learned = playerData != null && playerData.hasBlueprint(blueprintId.toString());
-        boolean discovered = playerData != null && playerData.hasDiscoveredBlueprint(blueprintId.toString());
-        int points = playerData == null ? 0 : playerData.getResearchPoints();
-        boolean prerequisitesSatisfied = playerData != null
+        boolean playerDataAvailable = playerData != null;
+        boolean learned = playerDataAvailable && playerData.hasBlueprint(blueprintId.toString());
+        boolean discovered = playerDataAvailable && playerData.hasDiscoveredBlueprint(blueprintId.toString());
+        int points = playerDataAvailable ? playerData.getResearchPoints() : 0;
+        boolean prerequisitesSatisfied = playerDataAvailable
                 && definition.prerequisites().stream()
                         .allMatch(id -> playerData.hasBlueprint(id.toString()));
 
@@ -58,6 +66,7 @@ public final class BlueprintResearchPolicyResolver {
                 profileId,
                 stableCatalog.containsKey(blueprintId),
                 stableBlocked.test(blueprintId.toString()),
+                playerDataAvailable,
                 learned,
                 discovered,
                 points,
@@ -81,28 +90,23 @@ public final class BlueprintResearchPolicyResolver {
             Map<ResourceLocation, BlueprintData> catalog,
             ResourceLocation profileId,
             ResourceLocation blueprintId) {
-        CacheState current = cache;
-        if (current.snapshot() != snapshot
-                || current.catalog() != catalog
-                || !profileId.equals(current.profileId())) {
-            synchronized (BlueprintResearchPolicyResolver.class) {
-                current = cache;
-                if (current.snapshot() != snapshot
-                        || current.catalog() != catalog
-                        || !profileId.equals(current.profileId())) {
-                    current = rebuild(snapshot, catalog, profileId);
-                    cache = current;
-                }
-            }
-        }
-        BlueprintResearchPolicyDefinition cached = current.definitions().get(blueprintId);
-        return cached != null
-                ? cached
-                : resolveDefinition(snapshot, profileId, blueprintId, null);
+        CacheState state = cacheState(snapshot, catalog, profileId);
+        return state.definitions().computeIfAbsent(
+                blueprintId,
+                id -> resolveDefinition(
+                        snapshot,
+                        profileId,
+                        id,
+                        catalog.get(id),
+                        state.compiledProfile()));
     }
 
     static void clearCache() {
-        cache = CacheState.EMPTY;
+        caches = List.of();
+    }
+
+    static int cacheStateCount() {
+        return caches.size();
     }
 
     public static RuleSelection ruleSelection(
@@ -113,53 +117,67 @@ public final class BlueprintResearchPolicyResolver {
         if (snapshot == null || profileId == null || blueprintId == null) {
             return RuleSelection.NONE;
         }
-        List<Candidate> matches = snapshot.rulesForProfile(profileId).stream()
-                .map(binding -> new Candidate(
-                        binding,
-                        binding.rule().target().match(blueprintId, blueprintData, snapshot.tags())))
-                .filter(candidate -> candidate.specificity() != MatchSpecificity.NONE)
-                .sorted(CANDIDATE_ORDER)
-                .toList();
-        if (matches.isEmpty()) {
-            return RuleSelection.NONE;
-        }
-        Candidate selected = matches.get(0);
-        List<ResourceLocation> ties = matches.stream()
-                .filter(candidate -> candidate.specificity() == selected.specificity()
-                        && candidate.binding().rule().priority() == selected.binding().rule().priority())
-                .map(candidate -> candidate.binding().ruleId())
-                .toList();
-        return new RuleSelection(
-                Optional.of(selected.binding().ruleId()),
-                selected.specificity(),
-                selected.binding().rule().priority(),
-                ties.size() > 1 ? ties : List.of());
+        return CompiledProfile.compile(snapshot, profileId).select(blueprintId, blueprintData);
     }
 
-    private static CacheState rebuild(
+    private static CacheState cacheState(
             BlueprintResearchSnapshot snapshot,
             Map<ResourceLocation, BlueprintData> catalog,
             ResourceLocation profileId) {
-        Map<ResourceLocation, BlueprintResearchPolicyDefinition> definitions = new LinkedHashMap<>();
-        catalog.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey(Comparator.comparing(ResourceLocation::toString)))
-                .forEach(entry -> definitions.put(
-                        entry.getKey(),
-                        resolveDefinition(snapshot, profileId, entry.getKey(), entry.getValue())));
-        return new CacheState(snapshot, catalog, profileId, Map.copyOf(definitions));
+        CacheState found = findCacheState(snapshot, catalog, profileId);
+        if (found != null) {
+            return found;
+        }
+        synchronized (BlueprintResearchPolicyResolver.class) {
+            found = findCacheState(snapshot, catalog, profileId);
+            if (found != null) {
+                return found;
+            }
+            CacheState created = new CacheState(
+                    snapshot,
+                    catalog,
+                    profileId,
+                    CompiledProfile.compile(snapshot, profileId),
+                    new ConcurrentHashMap<>());
+            List<CacheState> updated = new ArrayList<>(Math.min(MAX_CACHE_STATES, caches.size() + 1));
+            updated.add(created);
+            for (CacheState existing : caches) {
+                if (updated.size() >= MAX_CACHE_STATES) {
+                    break;
+                }
+                updated.add(existing);
+            }
+            caches = List.copyOf(updated);
+            return created;
+        }
+    }
+
+    private static CacheState findCacheState(
+            BlueprintResearchSnapshot snapshot,
+            Map<ResourceLocation, BlueprintData> catalog,
+            ResourceLocation profileId) {
+        for (CacheState state : caches) {
+            if (state.snapshot() == snapshot
+                    && state.catalog() == catalog
+                    && profileId.equals(state.profileId())) {
+                return state;
+            }
+        }
+        return null;
     }
 
     private static BlueprintResearchPolicyDefinition resolveDefinition(
             BlueprintResearchSnapshot snapshot,
             ResourceLocation profileId,
             ResourceLocation blueprintId,
-            BlueprintData blueprintData) {
+            BlueprintData blueprintData,
+            CompiledProfile compiledProfile) {
         BlueprintResearchProfile profile = snapshot.profiles().get(profileId);
         if (profile == null) {
             return disabledDefinition();
         }
         BlueprintResearchPolicyDefinition base = BlueprintResearchPolicyDefinition.fromProfile(profile);
-        RuleSelection selection = ruleSelection(snapshot, profileId, blueprintId, blueprintData);
+        RuleSelection selection = compiledProfile.select(blueprintId, blueprintData);
         if (selection.selectedRuleId().isEmpty()) {
             return base;
         }
@@ -184,14 +202,9 @@ public final class BlueprintResearchPolicyResolver {
                 false);
     }
 
-    private static final Comparator<Candidate> CANDIDATE_ORDER = Comparator
-            .comparingInt((Candidate value) -> value.specificity().rank()).reversed()
-            .thenComparing(Comparator.comparingInt(
-                    (Candidate value) -> value.binding().rule().priority()).reversed())
-            .thenComparing(value -> value.binding().ruleId().toString());
-
-    private record Candidate(RuleBinding binding, MatchSpecificity specificity) {
-    }
+    private static final Comparator<RuleBinding> RULE_ORDER = Comparator
+            .comparingInt((RuleBinding value) -> value.rule().priority()).reversed()
+            .thenComparing(value -> value.ruleId().toString());
 
     public record RuleSelection(
             Optional<ResourceLocation> selectedRuleId,
@@ -215,7 +228,90 @@ public final class BlueprintResearchPolicyResolver {
             BlueprintResearchSnapshot snapshot,
             Map<ResourceLocation, BlueprintData> catalog,
             ResourceLocation profileId,
-            Map<ResourceLocation, BlueprintResearchPolicyDefinition> definitions) {
-        private static final CacheState EMPTY = new CacheState(null, null, null, Map.of());
+            CompiledProfile compiledProfile,
+            ConcurrentMap<ResourceLocation, BlueprintResearchPolicyDefinition> definitions) {
+    }
+
+    private record CompiledProfile(
+            Map<ResourceLocation, List<RuleBinding>> exactRules,
+            Map<ResourceLocation, List<RuleBinding>> tagRules,
+            List<RuleBinding> selectorRules) {
+        private static CompiledProfile compile(
+                BlueprintResearchSnapshot snapshot,
+                ResourceLocation profileId) {
+            Map<ResourceLocation, LinkedHashSet<RuleBinding>> exact = new LinkedHashMap<>();
+            Map<ResourceLocation, LinkedHashSet<RuleBinding>> tags = new LinkedHashMap<>();
+            List<RuleBinding> selectors = new ArrayList<>();
+            for (RuleBinding binding : snapshot.rulesForProfile(profileId)) {
+                BlueprintResearchTarget target = binding.rule().target();
+                target.blueprints().forEach(id ->
+                        exact.computeIfAbsent(id, ignored -> new LinkedHashSet<>()).add(binding));
+                for (ResourceLocation tagId : target.tags()) {
+                    BlueprintLootTag tag = snapshot.tags().get(tagId);
+                    if (tag != null) {
+                        tag.values().forEach(id ->
+                                tags.computeIfAbsent(id, ignored -> new LinkedHashSet<>()).add(binding));
+                    }
+                }
+                if (target.selector().isPresent()) {
+                    selectors.add(binding);
+                }
+            }
+            selectors.sort(RULE_ORDER);
+            return new CompiledProfile(
+                    immutableBindingMap(exact),
+                    immutableBindingMap(tags),
+                    List.copyOf(selectors));
+        }
+
+        private RuleSelection select(ResourceLocation blueprintId, BlueprintData blueprintData) {
+            List<RuleBinding> exact = exactRules.getOrDefault(blueprintId, List.of());
+            if (!exact.isEmpty()) {
+                return selection(exact, MatchSpecificity.EXACT);
+            }
+            List<RuleBinding> tags = tagRules.getOrDefault(blueprintId, List.of());
+            if (!tags.isEmpty()) {
+                return selection(tags, MatchSpecificity.TAG);
+            }
+            if (blueprintData == null) {
+                return RuleSelection.NONE;
+            }
+            List<RuleBinding> matchingSelectors = selectorRules.stream()
+                    .filter(binding -> binding.rule().target().selector()
+                            .filter(selector -> selector.matches(blueprintId, blueprintData))
+                            .isPresent())
+                    .toList();
+            return matchingSelectors.isEmpty()
+                    ? RuleSelection.NONE
+                    : selection(matchingSelectors, MatchSpecificity.SELECTOR);
+        }
+
+        private static RuleSelection selection(
+                List<RuleBinding> orderedBindings,
+                MatchSpecificity specificity) {
+            RuleBinding selected = orderedBindings.get(0);
+            List<ResourceLocation> ties = orderedBindings.stream()
+                    .filter(binding -> binding.rule().priority() == selected.rule().priority())
+                    .map(RuleBinding::ruleId)
+                    .toList();
+            return new RuleSelection(
+                    Optional.of(selected.ruleId()),
+                    specificity,
+                    selected.rule().priority(),
+                    ties.size() > 1 ? ties : List.of());
+        }
+
+        private static Map<ResourceLocation, List<RuleBinding>> immutableBindingMap(
+                Map<ResourceLocation, LinkedHashSet<RuleBinding>> bindings) {
+            Map<ResourceLocation, List<RuleBinding>> immutable = new LinkedHashMap<>();
+            bindings.entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey(Comparator.comparing(ResourceLocation::toString)))
+                    .forEach(entry -> {
+                        List<RuleBinding> sorted = new ArrayList<>(entry.getValue());
+                        sorted.sort(RULE_ORDER);
+                        immutable.put(entry.getKey(), List.copyOf(sorted));
+                    });
+            return Collections.unmodifiableMap(immutable);
+        }
     }
 }

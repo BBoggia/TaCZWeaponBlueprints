@@ -233,6 +233,64 @@ class BlueprintResearchPolicyResolverTest {
         assertFalse(resolve(secondSnapshot, Map.of(), blueprintId, null).available());
     }
 
+    @Test
+    void permissiveRecyclingStillRequiresPlayerData() {
+        ResourceLocation blueprintId = id("test:recyclable");
+        BlueprintResearchProfile permissive = new BlueprintResearchProfile(
+                1,
+                true,
+                JournalVisibility.SILHOUETTE,
+                true,
+                true,
+                true,
+                1,
+                new BlueprintResearchCost(8, List.of()),
+                false,
+                false);
+        BlueprintResearchSnapshot snapshot = BlueprintResearchSnapshot.create(
+                Map.of(),
+                Map.of(profileId(), permissive),
+                Map.of());
+
+        BlueprintResearchPolicy unavailableData = resolve(
+                snapshot,
+                catalog(blueprintId, "rifle"),
+                blueprintId,
+                null);
+        assertFalse(unavailableData.playerDataAvailable());
+        assertFalse(unavailableData.recyclable());
+        assertFalse(unavailableData.canAffordPoints());
+
+        BlueprintResearchPolicy availableData = resolve(
+                snapshot,
+                catalog(blueprintId, "rifle"),
+                blueprintId,
+                new PlayerRecipeData());
+        assertTrue(availableData.playerDataAvailable());
+        assertTrue(availableData.recyclable());
+    }
+
+    @Test
+    void cacheRetainsMultipleProfilesAndResolvesEntriesLazily() {
+        ResourceLocation blueprintId = id("test:cached");
+        ResourceLocation alternateProfile = id("test:alternate");
+        BlueprintResearchSnapshot snapshot = BlueprintResearchSnapshot.create(
+                Map.of(),
+                Map.of(profileId(), profile(false), alternateProfile, profile(false)),
+                Map.of());
+        Map<ResourceLocation, BlueprintData> catalog = catalog(blueprintId, "rifle");
+
+        BlueprintResearchPolicyResolver.resolve(
+                snapshot, catalog, profileId(), blueprintId, new PlayerRecipeData(), ignored -> false);
+        BlueprintResearchPolicyResolver.resolve(
+                snapshot, catalog, alternateProfile, blueprintId, new PlayerRecipeData(), ignored -> false);
+        assertEquals(2, BlueprintResearchPolicyResolver.cacheStateCount());
+
+        BlueprintResearchPolicyResolver.resolve(
+                snapshot, catalog, profileId(), blueprintId, new PlayerRecipeData(), ignored -> false);
+        assertEquals(2, BlueprintResearchPolicyResolver.cacheStateCount());
+    }
+
     private static BlueprintResearchPolicy resolve(
             BlueprintResearchSnapshot snapshot,
             Map<ResourceLocation, BlueprintData> catalog,

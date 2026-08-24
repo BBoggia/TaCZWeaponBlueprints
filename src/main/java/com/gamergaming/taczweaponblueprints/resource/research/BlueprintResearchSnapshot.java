@@ -14,21 +14,31 @@ import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintLootTag;
 
 import net.minecraft.resources.ResourceLocation;
 
-public record BlueprintResearchSnapshot(
-        Map<ResourceLocation, BlueprintLootTag> tags,
-        Map<ResourceLocation, BlueprintResearchProfile> profiles,
-        Map<ResourceLocation, BlueprintResearchRule> rules,
-        Map<ResourceLocation, List<RuleBinding>> rulesByProfile) {
+public final class BlueprintResearchSnapshot {
     public static final int MAX_DEFINITIONS_PER_TYPE = 4096;
     public static final int MAX_PREREQUISITE_DEPTH = 64;
+    public static final int MAX_TOTAL_TAG_VALUES = 65_536;
+    public static final int MAX_TOTAL_RULE_TARGET_TERMS = 65_536;
+    public static final int MAX_EXPANDED_TAG_BINDINGS = 262_144;
+    public static final int MAX_TOTAL_INGREDIENT_TERMS = 65_536;
+    public static final int MAX_TOTAL_PREREQUISITES = 65_536;
     public static final BlueprintResearchSnapshot EMPTY = new BlueprintResearchSnapshot(
             Map.of(), Map.of(), Map.of(), Map.of());
 
-    public BlueprintResearchSnapshot {
-        tags = immutableMap(tags);
-        profiles = immutableMap(profiles);
-        rules = immutableMap(rules);
-        rulesByProfile = immutableRuleMap(rulesByProfile);
+    private final Map<ResourceLocation, BlueprintLootTag> tags;
+    private final Map<ResourceLocation, BlueprintResearchProfile> profiles;
+    private final Map<ResourceLocation, BlueprintResearchRule> rules;
+    private final Map<ResourceLocation, List<RuleBinding>> rulesByProfile;
+
+    private BlueprintResearchSnapshot(
+            Map<ResourceLocation, BlueprintLootTag> tags,
+            Map<ResourceLocation, BlueprintResearchProfile> profiles,
+            Map<ResourceLocation, BlueprintResearchRule> rules,
+            Map<ResourceLocation, List<RuleBinding>> rulesByProfile) {
+        this.tags = immutableMap(tags);
+        this.profiles = immutableMap(profiles);
+        this.rules = immutableMap(rules);
+        this.rulesByProfile = immutableRuleMap(rulesByProfile);
     }
 
     public static BlueprintResearchSnapshot create(
@@ -73,8 +83,25 @@ public record BlueprintResearchSnapshot(
         }
         byProfile.values().forEach(bindings ->
                 bindings.sort(Comparator.comparing(binding -> binding.ruleId().toString())));
+        validateAggregateLimits(sortedTags, sortedProfiles, sortedRules);
         validatePrerequisites(sortedProfiles, byProfile);
         return new BlueprintResearchSnapshot(sortedTags, sortedProfiles, sortedRules, byProfile);
+    }
+
+    public Map<ResourceLocation, BlueprintLootTag> tags() {
+        return tags;
+    }
+
+    public Map<ResourceLocation, BlueprintResearchProfile> profiles() {
+        return profiles;
+    }
+
+    public Map<ResourceLocation, BlueprintResearchRule> rules() {
+        return rules;
+    }
+
+    public Map<ResourceLocation, List<RuleBinding>> rulesByProfile() {
+        return rulesByProfile;
     }
 
     public List<RuleBinding> rulesForProfile(ResourceLocation profileId) {
@@ -89,6 +116,63 @@ public record BlueprintResearchSnapshot(
                     "research data cannot contain more than " + MAX_DEFINITIONS_PER_TYPE
                             + " definitions of one type");
         }
+    }
+
+    private static void validateAggregateLimits(
+            Map<ResourceLocation, BlueprintLootTag> tags,
+            Map<ResourceLocation, BlueprintResearchProfile> profiles,
+            Map<ResourceLocation, BlueprintResearchRule> rules) {
+        long tagValues = tags.values().stream().mapToLong(tag -> tag.values().size()).sum();
+        if (tagValues > MAX_TOTAL_TAG_VALUES) {
+            throw new IllegalArgumentException(
+                    "research data cannot contain more than " + MAX_TOTAL_TAG_VALUES + " total blueprint-tag values");
+        }
+
+        long targetTerms = 0L;
+        long expandedTagBindings = 0L;
+        long prerequisiteIds = 0L;
+        long ingredientTerms = profiles.values().stream()
+                .map(BlueprintResearchProfile::researchCost)
+                .mapToLong(BlueprintResearchSnapshot::ingredientTermCount)
+                .sum();
+        for (BlueprintResearchRule rule : rules.values()) {
+            targetTerms += rule.target().blueprints().size() + rule.target().tags().size();
+            targetTerms += rule.target().selector().map(selector -> selector.termCount()).orElse(0);
+            prerequisiteIds += rule.prerequisites().map(List::size).orElse(0);
+            ingredientTerms += rule.researchCost()
+                    .map(BlueprintResearchSnapshot::ingredientTermCount)
+                    .orElse(0L);
+            for (ResourceLocation tagId : rule.target().tags()) {
+                BlueprintLootTag tag = tags.get(tagId);
+                if (tag != null) {
+                    expandedTagBindings += tag.values().size();
+                }
+            }
+        }
+        if (targetTerms > MAX_TOTAL_RULE_TARGET_TERMS) {
+            throw new IllegalArgumentException(
+                    "research rules cannot contain more than " + MAX_TOTAL_RULE_TARGET_TERMS + " total target terms");
+        }
+        if (expandedTagBindings > MAX_EXPANDED_TAG_BINDINGS) {
+            throw new IllegalArgumentException(
+                    "research rules cannot expand to more than " + MAX_EXPANDED_TAG_BINDINGS + " tag bindings");
+        }
+        if (prerequisiteIds > MAX_TOTAL_PREREQUISITES) {
+            throw new IllegalArgumentException(
+                    "research rules cannot contain more than " + MAX_TOTAL_PREREQUISITES
+                            + " total prerequisites");
+        }
+        if (ingredientTerms > MAX_TOTAL_INGREDIENT_TERMS) {
+            throw new IllegalArgumentException(
+                    "research data cannot contain more than " + MAX_TOTAL_INGREDIENT_TERMS
+                            + " total ingredient terms");
+        }
+    }
+
+    private static long ingredientTermCount(BlueprintResearchCost cost) {
+        return cost.ingredients().stream()
+                .mapToLong(ingredient -> ingredient.items().isEmpty() ? 1L : ingredient.items().size())
+                .sum();
     }
 
     private static void validateDefinitions(
@@ -196,6 +280,9 @@ public record BlueprintResearchSnapshot(
     private static <T> Map<ResourceLocation, T> sortedCopy(Map<ResourceLocation, T> values) {
         if (values == null || values.isEmpty()) {
             return Map.of();
+        }
+        if (values.keySet().stream().anyMatch(java.util.Objects::isNull)) {
+            throw new IllegalArgumentException("research definition IDs cannot be null");
         }
         List<Map.Entry<ResourceLocation, T>> entries = new ArrayList<>(values.entrySet());
         entries.sort(Map.Entry.comparingByKey(Comparator.comparing(ResourceLocation::toString)));

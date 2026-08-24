@@ -19,6 +19,7 @@ public record BlueprintCatalogSelector(
         List<ResourceLocation> exclude,
         float weight) {
     public static final int MAX_TERMS = 256;
+    public static final int MAX_TERM_LENGTH = 256;
 
     private static final Codec<String> NON_BLANK_STRING = Codec.STRING.flatXmap(
             BlueprintCatalogSelector::validateString,
@@ -32,19 +33,31 @@ public record BlueprintCatalogSelector(
     private static final Codec<Float> WEIGHT_CODEC = Codec.FLOAT.flatXmap(
             BlueprintCatalogSelector::validateWeight,
             BlueprintCatalogSelector::validateWeight);
+    private static final Codec<ResourceLocation> BOUNDED_RESOURCE_LOCATION = ResourceLocation.CODEC.flatXmap(
+            BlueprintCatalogSelector::validateResourceLocation,
+            BlueprintCatalogSelector::validateResourceLocation);
 
     private static final Codec<BlueprintCatalogSelector> RAW_CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
                     strictList("namespaces", NAMESPACE_STRING).forGetter(BlueprintCatalogSelector::namespaces),
                     strictList("item_types", NON_BLANK_STRING).forGetter(BlueprintCatalogSelector::itemTypes),
                     strictList("path_prefixes", PATH_PREFIX_STRING).forGetter(BlueprintCatalogSelector::pathPrefixes),
-                    strictList("exclude", ResourceLocation.CODEC).forGetter(BlueprintCatalogSelector::exclude),
+                    strictList("exclude", BOUNDED_RESOURCE_LOCATION).forGetter(BlueprintCatalogSelector::exclude),
                     new StrictOptionalFieldCodec<>("weight", WEIGHT_CODEC)
                             .xmap(
                                     value -> value.orElse(1.0f),
                                     value -> value == 1.0f ? Optional.empty() : Optional.of(value))
                             .forGetter(BlueprintCatalogSelector::weight))
                     .apply(instance, BlueprintCatalogSelector::new));
+
+    private static final Codec<BlueprintCatalogSelector> RAW_RESEARCH_CODEC = RecordCodecBuilder.create(instance ->
+            instance.group(
+                    strictList("namespaces", NAMESPACE_STRING).forGetter(BlueprintCatalogSelector::namespaces),
+                    strictList("item_types", NON_BLANK_STRING).forGetter(BlueprintCatalogSelector::itemTypes),
+                    strictList("path_prefixes", PATH_PREFIX_STRING).forGetter(BlueprintCatalogSelector::pathPrefixes),
+                    strictList("exclude", BOUNDED_RESOURCE_LOCATION).forGetter(BlueprintCatalogSelector::exclude))
+                    .apply(instance, (namespaces, itemTypes, pathPrefixes, exclude) ->
+                            new BlueprintCatalogSelector(namespaces, itemTypes, pathPrefixes, exclude, 1.0F)));
 
     public static final Codec<BlueprintCatalogSelector> CODEC = StrictRecordCodec.wrap(
             "blueprint catalog selector",
@@ -55,10 +68,23 @@ public record BlueprintCatalogSelector(
             "exclude",
             "weight");
 
+    public static final Codec<BlueprintCatalogSelector> RESEARCH_CODEC = StrictRecordCodec.wrap(
+            "blueprint research catalog selector",
+            RAW_RESEARCH_CODEC.flatXmap(
+                    BlueprintCatalogSelector::validateSelector,
+                    BlueprintCatalogSelector::validateSelector),
+            "namespaces",
+            "item_types",
+            "path_prefixes",
+            "exclude");
+
     public BlueprintCatalogSelector {
         namespaces = normalizeStrings(namespaces);
         itemTypes = normalizeStrings(itemTypes);
         pathPrefixes = normalizeStrings(pathPrefixes);
+        if (exclude != null && exclude.stream().anyMatch(java.util.Objects::isNull)) {
+            throw new IllegalArgumentException("catalog selector exclusions cannot be null");
+        }
         exclude = exclude == null ? List.of() : List.copyOf(new LinkedHashSet<>(exclude));
         if (!Float.isFinite(weight) || weight <= 0.0f) {
             throw new IllegalArgumentException("selector weight must be finite and greater than zero");
@@ -93,18 +119,30 @@ public record BlueprintCatalogSelector(
     }
 
     public void validateForUse() {
-        if (termCount(namespaces, itemTypes, pathPrefixes, exclude) > MAX_TERMS) {
+        if (termCount() > MAX_TERMS) {
             throw new IllegalArgumentException("catalog selector cannot contain more than " + MAX_TERMS + " terms");
         }
-        if (namespaces.stream().anyMatch(value -> ResourceLocation.tryBuild(value, "value") == null)) {
+        if (namespaces.stream().anyMatch(value ->
+                value.length() > MAX_TERM_LENGTH || ResourceLocation.tryBuild(value, "value") == null)) {
             throw new IllegalArgumentException("catalog selector contains an invalid namespace");
         }
         if (itemTypes.stream().anyMatch(String::isBlank)) {
             throw new IllegalArgumentException("catalog selector contains a blank item type");
         }
-        if (pathPrefixes.stream().anyMatch(value -> ResourceLocation.tryBuild("test", value) == null)) {
+        if (itemTypes.stream().anyMatch(value -> value.length() > MAX_TERM_LENGTH)) {
+            throw new IllegalArgumentException("catalog selector contains an oversized item type");
+        }
+        if (pathPrefixes.stream().anyMatch(value ->
+                value.length() > MAX_TERM_LENGTH || ResourceLocation.tryBuild("test", value) == null)) {
             throw new IllegalArgumentException("catalog selector contains an invalid path prefix");
         }
+        if (exclude.stream().anyMatch(value -> value.toString().length() > MAX_TERM_LENGTH)) {
+            throw new IllegalArgumentException("catalog selector contains an oversized excluded resource ID");
+        }
+    }
+
+    public int termCount() {
+        return termCount(namespaces, itemTypes, pathPrefixes, exclude);
     }
 
     private static List<String> normalizeStrings(List<String> values) {
@@ -112,24 +150,34 @@ public record BlueprintCatalogSelector(
             return List.of();
         }
         LinkedHashSet<String> normalized = new LinkedHashSet<>();
-        values.forEach(value -> normalized.add(value.toLowerCase(Locale.ROOT)));
+        values.forEach(value -> {
+            if (value == null) {
+                throw new IllegalArgumentException("catalog selector terms cannot be null");
+            }
+            normalized.add(value.toLowerCase(Locale.ROOT));
+        });
         return List.copyOf(normalized);
     }
 
     private static DataResult<String> validateString(String value) {
-        return value != null && !value.isBlank()
+        return value != null && !value.isBlank() && value.length() <= MAX_TERM_LENGTH
                 ? DataResult.success(value)
-                : DataResult.error(() -> "selector terms cannot be blank");
+                : DataResult.error(() -> "selector terms must be non-blank and at most "
+                        + MAX_TERM_LENGTH + " characters");
     }
 
     private static DataResult<String> validateNamespace(String value) {
-        return value != null && ResourceLocation.tryBuild(value, "value") != null
+        return value != null
+                && value.length() <= MAX_TERM_LENGTH
+                && ResourceLocation.tryBuild(value, "value") != null
                 ? DataResult.success(value)
                 : DataResult.error(() -> "invalid selector namespace " + value);
     }
 
     private static DataResult<String> validatePathPrefix(String value) {
-        return value != null && ResourceLocation.tryBuild("test", value) != null
+        return value != null
+                && value.length() <= MAX_TERM_LENGTH
+                && ResourceLocation.tryBuild("test", value) != null
                 ? DataResult.success(value)
                 : DataResult.error(() -> "invalid selector path prefix " + value);
     }
@@ -138,6 +186,13 @@ public record BlueprintCatalogSelector(
         return Float.isFinite(value) && value > 0.0f
                 ? DataResult.success(value)
                 : DataResult.error(() -> "selector weight must be finite and greater than zero");
+    }
+
+    private static DataResult<ResourceLocation> validateResourceLocation(ResourceLocation value) {
+        return value != null && value.toString().length() <= MAX_TERM_LENGTH
+                ? DataResult.success(value)
+                : DataResult.error(() -> "selector resource IDs cannot exceed "
+                        + MAX_TERM_LENGTH + " characters");
     }
 
     private static DataResult<BlueprintCatalogSelector> validateSelector(BlueprintCatalogSelector selector) {

@@ -1,6 +1,7 @@
 package com.gamergaming.taczweaponblueprints.network;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -222,6 +223,31 @@ class SyncPacketTest {
         blueprintChunks.forEach(packet -> assertEncodedWithinBudget(packet::toBytes));
         recipeChunks.forEach(packet -> assertEncodedWithinBudget(packet::toBytes));
         progressionChunks.forEach(packet -> assertEncodedWithinBudget(packet::toBytes));
+
+        SyncPlayerProgressionPacket.ClientAccumulator outOfOrderAccumulator =
+                new SyncPlayerProgressionPacket.ClientAccumulator();
+        java.util.Optional<SyncPlayerProgressionPacket.ProgressionSnapshot> completed = java.util.Optional.empty();
+        for (int index = progressionChunks.size() - 1; index >= 0; index--) {
+            completed = outOfOrderAccumulator.accept(progressionChunks.get(index));
+        }
+        assertTrue(completed.isPresent());
+        assertEquals(progressionIds, completed.orElseThrow().learnedBlueprints());
+        assertEquals(progressionIds, completed.orElseThrow().discoveredBlueprints());
+
+        SyncPlayerProgressionPacket.ClientAccumulator replacedAccumulator =
+                new SyncPlayerProgressionPacket.ClientAccumulator();
+        assertFalse(replacedAccumulator.accept(progressionChunks.get(0)).isPresent());
+        var replacementChunks = SyncPlayerProgressionPacket.split(
+                progressionIds,
+                progressionIds,
+                PlayerProgressionLimits.MAX_RESEARCH_POINTS,
+                44L);
+        assertFalse(replacedAccumulator.accept(replacementChunks.get(0)).isPresent());
+        assertFalse(replacedAccumulator.accept(replacementChunks.get(0)).isPresent());
+        for (int index = 1; index < replacementChunks.size() - 1; index++) {
+            assertFalse(replacedAccumulator.accept(replacementChunks.get(index)).isPresent());
+        }
+        assertTrue(replacedAccumulator.accept(replacementChunks.get(replacementChunks.size() - 1)).isPresent());
     }
 
     @Test

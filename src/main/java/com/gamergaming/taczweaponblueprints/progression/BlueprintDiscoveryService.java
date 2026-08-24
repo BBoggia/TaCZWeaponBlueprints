@@ -5,7 +5,6 @@ import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
-import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -34,7 +33,7 @@ public final class BlueprintDiscoveryService {
                 BlueprintDataManager.SERVER,
                 true);
         if (result == DiscoveryResult.DISCOVERED) {
-            NetworkHandler.syncPlayerProgressionData(player);
+            BlueprintProgressionSyncScheduler.markDirty(player);
         }
         return result;
     }

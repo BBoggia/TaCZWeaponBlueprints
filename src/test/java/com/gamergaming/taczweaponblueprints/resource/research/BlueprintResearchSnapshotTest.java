@@ -3,13 +3,16 @@ package com.gamergaming.taczweaponblueprints.resource.research;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.InputStreamReader;
+import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.IntStream;
 
 import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintCatalogSelector;
@@ -196,6 +199,77 @@ class BlueprintResearchSnapshotTest {
     }
 
     @Test
+    void enforcesAggregateLimitsBeforeCompilingPolicyIndices() {
+        Map<ResourceLocation, BlueprintResearchRule> excessiveTargets = new LinkedHashMap<>();
+        for (int ruleIndex = 0; ruleIndex < 257; ruleIndex++) {
+            int currentRule = ruleIndex;
+            List<ResourceLocation> targets = IntStream.range(0, BlueprintResearchTarget.MAX_TERMS)
+                    .mapToObj(termIndex -> id("test:target_" + currentRule + "_" + termIndex))
+                    .toList();
+            excessiveTargets.put(
+                    id("test:target_rule_" + ruleIndex),
+                    rule(target(targets, List.of(), false), 0, Optional.empty(), Optional.empty(), Optional.empty()));
+        }
+        assertThrows(IllegalArgumentException.class, () -> snapshot(excessiveTargets));
+
+        ResourceLocation tagId = id("test:large_tag");
+        BlueprintLootTag tag = new BlueprintLootTag(
+                1,
+                IntStream.range(0, 256).mapToObj(index -> id("test:tagged_" + index)).toList());
+        Map<ResourceLocation, BlueprintResearchRule> expandedTags = new LinkedHashMap<>();
+        for (int index = 0; index < 1_025; index++) {
+            expandedTags.put(
+                    id("test:tag_rule_" + index),
+                    rule(target(List.of(), List.of(tagId), false),
+                            0, Optional.empty(), Optional.empty(), Optional.empty()));
+        }
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> BlueprintResearchSnapshot.create(
+                        Map.of(tagId, tag),
+                        Map.of(profileId(), profile()),
+                        expandedTags));
+    }
+
+    @Test
+    void snapshotConstructionIsFactoryOnlyAndIngredientsReceiveRegistryValidation() {
+        assertTrue(java.util.Arrays.stream(BlueprintResearchSnapshot.class.getDeclaredConstructors())
+                .allMatch(constructor -> Modifier.isPrivate(constructor.getModifiers())));
+        Map<ResourceLocation, BlueprintResearchProfile> nullKeyProfiles = new LinkedHashMap<>();
+        nullKeyProfiles.put(null, profile());
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> BlueprintResearchSnapshot.create(Map.of(), nullKeyProfiles, Map.of()));
+
+        BlueprintResearchCost exactCost = new BlueprintResearchCost(
+                8,
+                List.of(new BlueprintResearchIngredient(
+                        List.of(id("missing:item")), Optional.empty(), 1)));
+        BlueprintResearchSnapshot exactSnapshot = BlueprintResearchSnapshot.create(
+                Map.of(),
+                Map.of(profileId(), profile(exactCost)),
+                Map.of());
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> BlueprintResearchIngredientValidator.validateExactItems(
+                        exactSnapshot,
+                        itemId -> itemId.equals(id("minecraft:paper"))));
+
+        ResourceLocation missingTag = id("forge:missing_material");
+        BlueprintResearchCost tagCost = new BlueprintResearchCost(
+                8,
+                List.of(new BlueprintResearchIngredient(
+                        List.of(), Optional.of(missingTag), 1)));
+        BlueprintResearchSnapshot tagSnapshot = BlueprintResearchSnapshot.create(
+                Map.of(),
+                Map.of(profileId(), profile(tagCost)),
+                Map.of());
+        assertEquals(
+                Set.of(missingTag),
+                BlueprintResearchIngredientValidator.unresolvedTags(tagSnapshot, ignored -> false));
+    }
+
+    @Test
     void packagedDuplicateRecoveryProfileIsStrictAndEconomicallySafe() throws Exception {
         String path = "data/taczweaponblueprints/taczweaponblueprints/research_profiles/duplicate_recovery.json";
         try (var stream = getClass().getClassLoader().getResourceAsStream(path)) {
@@ -233,6 +307,10 @@ class BlueprintResearchSnapshotTest {
     }
 
     private static BlueprintResearchProfile profile() {
+        return profile(new BlueprintResearchCost(8, List.of()));
+    }
+
+    private static BlueprintResearchProfile profile(BlueprintResearchCost cost) {
         return new BlueprintResearchProfile(
                 1,
                 true,
@@ -241,7 +319,7 @@ class BlueprintResearchSnapshotTest {
                 true,
                 false,
                 1,
-                new BlueprintResearchCost(8, List.of()),
+                cost,
                 false,
                 false);
     }
