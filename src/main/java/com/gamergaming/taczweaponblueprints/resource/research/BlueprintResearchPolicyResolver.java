@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Predicate;
 
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
+import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
 import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintLootTag;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchSnapshot.RuleBinding;
@@ -70,6 +71,7 @@ public final class BlueprintResearchPolicyResolver {
                 learned,
                 discovered,
                 points,
+                PlayerProgressionLimits.MAX_RESEARCH_POINTS,
                 prerequisitesSatisfied,
                 definition.journalEnabled(),
                 visibility,

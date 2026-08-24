@@ -1,0 +1,185 @@
+package com.gamergaming.taczweaponblueprints.progression;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.junit.jupiter.api.Test;
+
+import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
+import com.gamergaming.taczweaponblueprints.compat.fzzy_config.BlueprintConfig;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCost;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchPolicy;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchTarget.MatchSpecificity;
+import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
+
+import net.minecraft.resources.ResourceLocation;
+
+class BlueprintProgressionConfigSnapshotTest {
+    private static final ResourceLocation PROFILE = new ResourceLocation("test", "profile");
+    private static final ResourceLocation BLUEPRINT = new ResourceLocation("test", "blueprint");
+
+    @Test
+    void rejectsInvalidPointCapsAndRequiredState() {
+        assertThrows(IllegalArgumentException.class, () -> config(
+                true, JournalVisibility.FULL, DuplicateBlueprintPolicy.MANUAL_RECYCLING, -1));
+        assertThrows(IllegalArgumentException.class, () -> config(
+                true,
+                JournalVisibility.FULL,
+                DuplicateBlueprintPolicy.MANUAL_RECYCLING,
+                PlayerProgressionLimits.MAX_RESEARCH_POINTS + 1));
+        assertThrows(IllegalArgumentException.class, () -> new BlueprintProgressionConfigSnapshot(
+                true, true, true, null, true, DuplicateBlueprintPolicy.KEEP, false, 10, false, PROFILE));
+    }
+
+    @Test
+    void mapsTheSynchronizedConfigDefaultsIntoAnImmutableSnapshot() {
+        BlueprintConfig config = new BlueprintConfig();
+        BlueprintProgressionConfigSnapshot snapshot = config.progressionSnapshot();
+
+        assertTrue(snapshot.blueprintsEnabled());
+        assertTrue(snapshot.discoveryTrackingEnabled());
+        assertTrue(snapshot.journalEnabled());
+        assertTrue(snapshot.researchEnabled());
+        assertEquals(JournalVisibility.FULL, snapshot.maximumUndiscoveredVisibility());
+        assertEquals(DuplicateBlueprintPolicy.MANUAL_RECYCLING, snapshot.duplicatePolicy());
+        assertFalse(snapshot.allowUnlearnedRecycling());
+        assertEquals(BlueprintProgressionConfigSnapshot.DEFAULT_POINT_CAP, snapshot.pointCap());
+        assertFalse(snapshot.creativeBypassesResearchCost());
+        assertEquals(BlueprintConfig.DEFAULT_RESEARCH_PROFILE, snapshot.activeProfileId());
+
+        config.enableResearch.accept(false);
+        config.onSyncServer();
+        BlueprintProgressionConfigSnapshot updated = config.progressionSnapshot();
+        assertNotSame(snapshot, updated);
+        assertFalse(updated.researchEnabled());
+        assertTrue(snapshot.researchEnabled());
+    }
+
+    @Test
+    void composesCoarseGatesWithoutMutatingDatapackPolicy() {
+        BlueprintResearchPolicy base = basePolicy(5, 20);
+        BlueprintProgressionConfigSnapshot disabled = new BlueprintProgressionConfigSnapshot(
+                false,
+                true,
+                true,
+                JournalVisibility.FULL,
+                true,
+                DuplicateBlueprintPolicy.MANUAL_RECYCLING,
+                true,
+                100,
+                true,
+                PROFILE);
+
+        BlueprintResearchPolicy effective = disabled.apply(base);
+        assertFalse(effective.journalEnabled());
+        assertEquals(JournalVisibility.HIDDEN, effective.visibility());
+        assertFalse(effective.researchEnabled());
+        assertFalse(effective.recyclingEnabled());
+        assertTrue(base.journalEnabled());
+        assertTrue(base.researchEnabled());
+    }
+
+    @Test
+    void capsUndiscoveredDisclosureAndEnforcesPointEconomy() {
+        BlueprintResearchPolicy base = basePolicy(9, 8);
+        BlueprintProgressionConfigSnapshot capped = config(
+                true,
+                JournalVisibility.NAME,
+                DuplicateBlueprintPolicy.MANUAL_RECYCLING,
+                10);
+
+        BlueprintResearchPolicy effective = capped.apply(base);
+        assertEquals(JournalVisibility.NAME, effective.visibility());
+        assertTrue(effective.researchable());
+        assertTrue(effective.canAffordPoints());
+        assertFalse(effective.recyclable(), "crediting two points would exceed the configured cap");
+
+        BlueprintResearchPolicy unaffordableByPolicy = config(
+                true,
+                JournalVisibility.FULL,
+                DuplicateBlueprintPolicy.MANUAL_RECYCLING,
+                5).apply(base);
+        assertFalse(unaffordableByPolicy.researchable());
+        assertFalse(unaffordableByPolicy.canAffordPoints());
+    }
+
+    @Test
+    void keepPolicyAndUnlearnedGateDisablePermissiveDatapackRecycling() {
+        BlueprintResearchPolicy base = basePolicy(0, 8);
+        BlueprintProgressionConfigSnapshot keep = new BlueprintProgressionConfigSnapshot(
+                true,
+                true,
+                true,
+                JournalVisibility.FULL,
+                true,
+                DuplicateBlueprintPolicy.KEEP,
+                true,
+                100,
+                false,
+                PROFILE);
+        assertFalse(keep.apply(base).recyclable());
+
+        BlueprintProgressionConfigSnapshot learnedOnly = new BlueprintProgressionConfigSnapshot(
+                true,
+                true,
+                true,
+                JournalVisibility.FULL,
+                true,
+                DuplicateBlueprintPolicy.MANUAL_RECYCLING,
+                false,
+                100,
+                false,
+                PROFILE);
+        assertFalse(learnedOnly.apply(base).allowUnlearnedRecycling());
+    }
+
+    private static BlueprintProgressionConfigSnapshot config(
+            boolean researchEnabled,
+            JournalVisibility visibility,
+            DuplicateBlueprintPolicy duplicatePolicy,
+            int pointCap) {
+        return new BlueprintProgressionConfigSnapshot(
+                true,
+                true,
+                true,
+                visibility,
+                researchEnabled,
+                duplicatePolicy,
+                true,
+                pointCap,
+                false,
+                PROFILE);
+    }
+
+    private static BlueprintResearchPolicy basePolicy(int points, int cost) {
+        return new BlueprintResearchPolicy(
+                BLUEPRINT,
+                PROFILE,
+                true,
+                false,
+                true,
+                false,
+                true,
+                points,
+                PlayerProgressionLimits.MAX_RESEARCH_POINTS,
+                true,
+                true,
+                JournalVisibility.PREVIEW,
+                true,
+                true,
+                true,
+                2,
+                new BlueprintResearchCost(cost, List.of()),
+                false,
+                List.of(),
+                true,
+                Optional.empty(),
+                MatchSpecificity.NONE);
+    }
+}

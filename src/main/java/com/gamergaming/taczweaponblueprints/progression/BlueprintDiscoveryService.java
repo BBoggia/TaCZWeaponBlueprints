@@ -21,7 +21,8 @@ public final class BlueprintDiscoveryService {
         if (stack == null || stack.isEmpty() || !(stack.getItem() instanceof BlueprintItem)) {
             return DiscoveryResult.NOT_BLUEPRINT_ITEM;
         }
-        if (!ModConfigs.BLUEPRINT.enableDiscoveryTracking.get()) {
+        var config = ModConfigs.BLUEPRINT.progressionSnapshot();
+        if (!config.blueprintsEnabled() || !config.discoveryTrackingEnabled()) {
             return DiscoveryResult.TRACKING_DISABLED;
         }
         IPlayerRecipeData data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)

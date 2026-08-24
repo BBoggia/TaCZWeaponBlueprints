@@ -1,0 +1,86 @@
+package com.gamergaming.taczweaponblueprints.progression;
+
+import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
+import com.gamergaming.taczweaponblueprints.compat.fzzy_config.BlueprintConfig;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchPolicy;
+import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
+
+import net.minecraft.resources.ResourceLocation;
+
+/**
+ * Immutable view of synchronized, coarse progression policy. Datapacks still
+ * own blueprint selection, costs, prerequisites, and per-target overrides.
+ */
+public record BlueprintProgressionConfigSnapshot(
+        boolean blueprintsEnabled,
+        boolean discoveryTrackingEnabled,
+        boolean journalEnabled,
+        JournalVisibility maximumUndiscoveredVisibility,
+        boolean researchEnabled,
+        DuplicateBlueprintPolicy duplicatePolicy,
+        boolean allowUnlearnedRecycling,
+        int pointCap,
+        boolean creativeBypassesResearchCost,
+        ResourceLocation activeProfileId) {
+    public static final int DEFAULT_POINT_CAP = 1_000_000;
+
+    public BlueprintProgressionConfigSnapshot {
+        if (maximumUndiscoveredVisibility == null || duplicatePolicy == null || activeProfileId == null) {
+            throw new IllegalArgumentException("progression configuration contains null required state");
+        }
+        if (pointCap < 0 || pointCap > PlayerProgressionLimits.MAX_RESEARCH_POINTS) {
+            throw new IllegalArgumentException("Research Point cap is outside the supported range");
+        }
+        if (activeProfileId.toString().length() > PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH) {
+            throw new IllegalArgumentException("active research profile ID is oversized");
+        }
+    }
+
+    public static BlueprintProgressionConfigSnapshot from(BlueprintConfig config) {
+        if (config == null) {
+            throw new IllegalArgumentException("blueprint configuration cannot be null");
+        }
+        ResourceLocation profileId = ResourceLocation.tryParse(config.activeResearchProfile.get());
+        if (profileId == null) {
+            profileId = BlueprintConfig.DEFAULT_RESEARCH_PROFILE;
+        }
+        return new BlueprintProgressionConfigSnapshot(
+                config.enableBlueprints.get(),
+                config.enableDiscoveryTracking.get(),
+                config.enableJournal.get(),
+                config.maximumUndiscoveredVisibility.get(),
+                config.enableResearch.get(),
+                config.duplicateBlueprintPolicy.get(),
+                config.allowUnlearnedRecycling.get(),
+                config.researchPointCap.get(),
+                config.creativeBypassesResearchCost.get(),
+                profileId);
+    }
+
+    public BlueprintResearchPolicy apply(BlueprintResearchPolicy policy) {
+        if (policy == null) {
+            throw new IllegalArgumentException("research policy cannot be null");
+        }
+        JournalVisibility visibility;
+        if (!blueprintsEnabled || !journalEnabled || !policy.journalEnabled()) {
+            visibility = JournalVisibility.HIDDEN;
+        } else if (policy.learned()) {
+            visibility = JournalVisibility.FULL;
+        } else {
+            visibility = policy.visibility().atMost(maximumUndiscoveredVisibility);
+        }
+        boolean manualRecycling = blueprintsEnabled
+                && duplicatePolicy == DuplicateBlueprintPolicy.MANUAL_RECYCLING;
+        return policy.withRuntimePolicy(
+                blueprintsEnabled && journalEnabled && policy.journalEnabled(),
+                visibility,
+                blueprintsEnabled && researchEnabled && policy.researchEnabled(),
+                manualRecycling && policy.recyclingEnabled(),
+                manualRecycling && allowUnlearnedRecycling && policy.allowUnlearnedRecycling(),
+                blueprintsEnabled
+                        && researchEnabled
+                        && creativeBypassesResearchCost
+                        && policy.creativeBypassesCost(),
+                pointCap);
+    }
+}

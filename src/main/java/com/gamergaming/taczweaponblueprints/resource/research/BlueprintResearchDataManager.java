@@ -9,7 +9,9 @@ import java.util.Set;
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
+import com.gamergaming.taczweaponblueprints.compat.fzzy_config.BlueprintConfig;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
+import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionConfigSnapshot;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintLootTag;
 import com.google.gson.JsonElement;
@@ -30,7 +32,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 
 public final class BlueprintResearchDataManager extends SimplePreparableReloadListener<BlueprintResearchSnapshot> {
     public static final BlueprintResearchDataManager INSTANCE = new BlueprintResearchDataManager();
-    public static final ResourceLocation DEFAULT_PROFILE = TaCZWeaponBlueprints.loc("duplicate_recovery");
+    public static final ResourceLocation DEFAULT_PROFILE = BlueprintConfig.DEFAULT_RESEARCH_PROFILE;
 
     static final String TAG_DIRECTORY = "taczweaponblueprints/blueprint_tags";
     static final String PROFILE_DIRECTORY = "taczweaponblueprints/research_profiles";
@@ -87,10 +89,12 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
                 summary.exactTargetCount(),
                 summary.tagTargetCount(),
                 summary.selectorTargetCount());
-        if (!prepared.profiles().containsKey(DEFAULT_PROFILE)) {
+        ResourceLocation activeProfile = progressionConfig().activeProfileId();
+        if (!prepared.profiles().containsKey(activeProfile)) {
             TaCZWeaponBlueprints.LOGGER.warn(
-                    "Blueprint research snapshot does not define the default profile {}; research policy is disabled",
-                    DEFAULT_PROFILE);
+                    "Blueprint research snapshot does not define the configured active profile {}; "
+                            + "default research policy is disabled",
+                    activeProfile);
         }
         Set<ResourceLocation> unresolvedIngredientTags = BlueprintResearchIngredientValidator.unresolvedTags(
                 prepared,
@@ -118,20 +122,35 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
     }
 
     public BlueprintResearchPolicy policyFor(ResourceLocation blueprintId, IPlayerRecipeData playerData) {
-        return policyFor(DEFAULT_PROFILE, blueprintId, playerData);
+        BlueprintProgressionConfigSnapshot config = progressionConfig();
+        return resolvePolicy(config, config.activeProfileId(), blueprintId, playerData);
     }
 
     public BlueprintResearchPolicy policyFor(
             ResourceLocation profileId,
             ResourceLocation blueprintId,
             IPlayerRecipeData playerData) {
-        return BlueprintResearchPolicyResolver.resolve(
+        BlueprintProgressionConfigSnapshot config = progressionConfig();
+        return resolvePolicy(config, profileId, blueprintId, playerData);
+    }
+
+    public BlueprintProgressionConfigSnapshot progressionConfig() {
+        return ModConfigs.BLUEPRINT.progressionSnapshot();
+    }
+
+    private BlueprintResearchPolicy resolvePolicy(
+            BlueprintProgressionConfigSnapshot config,
+            ResourceLocation profileId,
+            ResourceLocation blueprintId,
+            IPlayerRecipeData playerData) {
+        BlueprintResearchPolicy datapackPolicy = BlueprintResearchPolicyResolver.resolve(
                 snapshot(),
                 BlueprintDataManager.SERVER.getBlueprintDataMap(),
                 profileId,
                 blueprintId,
                 playerData,
                 ModConfigs.BLUEPRINT::isItemBlacklisted);
+        return config.apply(datapackPolicy);
     }
 
     static ResourceLocation definitionId(ResourceLocation resourceId, String directory) {

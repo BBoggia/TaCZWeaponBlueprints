@@ -24,6 +24,10 @@ public enum JournalVisibility {
         return ordinal() >= minimum.ordinal() ? this : minimum;
     }
 
+    public JournalVisibility atMost(JournalVisibility maximum) {
+        return ordinal() <= maximum.ordinal() ? this : maximum;
+    }
+
     private static DataResult<JournalVisibility> parse(String value) {
         if (value != null) {
             try {
