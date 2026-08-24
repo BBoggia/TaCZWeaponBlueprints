@@ -3,6 +3,7 @@ package com.gamergaming.taczweaponblueprints.network;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
+import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 
@@ -14,7 +15,8 @@ public final class BlueprintSyncLimits {
     public static final int MAX_CHUNK_BYTES = 900_000;
     public static final int MAX_TRANSLATION_KEY_LENGTH = 256;
     public static final int MAX_ITEM_TYPE_LENGTH = 64;
-    public static final int MAX_RESOURCE_ID_LENGTH = 256;
+    public static final int MAX_RESOURCE_ID_LENGTH = PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH;
+    public static final int MAX_CHUNKS_PER_SNAPSHOT = 16;
     static final int CHUNK_HEADER_RESERVE = 32;
 
     private BlueprintSyncLimits() {

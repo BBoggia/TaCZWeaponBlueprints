@@ -172,7 +172,10 @@ public class SyncBlueprintDataPacket {
     }
 
     private static void validateChunkMetadata(int chunkIndex, int chunkCount) {
-        if (chunkCount < 1 || chunkCount > MAX_BLUEPRINTS || chunkIndex < 0 || chunkIndex >= chunkCount) {
+        if (chunkCount < 1
+                || chunkCount > BlueprintSyncLimits.MAX_CHUNKS_PER_SNAPSHOT
+                || chunkIndex < 0
+                || chunkIndex >= chunkCount) {
             throw new IllegalArgumentException(
                     "Invalid blueprint synchronization chunk " + chunkIndex + " of " + chunkCount);
         }

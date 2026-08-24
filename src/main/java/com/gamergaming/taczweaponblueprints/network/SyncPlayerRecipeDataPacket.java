@@ -11,6 +11,7 @@ import java.util.TreeSet;
 import java.util.function.Supplier;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerRecipeData;
+import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.client.ClientBlueprintCatalog;
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
 
@@ -19,7 +20,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
 
 public class SyncPlayerRecipeDataPacket {
-    private static final int MAX_RECIPES = 4096;
+    private static final int MAX_RECIPES = PlayerProgressionLimits.MAX_IDS_PER_COLLECTION;
     private static final ClientAccumulator CLIENT_ACCUMULATOR = new ClientAccumulator();
 
     private final long syncId;
@@ -55,7 +56,7 @@ public class SyncPlayerRecipeDataPacket {
 
         TreeSet<String> decodedRecipes = new TreeSet<>();
         for (int i = 0; i < size; i++) {
-            String rawId = buf.readUtf(PlayerRecipeData.MAX_RESOURCE_ID_LENGTH);
+            String rawId = buf.readUtf(PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH);
             String normalizedId = PlayerRecipeData.normalizeRecipeId(rawId);
             if (normalizedId == null) {
                 throw new IllegalArgumentException("Invalid learned recipe ID in synchronization payload");
@@ -101,7 +102,7 @@ public class SyncPlayerRecipeDataPacket {
         buf.writeVarInt(chunkCount);
         buf.writeVarInt(learnedRecipes.size());
         for (String recipeId : learnedRecipes) {
-            buf.writeUtf(recipeId, PlayerRecipeData.MAX_RESOURCE_ID_LENGTH);
+            buf.writeUtf(recipeId, PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH);
         }
         if (buf.writerIndex() - start > BlueprintSyncLimits.MAX_CHUNK_BYTES) {
             throw new IllegalArgumentException("Learned-recipe synchronization chunk exceeds the byte budget");
@@ -161,7 +162,10 @@ public class SyncPlayerRecipeDataPacket {
     }
 
     private static void validateChunkMetadata(int chunkIndex, int chunkCount) {
-        if (chunkCount < 1 || chunkCount > MAX_RECIPES || chunkIndex < 0 || chunkIndex >= chunkCount) {
+        if (chunkCount < 1
+                || chunkCount > BlueprintSyncLimits.MAX_CHUNKS_PER_SNAPSHOT
+                || chunkIndex < 0
+                || chunkIndex >= chunkCount) {
             throw new IllegalArgumentException(
                     "Invalid learned-recipe synchronization chunk " + chunkIndex + " of " + chunkCount);
         }

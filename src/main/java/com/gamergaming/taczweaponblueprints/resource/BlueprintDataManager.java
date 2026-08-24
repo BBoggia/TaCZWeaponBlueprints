@@ -317,6 +317,7 @@ public class BlueprintDataManager {
         // Keep the legacy recipe list usable by older releases if the world is
         // rolled back after this capability schema has been saved.
         for (String learnedBlueprint : recipeData.getLearnedBlueprints()) {
+            recipeData.discoverBlueprint(learnedBlueprint);
             BlueprintData data = getBlueprintData(learnedBlueprint);
             if (data != null) {
                 recipeData.addRecipe(data.getRecipeId().toString());

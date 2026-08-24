@@ -16,7 +16,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public class NetworkHandler {
-    public static final String PROTOCOL_VERSION = "3";
+    public static final String PROTOCOL_VERSION = "4";
     // A random per-server seed prevents a partial chunk set from an earlier
     // connection being mistaken for a new sync after reconnecting.
     private static final AtomicLong SYNC_SEQUENCE =
@@ -40,6 +40,11 @@ public class NetworkHandler {
                 SyncBlueprintDataPacket::toBytes, SyncBlueprintDataPacket::new,
                 SyncBlueprintDataPacket::handle,
                 Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+
+        INSTANCE.registerMessage(id++, SyncPlayerProgressionPacket.class,
+                SyncPlayerProgressionPacket::toBytes, SyncPlayerProgressionPacket::new,
+                SyncPlayerProgressionPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     public static void syncPlayerRecipeData(ServerPlayer player) {
@@ -51,6 +56,12 @@ public class NetworkHandler {
                     BlueprintDataManager.SERVER.getBlueprintDataMap(),
                     BlueprintDataManager.SERVER.getRecipeToBlueprintMap());
             SyncPlayerRecipeDataPacket.split(activeRecipes, SYNC_SEQUENCE.incrementAndGet())
+                    .forEach(packet -> INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), packet));
+            SyncPlayerProgressionPacket.split(
+                            recipeData.getLearnedBlueprints(),
+                            recipeData.getDiscoveredBlueprints(),
+                            recipeData.getResearchPoints(),
+                            SYNC_SEQUENCE.incrementAndGet())
                     .forEach(packet -> INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), packet));
         });
     }

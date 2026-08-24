@@ -11,6 +11,7 @@
     "message.taczweaponblueprints.blueprint.invalid_recipe": "Invalid recipe for this blueprint.",
     "message.taczweaponblueprints.blueprint.invalid_blueprint": "This blueprint is invalid.",
     "message.taczweaponblueprints.blueprint.data_unavailable": "Your blueprint data is unavailable. The blueprint was not consumed.",
+    "message.taczweaponblueprints.blueprint.progression_full": "Your blueprint progression data has reached its safety limit. The blueprint was not consumed.",
 
     "gui.taczweaponblueprints.gun_smith_table.no_recipes": "No recipes",
     "gui.taczweaponblueprints.gun_smith_table.available": "available",

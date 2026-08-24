@@ -150,8 +150,12 @@ public class BlueprintItem extends Item {
         }
 
         BlueprintDataManager.SERVER.migrateLegacyUnlocks(recipeData.get());
-        if (!recipeData.get().addBlueprint(bpId)) {
+        if (recipeData.get().hasBlueprint(bpId)) {
             player.displayClientMessage(Component.translatable("message.taczweaponblueprints.blueprint.already_known"), true);
+            return;
+        }
+        if (!recipeData.get().addBlueprint(bpId)) {
+            player.displayClientMessage(Component.translatable("message.taczweaponblueprints.blueprint.progression_full"), true);
             return;
         }
         // Retain the canonical recipe list for downgrade compatibility. New code

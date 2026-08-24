@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
+import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import io.netty.buffer.Unpooled;
 import net.minecraft.network.FriendlyByteBuf;
@@ -54,6 +55,54 @@ class SyncPacketTest {
             assertThrows(IllegalArgumentException.class, () -> new SyncPlayerRecipeDataPacket(buffer));
         } finally {
             buffer.release();
+        }
+    }
+
+    @Test
+    void playerProgressionPacketRoundTripsAStableSnapshot() {
+        var packets = SyncPlayerProgressionPacket.split(
+                Set.of("test:bravo", "test:alpha"),
+                Set.of("test:history", "test:bravo", "test:alpha"),
+                125,
+                9L);
+        assertEquals(1, packets.size());
+
+        FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            packets.get(0).toBytes(buffer);
+            SyncPlayerProgressionPacket decoded = new SyncPlayerProgressionPacket(buffer);
+
+            assertEquals(Set.of("test:alpha", "test:bravo"), decoded.learnedEntries());
+            assertEquals(Set.of("test:alpha", "test:bravo", "test:history"), decoded.discoveredEntries());
+            assertEquals(125, decoded.researchPoints());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    void playerProgressionPacketRejectsInvalidState() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> SyncPlayerProgressionPacket.split(Set.of("test:learned"), Set.of(), 0, 1L));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> SyncPlayerProgressionPacket.split(
+                        Set.of(),
+                        Set.of(),
+                        PlayerProgressionLimits.MAX_RESEARCH_POINTS + 1,
+                        1L));
+
+        FriendlyByteBuf excessiveChunks = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            excessiveChunks.writeLong(1L);
+            excessiveChunks.writeVarInt(0);
+            excessiveChunks.writeVarInt(BlueprintSyncLimits.MAX_CHUNKS_PER_SNAPSHOT + 1);
+            assertThrows(
+                    IllegalArgumentException.class,
+                    () -> new SyncPlayerProgressionPacket(excessiveChunks));
+        } finally {
+            excessiveChunks.release();
         }
     }
 
@@ -128,6 +177,7 @@ class SyncPacketTest {
     void maximumCatalogAndRecipeSetsAreSplitBelowThePayloadBudget() {
         Map<ResourceLocation, BlueprintData> blueprints = new LinkedHashMap<>();
         Set<String> recipes = new java.util.LinkedHashSet<>();
+        Set<String> progressionIds = new java.util.LinkedHashSet<>();
         for (int index = 0; index < BlueprintDataManager.MAX_CATALOG_ENTRIES; index++) {
             ResourceLocation blueprintId = new ResourceLocation("test", "blueprint_" + index);
             blueprints.put(
@@ -139,23 +189,39 @@ class SyncPacketTest {
                             "x".repeat(64)));
             String suffix = Integer.toString(index);
             recipes.add("test:" + "r".repeat(251 - suffix.length()) + suffix);
+            progressionIds.add("test:" + "p".repeat(251 - suffix.length()) + suffix);
         }
 
         var blueprintChunks = SyncBlueprintDataPacket.split(blueprints, 41L);
         var recipeChunks = SyncPlayerRecipeDataPacket.split(recipes, 42L);
+        var progressionChunks = SyncPlayerProgressionPacket.split(
+                progressionIds,
+                progressionIds,
+                PlayerProgressionLimits.MAX_RESEARCH_POINTS,
+                43L);
 
         assertTrue(blueprintChunks.size() > 1);
         assertTrue(recipeChunks.size() > 1);
+        assertTrue(progressionChunks.size() > 1);
         assertEquals(
                 BlueprintDataManager.MAX_CATALOG_ENTRIES,
                 blueprintChunks.stream().mapToInt(packet -> packet.entries().size()).sum());
         assertEquals(4096, recipeChunks.stream().mapToInt(packet -> packet.entries().size()).sum());
+        assertEquals(
+                PlayerProgressionLimits.MAX_IDS_PER_COLLECTION,
+                progressionChunks.stream().mapToInt(packet -> packet.learnedEntries().size()).sum());
+        assertEquals(
+                PlayerProgressionLimits.MAX_IDS_PER_COLLECTION,
+                progressionChunks.stream().mapToInt(packet -> packet.discoveredEntries().size()).sum());
         blueprintChunks.forEach(packet ->
                 assertTrue(packet.estimatedPayloadBytes() <= BlueprintSyncLimits.MAX_CHUNK_BYTES));
         recipeChunks.forEach(packet ->
                 assertTrue(packet.estimatedPayloadBytes() <= BlueprintSyncLimits.MAX_CHUNK_BYTES));
+        progressionChunks.forEach(packet ->
+                assertTrue(packet.estimatedPayloadBytes() <= BlueprintSyncLimits.MAX_CHUNK_BYTES));
         blueprintChunks.forEach(packet -> assertEncodedWithinBudget(packet::toBytes));
         recipeChunks.forEach(packet -> assertEncodedWithinBudget(packet::toBytes));
+        progressionChunks.forEach(packet -> assertEncodedWithinBudget(packet::toBytes));
     }
 
     @Test

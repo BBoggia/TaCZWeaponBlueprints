@@ -14,6 +14,8 @@ class CapabilityEventHandlerTest {
         PlayerRecipeData original = new PlayerRecipeData();
         original.addRecipe("tacz:gun/ak47");
         original.addBlueprint("tacz:ak47");
+        original.discoverBlueprint("tacz:m4a1");
+        original.setResearchPoints(75);
         PlayerRecipeData clone = new PlayerRecipeData();
 
         CapabilityEventHandler.copyRecipeData(original, clone);
@@ -21,6 +23,8 @@ class CapabilityEventHandlerTest {
 
         assertEquals(Set.of("tacz:gun/ak47"), clone.getLearnedRecipes());
         assertEquals(Set.of("tacz:ak47"), clone.getLearnedBlueprints());
+        assertEquals(Set.of("tacz:ak47", "tacz:m4a1"), clone.getDiscoveredBlueprints());
+        assertEquals(75, clone.getResearchPoints());
         assertFalse(clone.hasRecipe("tacz:gun/m4a1"));
     }
 }
