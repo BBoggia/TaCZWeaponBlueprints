@@ -10,11 +10,11 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.MapLike;
 import com.mojang.serialization.RecordBuilder;
 
-final class StrictOptionalFieldCodec<A> extends MapCodec<Optional<A>> {
+public final class StrictOptionalFieldCodec<A> extends MapCodec<Optional<A>> {
     private final String name;
     private final Codec<A> elementCodec;
 
-    StrictOptionalFieldCodec(String name, Codec<A> elementCodec) {
+    public StrictOptionalFieldCodec(String name, Codec<A> elementCodec) {
         this.name = name;
         this.elementCodec = elementCodec;
     }

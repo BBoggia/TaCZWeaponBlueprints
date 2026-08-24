@@ -1,0 +1,28 @@
+{
+  "format": 1,
+  "journal_enabled": true,
+  "visibility": "silhouette",
+  "research_enabled": true,
+  "recycling_enabled": true,
+  "allow_unlearned_recycling": false,
+  "recycling_value": 1,
+  "research_cost": {
+    "points": 8,
+    "ingredients": [
+      {
+        "items": [
+          "minecraft:paper"
+        ],
+        "count": 4
+      },
+      {
+        "items": [
+          "minecraft:iron_ingot"
+        ],
+        "count": 2
+      }
+    ]
+  },
+  "requires_discovery": false,
+  "creative_bypasses_cost": false
+}

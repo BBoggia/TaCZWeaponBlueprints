@@ -39,7 +39,11 @@ public record BlueprintCatalogSelector(
                     strictList("item_types", NON_BLANK_STRING).forGetter(BlueprintCatalogSelector::itemTypes),
                     strictList("path_prefixes", PATH_PREFIX_STRING).forGetter(BlueprintCatalogSelector::pathPrefixes),
                     strictList("exclude", ResourceLocation.CODEC).forGetter(BlueprintCatalogSelector::exclude),
-                    WEIGHT_CODEC.fieldOf("weight").forGetter(BlueprintCatalogSelector::weight))
+                    new StrictOptionalFieldCodec<>("weight", WEIGHT_CODEC)
+                            .xmap(
+                                    value -> value.orElse(1.0f),
+                                    value -> value == 1.0f ? Optional.empty() : Optional.of(value))
+                            .forGetter(BlueprintCatalogSelector::weight))
                     .apply(instance, BlueprintCatalogSelector::new));
 
     public static final Codec<BlueprintCatalogSelector> CODEC = StrictRecordCodec.wrap(
@@ -88,6 +92,21 @@ public record BlueprintCatalogSelector(
         return new BlueprintCatalogSelector(namespaces, itemTypes, pathPrefixes, exclude, narrowed);
     }
 
+    public void validateForUse() {
+        if (termCount(namespaces, itemTypes, pathPrefixes, exclude) > MAX_TERMS) {
+            throw new IllegalArgumentException("catalog selector cannot contain more than " + MAX_TERMS + " terms");
+        }
+        if (namespaces.stream().anyMatch(value -> ResourceLocation.tryBuild(value, "value") == null)) {
+            throw new IllegalArgumentException("catalog selector contains an invalid namespace");
+        }
+        if (itemTypes.stream().anyMatch(String::isBlank)) {
+            throw new IllegalArgumentException("catalog selector contains a blank item type");
+        }
+        if (pathPrefixes.stream().anyMatch(value -> ResourceLocation.tryBuild("test", value) == null)) {
+            throw new IllegalArgumentException("catalog selector contains an invalid path prefix");
+        }
+    }
+
     private static List<String> normalizeStrings(List<String> values) {
         if (values == null) {
             return List.of();
@@ -122,13 +141,21 @@ public record BlueprintCatalogSelector(
     }
 
     private static DataResult<BlueprintCatalogSelector> validateSelector(BlueprintCatalogSelector selector) {
-        int termCount = selector.namespaces().size()
-                + selector.itemTypes().size()
-                + selector.pathPrefixes().size()
-                + selector.exclude().size();
-        return termCount <= MAX_TERMS
+        return termCount(
+                selector.namespaces(),
+                selector.itemTypes(),
+                selector.pathPrefixes(),
+                selector.exclude()) <= MAX_TERMS
                 ? DataResult.success(selector)
                 : DataResult.error(() -> "catalog selector cannot contain more than " + MAX_TERMS + " terms");
+    }
+
+    private static int termCount(
+            List<String> namespaces,
+            List<String> itemTypes,
+            List<String> pathPrefixes,
+            List<ResourceLocation> exclude) {
+        return namespaces.size() + itemTypes.size() + pathPrefixes.size() + exclude.size();
     }
 
     private static <T> com.mojang.serialization.MapCodec<List<T>> strictList(String name, Codec<T> elementCodec) {

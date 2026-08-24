@@ -11,11 +11,11 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.Decoder;
 import com.mojang.serialization.DynamicOps;
 
-final class StrictRecordCodec {
+public final class StrictRecordCodec {
     private StrictRecordCodec() {
     }
 
-    static <A> Codec<A> wrap(String description, Codec<A> delegate, String... allowedFields) {
+    public static <A> Codec<A> wrap(String description, Codec<A> delegate, String... allowedFields) {
         Set<String> allowed = Set.copyOf(Arrays.asList(allowedFields));
         Decoder<A> strictDecoder = new Decoder<>() {
             @Override

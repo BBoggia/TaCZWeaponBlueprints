@@ -4,6 +4,7 @@ import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintLootDataManager;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchDataManager;
 
 import net.minecraftforge.event.AddReloadListenerEvent;
 import net.minecraftforge.event.OnDatapackSyncEvent;
@@ -18,6 +19,7 @@ public final class BlueprintResourceEvents {
     @SubscribeEvent
     public static void onAddReloadListeners(AddReloadListenerEvent event) {
         event.addListener(BlueprintLootDataManager.INSTANCE);
+        event.addListener(BlueprintResearchDataManager.INSTANCE);
     }
 
     @SubscribeEvent
