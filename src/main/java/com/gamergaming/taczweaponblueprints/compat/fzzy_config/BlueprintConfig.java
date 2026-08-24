@@ -29,6 +29,9 @@ public class BlueprintConfig extends Config {
     @WithPerms(opLevel = 2)
     public ValidatedBoolean enableBlueprints = new ValidatedBoolean(true);
 
+    @WithPerms(opLevel = 2)
+    public ValidatedBoolean enableDiscoveryTracking = new ValidatedBoolean(true);
+
     // @Comment("Blueprint spawn chance")
     @WithPerms(opLevel = 2)
     public ValidatedDouble blueprintSpawnChance = new ValidatedDouble(0.2, 1.0, 0.0);

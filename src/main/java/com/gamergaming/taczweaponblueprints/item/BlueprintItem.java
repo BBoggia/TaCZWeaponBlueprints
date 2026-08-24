@@ -12,6 +12,7 @@ import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
 import com.gamergaming.taczweaponblueprints.init.ModItems;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
+import com.gamergaming.taczweaponblueprints.progression.BlueprintDiscoveryService;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.gamergaming.taczweaponblueprints.util.ItemNameFilterHelper;
 
@@ -24,10 +25,10 @@ import net.minecraft.world.level.Level;
 import net.minecraftforge.client.extensions.common.IClientItemExtensions;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 
 public class BlueprintItem extends Item {
-
     public BlueprintItem(Properties properties) {
         super(properties);
     }
@@ -55,6 +56,17 @@ public class BlueprintItem extends Item {
         CompoundTag tag = blueprint.getOrCreateTag();
         tag.putString("bpId", bpId);
         return blueprint;
+    }
+
+    @Override
+    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean selected) {
+        super.inventoryTick(stack, level, entity, slotId, selected);
+        if (!level.isClientSide && entity instanceof ServerPlayer serverPlayer) {
+            // Post-pickup discovery handles the common path immediately. This
+            // fallback catches commands, menus, and third-party inserts. Known
+            // canonical IDs use an allocation-free membership fast path.
+            BlueprintDiscoveryService.discoverInventoryBlueprint(serverPlayer, stack);
+        }
     }
 
     @Override

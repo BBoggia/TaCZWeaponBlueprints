@@ -85,20 +85,17 @@ public class PlayerRecipeData implements IPlayerRecipeData {
 
     @Override
     public boolean hasRecipe(String recipeId) {
-        String normalizedId = normalizeResourceId(recipeId);
-        return normalizedId != null && learnedRecipes.contains(normalizedId);
+        return containsResourceId(learnedRecipes, recipeId);
     }
 
     @Override
     public boolean hasBlueprint(String blueprintId) {
-        String normalizedId = normalizeResourceId(blueprintId);
-        return normalizedId != null && learnedBlueprints.contains(normalizedId);
+        return containsResourceId(learnedBlueprints, blueprintId);
     }
 
     @Override
     public boolean hasDiscoveredBlueprint(String blueprintId) {
-        String normalizedId = normalizeResourceId(blueprintId);
-        return normalizedId != null && discoveredBlueprints.contains(normalizedId);
+        return containsResourceId(discoveredBlueprints, blueprintId);
     }
 
     @Override
@@ -241,6 +238,19 @@ public class PlayerRecipeData implements IPlayerRecipeData {
             return false;
         }
         return values.add(normalizedId);
+    }
+
+    private static boolean containsResourceId(Set<String> values, String resourceId) {
+        if (resourceId == null || resourceId.length() > PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH) {
+            return false;
+        }
+        // Persisted and item IDs are normally canonical already. This fast path
+        // avoids reparsing a ResourceLocation on every inventory fallback tick.
+        if (values.contains(resourceId)) {
+            return true;
+        }
+        String normalizedId = normalizeResourceId(resourceId);
+        return normalizedId != null && values.contains(normalizedId);
     }
 
     private static ListTag writeSortedIds(Set<String> values) {

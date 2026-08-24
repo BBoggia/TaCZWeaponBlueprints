@@ -5,6 +5,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
+import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 
@@ -57,13 +58,13 @@ public class NetworkHandler {
                     BlueprintDataManager.SERVER.getRecipeToBlueprintMap());
             SyncPlayerRecipeDataPacket.split(activeRecipes, SYNC_SEQUENCE.incrementAndGet())
                     .forEach(packet -> INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), packet));
-            SyncPlayerProgressionPacket.split(
-                            recipeData.getLearnedBlueprints(),
-                            recipeData.getDiscoveredBlueprints(),
-                            recipeData.getResearchPoints(),
-                            SYNC_SEQUENCE.incrementAndGet())
-                    .forEach(packet -> INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), packet));
+            sendPlayerProgressionData(player, recipeData);
         });
+    }
+
+    public static void syncPlayerProgressionData(ServerPlayer player) {
+        player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
+                .ifPresent(recipeData -> sendPlayerProgressionData(player, recipeData));
     }
 
     public static void syncBlueprintData(ServerPlayer player) {
@@ -76,6 +77,15 @@ public class NetworkHandler {
     public static void syncAllPlayerData(ServerPlayer player) {
         syncBlueprintData(player);
         syncPlayerRecipeData(player);
+    }
+
+    private static void sendPlayerProgressionData(ServerPlayer player, IPlayerRecipeData recipeData) {
+        SyncPlayerProgressionPacket.split(
+                        recipeData.getLearnedBlueprints(),
+                        recipeData.getDiscoveredBlueprints(),
+                        recipeData.getResearchPoints(),
+                        SYNC_SEQUENCE.incrementAndGet())
+                .forEach(packet -> INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), packet));
     }
 
 }

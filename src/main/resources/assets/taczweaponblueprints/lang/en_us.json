@@ -58,6 +58,8 @@
     "config.taczweaponblueprints.blueprint.desc": "Settings related to gun blueprints",
     "config.taczweaponblueprints.blueprint.enableBlueprints": "Enable Blueprints",
     "config.taczweaponblueprints.blueprint.enableBlueprints.desc": "Require blueprints for crafting and allow them to appear in configured loot tables",
+    "config.taczweaponblueprints.blueprint.enableDiscoveryTracking": "Enable Blueprint Discovery",
+    "config.taczweaponblueprints.blueprint.enableDiscoveryTracking.desc": "Record valid blueprints when they enter a player's inventory",
     "config.taczweaponblueprints.blueprint.blueprintSpawnChance": "Blueprint Spawn Chance",
     "config.taczweaponblueprints.blueprint.blueprintSpawnChance.desc": "Chance for blueprints to be added when an eligible loot table is rolled",
     "config.taczweaponblueprints.blueprint.minBlueprints": "Minimum Blueprints",
