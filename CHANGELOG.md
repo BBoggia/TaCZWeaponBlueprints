@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.4 - 2026-08-24
 
 ### Changed
 
@@ -14,6 +14,7 @@
 - TaCZ 1.1.8-hotfix compiles successfully and passes the complete automated test suite.
 - Dedicated-server and client startup probes load the blueprint menu and screen mixins without an injection error.
 - Existing learned blueprint data, datapack formats, loot policies, and network formats are unchanged.
+- Promotes the complete `1.0.3-beta7` feature and hardening set below to the stable release channel.
 
 ## 1.0.3-beta7 - 2026-08-24
 
