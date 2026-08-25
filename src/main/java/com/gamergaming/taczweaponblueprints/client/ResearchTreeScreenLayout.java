@@ -46,6 +46,8 @@ public final class ResearchTreeScreenLayout {
         if (screenWidth < MIN_FULLSCREEN_WIDTH || screenHeight < MIN_FULLSCREEN_HEIGHT) {
             throw new IllegalArgumentException("fullscreen Research Tree bounds are too small");
         }
+        ResearchTreeFullscreenLayout.Layout fullscreenLayout =
+                ResearchTreeFullscreenLayout.forScreen(screenWidth, screenHeight);
         Rect toolbar = new Rect(
                 PADDING,
                 PADDING,
@@ -57,12 +59,9 @@ public final class ResearchTreeScreenLayout {
                 contentY,
                 SIDEBAR_WIDTH,
                 screenHeight - contentY - PADDING);
-        int canvasX = sidebar.right() + 4;
-        Rect canvas = new Rect(
-                canvasX,
-                contentY,
-                screenWidth - canvasX,
-                screenHeight - contentY);
+        // Phase-one controls still use the legacy toolbar/sidebar geometry, but
+        // they are overlays now. The graph owns every screen pixel underneath.
+        Rect canvas = fullscreenLayout.canvas();
         // Fullscreen details are contextual tooltips. Retain a tiny valid region
         // for the shared layout contract instead of reserving permanent space.
         Rect details = new Rect(PADDING, screenHeight - PADDING - 1, 1, 1);
@@ -177,13 +176,17 @@ public final class ResearchTreeScreenLayout {
                             || canvas.overlaps(details))) {
                 throw new IllegalArgumentException("Research Tree primary regions overlap");
             }
-            if (sidebar.isPresent()
-                    && (sidebar.orElseThrow().overlaps(canvas)
-                            || sidebar.orElseThrow().overlaps(toolbar))) {
-                throw new IllegalArgumentException("Research Tree sidebar overlaps another input region");
+            if (sidebar.isPresent() && sidebar.orElseThrow().overlaps(toolbar)) {
+                throw new IllegalArgumentException("Research Tree overlays overlap each other");
             }
-            if (mode == ViewMode.FULLSCREEN && canvas.overlaps(toolbar)) {
-                throw new IllegalArgumentException("fullscreen Research Tree canvas overlaps its toolbar");
+            if (detailsPlacement != DetailsPlacement.OVERLAY
+                    && sidebar.isPresent()
+                    && sidebar.orElseThrow().overlaps(canvas)) {
+                throw new IllegalArgumentException("Research Tree sidebar overlaps its canvas");
+            }
+            if (mode == ViewMode.FULLSCREEN
+                    && !canvas.equals(new Rect(0, 0, screenWidth, screenHeight))) {
+                throw new IllegalArgumentException("fullscreen Research Tree canvas is not edge-to-edge");
             }
         }
     }

@@ -939,7 +939,13 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         boolean guidanceHovered = guidanceContains(mouseX, mouseY);
-        if (visibleMode == ResearchBenchMenu.Mode.BROWSE && !guidanceHovered) {
+        ResearchTreeInteractionPolicy.PointerTarget pointerTarget =
+                fullscreenPointerTarget(mouseX, mouseY);
+        boolean graphHoverAllowed = !fullscreen
+                || ResearchTreeInteractionPolicy.allowsGraphHover(pointerTarget);
+        if (visibleMode == ResearchBenchMenu.Mode.BROWSE
+                && !guidanceHovered
+                && graphHoverAllowed) {
             treeCanvas.updateHover(mouseX, mouseY);
         } else {
             treeCanvas.clearHover();
@@ -950,7 +956,9 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         super.render(graphics, mouseX, mouseY, partialTick);
         renderSelectedTabIndicator(graphics);
         renderTooltip(graphics, mouseX, mouseY);
-        if (visibleMode == ResearchBenchMenu.Mode.BROWSE && !guidanceHovered) {
+        if (visibleMode == ResearchBenchMenu.Mode.BROWSE
+                && !guidanceHovered
+                && graphHoverAllowed) {
             renderTreeTooltip(graphics, mouseX, mouseY);
         }
     }
@@ -959,14 +967,6 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         if (fullscreen && visibleMode == ResearchBenchMenu.Mode.BROWSE) {
             drawBrowseBackground(graphics);
-            ResearchTreeScreenLayout.Rect toolbar = activeTreeLayout.toolbar();
-            graphics.fill(
-                    0,
-                    0,
-                    width,
-                    toolbar.bottom() + 3,
-                    0xE8111820);
-            graphics.fill(0, toolbar.bottom() + 2, width, toolbar.bottom() + 3, BORDER);
             renderGuidanceAtScreenCoordinates(graphics);
             return;
         }
@@ -1006,24 +1006,6 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 this::nodeBorderColor,
                 this::nodeStatusSymbol,
                 this::groupName);
-        if (fullscreen) {
-            renderSidebarBackground(graphics);
-        }
-    }
-
-    private void renderSidebarBackground(GuiGraphics graphics) {
-        ResearchTreeScreenLayout.Rect sidebar = activeTreeLayout.sidebar().orElseThrow();
-        int x = leftPos + sidebar.x();
-        int y = topPos + sidebar.y();
-        graphics.fill(x, y, x + sidebar.width(), y + sidebar.height(), 0xE8111820);
-        graphics.renderOutline(x, y, sidebar.width(), sidebar.height(), BORDER);
-        graphics.drawCenteredString(
-                font,
-                Component.translatable(
-                        "gui.taczweaponblueprints.research_bench.tree.sidebar"),
-                x + sidebar.width() / 2,
-                y + 4,
-                MUTED);
     }
 
     private void drawRecycleBackground(GuiGraphics graphics) {
@@ -1144,11 +1126,54 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                         .contains(mouseX - leftPos, mouseY - topPos);
     }
 
+    /** Resolves the owner of an intentionally overlapping fullscreen pointer position. */
+    private ResearchTreeInteractionPolicy.PointerTarget fullscreenPointerTarget(
+            double mouseX,
+            double mouseY) {
+        if (!fullscreen || visibleMode != ResearchBenchMenu.Mode.BROWSE) {
+            return ResearchTreeInteractionPolicy.PointerTarget.NONE;
+        }
+        boolean guidance = guidanceContains(mouseX, mouseY);
+        boolean contextCard = primaryResearchButton != null
+                && primaryResearchButton.visible
+                && primaryResearchButton.isMouseOver(mouseX, mouseY);
+        boolean close = fullscreenButton != null
+                && fullscreenButton.visible
+                && fullscreenButton.isMouseOver(mouseX, mouseY);
+        double localX = mouseX - leftPos;
+        double localY = mouseY - topPos;
+        boolean sidebar = activeTreeLayout.sidebar()
+                .map(region -> region.contains(localX, localY))
+                .orElse(false);
+        // Phase two replaces this legacy toolbar with the compact rail and
+        // expandable search. Until then, its whole footprint owns input so
+        // empty chrome cannot select or zoom graph content underneath it.
+        boolean search = !close && activeTreeLayout.toolbar().contains(localX, localY);
+        boolean overlayOwned = guidance || contextCard || search || sidebar || close;
+        boolean graphCanvas = treeCanvas.contains(mouseX, mouseY);
+        boolean graphElement = !overlayOwned
+                && graphCanvas
+                && (treeCanvas.nodeAt(mouseX, mouseY).isPresent()
+                        || treeCanvas.portalAt(mouseX, mouseY).isPresent());
+        return ResearchTreeInteractionPolicy.route(
+                new ResearchTreeInteractionPolicy.PointerLayers(
+                        guidance,
+                        contextCard,
+                        search,
+                        sidebar,
+                        close,
+                        graphElement,
+                        graphCanvas));
+    }
+
     private void renderFullscreenBrowseLabels(GuiGraphics graphics) {
         ResearchTreeScreenLayout.Rect canvas = activeTreeLayout.canvas();
         ResearchTreeScreenLayout.Rect details = activeTreeLayout.details();
         boolean overlayDetails = activeTreeLayout.detailsPlacement()
                 == ResearchTreeScreenLayout.DetailsPlacement.OVERLAY;
+        int messageX = activeTreeLayout.sidebar()
+                .map(sidebar -> sidebar.right() + 8)
+                .orElse(canvas.x() + 8);
         int stateMessageY = overlayDetails
                 ? activeTreeLayout.toolbar().bottom() + 8
                 : canvas.y() + ResearchTreeCanvas.STICKY_HEADER_HEIGHT + 4;
@@ -1156,9 +1181,9 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             graphics.drawWordWrap(
                     font,
                     Component.translatable("gui.taczweaponblueprints.research_bench.search.unavailable"),
-                    canvas.x() + 8,
+                    messageX,
                     stateMessageY,
-                    canvas.width() - 16,
+                    Math.max(1, canvas.right() - messageX - 8),
                     MUTED);
         }
         if (!guidanceVisible
@@ -1168,7 +1193,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             graphics.drawString(
                     font,
                     Component.translatable("gui.taczweaponblueprints.research_bench.search.empty"),
-                    canvas.x() + ResearchTreeCanvas.STICKY_GUTTER_WIDTH + 4,
+                    messageX,
                     stateMessageY,
                     WARN,
                     false);
@@ -1617,7 +1642,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                             font,
                             treeTooltipLines(node, true),
                             leftPos + canvas.right() - 12,
-                            topPos + canvas.y() + ResearchTreeCanvas.STICKY_HEADER_HEIGHT + 8);
+                            topPos + activeTreeLayout.toolbar().bottom() + 8);
                 });
             }
             return;
@@ -1755,9 +1780,19 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             return true;
         }
         boolean browseMode = visibleMode == ResearchBenchMenu.Mode.BROWSE;
-        // Fullscreen deliberately places controls over the canvas. Widgets
-        // must receive the click before the underlying pan/select surface.
-        if (browseMode && super.mouseClicked(mouseX, mouseY, button)) {
+        if (browseMode && fullscreen) {
+            ResearchTreeInteractionPolicy.PointerTarget pointerTarget =
+                    fullscreenPointerTarget(mouseX, mouseY);
+            if (!ResearchTreeInteractionPolicy.allowsGraphHover(pointerTarget)) {
+                if (pointerTarget != ResearchTreeInteractionPolicy.PointerTarget.NONE) {
+                    // Let a child widget act first, then consume any blank part
+                    // of its overlay so the graph never receives click-through.
+                    super.mouseClicked(mouseX, mouseY, button);
+                    return true;
+                }
+                return false;
+            }
+        } else if (browseMode && super.mouseClicked(mouseX, mouseY, button)) {
             return true;
         }
         if (browseMode
@@ -1849,18 +1884,32 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         if (guidanceContains(mouseX, mouseY)) {
             return true;
         }
-        if (visibleMode == ResearchBenchMenu.Mode.BROWSE
-                && fullscreen
-                && activeTreeLayout.sidebar().map(sidebar ->
-                        sidebar.contains(mouseX - leftPos, mouseY - topPos)).orElse(false)) {
-            int maximumScroll = Math.max(0, sidebarEntryCount() - sidebarButtons.size());
-            if (delta != 0.0D) {
-                sidebarScroll = Math.max(
-                        0,
-                        Math.min(maximumScroll, sidebarScroll + (delta < 0.0D ? 1 : -1)));
+        if (visibleMode == ResearchBenchMenu.Mode.BROWSE && fullscreen) {
+            ResearchTreeInteractionPolicy.ScrollTarget scrollTarget =
+                    ResearchTreeInteractionPolicy.scrollTarget(
+                            fullscreenPointerTarget(mouseX, mouseY),
+                            false);
+            if (scrollTarget == ResearchTreeInteractionPolicy.ScrollTarget.SIDEBAR) {
+                int maximumScroll = Math.max(0, sidebarEntryCount() - sidebarButtons.size());
+                if (delta != 0.0D) {
+                    sidebarScroll = Math.max(
+                            0,
+                            Math.min(maximumScroll, sidebarScroll + (delta < 0.0D ? 1 : -1)));
+                }
+                updateSidebarButtons(true);
+                return true;
             }
-            updateSidebarButtons(true);
-            return true;
+            if (scrollTarget == ResearchTreeInteractionPolicy.ScrollTarget.GRAPH) {
+                if (treeCanvas.mouseScrolled(mouseX, mouseY, delta)) {
+                    updateWidgets();
+                    return true;
+                }
+            } else if (scrollTarget == ResearchTreeInteractionPolicy.ScrollTarget.BLOCKED
+                    || scrollTarget == ResearchTreeInteractionPolicy.ScrollTarget.CONTEXT_CARD) {
+                return true;
+            } else if (scrollTarget == ResearchTreeInteractionPolicy.ScrollTarget.NONE) {
+                return super.mouseScrolled(mouseX, mouseY, delta);
+            }
         }
         if (visibleMode == ResearchBenchMenu.Mode.BROWSE
                 && treeCanvas.mouseScrolled(mouseX, mouseY, delta)) {

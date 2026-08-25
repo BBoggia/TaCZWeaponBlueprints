@@ -38,8 +38,12 @@ class ResearchTreeScreenLayoutTest {
             assertEquals(ResearchTreeScreenLayout.ViewMode.FULLSCREEN, layout.mode());
             assertEquals(ResearchTreeScreenLayout.DetailsPlacement.OVERLAY, layout.detailsPlacement());
             assertTrue(layout.sidebar().isPresent());
-            assertFalse(layout.canvas().overlaps(layout.sidebar().orElseThrow()));
-            assertFalse(layout.canvas().overlaps(layout.toolbar()));
+            assertEquals(
+                    new ResearchTreeScreenLayout.Rect(
+                            0, 0, layout.screenWidth(), layout.screenHeight()),
+                    layout.canvas());
+            assertTrue(layout.canvas().overlaps(layout.sidebar().orElseThrow()));
+            assertTrue(layout.canvas().overlaps(layout.toolbar()));
             assertUsable(layout);
         }
         assertEquals(smallExpanded, smallCollapsed);
@@ -98,10 +102,12 @@ class ResearchTreeScreenLayoutTest {
             assertFalse(layout.canvas().overlaps(layout.details()));
             assertFalse(layout.canvas().overlaps(layout.toolbar()));
         } else {
-            assertFalse(layout.canvas().overlaps(layout.toolbar()));
+            assertTrue(layout.canvas().overlaps(layout.toolbar()));
         }
         layout.sidebar().ifPresent(sidebar -> {
-            assertFalse(sidebar.overlaps(layout.canvas()));
+            assertEquals(
+                    layout.detailsPlacement() == ResearchTreeScreenLayout.DetailsPlacement.OVERLAY,
+                    sidebar.overlaps(layout.canvas()));
             assertFalse(sidebar.overlaps(layout.toolbar()));
         });
         assertTrue(layout.canvas().inside(layout.screenWidth(), layout.screenHeight()));

@@ -144,6 +144,29 @@ class ResearchTreeCanvasTest {
     }
 
     @Test
+    void fullscreenHasNoStickyDeadZoneOverGraphContent() {
+        ResearchTreeCanvas canvas = canvas();
+        ResearchTreeGraph graph = graph("test:a", JournalVisibility.FULL);
+        ResearchTreeLayout layout = new ResearchTreeLayout(
+                64,
+                64,
+                1,
+                List.of(new ResearchTreeLayout.PositionedNode(
+                        0, id("test:a"), 0, 0, 0, 0, 0)),
+                List.of(),
+                List.of(new ResearchTreeLayout.CategoryLane("rifle", 0, 64)));
+        ResearchTreeScreenLayout.Rect bounds = new ResearchTreeScreenLayout.Rect(0, 0, 64, 64);
+        canvas.setBounds(ResearchTreeScreenLayout.ViewMode.FULLSCREEN, bounds);
+        canvas.setContent(graph, layout, Map.of(), null);
+
+        ResearchTreeLayout.PositionedNode position = layout.nodes().get(0);
+        double screenX = canvas.viewport().viewportX(position.centerX());
+        double screenY = canvas.viewport().viewportY(position.centerY());
+        assertEquals(id("test:a"), canvas.nodeAt(screenX, screenY).orElseThrow().blueprintId());
+        assertTrue(canvas.categoryHeaderAt(screenX, 2).isEmpty());
+    }
+
+    @Test
     void categoryFocusUsesPublishedLanesAndClearsBackToAll() {
         ResearchTreeCanvas canvas = canvas();
         ResearchTreeGraph graph = graph("test:a", JournalVisibility.FULL);

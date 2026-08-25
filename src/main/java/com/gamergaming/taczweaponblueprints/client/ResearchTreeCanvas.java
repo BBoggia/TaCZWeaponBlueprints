@@ -214,9 +214,11 @@ public final class ResearchTreeCanvas {
             } finally {
                 graphics.pose().popPose();
             }
-            drawStickyGroupHeaders(graphics, font, groupName);
-            drawStickyCategoryHeaders(graphics, font);
-            drawStickyTierLabels(graphics, font);
+            if (viewMode == ResearchTreeScreenLayout.ViewMode.COMPACT) {
+                drawStickyGroupHeaders(graphics, font, groupName);
+                drawStickyCategoryHeaders(graphics, font);
+                drawStickyTierLabels(graphics, font);
+            }
         } finally {
             graphics.disableScissor();
         }
@@ -270,8 +272,7 @@ public final class ResearchTreeCanvas {
 
     public Optional<ResearchTreeGraph.Node> nodeAt(double mouseX, double mouseY) {
         if (!contains(mouseX, mouseY) || layout.nodes().isEmpty()
-                || mouseY < bounds.y() + STICKY_HEADER_HEIGHT
-                || mouseX < bounds.x() + STICKY_GUTTER_WIDTH) {
+                || isCoveredByCompactChrome(mouseX, mouseY)) {
             return Optional.empty();
         }
         ResearchTreeViewport viewport = viewport();
@@ -292,8 +293,7 @@ public final class ResearchTreeCanvas {
             double mouseX,
             double mouseY) {
         if (!contains(mouseX, mouseY) || portals.isEmpty()
-                || mouseY < bounds.y() + STICKY_HEADER_HEIGHT
-                || mouseX < bounds.x() + STICKY_GUTTER_WIDTH) {
+                || isCoveredByCompactChrome(mouseX, mouseY)) {
             return Optional.empty();
         }
         ResearchTreeViewport viewport = viewport();
@@ -310,7 +310,8 @@ public final class ResearchTreeCanvas {
 
     /** Full label for a visible sticky category header, used by the screen tooltip. */
     public Optional<Component> categoryHeaderAt(double mouseX, double mouseY) {
-        if (!contains(mouseX, mouseY)
+        if (viewMode != ResearchTreeScreenLayout.ViewMode.COMPACT
+                || !contains(mouseX, mouseY)
                 || mouseY >= bounds.y() + STICKY_HEADER_HEIGHT) {
             return Optional.empty();
         }
@@ -329,6 +330,12 @@ public final class ResearchTreeCanvas {
     public boolean contains(double mouseX, double mouseY) {
         return mouseX >= bounds.x() && mouseX < bounds.right()
                 && mouseY >= bounds.y() && mouseY < bounds.bottom();
+    }
+
+    private boolean isCoveredByCompactChrome(double mouseX, double mouseY) {
+        return viewMode == ResearchTreeScreenLayout.ViewMode.COMPACT
+                && (mouseY < bounds.y() + STICKY_HEADER_HEIGHT
+                        || mouseX < bounds.x() + STICKY_GUTTER_WIDTH);
     }
 
     public void zoomAtCenter(double direction) {
@@ -561,7 +568,10 @@ public final class ResearchTreeCanvas {
         for (int y = bounds.y() + offsetY; y < bounds.bottom(); y += spacing) {
             graphics.fill(bounds.x(), y, bounds.right(), y + 1, style.grid());
         }
-        graphics.renderOutline(bounds.x(), bounds.y(), bounds.width(), bounds.height(), style.border());
+        if (viewMode == ResearchTreeScreenLayout.ViewMode.COMPACT) {
+            graphics.renderOutline(
+                    bounds.x(), bounds.y(), bounds.width(), bounds.height(), style.border());
+        }
     }
 
     private void drawCategoryLanes(GuiGraphics graphics) {
