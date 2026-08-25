@@ -21,7 +21,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public class NetworkHandler {
-    public static final String PROTOCOL_VERSION = "5";
+    public static final String PROTOCOL_VERSION = "6";
     // A random per-server seed prevents a partial chunk set from an earlier
     // connection being mistaken for a new sync after reconnecting.
     private static final AtomicLong SYNC_SEQUENCE =
@@ -55,6 +55,16 @@ public class NetworkHandler {
                 SyncBlueprintJournalPacket::toBytes, SyncBlueprintJournalPacket::new,
                 SyncBlueprintJournalPacket::handle,
                 Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+
+        INSTANCE.registerMessage(id++, ResearchBenchActionPacket.class,
+                ResearchBenchActionPacket::toBytes, ResearchBenchActionPacket::new,
+                ResearchBenchActionPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_SERVER));
+
+        INSTANCE.registerMessage(id++, SyncResearchBenchPreviewPacket.class,
+                SyncResearchBenchPreviewPacket::toBytes, SyncResearchBenchPreviewPacket::new,
+                SyncResearchBenchPreviewPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     public static void syncPlayerRecipeData(ServerPlayer player) {
@@ -79,6 +89,9 @@ public class NetworkHandler {
     public static void syncJournalData(ServerPlayer player) {
         player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
                 .ifPresent(recipeData -> sendJournalData(player, recipeData));
+        if (player.containerMenu instanceof com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu menu) {
+            menu.refreshAuthoritativePreview(player);
+        }
     }
 
     public static void syncBlueprintData(ServerPlayer player) {
@@ -91,6 +104,15 @@ public class NetworkHandler {
     public static void syncAllPlayerData(ServerPlayer player) {
         syncBlueprintData(player);
         syncPlayerRecipeData(player);
+    }
+
+    public static void sendResearchBenchPreview(
+            ServerPlayer player,
+            int containerId,
+            com.gamergaming.taczweaponblueprints.menu.ResearchBenchPreview preview) {
+        INSTANCE.send(
+                PacketDistributor.PLAYER.with(() -> player),
+                new SyncResearchBenchPreviewPacket(containerId, preview));
     }
 
     private static void sendPlayerProgressionData(ServerPlayer player, IPlayerRecipeData recipeData) {

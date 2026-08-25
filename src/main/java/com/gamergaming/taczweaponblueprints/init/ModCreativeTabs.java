@@ -90,6 +90,9 @@ public class ModCreativeTabs {
 
     @SubscribeEvent
     public static void buildCreativeModeTabs(BuildCreativeModeTabContentsEvent event) {
+        if (event.getTabKey() == net.minecraft.world.item.CreativeModeTabs.FUNCTIONAL_BLOCKS) {
+            event.accept(ModItems.RESEARCH_BENCH_ITEM.get());
+        }
         if (event.getTabKey() == ModCreativeTabs.AMMO_BLUEPRINT_TAB.getKey()) {
             if (Minecraft.getInstance().player != null
                     && BlueprintDataManager.CLIENT.getAllBlueprints().isEmpty()

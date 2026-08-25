@@ -3,8 +3,10 @@ package com.gamergaming.taczweaponblueprints;
 import org.slf4j.Logger;
 
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
+import com.gamergaming.taczweaponblueprints.init.ModBlocks;
 import com.gamergaming.taczweaponblueprints.init.ModCreativeTabs;
 import com.gamergaming.taczweaponblueprints.init.ModItems;
+import com.gamergaming.taczweaponblueprints.init.ModMenus;
 import com.gamergaming.taczweaponblueprints.loot.ModLootModifier;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.mojang.logging.LogUtils;
@@ -28,7 +30,9 @@ public class TaCZWeaponBlueprints {
 
         NetworkHandler.registerPackets();
 
+        ModBlocks.register(modEventBus);
         ModItems.register(modEventBus);
+        ModMenus.register(modEventBus);
         ModCreativeTabs.register(modEventBus);
         ModLootModifier.register(modEventBus);
 

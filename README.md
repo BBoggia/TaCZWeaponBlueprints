@@ -24,6 +24,9 @@ Install the same mod and dependency versions on both client and server. TaCZ con
 - Datapacks can replace or extend loot pools and rules without rebuilding the mod.
 - Format-2 datapacks support tags, pool inheritance, catalog selectors, loot-table selectors, dimensions, and luck predicates.
 - Catalog and loot reloads publish complete immutable snapshots; failed rebuilds preserve the previous working state.
+- The Blueprint Journal presents disclosure-filtered discovery, completion, research, and recycling policy.
+- The Research Bench performs atomic, server-authoritative research and voluntary duplicate recycling.
+- Research profiles and rules can configure point costs, item/tag ingredients, prerequisites, visibility, and recycling values.
 
 ## Configuration
 
@@ -33,6 +36,8 @@ The synchronized Fzzy Config screen exposes:
 - default blueprint loot chance;
 - default minimum and maximum rolls, bounded to 64;
 - gun, ammo, and attachment blacklists.
+- Journal, discovery tracking, research, and manual recycling enablement;
+- undiscovered visibility, Research Point cap, Creative cost bypass, and active research profile.
 
 Datapack rules may override chance and rolls for individual loot policies. Rules that omit those fields continue using the live global defaults.
 
@@ -48,6 +53,8 @@ All `/gg` commands require permission level 2.
 | `/gg loot inspect <loot_table>` | Explain dynamic ownership, targeting, predicates, and candidates. |
 | `/gg loot pool <pool_id>` | Inspect a prepared pool and its current catalog candidates. |
 | `/gg loot preview <loot_table>` | Show effective chance, rolls, weights, probabilities, and expected additions. |
+| `/gg progression inspect <player>` | Inspect a player's durable blueprint progression counts and Research Points. |
+| `/gg progression reset <targets> <learned\|discovered\|points\|all>` | Explicitly reset one progression state while preserving invariants. |
 
 Use vanilla `/reload` after changing blueprint loot datapacks. A successful reload advances the revision reported by `/gg loot status`; an invalid reload leaves the last-known-good revision active.
 
@@ -59,9 +66,11 @@ Definitions use these locations:
 data/<namespace>/taczweaponblueprints/blueprint_tags/<path>.json
 data/<namespace>/taczweaponblueprints/loot_pools/<path>.json
 data/<namespace>/taczweaponblueprints/loot_rules/<path>.json
+data/<namespace>/taczweaponblueprints/research_profiles/<path>.json
+data/<namespace>/taczweaponblueprints/research_rules/<path>.json
 ```
 
-Format 1 provides exact weighted pools and exact loot-table rules. Format 2 adds reusable composition, current-catalog selection, table-family selection, and runtime predicates. See [Phase 5 implementation](docs/development/phase-5-implementation.md) for the complete schemas and [operations and migration](docs/operations-and-migration.md) for rollout and rollback guidance.
+Format 1 provides exact weighted pools and exact loot-table rules. Format 2 adds reusable composition, current-catalog selection, table-family selection, and runtime predicates. Research profiles provide defaults while deterministic exact, tag, namespace, category, and catalog-selector rules provide per-blueprint overrides. See [Phase 5 implementation](docs/development/phase-5-implementation.md), [Journal/research Phase 8](docs/development/journal-research-phase-8.md), and [operations and migration](docs/operations-and-migration.md).
 
 ## Building
 

@@ -30,6 +30,21 @@ license. The selected root license is packaged into the verified JAR.
 For compatibility-sensitive changes, repeat the dedicated-server and client
 smoke tests documented in `docs/operations-and-migration.md`.
 
+For Journal/research releases, complete one integrated-server Research Bench
+interaction pass:
+
+- craft or place the bench and confirm its menu opens and closes normally;
+- close it with items in every input type and confirm all unused items return;
+- select a disclosed unlearned blueprint and verify the exact point/item preview;
+- confirm insufficient points, missing ingredients, and a full inventory consume
+  nothing;
+- complete one research transaction, receive one normal physical blueprint,
+  then use it to learn the recipe;
+- recycle one learned duplicate and confirm exactly one item is consumed for the
+  complete configured award;
+- keep a bench open across `/reload` and confirm its preview refreshes while the
+  next action uses the new policy.
+
 ## Publish
 
 - Record the SHA-256 hash of `build/libs/taczweaponblueprints-<version>.jar`.

@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Blueprint Journal discovery, completion, filtering, and disclosure-aware policy presentation.
+- Per-player Research Points with synchronized caps and durable persistence.
+- Datapack-driven research profiles and deterministic per-blueprint rules.
+- A non-ticking Research Bench for atomic physical-blueprint research and manual duplicate recycling.
+- Overlap-safe point, explicit-item, and item-tag ingredient transactions.
+- Operator progression inspection and explicit learned, discovered, points, or complete resets.
+
+### Changed
+
+- Advanced the network protocol to `6` for bounded Research Bench actions and exact open-menu previews.
+
+### Compatibility
+
+- Existing learned recipes migrate to durable learned/discovered blueprint output IDs.
+- Research and recycling remain opt-in policy surfaces and never delete progression when disabled.
+
 ## 1.0.4 - 2026-08-24
 
 ### Changed

@@ -25,5 +25,10 @@ class RootCommandTest {
         assertNotNull(loot.getChild("inspect"));
         assertNotNull(loot.getChild("preview"));
         assertNotNull(loot.getChild("pool"));
+
+        var progression = root.getChild("progression");
+        assertNotNull(progression);
+        assertNotNull(progression.getChild("inspect"));
+        assertNotNull(progression.getChild("reset"));
     }
 }

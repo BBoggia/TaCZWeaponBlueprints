@@ -1,6 +1,7 @@
 package com.gamergaming.taczweaponblueprints.init;
 
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.BlockItem;
 
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
@@ -24,6 +25,11 @@ public class ModItems {
                         new Item.Properties()
                         .stacksTo(1)
                 ));
+
+        public static final RegistryObject<Item> RESEARCH_BENCH_ITEM =
+                ITEMS.register("research_bench", () -> new BlockItem(
+                        ModBlocks.RESEARCH_BENCH.get(),
+                        new Item.Properties()));
 
         public static final RegistryObject<Item> AMMO_BLUEPRINT_ITEM =
                 ITEMS.register("ammo_blueprint_tab", () -> new Item(
