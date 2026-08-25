@@ -52,11 +52,14 @@ class BlueprintJournalBuilderTest {
         BlueprintJournalEntry unknown = snapshot.entries().get(2);
         assertEquals(id("test:discovered"), discovered.blueprintId().orElseThrow());
         assertEquals(JournalVisibility.PREVIEW, discovered.visibility());
-        assertTrue(discovered.discovered());
-        assertTrue(discovered.researchable());
+        assertFalse(discovered.discovered());
+        assertFalse(discovered.researchable());
+        assertEquals(8, discovered.researchPointCost());
+        assertEquals(0, discovered.recyclingValue());
         assertEquals(id("test:learned"), learned.blueprintId().orElseThrow());
         assertEquals(JournalVisibility.FULL, learned.visibility());
         assertTrue(learned.learned());
+        assertEquals(1, learned.recyclingValue());
         assertEquals(JournalVisibility.SILHOUETTE, unknown.visibility());
         assertTrue(unknown.blueprintId().isEmpty());
         assertTrue(unknown.nameKey().isEmpty());
@@ -121,6 +124,12 @@ class BlueprintJournalBuilderTest {
                 Optional.empty(),
                 Optional.of("test.name"), Optional.empty(), Optional.empty(),
                 false, true, false, false, false, 0, 0, 0, 0));
+        assertThrows(IllegalArgumentException.class, () -> new BlueprintJournalEntry(
+                0,
+                JournalVisibility.PREVIEW,
+                Optional.of(id("test:target")),
+                Optional.of("test.name"), Optional.of("rifle"), Optional.of(id("test:slot/target")),
+                false, false, true, false, true, 8, 0, 0, 0));
     }
 
     private static BlueprintResearchSnapshot researchSnapshot() {

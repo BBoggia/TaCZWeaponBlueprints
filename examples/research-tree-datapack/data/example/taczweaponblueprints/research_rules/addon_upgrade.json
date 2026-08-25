@@ -1,0 +1,17 @@
+{
+  "format": 1,
+  "profile": "example:custom_progression",
+  "priority": 100,
+  "target": {
+    "blueprints": ["example_guns:advanced_pistol"]
+  },
+  "visibility": "preview",
+  "research_cost": {
+    "points": 8,
+    "ingredients": [
+      { "items": ["minecraft:paper"], "count": 4 },
+      { "tag": "forge:ingots/iron", "count": 2 }
+    ]
+  },
+  "prerequisites": ["example_guns:starter_pistol"]
+}

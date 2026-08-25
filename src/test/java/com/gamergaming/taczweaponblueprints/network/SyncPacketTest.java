@@ -108,6 +108,50 @@ class SyncPacketTest {
     }
 
     @Test
+    void progressionAccumulatorRejectsStaleAndConflictingSnapshotsUntilCleared() {
+        SyncPlayerProgressionPacket newer = decodedProgressionPacket(
+                20L, 0, 1, 8, Set.of(), Set.of("test:newer"));
+        SyncPlayerProgressionPacket stale = decodedProgressionPacket(
+                19L, 0, 1, 4, Set.of(), Set.of("test:stale"));
+        SyncPlayerProgressionPacket.ClientAccumulator accumulator =
+                new SyncPlayerProgressionPacket.ClientAccumulator();
+
+        assertTrue(accumulator.accept(newer).isPresent());
+        assertTrue(accumulator.accept(stale).isEmpty());
+        assertTrue(accumulator.accept(newer).isEmpty());
+
+        accumulator.clear();
+        assertEquals(4, accumulator.accept(stale).orElseThrow().researchPoints());
+
+        SyncPlayerProgressionPacket first = decodedProgressionPacket(
+                30L, 0, 2, 5, Set.of(), Set.of("test:first"));
+        SyncPlayerProgressionPacket conflicting = decodedProgressionPacket(
+                30L, 0, 2, 5, Set.of(), Set.of("test:conflict"));
+        accumulator.clear();
+        assertTrue(accumulator.accept(first).isEmpty());
+        assertThrows(IllegalArgumentException.class, () -> accumulator.accept(conflicting));
+    }
+
+    @Test
+    void progressionAccumulatorRejectsCumulativeEntriesBeforeCompletion() {
+        Set<String> firstIds = IntStream.range(0, 2_050)
+                .mapToObj(index -> "a:" + index)
+                .collect(Collectors.toSet());
+        Set<String> secondIds = IntStream.range(0, 2_050)
+                .mapToObj(index -> "b:" + index)
+                .collect(Collectors.toSet());
+        SyncPlayerProgressionPacket first = decodedProgressionPacket(
+                40L, 0, 3, 0, Set.of(), firstIds);
+        SyncPlayerProgressionPacket overflow = decodedProgressionPacket(
+                40L, 1, 3, 0, Set.of(), secondIds);
+        SyncPlayerProgressionPacket.ClientAccumulator accumulator =
+                new SyncPlayerProgressionPacket.ClientAccumulator();
+
+        assertTrue(accumulator.accept(first).isEmpty());
+        assertThrows(IllegalArgumentException.class, () -> accumulator.accept(overflow));
+    }
+
+    @Test
     void blueprintPacketUsesMapKeysAndStableOrdering() {
         ResourceLocation firstId = new ResourceLocation("test", "alpha");
         ResourceLocation secondId = new ResourceLocation("test", "bravo");
@@ -298,6 +342,29 @@ class SyncPacketTest {
 
     private static BlueprintData blueprint(ResourceLocation blueprintId) {
         return blueprint(blueprintId, "item.test.name", "item.test.tooltip", "rifle");
+    }
+
+    private static SyncPlayerProgressionPacket decodedProgressionPacket(
+            long syncId,
+            int chunkIndex,
+            int chunkCount,
+            int researchPoints,
+            Set<String> learned,
+            Set<String> discovered) {
+        FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            buffer.writeLong(syncId);
+            buffer.writeVarInt(chunkIndex);
+            buffer.writeVarInt(chunkCount);
+            buffer.writeVarInt(researchPoints);
+            buffer.writeVarInt(learned.size());
+            learned.forEach(buffer::writeUtf);
+            buffer.writeVarInt(discovered.size());
+            discovered.forEach(buffer::writeUtf);
+            return new SyncPlayerProgressionPacket(buffer);
+        } finally {
+            buffer.release();
+        }
     }
 
     private static void assertEncodedWithinBudget(java.util.function.Consumer<FriendlyByteBuf> encoder) {

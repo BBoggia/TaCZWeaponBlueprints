@@ -2,6 +2,7 @@ package com.gamergaming.taczweaponblueprints.network;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
@@ -71,11 +72,38 @@ class SyncBlueprintJournalPacketTest {
             completed = accumulator.accept(replacementPackets.get(index));
         }
         assertEquals(replacement, completed.orElseThrow());
+
+        for (SyncBlueprintJournalPacket stale : firstPackets) {
+            assertTrue(accumulator.accept(stale).isEmpty());
+        }
+        assertTrue(accumulator.accept(replacementPackets.get(0)).isEmpty());
+    }
+
+    @Test
+    void conflictingDuplicateChunkFailsClosed() {
+        BlueprintJournalSnapshot first = snapshot(
+                PlayerProgressionLimits.MAX_IDS_PER_COLLECTION,
+                "a".repeat(BlueprintSyncLimits.MAX_TRANSLATION_KEY_LENGTH));
+        BlueprintJournalSnapshot conflicting = snapshot(
+                PlayerProgressionLimits.MAX_IDS_PER_COLLECTION,
+                "b".repeat(BlueprintSyncLimits.MAX_TRANSLATION_KEY_LENGTH));
+        List<SyncBlueprintJournalPacket> firstPackets = SyncBlueprintJournalPacket.split(first, 7L);
+        List<SyncBlueprintJournalPacket> conflictingPackets = SyncBlueprintJournalPacket.split(conflicting, 7L);
+        SyncBlueprintJournalPacket.ClientAccumulator accumulator =
+                new SyncBlueprintJournalPacket.ClientAccumulator();
+
+        assertTrue(accumulator.accept(firstPackets.get(0)).isEmpty());
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> accumulator.accept(conflictingPackets.get(0)));
     }
 
     private static BlueprintJournalSnapshot snapshot(int count) {
+        return snapshot(count, "n".repeat(BlueprintSyncLimits.MAX_TRANSLATION_KEY_LENGTH));
+    }
+
+    private static BlueprintJournalSnapshot snapshot(int count, String name) {
         List<BlueprintJournalEntry> entries = new ArrayList<>();
-        String name = "n".repeat(BlueprintSyncLimits.MAX_TRANSLATION_KEY_LENGTH);
         for (int index = 0; index < count; index++) {
             entries.add(new BlueprintJournalEntry(
                     index, JournalVisibility.NAME, Optional.empty(), Optional.of(name),

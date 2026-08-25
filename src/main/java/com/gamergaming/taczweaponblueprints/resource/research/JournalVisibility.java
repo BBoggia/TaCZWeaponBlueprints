@@ -28,6 +28,38 @@ public enum JournalVisibility {
         return ordinal() <= maximum.ordinal() ? this : maximum;
     }
 
+    public boolean appearsInJournal() {
+        return this != HIDDEN;
+    }
+
+    public boolean appearsInTree() {
+        return this != HIDDEN;
+    }
+
+    public boolean revealsName() {
+        return ordinal() >= NAME.ordinal();
+    }
+
+    public boolean revealsIdentity() {
+        return ordinal() >= PREVIEW.ordinal();
+    }
+
+    public boolean revealsIcon() {
+        return revealsIdentity();
+    }
+
+    public boolean revealsResearchSummary() {
+        return ordinal() >= PREVIEW.ordinal();
+    }
+
+    public boolean revealsExactPolicy() {
+        return this == FULL;
+    }
+
+    public boolean allowsServerSelection() {
+        return revealsIdentity();
+    }
+
     private static DataResult<JournalVisibility> parse(String value) {
         if (value != null) {
             try {

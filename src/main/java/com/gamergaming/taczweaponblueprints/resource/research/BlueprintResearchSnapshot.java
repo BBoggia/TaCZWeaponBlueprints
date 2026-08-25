@@ -22,35 +22,54 @@ public final class BlueprintResearchSnapshot {
     public static final int MAX_EXPANDED_TAG_BINDINGS = 262_144;
     public static final int MAX_TOTAL_INGREDIENT_TERMS = 65_536;
     public static final int MAX_TOTAL_PREREQUISITES = 65_536;
+    public static final int MAX_TOTAL_GROUP_MEMBERS = 65_536;
     public static final BlueprintResearchSnapshot EMPTY = new BlueprintResearchSnapshot(
-            Map.of(), Map.of(), Map.of(), Map.of());
+            Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of());
 
     private final Map<ResourceLocation, BlueprintLootTag> tags;
     private final Map<ResourceLocation, BlueprintResearchProfile> profiles;
     private final Map<ResourceLocation, BlueprintResearchRule> rules;
+    private final Map<ResourceLocation, ResearchTreeGroupDefinition> groups;
     private final Map<ResourceLocation, List<RuleBinding>> rulesByProfile;
+    private final Map<ResourceLocation, List<GroupBinding>> groupsByProfile;
+    private final Map<ResourceLocation, Map<ResourceLocation, ResearchTreeGroupPlacement>> placementsByProfile;
 
     private BlueprintResearchSnapshot(
             Map<ResourceLocation, BlueprintLootTag> tags,
             Map<ResourceLocation, BlueprintResearchProfile> profiles,
             Map<ResourceLocation, BlueprintResearchRule> rules,
-            Map<ResourceLocation, List<RuleBinding>> rulesByProfile) {
+            Map<ResourceLocation, ResearchTreeGroupDefinition> groups,
+            Map<ResourceLocation, List<RuleBinding>> rulesByProfile,
+            Map<ResourceLocation, List<GroupBinding>> groupsByProfile,
+            Map<ResourceLocation, Map<ResourceLocation, ResearchTreeGroupPlacement>> placementsByProfile) {
         this.tags = immutableMap(tags);
         this.profiles = immutableMap(profiles);
         this.rules = immutableMap(rules);
+        this.groups = immutableMap(groups);
         this.rulesByProfile = immutableRuleMap(rulesByProfile);
+        this.groupsByProfile = immutableGroupMap(groupsByProfile);
+        this.placementsByProfile = immutablePlacementMap(placementsByProfile);
     }
 
     public static BlueprintResearchSnapshot create(
             Map<ResourceLocation, BlueprintLootTag> tags,
             Map<ResourceLocation, BlueprintResearchProfile> profiles,
             Map<ResourceLocation, BlueprintResearchRule> rules) {
+        return create(tags, profiles, rules, Map.of());
+    }
+
+    public static BlueprintResearchSnapshot create(
+            Map<ResourceLocation, BlueprintLootTag> tags,
+            Map<ResourceLocation, BlueprintResearchProfile> profiles,
+            Map<ResourceLocation, BlueprintResearchRule> rules,
+            Map<ResourceLocation, ResearchTreeGroupDefinition> groups) {
         Map<ResourceLocation, BlueprintLootTag> sortedTags = sortedCopy(tags);
         Map<ResourceLocation, BlueprintResearchProfile> sortedProfiles = sortedCopy(profiles);
         Map<ResourceLocation, BlueprintResearchRule> sortedRules = sortedCopy(rules);
-        validateDefinitionCounts(sortedTags, sortedProfiles, sortedRules);
-        validateDefinitionIds(sortedTags, sortedProfiles, sortedRules);
-        validateDefinitions(sortedTags, sortedProfiles, sortedRules);
+        Map<ResourceLocation, ResearchTreeGroupDefinition> sortedGroups = sortedCopy(groups);
+        validateDefinitionCounts(sortedTags, sortedProfiles, sortedRules, sortedGroups);
+        validateDefinitionIds(sortedTags, sortedProfiles, sortedRules, sortedGroups);
+        validateDefinitions(sortedTags, sortedProfiles, sortedRules, sortedGroups);
         sortedProfiles.values().forEach(profile -> {
             profile.researchCost().validateForSnapshot();
             BlueprintResearchPolicyDefinition.fromProfile(profile);
@@ -83,9 +102,17 @@ public final class BlueprintResearchSnapshot {
         }
         byProfile.values().forEach(bindings ->
                 bindings.sort(Comparator.comparing(binding -> binding.ruleId().toString())));
-        validateAggregateLimits(sortedTags, sortedProfiles, sortedRules);
+        validateAggregateLimits(sortedTags, sortedProfiles, sortedRules, sortedGroups);
         validatePrerequisites(sortedProfiles, byProfile);
-        return new BlueprintResearchSnapshot(sortedTags, sortedProfiles, sortedRules, byProfile);
+        GroupIndex groupIndex = compileGroups(sortedProfiles, sortedGroups, byProfile);
+        return new BlueprintResearchSnapshot(
+                sortedTags,
+                sortedProfiles,
+                sortedRules,
+                sortedGroups,
+                byProfile,
+                groupIndex.groupsByProfile(),
+                groupIndex.placementsByProfile());
     }
 
     public Map<ResourceLocation, BlueprintLootTag> tags() {
@@ -100,6 +127,10 @@ public final class BlueprintResearchSnapshot {
         return rules;
     }
 
+    public Map<ResourceLocation, ResearchTreeGroupDefinition> groups() {
+        return groups;
+    }
+
     public Map<ResourceLocation, List<RuleBinding>> rulesByProfile() {
         return rulesByProfile;
     }
@@ -108,10 +139,29 @@ public final class BlueprintResearchSnapshot {
         return rulesByProfile.getOrDefault(profileId, List.of());
     }
 
-    private static void validateDefinitionCounts(Map<?, ?> tags, Map<?, ?> profiles, Map<?, ?> rules) {
+    public List<GroupBinding> groupsForProfile(ResourceLocation profileId) {
+        return groupsByProfile.getOrDefault(profileId, List.of());
+    }
+
+    public java.util.Optional<ResearchTreeGroupPlacement> placementFor(
+            ResourceLocation profileId,
+            ResourceLocation blueprintId) {
+        if (profileId == null || blueprintId == null) {
+            return java.util.Optional.empty();
+        }
+        return java.util.Optional.ofNullable(
+                placementsByProfile.getOrDefault(profileId, Map.of()).get(blueprintId));
+    }
+
+    private static void validateDefinitionCounts(
+            Map<?, ?> tags,
+            Map<?, ?> profiles,
+            Map<?, ?> rules,
+            Map<?, ?> groups) {
         if (tags.size() > MAX_DEFINITIONS_PER_TYPE
                 || profiles.size() > MAX_DEFINITIONS_PER_TYPE
-                || rules.size() > MAX_DEFINITIONS_PER_TYPE) {
+                || rules.size() > MAX_DEFINITIONS_PER_TYPE
+                || groups.size() > MAX_DEFINITIONS_PER_TYPE) {
             throw new IllegalArgumentException(
                     "research data cannot contain more than " + MAX_DEFINITIONS_PER_TYPE
                             + " definitions of one type");
@@ -121,7 +171,8 @@ public final class BlueprintResearchSnapshot {
     private static void validateAggregateLimits(
             Map<ResourceLocation, BlueprintLootTag> tags,
             Map<ResourceLocation, BlueprintResearchProfile> profiles,
-            Map<ResourceLocation, BlueprintResearchRule> rules) {
+            Map<ResourceLocation, BlueprintResearchRule> rules,
+            Map<ResourceLocation, ResearchTreeGroupDefinition> groups) {
         long tagValues = tags.values().stream().mapToLong(tag -> tag.values().size()).sum();
         if (tagValues > MAX_TOTAL_TAG_VALUES) {
             throw new IllegalArgumentException(
@@ -167,6 +218,14 @@ public final class BlueprintResearchSnapshot {
                     "research data cannot contain more than " + MAX_TOTAL_INGREDIENT_TERMS
                             + " total ingredient terms");
         }
+        long groupMembers = groups.values().stream()
+                .mapToLong(ResearchTreeGroupDefinition::memberCount)
+                .sum();
+        if (groupMembers > MAX_TOTAL_GROUP_MEMBERS) {
+            throw new IllegalArgumentException(
+                    "research-tree groups cannot contain more than " + MAX_TOTAL_GROUP_MEMBERS
+                            + " total members");
+        }
     }
 
     private static long ingredientTermCount(BlueprintResearchCost cost) {
@@ -178,7 +237,8 @@ public final class BlueprintResearchSnapshot {
     private static void validateDefinitions(
             Map<ResourceLocation, BlueprintLootTag> tags,
             Map<ResourceLocation, BlueprintResearchProfile> profiles,
-            Map<ResourceLocation, BlueprintResearchRule> rules) {
+            Map<ResourceLocation, BlueprintResearchRule> rules,
+            Map<ResourceLocation, ResearchTreeGroupDefinition> groups) {
         for (Map.Entry<ResourceLocation, BlueprintLootTag> entry : tags.entrySet()) {
             BlueprintLootTag tag = entry.getValue();
             if (tag == null
@@ -198,6 +258,9 @@ public final class BlueprintResearchSnapshot {
         if (rules.values().stream().anyMatch(java.util.Objects::isNull)) {
             throw new IllegalArgumentException("research rule definitions cannot be null");
         }
+        if (groups.values().stream().anyMatch(java.util.Objects::isNull)) {
+            throw new IllegalArgumentException("research-tree group definitions cannot be null");
+        }
     }
 
     @SafeVarargs
@@ -214,30 +277,109 @@ public final class BlueprintResearchSnapshot {
             Map<ResourceLocation, BlueprintResearchProfile> profiles,
             Map<ResourceLocation, List<RuleBinding>> byProfile) {
         for (ResourceLocation profileId : profiles.keySet()) {
-            Map<ResourceLocation, List<ResourceLocation>> graph = new LinkedHashMap<>();
-            Map<ResourceLocation, List<RuleBinding>> exactRules = new LinkedHashMap<>();
-            for (RuleBinding binding : byProfile.getOrDefault(profileId, List.of())) {
-                for (ResourceLocation targetId : binding.rule().target().blueprints()) {
-                    exactRules.computeIfAbsent(targetId, ignored -> new ArrayList<>()).add(binding);
-                }
-            }
-
-            for (Map.Entry<ResourceLocation, List<RuleBinding>> entry : exactRules.entrySet()) {
-                RuleBinding selected = selectExact(entry.getValue());
-                List<ResourceLocation> prerequisites = selected.rule().prerequisites().orElse(List.of());
-                if (prerequisites.contains(entry.getKey())) {
-                    throw new IllegalArgumentException(
-                            "research prerequisite self-reference for " + entry.getKey()
-                                    + " in rule " + selected.ruleId());
-                }
-                graph.put(entry.getKey(), prerequisites);
-            }
+            Map<ResourceLocation, List<ResourceLocation>> graph = prerequisiteGraphForProfile(
+                    profileId,
+                    byProfile);
 
             Set<ResourceLocation> complete = new LinkedHashSet<>();
             for (ResourceLocation blueprintId : graph.keySet()) {
                 visitPrerequisite(blueprintId, graph, complete, new LinkedHashSet<>());
             }
         }
+    }
+
+    private static Map<ResourceLocation, List<ResourceLocation>> prerequisiteGraphForProfile(
+            ResourceLocation profileId,
+            Map<ResourceLocation, List<RuleBinding>> byProfile) {
+        Map<ResourceLocation, List<RuleBinding>> exactRules = new LinkedHashMap<>();
+        for (RuleBinding binding : byProfile.getOrDefault(profileId, List.of())) {
+            for (ResourceLocation targetId : binding.rule().target().blueprints()) {
+                exactRules.computeIfAbsent(targetId, ignored -> new ArrayList<>()).add(binding);
+            }
+        }
+
+        Map<ResourceLocation, List<ResourceLocation>> graph = new LinkedHashMap<>();
+        for (Map.Entry<ResourceLocation, List<RuleBinding>> entry : exactRules.entrySet()) {
+            RuleBinding selected = selectExact(entry.getValue());
+            List<ResourceLocation> prerequisites = selected.rule().prerequisites().orElse(List.of());
+            if (prerequisites.contains(entry.getKey())) {
+                throw new IllegalArgumentException(
+                        "research prerequisite self-reference for " + entry.getKey()
+                                + " in rule " + selected.ruleId());
+            }
+            graph.put(entry.getKey(), prerequisites);
+        }
+        return graph;
+    }
+
+    private static GroupIndex compileGroups(
+            Map<ResourceLocation, BlueprintResearchProfile> profiles,
+            Map<ResourceLocation, ResearchTreeGroupDefinition> groups,
+            Map<ResourceLocation, List<RuleBinding>> rulesByProfile) {
+        Map<ResourceLocation, List<GroupBinding>> byProfile = new LinkedHashMap<>();
+        Map<ResourceLocation, Map<ResourceLocation, ResearchTreeGroupPlacement>> placements =
+                new LinkedHashMap<>();
+        Map<ResourceLocation, Map<ResourceLocation, ResourceLocation>> owners = new LinkedHashMap<>();
+
+        for (Map.Entry<ResourceLocation, ResearchTreeGroupDefinition> entry : groups.entrySet()) {
+            ResourceLocation groupId = entry.getKey();
+            ResearchTreeGroupDefinition definition = entry.getValue();
+            definition.validateForSnapshot();
+            if (!profiles.containsKey(definition.profile())) {
+                throw new IllegalArgumentException(
+                        "research-tree group " + groupId + " references missing profile "
+                                + definition.profile());
+            }
+            byProfile.computeIfAbsent(definition.profile(), ignored -> new ArrayList<>())
+                    .add(new GroupBinding(groupId, definition));
+            Map<ResourceLocation, ResearchTreeGroupPlacement> profilePlacements =
+                    placements.computeIfAbsent(definition.profile(), ignored -> new LinkedHashMap<>());
+            Map<ResourceLocation, ResourceLocation> profileOwners =
+                    owners.computeIfAbsent(definition.profile(), ignored -> new LinkedHashMap<>());
+            for (int rank = 0; rank < definition.ranks().size(); rank++) {
+                List<ResourceLocation> members = definition.ranks().get(rank);
+                for (int order = 0; order < members.size(); order++) {
+                    ResourceLocation member = members.get(order);
+                    ResourceLocation previous = profileOwners.putIfAbsent(member, groupId);
+                    if (previous != null) {
+                        throw new IllegalArgumentException(
+                                "blueprint " + member + " belongs to multiple research-tree groups "
+                                        + previous + " and " + groupId + " for profile "
+                                        + definition.profile());
+                    }
+                    profilePlacements.put(
+                            member,
+                            new ResearchTreeGroupPlacement(groupId, rank, order));
+                }
+            }
+        }
+
+        byProfile.values().forEach(bindings -> bindings.sort(Comparator
+                .comparingInt((GroupBinding binding) -> binding.definition().order())
+                .thenComparing(binding -> binding.groupId().toString())));
+
+        for (Map.Entry<ResourceLocation, Map<ResourceLocation, ResearchTreeGroupPlacement>> profileEntry
+                : placements.entrySet()) {
+            ResourceLocation profileId = profileEntry.getKey();
+            Map<ResourceLocation, ResearchTreeGroupPlacement> profilePlacements = profileEntry.getValue();
+            Map<ResourceLocation, List<ResourceLocation>> graph = prerequisiteGraphForProfile(
+                    profileId,
+                    rulesByProfile);
+            for (Map.Entry<ResourceLocation, ResearchTreeGroupPlacement> placementEntry
+                    : profilePlacements.entrySet()) {
+                ResourceLocation dependentId = placementEntry.getKey();
+                ResearchTreeGroupPlacement dependent = placementEntry.getValue();
+                for (ResourceLocation prerequisiteId : graph.getOrDefault(dependentId, List.of())) {
+                    ResearchTreeGroupPlacement prerequisite = profilePlacements.get(prerequisiteId);
+                    if (prerequisite != null && prerequisite.rank() >= dependent.rank()) {
+                        throw new IllegalArgumentException(
+                                "research-tree group rank for " + dependentId + " must be above prerequisite "
+                                        + prerequisiteId + " in profile " + profileId);
+                    }
+                }
+            }
+        }
+        return new GroupIndex(byProfile, placements);
     }
 
     private static RuleBinding selectExact(List<RuleBinding> bindings) {
@@ -309,11 +451,49 @@ public final class BlueprintResearchSnapshot {
         return Collections.unmodifiableMap(immutable);
     }
 
+    private static Map<ResourceLocation, List<GroupBinding>> immutableGroupMap(
+            Map<ResourceLocation, List<GroupBinding>> values) {
+        if (values == null || values.isEmpty()) {
+            return Map.of();
+        }
+        Map<ResourceLocation, List<GroupBinding>> immutable = new LinkedHashMap<>();
+        values.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey(Comparator.comparing(ResourceLocation::toString)))
+                .forEach(entry -> immutable.put(entry.getKey(), List.copyOf(entry.getValue())));
+        return Collections.unmodifiableMap(immutable);
+    }
+
+    private static Map<ResourceLocation, Map<ResourceLocation, ResearchTreeGroupPlacement>> immutablePlacementMap(
+            Map<ResourceLocation, Map<ResourceLocation, ResearchTreeGroupPlacement>> values) {
+        if (values == null || values.isEmpty()) {
+            return Map.of();
+        }
+        Map<ResourceLocation, Map<ResourceLocation, ResearchTreeGroupPlacement>> immutable =
+                new LinkedHashMap<>();
+        values.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey(Comparator.comparing(ResourceLocation::toString)))
+                .forEach(entry -> immutable.put(entry.getKey(), immutableMap(entry.getValue())));
+        return Collections.unmodifiableMap(immutable);
+    }
+
     public record RuleBinding(ResourceLocation ruleId, BlueprintResearchRule rule) {
         public RuleBinding {
             if (ruleId == null || rule == null) {
                 throw new IllegalArgumentException("rule binding values cannot be null");
             }
         }
+    }
+
+    public record GroupBinding(ResourceLocation groupId, ResearchTreeGroupDefinition definition) {
+        public GroupBinding {
+            if (groupId == null || definition == null) {
+                throw new IllegalArgumentException("research-tree group binding values cannot be null");
+            }
+        }
+    }
+
+    private record GroupIndex(
+            Map<ResourceLocation, List<GroupBinding>> groupsByProfile,
+            Map<ResourceLocation, Map<ResourceLocation, ResearchTreeGroupPlacement>> placementsByProfile) {
     }
 }

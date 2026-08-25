@@ -2,6 +2,70 @@
 
 ## Unreleased
 
+## 1.2.0 - 2026-08-25
+
+### Added
+
+- Synchronized each disclosure-safe research graph together with its matching
+  branch titles, kinds, icons, ranks, sibling order, and complete membership.
+- Added lazy client-side Branches and All Weapons projections, disclosure-safe
+  cross-group link metadata, and deterministic branch navigation.
+- Added a bounded fullscreen Weapon Trees sidebar, clickable cross-branch
+  requirement/unlock portals, pinned contextual details, and independent
+  camera restoration for All Weapons and every branch.
+- Added adversarial coverage for 4,096-node mixed-disclosure publications,
+  maximum fallback/grouped atlases, content-pack fallback churn, profile group
+  reloads, and disconnect cleanup.
+
+### Changed
+
+- Advanced the network protocol to `15`; research graph and presentation chunks
+  now validate and publish atomically under one generation, and Research Bench
+  previews contain only the active inventory-backed workflow.
+- Made Branches the default Research Bench view and added global search-aware
+  view/group controls; selecting a group filters Branches but only focuses its
+  region in All Weapons.
+- Reoriented progression bottom-to-top and replaced category lanes with
+  authored, horizontally clustered group regions in All Weapons.
+- Rebalanced the complete 54-weapon TaCZ 1.1.8 default progression into seven
+  independent role-aware branches, with weaker entries at the bottom and
+  stronger weapons at the top.
+- Hardened release certification to require JDK 17 and verify the packaged
+  grouped-tree runtime classes, 32 default rules, and seven presentation groups.
+- Updated the packaged mod description to explain the Research Bench,
+  inventory-backed research, recycling, and datapack customization.
+
+### Fixed
+
+- Stopped hidden prerequisites from contributing published counts, anonymous
+  anchors, layout tiers, or tooltips; public counts now exactly match public
+  prerequisite edges.
+- Normalized authored, fallback, and Undisclosed ranks against the complete
+  public graph and reject publications whose ranks contradict an edge.
+- Bounded research-definition JSON before parsing, bounded group rank/member
+  decoding while streaming the list, and reject synchronization totals as soon
+  as accumulated chunks exceed their declaration.
+- Prevented stale completed sync halves from regressing the client publication,
+  and made point-only updates reuse a newer completed pending tree without
+  discarding future generations.
+- Rejected stale, conflicting, completed-duplicate, and cumulatively oversized
+  player-progression chunks, and cleared partial progression state on logout.
+- Cleared cached per-player tree publications when a server stops, preventing
+  integrated-server sessions from retaining obsolete server-owned state.
+- Removed the retired Prepare/Fill actions, menu mode, hidden ingredient/result
+  slots, preview fields, and fill planner; research now has one inventory-backed
+  transaction path from UI through server authority.
+
+### Compatibility
+
+- Existing learned and discovered blueprint IDs, Research Points, datapack
+  formats, and loot configuration remain compatible without a world migration.
+- Protocol `15` requires matching `1.2.0` clients and servers for the new
+  disclosure-safe grouped-tree publication.
+- Development and release verification remain pinned to TaCZ `1.1.8-hotfix`.
+
+## 1.1.0 - 2026-08-25
+
 ### Added
 
 - Blueprint Journal discovery, completion, filtering, and disclosure-aware policy presentation.
@@ -13,7 +77,35 @@
 
 ### Changed
 
-- Advanced the network protocol to `6` for bounded Research Bench actions and exact open-menu previews.
+- Replaced the original list-style Research Bench browser with a pannable,
+  zoomable, searchable, keyboard-navigable research tree with responsive
+  translucent fullscreen overlay, contextual node details, category focus,
+  first-visit guidance, automatic inventory-backed research, and recycling.
+- Advanced the network protocol to `13` for bounded Research Bench actions,
+  atomic tree publication, per-player node state, and exact open-menu previews.
+- Made all five undiscovered-visibility ceilings distinct in the Journal and
+  Research Bench: hidden, anonymous silhouette, name-only, limited preview,
+  and complete policy detail.
+- Changed the packaged exact-tree rules to request full disclosure so the
+  server visibility ceiling can select any of the five presentation tiers.
+- Added a repeatable runtime-log gate and machine-readable release-candidate
+  report containing dependency versions, test totals, artifact size, and SHA-256.
+
+### Fixed
+
+- Removed the manual Prepare/Fill step, made research consume exact materials
+  directly from the player's inventory, and made Fit show the complete tree.
+- Forced a complete tree publication when recycling also migrates legacy unlocks.
+- Limited root, leaf, component, and independent-node diagnostics to the visible
+  graph and delayed audit logging until the TaCZ catalog is initialized.
+- Rejected stale or conflicting Journal chunks with the same fail-closed rules
+  used by research-tree synchronization.
+- Spatially indexed prerequisite edges so large authored graphs do not scan every
+  edge on every rendered frame.
+- Replaced real IDs on silhouette and name-only tree nodes with validated opaque
+  publication keys and blocked server selection below preview visibility.
+- Prevented release certification from accepting an older changelog version or
+  nonempty Unreleased section.
 
 ### Compatibility
 

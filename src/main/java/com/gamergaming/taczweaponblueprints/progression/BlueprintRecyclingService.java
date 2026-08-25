@@ -44,11 +44,44 @@ public final class BlueprintRecyclingService {
                 input,
                 playerData,
                 id -> BlueprintResearchDataManager.INSTANCE.policyFor(id, playerData));
-        if (result.successful() || migrated > 0) {
-            // One progression publication also refreshes the disclosure-filtered Journal.
-            NetworkHandler.syncPlayerProgressionData(player);
+        switch (requiredSync(result, migrated)) {
+            case FULL -> NetworkHandler.syncPlayerProgressionData(player);
+            case POINTS -> NetworkHandler.syncPlayerPointBalance(player);
+            case NONE -> {
+            }
         }
         return result;
+    }
+
+    static SyncKind requiredSync(Result result, int migrated) {
+        if (migrated > 0) {
+            // Migration changes learned nodes and prerequisite availability, so a
+            // point-only publication cannot safely reuse the previous tree.
+            return SyncKind.FULL;
+        }
+        return result != null && result.successful() ? SyncKind.POINTS : SyncKind.NONE;
+    }
+
+    /**
+     * Resolves the same live policy used by {@link #recycle(ServerPlayer, ItemStack)}
+     * without changing the item stack or player progression. This is the only
+     * source of truth for the Research Bench's recycling preview.
+     */
+    public static Evaluation evaluate(ServerPlayer player, ItemStack input) {
+        Optional<ResourceLocation> inputId = BlueprintItem.getBlueprintId(input);
+        if (player == null || !player.isAlive() || inputId.isEmpty()) {
+            return Evaluation.failure(Status.INVALID_INPUT, inputId, 0, 0, 0);
+        }
+        Optional<IPlayerRecipeData> resolvedData =
+                player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve();
+        if (resolvedData.isEmpty()) {
+            return Evaluation.failure(Status.PLAYER_DATA_UNAVAILABLE, inputId, 0, 0, 0);
+        }
+        IPlayerRecipeData playerData = resolvedData.orElseThrow();
+        return evaluate(
+                stackInput(input),
+                playerData,
+                id -> BlueprintResearchDataManager.INSTANCE.policyFor(id, playerData));
     }
 
     static Result recycle(
@@ -62,74 +95,103 @@ public final class BlueprintRecyclingService {
             RecyclingInput input,
             IPlayerRecipeData playerData,
             Function<ResourceLocation, BlueprintResearchPolicy> policyResolver) {
+        Evaluation evaluation = evaluate(input, playerData, policyResolver);
+        if (!evaluation.successful()) {
+            return Result.failure(
+                    evaluation.status(), evaluation.blueprintId(), evaluation.currentBalance());
+        }
+        if (!playerData.addResearchPoints(evaluation.pointValue(), evaluation.pointCap())) {
+            return Result.failure(
+                    Status.POINT_CAP_REACHED,
+                    evaluation.blueprintId(),
+                    playerData.getResearchPoints());
+        }
+        input.consumeOne();
+        return new Result(
+                Status.SUCCESS,
+                evaluation.blueprintId(),
+                evaluation.pointValue(),
+                playerData.getResearchPoints());
+    }
+
+    static Evaluation evaluate(
+            RecyclingInput input,
+            IPlayerRecipeData playerData,
+            Function<ResourceLocation, BlueprintResearchPolicy> policyResolver) {
         Optional<ResourceLocation> inputId = input == null ? Optional.empty() : input.blueprintId();
         if (inputId == null || inputId.isEmpty() || input.count() <= 0) {
-            return Result.failure(
+            return Evaluation.failure(
                     Status.INVALID_INPUT,
                     Optional.empty(),
-                    playerData == null ? 0 : playerData.getResearchPoints());
+                    0,
+                    playerData == null ? 0 : playerData.getResearchPoints(),
+                    0);
         }
         if (playerData == null) {
-            return Result.failure(Status.PLAYER_DATA_UNAVAILABLE, inputId, 0);
+            return Evaluation.failure(Status.PLAYER_DATA_UNAVAILABLE, inputId, 0, 0, 0);
         }
         if (policyResolver == null) {
-            return Result.failure(Status.POLICY_UNAVAILABLE, inputId, playerData.getResearchPoints());
+            return Evaluation.failure(
+                    Status.POLICY_UNAVAILABLE, inputId, 0, playerData.getResearchPoints(), 0);
         }
 
         BlueprintResearchPolicy policy;
         try {
             policy = policyResolver.apply(inputId.orElseThrow());
         } catch (RuntimeException exception) {
-            return Result.failure(Status.POLICY_UNAVAILABLE, inputId, playerData.getResearchPoints());
+            return Evaluation.failure(
+                    Status.POLICY_UNAVAILABLE, inputId, 0, playerData.getResearchPoints(), 0);
         }
-        return commit(input, inputId.orElseThrow(), playerData, policy);
+        return evaluatePolicy(inputId.orElseThrow(), playerData, policy);
     }
 
-    private static Result commit(
-            RecyclingInput input,
+    private static Evaluation evaluatePolicy(
             ResourceLocation inputId,
             IPlayerRecipeData playerData,
             BlueprintResearchPolicy policy) {
         int currentPoints = playerData.getResearchPoints();
         if (policy == null) {
-            return Result.failure(Status.POLICY_UNAVAILABLE, Optional.of(inputId), currentPoints);
+            return Evaluation.failure(
+                    Status.POLICY_UNAVAILABLE, Optional.of(inputId), 0, currentPoints, 0);
         }
+        int value = Math.max(0, policy.recyclingValue());
+        int pointCap = policy.pointCap();
         if (!inputId.equals(policy.blueprintId())) {
-            return Result.failure(Status.POLICY_MISMATCH, Optional.of(inputId), currentPoints);
+            return Evaluation.failure(
+                    Status.POLICY_MISMATCH, Optional.of(inputId), value, currentPoints, pointCap);
         }
         if (!policy.playerDataAvailable() || policy.researchPoints() != currentPoints) {
-            return Result.failure(Status.STALE_POLICY, Optional.of(inputId), currentPoints);
+            return Evaluation.failure(
+                    Status.STALE_POLICY, Optional.of(inputId), value, currentPoints, pointCap);
         }
         if (!policy.available()) {
-            return Result.failure(Status.CONTENT_UNAVAILABLE, Optional.of(inputId), currentPoints);
+            return Evaluation.failure(
+                    Status.CONTENT_UNAVAILABLE, Optional.of(inputId), value, currentPoints, pointCap);
         }
         if (policy.blocked()) {
-            return Result.failure(Status.BLOCKED, Optional.of(inputId), currentPoints);
+            return Evaluation.failure(Status.BLOCKED, Optional.of(inputId), value, currentPoints, pointCap);
         }
         if (!policy.recyclingEnabled()) {
-            return Result.failure(Status.RECYCLING_DISABLED, Optional.of(inputId), currentPoints);
+            return Evaluation.failure(
+                    Status.RECYCLING_DISABLED, Optional.of(inputId), value, currentPoints, pointCap);
         }
         if (policy.recyclingValue() <= 0) {
-            return Result.failure(Status.NO_VALUE, Optional.of(inputId), currentPoints);
+            return Evaluation.failure(Status.NO_VALUE, Optional.of(inputId), 0, currentPoints, pointCap);
         }
         if (!policy.learned() && !policy.allowUnlearnedRecycling()) {
-            return Result.failure(Status.DUPLICATE_REQUIRED, Optional.of(inputId), currentPoints);
+            return Evaluation.failure(
+                    Status.DUPLICATE_REQUIRED, Optional.of(inputId), value, currentPoints, pointCap);
         }
-        int value = policy.recyclingValue();
         if (value > policy.pointCap() || currentPoints > policy.pointCap() - value) {
-            return Result.failure(Status.POINT_CAP_REACHED, Optional.of(inputId), currentPoints);
+            return Evaluation.failure(
+                    Status.POINT_CAP_REACHED, Optional.of(inputId), value, currentPoints, pointCap);
         }
         if (!policy.recyclable()) {
-            return Result.failure(Status.POLICY_INELIGIBLE, Optional.of(inputId), currentPoints);
+            return Evaluation.failure(
+                    Status.POLICY_INELIGIBLE, Optional.of(inputId), value, currentPoints, pointCap);
         }
-
-        // No fallible item operation remains after this validated point credit.
-        // The real input stack is always consumed, including for Creative players.
-        if (!playerData.addResearchPoints(value, policy.pointCap())) {
-            return Result.failure(Status.POINT_CAP_REACHED, Optional.of(inputId), currentPoints);
-        }
-        input.consumeOne();
-        return new Result(Status.SUCCESS, Optional.of(inputId), value, playerData.getResearchPoints());
+        return new Evaluation(
+                Status.SUCCESS, Optional.of(inputId), value, currentPoints, pointCap);
     }
 
     private static RecyclingInput stackInput(ItemStack stack) {
@@ -159,6 +221,12 @@ public final class BlueprintRecyclingService {
         int count();
 
         void consumeOne();
+    }
+
+    enum SyncKind {
+        NONE,
+        POINTS,
+        FULL
     }
 
     public enum Status {
@@ -216,6 +284,54 @@ public final class BlueprintRecyclingService {
                     0,
                     Math.min(PlayerProgressionLimits.MAX_RESEARCH_POINTS, currentBalance));
             return new Result(status, blueprintId, 0, boundedBalance);
+        }
+    }
+
+    /** Immutable, non-mutating recycling decision suitable for server-authored UI. */
+    public record Evaluation(
+            Status status,
+            Optional<ResourceLocation> blueprintId,
+            int pointValue,
+            int currentBalance,
+            int pointCap) {
+        public Evaluation {
+            blueprintId = blueprintId == null ? Optional.empty() : blueprintId;
+            if (status == null
+                    || pointValue < 0
+                    || pointValue > PlayerProgressionLimits.MAX_RESEARCH_POINTS
+                    || currentBalance < 0
+                    || currentBalance > PlayerProgressionLimits.MAX_RESEARCH_POINTS
+                    || pointCap < 0
+                    || pointCap > PlayerProgressionLimits.MAX_RESEARCH_POINTS) {
+                throw new IllegalArgumentException("invalid recycling evaluation");
+            }
+            if (blueprintId.filter(id -> id.toString().length()
+                    > PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH).isPresent()) {
+                throw new IllegalArgumentException("recycling evaluation blueprint ID is oversized");
+            }
+            if (status == Status.SUCCESS
+                    && (blueprintId.isEmpty() || pointValue <= 0
+                    || pointValue > pointCap - Math.min(currentBalance, pointCap))) {
+                throw new IllegalArgumentException("successful recycling evaluation is not affordable");
+            }
+        }
+
+        public boolean successful() {
+            return status == Status.SUCCESS;
+        }
+
+        private static Evaluation failure(
+                Status status,
+                Optional<ResourceLocation> blueprintId,
+                int pointValue,
+                int currentBalance,
+                int pointCap) {
+            return new Evaluation(
+                    status,
+                    blueprintId,
+                    Math.max(0, Math.min(PlayerProgressionLimits.MAX_RESEARCH_POINTS, pointValue)),
+                    Math.max(0, Math.min(PlayerProgressionLimits.MAX_RESEARCH_POINTS, currentBalance)),
+                    Math.max(0, Math.min(PlayerProgressionLimits.MAX_RESEARCH_POINTS, pointCap)));
         }
     }
 }

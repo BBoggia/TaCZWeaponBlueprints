@@ -1,0 +1,14 @@
+{
+  "format": 1,
+  "profile": "taczweaponblueprints:duplicate_recovery",
+  "title": "Machine Guns",
+  "translation_key": "gui.taczweaponblueprints.research_group.machine_guns",
+  "icon": "tacz:rpk",
+  "order": 60,
+  "ranks": [
+    ["tacz:rpk"],
+    ["tacz:m249"],
+    ["tacz:fn_evolys"],
+    ["tacz:minigun"]
+  ]
+}

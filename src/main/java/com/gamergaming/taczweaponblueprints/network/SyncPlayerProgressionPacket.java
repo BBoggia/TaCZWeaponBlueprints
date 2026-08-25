@@ -147,6 +147,11 @@ public final class SyncPlayerProgressionPacket {
         ctx.get().setPacketHandled(true);
     }
 
+    /** Drops any partial or completed snapshot retained from the previous connection. */
+    public static void clearClientState() {
+        CLIENT_ACCUMULATOR.clear();
+    }
+
     int estimatedPayloadBytes() {
         int size = 8
                 + BlueprintSyncLimits.varIntBytes(chunkIndex)
@@ -268,26 +273,51 @@ public final class SyncPlayerProgressionPacket {
     }
 
     static final class ClientAccumulator {
-        private long syncId = Long.MIN_VALUE;
+        private boolean initialized;
+        private boolean completed;
+        private long syncId;
         private int expectedChunks;
         private int researchPoints;
-        private final Map<Integer, ProgressionChunk> chunks = new TreeMap<>();
+        private final Map<Integer, SyncPlayerProgressionPacket> chunks = new TreeMap<>();
 
         synchronized Optional<ProgressionSnapshot> accept(SyncPlayerProgressionPacket packet) {
-            if (syncId != packet.syncId) {
+            if (initialized && Long.compare(packet.syncId, syncId) < 0) {
+                return Optional.empty();
+            }
+            if (!initialized || syncId != packet.syncId) {
+                initialized = true;
+                completed = false;
                 syncId = packet.syncId;
                 expectedChunks = packet.chunkCount;
                 researchPoints = packet.researchPoints;
                 chunks.clear();
             }
+            if (completed) {
+                return Optional.empty();
+            }
             if (expectedChunks != packet.chunkCount || researchPoints != packet.researchPoints) {
                 throw new IllegalArgumentException("Inconsistent player progression synchronization chunks");
             }
 
-            ProgressionChunk chunk = new ProgressionChunk();
-            chunk.learned().addAll(packet.learnedBlueprints);
-            chunk.discovered().addAll(packet.discoveredBlueprints);
-            chunks.put(packet.chunkIndex, chunk);
+            SyncPlayerProgressionPacket existing = chunks.putIfAbsent(packet.chunkIndex, packet);
+            if (existing != null
+                    && (!existing.learnedBlueprints.equals(packet.learnedBlueprints)
+                    || !existing.discoveredBlueprints.equals(packet.discoveredBlueprints))) {
+                chunks.clear();
+                throw new IllegalArgumentException(
+                        "Conflicting duplicate player progression synchronization chunk");
+            }
+            long learnedEntryCount = chunks.values().stream()
+                    .mapToLong(chunk -> chunk.learnedBlueprints.size())
+                    .sum();
+            long discoveredEntryCount = chunks.values().stream()
+                    .mapToLong(chunk -> chunk.discoveredBlueprints.size())
+                    .sum();
+            if (learnedEntryCount > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION
+                    || discoveredEntryCount > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION) {
+                chunks.clear();
+                throw new IllegalArgumentException("Player progression synchronization exceeds the entry limit");
+            }
             if (chunks.size() != expectedChunks) {
                 return Optional.empty();
             }
@@ -295,21 +325,27 @@ public final class SyncPlayerProgressionPacket {
             Set<String> learned = new TreeSet<>();
             Set<String> discovered = new TreeSet<>();
             chunks.values().forEach(part -> {
-                learned.addAll(part.learned());
-                discovered.addAll(part.discovered());
+                learned.addAll(part.learnedBlueprints);
+                discovered.addAll(part.discoveredBlueprints);
             });
             chunks.clear();
-            if (learned.size() > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION
-                    || discovered.size() > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION) {
-                throw new IllegalArgumentException("Completed player progression exceeds the entry limit");
-            }
             if (!discovered.containsAll(learned)) {
                 throw new IllegalArgumentException("Completed player progression violates discovery invariants");
             }
+            completed = true;
             return Optional.of(new ProgressionSnapshot(
                     Collections.unmodifiableSet(learned),
                     Collections.unmodifiableSet(discovered),
                     researchPoints));
+        }
+
+        synchronized void clear() {
+            initialized = false;
+            completed = false;
+            syncId = 0L;
+            expectedChunks = 0;
+            researchPoints = 0;
+            chunks.clear();
         }
     }
 }

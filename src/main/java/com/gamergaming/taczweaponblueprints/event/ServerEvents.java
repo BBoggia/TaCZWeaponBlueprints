@@ -5,6 +5,7 @@ import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintLootDataManager;
 import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintLootSnapshot;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionSyncScheduler;
+import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraftforge.event.server.ServerStartingEvent;
@@ -55,5 +56,6 @@ public final class ServerEvents {
     @SubscribeEvent
     public static void onServerStopped(ServerStoppedEvent event) {
         BlueprintProgressionSyncScheduler.clearAll();
+        NetworkHandler.clearServerSyncState();
     }
 }

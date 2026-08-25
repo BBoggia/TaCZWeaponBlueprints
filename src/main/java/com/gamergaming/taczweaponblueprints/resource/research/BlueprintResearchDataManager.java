@@ -1,7 +1,7 @@
 package com.gamergaming.taczweaponblueprints.resource.research;
 
-import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.Reader;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -12,6 +12,9 @@ import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits
 import com.gamergaming.taczweaponblueprints.compat.fzzy_config.BlueprintConfig;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionConfigSnapshot;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeBuilder;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePublication;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintLootTag;
 import com.google.gson.JsonElement;
@@ -37,6 +40,8 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
     static final String TAG_DIRECTORY = "taczweaponblueprints/blueprint_tags";
     static final String PROFILE_DIRECTORY = "taczweaponblueprints/research_profiles";
     static final String RULE_DIRECTORY = "taczweaponblueprints/research_rules";
+    static final String GROUP_DIRECTORY = "taczweaponblueprints/research_tree_groups";
+    static final int MAX_DEFINITION_JSON_CHARACTERS = 2_000_000;
 
     private volatile Publication publication = new Publication(BlueprintResearchSnapshot.EMPTY, 0L);
 
@@ -60,9 +65,14 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
                 RULE_DIRECTORY,
                 BlueprintResearchRule.CODEC,
                 "research rule");
+        Map<ResourceLocation, ResearchTreeGroupDefinition> groups = loadDefinitions(
+                resourceManager,
+                GROUP_DIRECTORY,
+                ResearchTreeGroupDefinition.CODEC,
+                "research-tree group");
 
         try {
-            BlueprintResearchSnapshot snapshot = BlueprintResearchSnapshot.create(tags, profiles, rules);
+            BlueprintResearchSnapshot snapshot = BlueprintResearchSnapshot.create(tags, profiles, rules, groups);
             BlueprintResearchIngredientValidator.validateExactItems(
                     snapshot,
                     id -> ForgeRegistries.ITEMS.containsKey(id)
@@ -80,15 +90,17 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
         BlueprintResearchPolicyResolver.clearCache();
         BlueprintResearchDiagnostics.Summary summary = BlueprintResearchDiagnostics.summarize(prepared);
         TaCZWeaponBlueprints.LOGGER.info(
-                "Applied blueprint research snapshot revision {}: {} tags, {} profiles, and {} rules "
-                        + "({} exact, {} tag, and {} selector targets)",
+                "Applied blueprint research snapshot revision {}: {} tags, {} profiles, {} rules, and {} groups "
+                        + "({} exact, {} tag, and {} selector targets; {} authored group members)",
                 publication.revision(),
                 summary.tagCount(),
                 summary.profileCount(),
                 summary.ruleCount(),
+                summary.groupCount(),
                 summary.exactTargetCount(),
                 summary.tagTargetCount(),
-                summary.selectorTargetCount());
+                summary.selectorTargetCount(),
+                summary.groupMemberCount());
         ResourceLocation activeProfile = progressionConfig().activeProfileId();
         if (!prepared.profiles().containsKey(activeProfile)) {
             TaCZWeaponBlueprints.LOGGER.warn(
@@ -106,6 +118,62 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
                     "Blueprint research data references {} unresolved item tags; affected costs remain unavailable: {}",
                     unresolvedIngredientTags.size(),
                     unresolvedIngredientTags.stream().sorted().limit(12).toList());
+        }
+    }
+
+    /** Logs graph metrics only after the live TaCZ catalog has been initialized. */
+    public void logActiveProfileAudit() {
+        ResourceLocation activeProfile = progressionConfig().activeProfileId();
+        BlueprintResearchDiagnostics.Audit audit = BlueprintResearchDiagnostics.audit(
+                snapshot(),
+                BlueprintDataManager.SERVER.getBlueprintDataMap(),
+                activeProfile);
+        BlueprintResearchDiagnostics.GroupAudit groupAudit = BlueprintResearchDiagnostics.auditGroups(
+                snapshot(),
+                BlueprintDataManager.SERVER.getBlueprintDataMap(),
+                activeProfile);
+        if (audit.catalogSize() > 0) {
+            TaCZWeaponBlueprints.LOGGER.info(
+                    "Research graph audit for {}: {}/{} catalog entries assigned, {} tree-visible, {} roots, "
+                            + "{} leaves, {} components, and {} independent entries",
+                    activeProfile,
+                    audit.assignedBlueprintCount(),
+                    audit.catalogSize(),
+                    audit.treeVisibleBlueprintCount(),
+                    audit.rootCount(),
+                    audit.leafCount(),
+                    audit.componentCount(),
+                    audit.independentBlueprintIds().size());
+        }
+        if (audit.hasStructuralProblems()) {
+            TaCZWeaponBlueprints.LOGGER.warn(
+                    "Research graph audit found structural problems: empty tree={}, {} missing prerequisites {}, "
+                            + "{} visible targets with hidden prerequisite paths {}, and {} competing definitions {}",
+                    audit.emptyTree(),
+                    audit.missingPrerequisiteIds().size(),
+                    audit.missingPrerequisiteIds().stream().limit(12).toList(),
+                    audit.hiddenPrerequisiteTargetIds().size(),
+                    audit.hiddenPrerequisiteTargetIds().stream().limit(12).toList(),
+                    audit.competitions().size(),
+                    audit.competitions().stream().limit(12).toList());
+        }
+        if (groupAudit.catalogSize() > 0) {
+            TaCZWeaponBlueprints.LOGGER.info(
+                    "Research presentation audit for {}: {} authored groups, {}/{} live entries grouped, "
+                            + "{} fallback entries, and {} absent authored members",
+                    activeProfile,
+                    groupAudit.authoredGroupCount(),
+                    groupAudit.groupedCatalogCount(),
+                    groupAudit.catalogSize(),
+                    groupAudit.fallbackBlueprintIds().size(),
+                    groupAudit.missingMemberIds().size());
+        }
+        if (groupAudit.hasProblems()) {
+            TaCZWeaponBlueprints.LOGGER.warn(
+                    "Research presentation audit for {} references {} absent catalog members: {}",
+                    activeProfile,
+                    groupAudit.missingMemberIds().size(),
+                    groupAudit.missingMemberIds().stream().limit(12).toList());
         }
     }
 
@@ -136,6 +204,21 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
 
     public BlueprintProgressionConfigSnapshot progressionConfig() {
         return ModConfigs.BLUEPRINT.progressionSnapshot();
+    }
+
+    /** Builds the current disclosure-safe tree view for one player's progression. */
+    public ResearchTreeGraph treeFor(IPlayerRecipeData playerData) {
+        return treePublicationFor(playerData).graph();
+    }
+
+    /** Builds the graph and disclosure-safe presentation metadata as one value. */
+    public ResearchTreePublication treePublicationFor(IPlayerRecipeData playerData) {
+        return ResearchTreeBuilder.buildPublication(
+                BlueprintDataManager.SERVER.getBlueprintDataMap(),
+                snapshot(),
+                progressionConfig(),
+                playerData,
+                ModConfigs.BLUEPRINT::isItemBlacklisted);
     }
 
     private BlueprintResearchPolicy resolvePolicy(
@@ -197,8 +280,8 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
             Resource resource,
             Codec<T> codec,
             String typeName) {
-        try (BufferedReader reader = resource.openAsReader()) {
-            JsonElement json = JsonParser.parseReader(reader);
+        try (Reader reader = resource.openAsReader()) {
+            JsonElement json = parseBoundedJson(reader);
             DataResult<T> result = codec.parse(JsonOps.INSTANCE, json);
             return result.result().orElseThrow(() -> new IllegalStateException(
                     "Invalid blueprint " + typeName + " " + resourceId + " from pack "
@@ -212,6 +295,28 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
                     "Failed to read blueprint " + typeName + " " + resourceId
                             + " from pack " + resource.sourcePackId(),
                     exception);
+        }
+    }
+
+    static JsonElement parseBoundedJson(Reader reader) throws IOException {
+        if (reader == null) {
+            throw new IllegalArgumentException("blueprint definition reader cannot be null");
+        }
+        StringBuilder json = new StringBuilder(8_192);
+        char[] buffer = new char[8_192];
+        while (true) {
+            int remaining = MAX_DEFINITION_JSON_CHARACTERS - json.length();
+            int read = reader.read(buffer, 0, Math.min(buffer.length, remaining + 1));
+            if (read < 0) {
+                return JsonParser.parseString(json.toString());
+            }
+            if (read > remaining) {
+                throw new IllegalStateException(
+                        "Blueprint definition exceeds the "
+                                + MAX_DEFINITION_JSON_CHARACTERS
+                                + " character limit");
+            }
+            json.append(buffer, 0, read);
         }
     }
 

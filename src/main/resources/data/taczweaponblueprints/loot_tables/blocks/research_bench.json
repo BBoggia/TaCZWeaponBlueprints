@@ -11,6 +11,13 @@
       ],
       "conditions": [
         {
+          "condition": "minecraft:block_state_property",
+          "block": "taczweaponblueprints:research_bench",
+          "properties": {
+            "extension": "false"
+          }
+        },
+        {
           "condition": "minecraft:survives_explosion"
         }
       ]

@@ -16,6 +16,7 @@ import com.gamergaming.taczweaponblueprints.capabilities.PlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintRecyclingService.RecyclingInput;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintRecyclingService.Status;
+import com.gamergaming.taczweaponblueprints.progression.BlueprintRecyclingService.SyncKind;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCost;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchPolicy;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchTarget.MatchSpecificity;
@@ -53,6 +54,25 @@ class BlueprintRecyclingServiceTest {
         assertEquals(10, data.getResearchPoints());
         assertTrue(data.hasBlueprint(BLUEPRINT.toString()));
         assertTrue(data.hasDiscoveredBlueprint(BLUEPRINT.toString()));
+    }
+
+    @Test
+    void previewUsesTheCommitPolicyWithoutMutatingItemsOrPoints() {
+        PlayerRecipeData data = learnedData(4);
+        TestInput input = blueprintInput(BLUEPRINT, 2);
+
+        BlueprintRecyclingService.Evaluation evaluation = BlueprintRecyclingService.evaluate(
+                input,
+                data,
+                ignored -> policy(data, true, true, false, 3, 10));
+
+        assertTrue(evaluation.successful());
+        assertEquals(Status.SUCCESS, evaluation.status());
+        assertEquals(3, evaluation.pointValue());
+        assertEquals(4, evaluation.currentBalance());
+        assertEquals(10, evaluation.pointCap());
+        assertEquals(2, input.count());
+        assertEquals(4, data.getResearchPoints());
     }
 
     @Test
@@ -187,6 +207,19 @@ class BlueprintRecyclingServiceTest {
                 });
         assertEquals(Status.INVALID_INPUT, empty.status());
         assertEquals(0, resolutions.get());
+    }
+
+    @Test
+    void legacyMigrationAlwaysForcesAFullTreePublication() {
+        BlueprintRecyclingService.Result success = new BlueprintRecyclingService.Result(
+                Status.SUCCESS, Optional.of(BLUEPRINT), 1, 1);
+        BlueprintRecyclingService.Result failure = new BlueprintRecyclingService.Result(
+                Status.BLOCKED, Optional.of(BLUEPRINT), 0, 0);
+
+        assertEquals(SyncKind.FULL, BlueprintRecyclingService.requiredSync(success, 1));
+        assertEquals(SyncKind.FULL, BlueprintRecyclingService.requiredSync(failure, 1));
+        assertEquals(SyncKind.POINTS, BlueprintRecyclingService.requiredSync(success, 0));
+        assertEquals(SyncKind.NONE, BlueprintRecyclingService.requiredSync(failure, 0));
     }
 
     private static void assertFailure(

@@ -439,6 +439,12 @@ tasks.register('verifyReleaseArtifact') {
                     'com/gamergaming/taczweaponblueprints/command/sub/BlueprintProgressionCommand.class',
                     'com/gamergaming/taczweaponblueprints/client/ClientBlueprintJournal.class',
                     'com/gamergaming/taczweaponblueprints/client/ClientConnectionEvents.class',
+                    'com/gamergaming/taczweaponblueprints/client/ClientResearchState.class',
+                    'com/gamergaming/taczweaponblueprints/client/ClientResearchTree.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeCanvas.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeNavigationState.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeProjection.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeProjectionCache.class',
                     'com/gamergaming/taczweaponblueprints/journal/BlueprintJournalBuilder.class',
                     'com/gamergaming/taczweaponblueprints/journal/BlueprintJournalEntry.class',
                     'com/gamergaming/taczweaponblueprints/journal/BlueprintJournalSnapshot.class',
@@ -447,7 +453,11 @@ tasks.register('verifyReleaseArtifact') {
                     'com/gamergaming/taczweaponblueprints/network/SyncPlayerProgressionPacket.class',
                     'com/gamergaming/taczweaponblueprints/network/ResearchBenchActionPacket.class',
                     'com/gamergaming/taczweaponblueprints/network/SyncResearchBenchPreviewPacket.class',
+                    'com/gamergaming/taczweaponblueprints/network/SyncResearchTreePacket.class',
                     'com/gamergaming/taczweaponblueprints/menu/ResearchBenchMenu.class',
+                    'com/gamergaming/taczweaponblueprints/menu/ResearchBenchActionValidator.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeNavigator.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeEdgeIndex.class',
                     'com/gamergaming/taczweaponblueprints/progression/BlueprintDiscoveryService.class',
                     'com/gamergaming/taczweaponblueprints/progression/BlueprintProgressionConfigSnapshot.class',
                     'com/gamergaming/taczweaponblueprints/progression/BlueprintProgressionSyncScheduler.class',
@@ -457,12 +467,33 @@ tasks.register('verifyReleaseArtifact') {
                     'com/gamergaming/taczweaponblueprints/progression/PlayerProgressionAdminService.class',
                     'com/gamergaming/taczweaponblueprints/progression/DuplicateBlueprintPolicy.class',
                     'com/gamergaming/taczweaponblueprints/resource/research/BlueprintResearchDataManager.class',
+                    'com/gamergaming/taczweaponblueprints/resource/research/BlueprintResearchCatalogExporter.class',
+                    'com/gamergaming/taczweaponblueprints/resource/research/BlueprintResearchDiagnostics.class',
                     'com/gamergaming/taczweaponblueprints/resource/research/BlueprintResearchIngredientValidator.class',
                     'com/gamergaming/taczweaponblueprints/resource/research/BlueprintResearchPolicyResolver.class',
+                    'com/gamergaming/taczweaponblueprints/resource/research/ResearchTreeGroupDefinition.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeBuilder.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeGraph.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeGroupedLayoutEngine.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/ResearchTreePresentation.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/ResearchTreePublication.class',
+                    'com/gamergaming/taczweaponblueprints/command/sub/BlueprintResearchCommand.class',
                     'data/taczweaponblueprints/loot_modifiers/dynamic_blueprints.json',
                     'data/taczweaponblueprints/taczweaponblueprints/research_profiles/duplicate_recovery.json',
+                    'data/taczweaponblueprints/taczweaponblueprints/research_rules/default_tree/roots.json',
+                    'data/taczweaponblueprints/taczweaponblueprints/research_tree_groups/pistols.json',
+                    'data/taczweaponblueprints/taczweaponblueprints/research_tree_groups/rifles.json',
                     'data/taczweaponblueprints/recipes/research_bench.json',
                     'data/taczweaponblueprints/loot_tables/blocks/research_bench.json',
+                    'assets/taczweaponblueprints/blockstates/research_bench.json',
+                    'assets/taczweaponblueprints/models/block/research_bench_north.obj',
+                    'assets/taczweaponblueprints/models/block/research_bench_east.obj',
+                    'assets/taczweaponblueprints/models/block/research_bench_south.obj',
+                    'assets/taczweaponblueprints/models/block/research_bench_west.obj',
+                    'assets/taczweaponblueprints/models/block/research_bench.mtl',
+                    'assets/taczweaponblueprints/models/item/research_bench.obj',
+                    'assets/taczweaponblueprints/models/item/research_bench.mtl',
+                    'assets/taczweaponblueprints/textures/block/research_bench.png',
                     'data/forge/loot_modifiers/global_loot_modifiers.json',
                     'taczweaponblueprints.mixins.json',
                     'META-INF/mods.toml',
@@ -488,14 +519,29 @@ tasks.register('verifyReleaseArtifact') {
             if (schemaFiles.size() != 12) {
                 throw new GradleException("Expected 12 built-in pool/rule resources, found ${schemaFiles.size()}")
             }
-            def researchSchemaFiles = names.findAll {
-                (it.startsWith('data/taczweaponblueprints/taczweaponblueprints/research_profiles/')
-                        || it.startsWith('data/taczweaponblueprints/taczweaponblueprints/research_rules/'))
+            def researchProfileFiles = names.findAll {
+                it.startsWith('data/taczweaponblueprints/taczweaponblueprints/research_profiles/')
                         && it.endsWith('.json')
             }
-            if (researchSchemaFiles.size() != 1) {
+            if (researchProfileFiles.size() != 1) {
                 throw new GradleException(
-                        "Expected one built-in research profile/rule resource, found ${researchSchemaFiles.size()}")
+                        "Expected one built-in research profile, found ${researchProfileFiles.size()}")
+            }
+            def researchRuleFiles = names.findAll {
+                it.startsWith('data/taczweaponblueprints/taczweaponblueprints/research_rules/default_tree/')
+                        && it.endsWith('.json')
+            }
+            if (researchRuleFiles.size() != 32) {
+                throw new GradleException(
+                        "Expected 32 built-in default-tree research rules, found ${researchRuleFiles.size()}")
+            }
+            def researchGroupFiles = names.findAll {
+                it.startsWith('data/taczweaponblueprints/taczweaponblueprints/research_tree_groups/')
+                        && it.endsWith('.json')
+            }
+            if (researchGroupFiles.size() != 7) {
+                throw new GradleException(
+                        "Expected seven built-in research-tree groups, found ${researchGroupFiles.size()}")
             }
 
             def jsonParser = new groovy.json.JsonSlurper()
@@ -593,9 +639,34 @@ tasks.register('verifyPublicationReadiness') {
 
     doLast {
         def changelogText = file('CHANGELOG.md').getText('UTF-8')
-        if (!changelogText.readLines().any { it.startsWith("## ${project.version} - ") }) {
+        def changelogLines = changelogText.readLines()
+        def unreleasedIndex = changelogLines.findIndexOf { it.trim() == '## Unreleased' }
+        if (unreleasedIndex < 0) {
             throw new GradleException(
-                    "Publication is blocked: CHANGELOG.md has no finalized ${project.version} release heading.")
+                    'Publication is blocked: CHANGELOG.md has no Unreleased section.')
+        }
+        def nextReleaseIndex = (unreleasedIndex + 1..<changelogLines.size()).find {
+            changelogLines[it].startsWith('## ')
+        }
+        if (nextReleaseIndex == null) {
+            throw new GradleException(
+                    'Publication is blocked: CHANGELOG.md has no finalized release after Unreleased.')
+        }
+        def unreleasedContent = changelogLines.subList(unreleasedIndex + 1, nextReleaseIndex).findAll {
+            !it.isBlank() && !it.trim().startsWith('<!--')
+        }
+        if (!unreleasedContent.isEmpty()) {
+            throw new GradleException(
+                    'Publication is blocked: CHANGELOG.md still contains Unreleased changes.')
+        }
+        def latestReleaseHeading = changelogLines[nextReleaseIndex]
+        if (!latestReleaseHeading.startsWith("## ${project.version} - ")) {
+            throw new GradleException(
+                    "Publication is blocked: latest finalized CHANGELOG release is not ${project.version}.")
+        }
+        if (changelogLines.count { it.startsWith("## ${project.version} - ") } != 1) {
+            throw new GradleException(
+                    "Publication is blocked: CHANGELOG.md must contain exactly one ${project.version} release heading.")
         }
 
         def licenseText = file('LICENSE.txt').getText('UTF-8')
@@ -605,6 +676,150 @@ tasks.register('verifyPublicationReadiness') {
                     'Publication is blocked: replace the stock Forge MDK LICENSE.txt with the intended '
                             + 'project license or proprietary notice, and keep mod_license in agreement.')
         }
+    }
+}
+
+tasks.register('verifyRuntimeSmokeLog') {
+    group = 'verification'
+    description = 'Validates a captured client or dedicated-server startup log for release-blocking failures.'
+
+    doLast {
+        def kind = providers.gradleProperty('smokeKind').orNull
+        def logPath = providers.gradleProperty('smokeLog').orNull
+        if (!(kind in ['client', 'server'])) {
+            throw new GradleException('Set -PsmokeKind=client or -PsmokeKind=server')
+        }
+        if (logPath == null || logPath.isBlank()) {
+            throw new GradleException('Set -PsmokeLog=<path-to-latest.log-or-log.gz>')
+        }
+
+        def logFile = file(logPath)
+        if (!logFile.isFile()) {
+            throw new GradleException("Runtime smoke log does not exist: ${logFile}")
+        }
+        def logText = logFile.name.endsWith('.gz')
+                ? new java.util.zip.GZIPInputStream(new FileInputStream(logFile)).withCloseable {
+                    it.getText('UTF-8')
+                }
+                : logFile.getText('UTF-8')
+        def requiredMarkers = kind == 'client'
+                ? [
+                        "Forge mod loading, version ${forge_version}, for MC ${minecraft_version}",
+                        'Loaded config taczweaponblueprints:blueprint',
+                        'Sound engine started'
+                ]
+                : [
+                        'Applied blueprint research snapshot revision',
+                        'Blueprint catalog initialized:',
+                        'Dynamic blueprint loot distribution active:',
+                        'Done ('
+                ]
+        def missingMarkers = requiredMarkers.findAll { !logText.contains(it) }
+        if (!missingMarkers.isEmpty()) {
+            throw new GradleException(
+                    "${kind} smoke log is missing required startup markers: ${missingMarkers}")
+        }
+
+        def blockingPatterns = [
+                ~/(?i)mixin apply failed[^\n]*taczweaponblueprints/,
+                ~/(?i)taczweaponblueprints[^\n]*(invalidinjectionexception|nosuchmethoderror|noclassdeffounderror)/,
+                ~/(?i)(invalidinjectionexception|nosuchmethoderror|noclassdeffounderror)[^\n]*taczweaponblueprints/,
+                ~/(?i)failed to create mod instance[^\n]*taczweaponblueprints/,
+                ~/(?i)\[(?:[^\]]*\/)?(?:fatal|error)\][^\n]*taczweaponblueprints/
+        ]
+        def blockingMatches = blockingPatterns.collectMany { pattern ->
+            (logText =~ pattern).collect { it[0] }
+        }.unique()
+        if (!blockingMatches.isEmpty()) {
+            throw new GradleException(
+                    "${kind} smoke log contains release-blocking failures: ${blockingMatches}")
+        }
+
+        logger.lifecycle("Verified ${kind} runtime smoke log: ${logFile}")
+    }
+}
+
+tasks.register('certifyReleaseCandidate') {
+    group = 'verification'
+    description = 'Runs publication gates and writes a machine-readable release-candidate artifact report.'
+    dependsOn tasks.named('verifyPublicationReadiness')
+
+    def reportFile = layout.buildDirectory.file('reports/release-candidate.json')
+    inputs.file(tasks.named('jar', Jar).flatMap { it.archiveFile })
+    inputs.file('src/main/java/com/gamergaming/taczweaponblueprints/network/NetworkHandler.java')
+    inputs.files(layout.buildDirectory.dir('test-results/test'))
+    inputs.properties([
+            minecraft_version : minecraft_version,
+            forge_version     : forge_version,
+            tacz_version      : tacz_version,
+            fzzy_config_version: fzzy_config_version
+    ])
+    outputs.file(reportFile)
+
+    doLast {
+        def javaSpecification = System.getProperty('java.specification.version')
+        if (javaSpecification != '17') {
+            throw new GradleException(
+                    "Release certification requires JDK 17; current runtime is Java ${System.getProperty('java.version')}.")
+        }
+
+        def artifact = tasks.named('jar', Jar).get().archiveFile.get().asFile
+        def digest = java.security.MessageDigest.getInstance('SHA-256')
+        artifact.withInputStream { input ->
+            def buffer = new byte[8192]
+            int read
+            while ((read = input.read(buffer)) != -1) {
+                digest.update(buffer, 0, read)
+            }
+        }
+        def sha256 = digest.digest().encodeHex().toString()
+
+        def protocolSource = file(
+                'src/main/java/com/gamergaming/taczweaponblueprints/network/NetworkHandler.java')
+                .getText('UTF-8')
+        def protocolMatch = protocolSource =~ /PROTOCOL_VERSION\s*=\s*"([^"]+)"/
+        if (!protocolMatch.find()) {
+            throw new GradleException('Could not determine the network protocol from NetworkHandler')
+        }
+
+        def testSuites = fileTree("${buildDir}/test-results/test") {
+            include 'TEST-*.xml'
+        }.files.collect { new XmlSlurper().parse(it) }
+        def sumAttribute = { String name ->
+            testSuites.sum { suite -> (suite.attributes()[name]?.toString() ?: '0') as int } ?: 0
+        }
+        def report = [
+                schema         : 1,
+                project        : project.name,
+                version        : project.version.toString(),
+                buildJava      : [
+                        version: System.getProperty('java.version'),
+                        vendor : System.getProperty('java.vendor')
+                ],
+                minecraft      : minecraft_version,
+                forge          : forge_version,
+                tacz           : tacz_version,
+                fzzyConfig     : fzzy_config_version,
+                networkProtocol: protocolMatch.group(1),
+                tests          : [
+                        total   : sumAttribute('tests'),
+                        failures: sumAttribute('failures'),
+                        errors  : sumAttribute('errors'),
+                        skipped : sumAttribute('skipped')
+                ],
+                artifact       : [
+                        path  : project.relativePath(artifact),
+                        bytes : artifact.length(),
+                        sha256: sha256
+                ]
+        ]
+        def output = reportFile.get().asFile
+        output.parentFile.mkdirs()
+        output.setText(
+                groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(report)) + '\n',
+                'UTF-8')
+        logger.lifecycle("Release candidate report: ${output}")
+        logger.lifecycle("SHA-256: ${sha256}")
     }
 }
 

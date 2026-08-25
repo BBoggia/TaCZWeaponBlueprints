@@ -3,6 +3,7 @@ package com.gamergaming.taczweaponblueprints.event;
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintDiscoveryService;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionSyncScheduler;
+import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
@@ -34,6 +35,7 @@ public final class BlueprintDiscoveryEvents {
     public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
             BlueprintProgressionSyncScheduler.clear(serverPlayer);
+            NetworkHandler.clearPlayerSyncState(serverPlayer);
         }
     }
 }

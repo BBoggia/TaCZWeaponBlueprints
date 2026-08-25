@@ -21,6 +21,7 @@ public final class ModBlocks {
             () -> new ResearchBenchBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.WOOD)
                     .strength(2.5F)
+                    .noOcclusion()
                     .sound(SoundType.WOOD)));
 
     private ModBlocks() {

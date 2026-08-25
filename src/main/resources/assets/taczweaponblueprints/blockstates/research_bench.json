@@ -1,7 +1,28 @@
 {
   "variants": {
-    "": {
+    "extension=false,facing=north": {
       "model": "taczweaponblueprints:block/research_bench"
+    },
+    "extension=false,facing=east": {
+      "model": "taczweaponblueprints:block/research_bench_east"
+    },
+    "extension=false,facing=south": {
+      "model": "taczweaponblueprints:block/research_bench_south"
+    },
+    "extension=false,facing=west": {
+      "model": "taczweaponblueprints:block/research_bench_west"
+    },
+    "extension=true,facing=north": {
+      "model": "minecraft:block/air"
+    },
+    "extension=true,facing=east": {
+      "model": "minecraft:block/air"
+    },
+    "extension=true,facing=south": {
+      "model": "minecraft:block/air"
+    },
+    "extension=true,facing=west": {
+      "model": "minecraft:block/air"
     }
   }
 }

@@ -53,7 +53,7 @@ public final class BlueprintJournalBuilder {
                     playerData,
                     blocked);
             BlueprintResearchPolicy policy = config.apply(datapackPolicy);
-            if (!policy.journalEnabled() || policy.visibility() == JournalVisibility.HIDDEN || policy.blocked()) {
+            if (!policy.journalEnabled() || !policy.visibility().appearsInJournal() || policy.blocked()) {
                 continue;
             }
             BlueprintJournalEntry entry = BlueprintJournalEntry.create(

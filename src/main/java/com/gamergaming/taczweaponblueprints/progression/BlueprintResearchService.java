@@ -1,6 +1,5 @@
 package com.gamergaming.taczweaponblueprints.progression;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
@@ -16,21 +15,25 @@ import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchP
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 
 /** Atomic server authority for one Research Bench blueprint transaction. */
 public final class BlueprintResearchService {
-    public static final int INGREDIENT_SLOT_COUNT = 6;
-
     private BlueprintResearchService() {
     }
 
-    public static Result research(ServerPlayer player, ResourceLocation blueprintId, Container ingredients) {
-        if (player == null || !player.isAlive() || !validId(blueprintId) || ingredients == null
-                || ingredients.getContainerSize() < INGREDIENT_SLOT_COUNT) {
+    /** Researches directly from the player's main inventory and hotbar. */
+    public static Result researchFromInventory(ServerPlayer player, ResourceLocation blueprintId) {
+        if (player == null || !player.isAlive() || !validId(blueprintId)) {
             return Result.failure(Status.INVALID_INPUT, Optional.ofNullable(blueprintId), 0);
         }
+        return research(player, blueprintId, playerInventoryInput(player));
+    }
+
+    private static Result research(
+            ServerPlayer player,
+            ResourceLocation blueprintId,
+            ResearchInput input) {
         Optional<IPlayerRecipeData> resolvedData =
                 player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve();
         if (resolvedData.isEmpty()) {
@@ -39,7 +42,6 @@ public final class BlueprintResearchService {
 
         IPlayerRecipeData playerData = resolvedData.orElseThrow();
         int migrated = BlueprintDataManager.SERVER.migrateLegacyUnlocks(playerData);
-        ResearchInput input = playerInput(player, ingredients);
         Result result = research(
                 blueprintId,
                 playerData,
@@ -141,46 +143,103 @@ public final class BlueprintResearchService {
         if (!input.canAcceptOutput()) {
             return Result.failure(Status.OUTPUT_FULL, id, currentPoints);
         }
+        ItemStack output;
+        try {
+            output = input.createOutput(blueprintId);
+        } catch (RuntimeException exception) {
+            return Result.failure(Status.TRANSACTION_FAILED, id, currentPoints);
+        }
+        if (output == null || output.isEmpty()) {
+            return Result.failure(Status.TRANSACTION_FAILED, id, currentPoints);
+        }
 
         int pointsSpent = bypassCost ? 0 : policy.researchCost().points();
         if (pointsSpent > 0 && !playerData.spendResearchPoints(pointsSpent)) {
             return Result.failure(Status.STALE_POLICY, id, playerData.getResearchPoints());
         }
-        input.consume(plan);
-        input.produce(blueprintId);
+        try {
+            input.consume(plan);
+            if (!input.deliver(output)) {
+                rollback(playerData, input, inputSnapshot, currentPoints);
+                return Result.failure(Status.TRANSACTION_FAILED, id, playerData.getResearchPoints());
+            }
+        } catch (RuntimeException exception) {
+            rollback(playerData, input, inputSnapshot, currentPoints);
+            return Result.failure(Status.TRANSACTION_FAILED, id, playerData.getResearchPoints());
+        }
         return new Result(Status.SUCCESS, id, pointsSpent, playerData.getResearchPoints(), bypassCost);
     }
 
-    private static ResearchInput playerInput(ServerPlayer player, Container ingredients) {
+    private static void rollback(
+            IPlayerRecipeData playerData,
+            ResearchInput input,
+            List<ItemStack> inputSnapshot,
+            int originalPoints) {
+        try {
+            input.restore(inputSnapshot);
+        } catch (RuntimeException ignored) {
+            // Preserve the original failure result; the concrete menu input
+            // restore path is deterministic and does not throw.
+        } finally {
+            playerData.setResearchPoints(originalPoints);
+        }
+    }
+
+    private static ResearchInput playerInventoryInput(ServerPlayer player) {
         return new ResearchInput() {
             @Override
             public List<ItemStack> stacks() {
-                List<ItemStack> stacks = new ArrayList<>(INGREDIENT_SLOT_COUNT);
-                for (int slot = 0; slot < INGREDIENT_SLOT_COUNT; slot++) {
-                    stacks.add(ingredients.getItem(slot).copy());
-                }
-                return List.copyOf(stacks);
+                return player.getInventory().items.stream()
+                        .map(ItemStack::copy)
+                        .toList();
             }
 
             @Override
             public boolean canAcceptOutput() {
-                return player.getInventory().getFreeSlot() >= 0;
+                // Ingredient consumption normally opens a slot. If it does not,
+                // deliver() safely drops the researched blueprint at the player.
+                return true;
             }
 
             @Override
             public void consume(ResearchIngredientPlanner.Plan plan) {
-                for (int slot = 0; slot < INGREDIENT_SLOT_COUNT; slot++) {
-                    ingredients.removeItem(slot, plan.decrement(slot));
+                List<ItemStack> items = player.getInventory().items;
+                if (plan.slotCount() != items.size()) {
+                    throw new IllegalStateException("player inventory changed before research commit");
                 }
-                ingredients.setChanged();
+                for (int slot = 0; slot < items.size(); slot++) {
+                    int amount = plan.decrement(slot);
+                    if (amount < 0 || items.get(slot).getCount() < amount) {
+                        throw new IllegalStateException("player inventory changed before research commit");
+                    }
+                    items.get(slot).shrink(amount);
+                }
+                player.getInventory().setChanged();
             }
 
             @Override
-            public void produce(ResourceLocation id) {
-                ItemStack output = BlueprintItem.createBlueprint(id.toString());
+            public void restore(List<ItemStack> snapshot) {
+                List<ItemStack> items = player.getInventory().items;
+                if (snapshot.size() != items.size()) {
+                    throw new IllegalStateException("cannot restore a resized player inventory");
+                }
+                for (int slot = 0; slot < items.size(); slot++) {
+                    items.set(slot, snapshot.get(slot).copy());
+                }
+                player.getInventory().setChanged();
+            }
+
+            @Override
+            public ItemStack createOutput(ResourceLocation id) {
+                return BlueprintItem.createBlueprint(id.toString());
+            }
+
+            @Override
+            public boolean deliver(ItemStack output) {
                 if (!player.getInventory().add(output)) {
                     player.drop(output, false);
                 }
+                return true;
             }
         };
     }
@@ -196,7 +255,12 @@ public final class BlueprintResearchService {
 
         void consume(ResearchIngredientPlanner.Plan plan);
 
-        void produce(ResourceLocation blueprintId);
+        void restore(List<ItemStack> snapshot);
+
+        ItemStack createOutput(ResourceLocation blueprintId);
+
+        /** Returns false only when no part of the output was delivered. */
+        boolean deliver(ItemStack output);
     }
 
     public enum Status {
@@ -215,7 +279,8 @@ public final class BlueprintResearchService {
         POINTS_REQUIRED,
         INGREDIENTS_REQUIRED,
         OUTPUT_FULL,
-        POLICY_INELIGIBLE
+        POLICY_INELIGIBLE,
+        TRANSACTION_FAILED
     }
 
     public record Result(

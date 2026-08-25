@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "profile": "taczweaponblueprints:duplicate_recovery",
+  "title": "Special Weapons",
+  "translation_key": "gui.taczweaponblueprints.research_group.special_weapons",
+  "icon": "tacz:m320",
+  "order": 70,
+  "ranks": [
+    ["tacz:m320"],
+    ["tacz:rpg7"]
+  ]
+}

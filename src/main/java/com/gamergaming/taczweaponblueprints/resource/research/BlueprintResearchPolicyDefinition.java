@@ -69,7 +69,7 @@ public record BlueprintResearchPolicyDefinition(
                 Optional.of(selectedRuleId),
                 selectedSpecificity,
                 rule.visibility()
-                        .map(value -> value.ordinal() < JournalVisibility.PREVIEW.ordinal())
+                        .map(value -> !value.revealsIdentity())
                         .orElse(false));
     }
 

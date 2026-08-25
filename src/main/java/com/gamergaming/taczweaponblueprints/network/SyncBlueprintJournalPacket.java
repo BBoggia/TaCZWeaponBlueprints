@@ -8,7 +8,7 @@ import java.util.TreeMap;
 import java.util.function.Supplier;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
-import com.gamergaming.taczweaponblueprints.client.ClientBlueprintJournal;
+import com.gamergaming.taczweaponblueprints.client.ClientResearchState;
 import com.gamergaming.taczweaponblueprints.journal.BlueprintJournalEntry;
 import com.gamergaming.taczweaponblueprints.journal.BlueprintJournalSnapshot;
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
@@ -24,6 +24,7 @@ public final class SyncBlueprintJournalPacket {
     private static final ClientAccumulator CLIENT_ACCUMULATOR = new ClientAccumulator();
 
     private final long syncId;
+    private final boolean reuseExistingTree;
     private final int chunkIndex;
     private final int chunkCount;
     private final int researchPoints;
@@ -36,6 +37,7 @@ public final class SyncBlueprintJournalPacket {
 
     private SyncBlueprintJournalPacket(
             long syncId,
+            boolean reuseExistingTree,
             int chunkIndex,
             int chunkCount,
             BlueprintJournalSnapshot snapshot,
@@ -43,6 +45,7 @@ public final class SyncBlueprintJournalPacket {
             List<BlueprintJournalSnapshot.HistoryEntry> history) {
         validateChunkMetadata(chunkIndex, chunkCount);
         this.syncId = syncId;
+        this.reuseExistingTree = reuseExistingTree;
         this.chunkIndex = chunkIndex;
         this.chunkCount = chunkCount;
         researchPoints = snapshot.researchPoints();
@@ -61,6 +64,7 @@ public final class SyncBlueprintJournalPacket {
     public SyncBlueprintJournalPacket(FriendlyByteBuf buf) {
         int start = buf.readerIndex();
         syncId = buf.readLong();
+        reuseExistingTree = buf.readBoolean();
         chunkIndex = buf.readVarInt();
         chunkCount = buf.readVarInt();
         validateChunkMetadata(chunkIndex, chunkCount);
@@ -78,7 +82,7 @@ public final class SyncBlueprintJournalPacket {
         List<BlueprintJournalSnapshot.HistoryEntry> decodedHistory = new ArrayList<>(historyCount);
         for (int index = 0; index < historyCount; index++) {
             decodedHistory.add(new BlueprintJournalSnapshot.HistoryEntry(
-                    buf.readResourceLocation(), buf.readBoolean()));
+                    readId(buf), buf.readBoolean()));
         }
         entries = List.copyOf(decodedEntries);
         history = List.copyOf(decodedHistory);
@@ -91,6 +95,7 @@ public final class SyncBlueprintJournalPacket {
     public void toBytes(FriendlyByteBuf buf) {
         int start = buf.writerIndex();
         buf.writeLong(syncId);
+        buf.writeBoolean(reuseExistingTree);
         buf.writeVarInt(chunkIndex);
         buf.writeVarInt(chunkCount);
         buf.writeVarInt(researchPoints);
@@ -111,12 +116,23 @@ public final class SyncBlueprintJournalPacket {
     }
 
     public void handle(Supplier<NetworkEvent.Context> context) {
-        context.get().enqueueWork(() ->
-                CLIENT_ACCUMULATOR.accept(this).ifPresent(ClientBlueprintJournal::publish));
+        context.get().enqueueWork(() -> CLIENT_ACCUMULATOR.accept(this).ifPresent(snapshot ->
+                ClientResearchState.acceptJournal(syncId, snapshot, reuseExistingTree)));
         context.get().setPacketHandled(true);
     }
 
+    public static void clearClientState() {
+        CLIENT_ACCUMULATOR.clear();
+    }
+
     static List<SyncBlueprintJournalPacket> split(BlueprintJournalSnapshot snapshot, long syncId) {
+        return split(snapshot, syncId, false);
+    }
+
+    static List<SyncBlueprintJournalPacket> split(
+            BlueprintJournalSnapshot snapshot,
+            long syncId,
+            boolean reuseExistingTree) {
         if (snapshot == null) {
             throw new IllegalArgumentException("Journal snapshot cannot be null");
         }
@@ -150,7 +166,7 @@ public final class SyncBlueprintJournalPacket {
         for (int index = 0; index < chunks.size(); index++) {
             Chunk chunk = chunks.get(index);
             packets.add(new SyncBlueprintJournalPacket(
-                    syncId, index, chunks.size(), snapshot, chunk.entries, chunk.history));
+                    syncId, reuseExistingTree, index, chunks.size(), snapshot, chunk.entries, chunk.history));
         }
         return List.copyOf(packets);
     }
@@ -192,6 +208,9 @@ public final class SyncBlueprintJournalPacket {
         Optional<String> itemType = readOptionalString(buf, BlueprintSyncLimits.MAX_ITEM_TYPE_LENGTH);
         Optional<ResourceLocation> displaySlot = readOptionalId(buf);
         int flags = buf.readUnsignedByte();
+        if ((flags & ~31) != 0) {
+            throw new IllegalArgumentException("Invalid synchronized Journal flags");
+        }
         return new BlueprintJournalEntry(
                 ordinal,
                 visibility,
@@ -239,7 +258,16 @@ public final class SyncBlueprintJournalPacket {
     }
 
     private static Optional<ResourceLocation> readOptionalId(FriendlyByteBuf buf) {
-        return buf.readBoolean() ? Optional.of(buf.readResourceLocation()) : Optional.empty();
+        return buf.readBoolean() ? Optional.of(readId(buf)) : Optional.empty();
+    }
+
+    private static ResourceLocation readId(FriendlyByteBuf buf) {
+        ResourceLocation id = ResourceLocation.tryParse(
+                buf.readUtf(BlueprintSyncLimits.MAX_RESOURCE_ID_LENGTH));
+        if (id == null) {
+            throw new IllegalArgumentException("Invalid synchronized Journal ID");
+        }
+        return id;
     }
 
     private static void writeOptionalId(FriendlyByteBuf buf, Optional<ResourceLocation> value) {
@@ -283,8 +311,11 @@ public final class SyncBlueprintJournalPacket {
     }
 
     static final class ClientAccumulator {
-        private long syncId = Long.MIN_VALUE;
+        private boolean initialized;
+        private boolean completed;
+        private long syncId;
         private int expectedChunks;
+        private boolean reuseExistingTree;
         private int researchPoints;
         private int pointCap;
         private int learnedCount;
@@ -293,9 +324,15 @@ public final class SyncBlueprintJournalPacket {
         private final Map<Integer, SyncBlueprintJournalPacket> chunks = new TreeMap<>();
 
         synchronized Optional<BlueprintJournalSnapshot> accept(SyncBlueprintJournalPacket packet) {
-            if (syncId != packet.syncId) {
+            if (initialized && Long.compare(packet.syncId, syncId) < 0) {
+                return Optional.empty();
+            }
+            if (!initialized || syncId != packet.syncId) {
+                initialized = true;
+                completed = false;
                 syncId = packet.syncId;
                 expectedChunks = packet.chunkCount;
+                reuseExistingTree = packet.reuseExistingTree;
                 researchPoints = packet.researchPoints;
                 pointCap = packet.pointCap;
                 learnedCount = packet.learnedCount;
@@ -303,7 +340,11 @@ public final class SyncBlueprintJournalPacket {
                 researchableCount = packet.researchableCount;
                 chunks.clear();
             }
+            if (completed) {
+                return Optional.empty();
+            }
             if (expectedChunks != packet.chunkCount
+                    || reuseExistingTree != packet.reuseExistingTree
                     || researchPoints != packet.researchPoints
                     || pointCap != packet.pointCap
                     || learnedCount != packet.learnedCount
@@ -311,7 +352,12 @@ public final class SyncBlueprintJournalPacket {
                     || researchableCount != packet.researchableCount) {
                 throw new IllegalArgumentException("Inconsistent Journal synchronization chunks");
             }
-            chunks.put(packet.chunkIndex, packet);
+            SyncBlueprintJournalPacket existing = chunks.putIfAbsent(packet.chunkIndex, packet);
+            if (existing != null
+                    && (!existing.entries.equals(packet.entries) || !existing.history.equals(packet.history))) {
+                chunks.clear();
+                throw new IllegalArgumentException("Conflicting duplicate Journal synchronization chunk");
+            }
             if (chunks.size() != expectedChunks) {
                 return Optional.empty();
             }
@@ -329,9 +375,24 @@ public final class SyncBlueprintJournalPacket {
                 history.addAll(chunk.history);
             });
             chunks.clear();
+            completed = true;
             return Optional.of(new BlueprintJournalSnapshot(
                     entries, history, researchPoints, pointCap,
                     learnedCount, discoveredCount, researchableCount));
+        }
+
+        synchronized void clear() {
+            initialized = false;
+            completed = false;
+            syncId = 0L;
+            expectedChunks = 0;
+            reuseExistingTree = false;
+            researchPoints = 0;
+            pointCap = 0;
+            learnedCount = 0;
+            discoveredCount = 0;
+            researchableCount = 0;
+            chunks.clear();
         }
     }
 }

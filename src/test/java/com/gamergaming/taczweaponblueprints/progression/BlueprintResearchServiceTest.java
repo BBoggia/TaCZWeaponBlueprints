@@ -52,6 +52,25 @@ class BlueprintResearchServiceTest {
     }
 
     @Test
+    void partialAllocationReportsOverlapSafeBenchAndInventoryContributions() {
+        BlueprintResearchCost cost = new BlueprintResearchCost(0, List.of(
+                ingredient(1, "minecraft:paper", "minecraft:iron_ingot"),
+                ingredient(1, "minecraft:paper")));
+
+        ResearchIngredientPlanner.Allocation allocation = ResearchIngredientPlanner.allocation(
+                List.of(new ItemStack(Items.PAPER), new ItemStack(Items.IRON_INGOT)), cost)
+                .orElseThrow();
+
+        assertTrue(allocation.complete());
+        assertEquals(2, allocation.totalRequired());
+        assertEquals(2, allocation.totalAllocated());
+        assertEquals(0, allocation.allocatedForIngredientFromSlots(0, 0, 1));
+        assertEquals(1, allocation.allocatedForIngredientFromSlots(0, 1, 2));
+        assertEquals(1, allocation.allocatedForIngredientFromSlots(1, 0, 1));
+        assertEquals(0, allocation.allocatedForIngredientFromSlots(1, 1, 2));
+    }
+
+    @Test
     void successfulResearchSpendsTheCompleteCostConsumesInputsAndProducesOneBlueprint() {
         PlayerRecipeData data = data(10, true);
         TestInput input = input(new ItemStack(Items.PAPER, 4), new ItemStack(Items.IRON_INGOT, 3));
@@ -68,6 +87,30 @@ class BlueprintResearchServiceTest {
         assertEquals(1, input.stacks.get(1).getCount());
         assertEquals(List.of(BLUEPRINT), input.outputs);
         assertFalse(data.hasBlueprint(BLUEPRINT.toString()));
+    }
+
+    @Test
+    void successfulResearchConsumesAnExactPlanAcrossAPlayerSizedInventory() {
+        PlayerRecipeData data = data(10, true);
+        List<ItemStack> inventory = new ArrayList<>();
+        for (int slot = 0; slot < 36; slot++) {
+            inventory.add(ItemStack.EMPTY);
+        }
+        inventory.set(2, new ItemStack(Items.PAPER, 4));
+        inventory.set(31, new ItemStack(Items.IRON_INGOT, 3));
+        TestInput input = new TestInput(inventory);
+        BlueprintResearchCost cost = new BlueprintResearchCost(2, List.of(
+                ingredient(3, "minecraft:paper"),
+                ingredient(2, "minecraft:iron_ingot")));
+
+        BlueprintResearchService.Result result = research(data, input, policy(data, cost), false);
+
+        assertTrue(result.successful());
+        assertEquals(1, input.stacks.get(2).getCount());
+        assertEquals(1, input.stacks.get(31).getCount());
+        assertTrue(input.stacks.stream()
+                .filter(stack -> !stack.isEmpty())
+                .allMatch(stack -> stack.getCount() == 1));
     }
 
     @Test
@@ -109,6 +152,31 @@ class BlueprintResearchServiceTest {
         assertEquals(5, data.getResearchPoints());
         assertEquals(2, full.stacks.get(0).getCount());
         assertTrue(full.outputs.isEmpty());
+    }
+
+    @Test
+    void unexpectedCommitFailuresRestorePointsAndEveryInputSlot() {
+        PlayerRecipeData data = data(5, true);
+        BlueprintResearchCost cost = new BlueprintResearchCost(
+                3, List.of(ingredient(1, "minecraft:paper")));
+
+        TestInput failedConsume = input(new ItemStack(Items.PAPER, 2));
+        failedConsume.failConsumption = true;
+        BlueprintResearchService.Result consumeResult = research(
+                data, failedConsume, policy(data, cost), false);
+        assertEquals(Status.TRANSACTION_FAILED, consumeResult.status());
+        assertEquals(5, data.getResearchPoints());
+        assertEquals(2, failedConsume.stacks.get(0).getCount());
+        assertTrue(failedConsume.outputs.isEmpty());
+
+        TestInput failedDelivery = input(new ItemStack(Items.PAPER, 2));
+        failedDelivery.deliverOutput = false;
+        BlueprintResearchService.Result deliveryResult = research(
+                data, failedDelivery, policy(data, cost), false);
+        assertEquals(Status.TRANSACTION_FAILED, deliveryResult.status());
+        assertEquals(5, data.getResearchPoints());
+        assertEquals(2, failedDelivery.stacks.get(0).getCount());
+        assertTrue(failedDelivery.outputs.isEmpty());
     }
 
     @Test
@@ -248,6 +316,8 @@ class BlueprintResearchServiceTest {
         private final List<ItemStack> stacks;
         private final List<ResourceLocation> outputs = new ArrayList<>();
         private boolean acceptOutput = true;
+        private boolean deliverOutput = true;
+        private boolean failConsumption;
 
         private TestInput(List<ItemStack> stacks) {
             this.stacks = stacks;
@@ -267,12 +337,29 @@ class BlueprintResearchServiceTest {
         public void consume(ResearchIngredientPlanner.Plan plan) {
             for (int slot = 0; slot < stacks.size(); slot++) {
                 stacks.get(slot).shrink(plan.decrement(slot));
+                if (failConsumption) {
+                    throw new IllegalStateException("simulated consumption failure");
+                }
             }
         }
 
         @Override
-        public void produce(ResourceLocation blueprintId) {
-            outputs.add(blueprintId);
+        public void restore(List<ItemStack> snapshot) {
+            stacks.clear();
+            snapshot.forEach(stack -> stacks.add(stack.copy()));
+        }
+
+        @Override
+        public ItemStack createOutput(ResourceLocation blueprintId) {
+            return new ItemStack(Items.PAPER);
+        }
+
+        @Override
+        public boolean deliver(ItemStack output) {
+            if (deliverOutput) {
+                outputs.add(BLUEPRINT);
+            }
+            return deliverOutput;
         }
     }
 }

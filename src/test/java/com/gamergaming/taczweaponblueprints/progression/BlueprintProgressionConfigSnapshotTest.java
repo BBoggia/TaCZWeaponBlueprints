@@ -110,6 +110,19 @@ class BlueprintProgressionConfigSnapshotTest {
     }
 
     @Test
+    void fullDatapackPolicyLetsEveryGlobalVisibilityCeilingRemainDistinct() {
+        BlueprintResearchPolicy fullPolicy = basePolicy(9, 8, JournalVisibility.FULL);
+        for (JournalVisibility maximum : JournalVisibility.values()) {
+            BlueprintResearchPolicy effective = config(
+                    true,
+                    maximum,
+                    DuplicateBlueprintPolicy.MANUAL_RECYCLING,
+                    100).apply(fullPolicy);
+            assertEquals(maximum, effective.visibility());
+        }
+    }
+
+    @Test
     void keepPolicyAndUnlearnedGateDisablePermissiveDatapackRecycling() {
         BlueprintResearchPolicy base = basePolicy(0, 8);
         BlueprintProgressionConfigSnapshot keep = new BlueprintProgressionConfigSnapshot(
@@ -158,6 +171,13 @@ class BlueprintProgressionConfigSnapshotTest {
     }
 
     private static BlueprintResearchPolicy basePolicy(int points, int cost) {
+        return basePolicy(points, cost, JournalVisibility.PREVIEW);
+    }
+
+    private static BlueprintResearchPolicy basePolicy(
+            int points,
+            int cost,
+            JournalVisibility visibility) {
         return new BlueprintResearchPolicy(
                 BLUEPRINT,
                 PROFILE,
@@ -170,7 +190,7 @@ class BlueprintProgressionConfigSnapshotTest {
                 PlayerProgressionLimits.MAX_RESEARCH_POINTS,
                 true,
                 true,
-                JournalVisibility.PREVIEW,
+                visibility,
                 true,
                 true,
                 true,

@@ -31,7 +31,9 @@ public final class BlueprintResourceEvents {
             return;
         }
 
-        if (BlueprintDataManager.SERVER.initialize(event.getPlayerList().getServer())) {
+        boolean catalogUpdated = BlueprintDataManager.SERVER.initialize(event.getPlayerList().getServer());
+        BlueprintResearchDataManager.INSTANCE.logActiveProfileAudit();
+        if (catalogUpdated) {
             event.getPlayers().forEach(NetworkHandler::syncAllPlayerData);
         } else {
             // The catalog retains its last-known-good snapshot. Research data may

@@ -1,0 +1,14 @@
+{
+  "format": 1,
+  "profile": "taczweaponblueprints:duplicate_recovery",
+  "title": "SMGs",
+  "translation_key": "gui.taczweaponblueprints.research_group.smgs",
+  "icon": "tacz:uzi",
+  "order": 20,
+  "ranks": [
+    ["tacz:uzi"],
+    ["tacz:hk_mp5a5"],
+    ["tacz:ump45", "tacz:p90"],
+    ["tacz:vector45"]
+  ]
+}

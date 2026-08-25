@@ -46,7 +46,7 @@ class BlueprintJournalQueryTest {
     @Test
     void filtersSortsAndClampsPagesDeterministically() {
         BlueprintJournalEntry learned = entry(0, JournalVisibility.FULL, "pack:zulu", "Zulu", true, true, false);
-        BlueprintJournalEntry researchable = entry(1, JournalVisibility.PREVIEW, "pack:bravo", "Bravo", false, true, true);
+        BlueprintJournalEntry researchable = entry(1, JournalVisibility.FULL, "pack:bravo", "Bravo", false, true, true);
         BlueprintJournalEntry unknown = entry(2, JournalVisibility.SILHOUETTE, null, null, false, false, false);
         List<BlueprintJournalEntry> entries = List.of(learned, researchable, unknown);
 
@@ -109,6 +109,12 @@ class BlueprintJournalQueryTest {
                     ordinal, visibility, Optional.empty(), Optional.ofNullable(name), Optional.empty(), Optional.empty(),
                     false, false, false, false, false, 0, 0, 0, 0);
         }
+        if (visibility == JournalVisibility.PREVIEW) {
+            return new BlueprintJournalEntry(
+                    ordinal, visibility, Optional.of(id(id)), Optional.of(name),
+                    Optional.of("rifle"), Optional.of(id("pack:slot/" + ordinal)),
+                    false, false, false, false, false, 5, 1, 0, 0);
+        }
         return fullEntry(ordinal, id, name, "rifle", learned, discovered, researchable);
     }
 
@@ -121,7 +127,7 @@ class BlueprintJournalQueryTest {
             boolean discovered,
             boolean researchable) {
         return new BlueprintJournalEntry(
-                ordinal, JournalVisibility.PREVIEW, Optional.of(id(id)), Optional.of(name),
+                ordinal, JournalVisibility.FULL, Optional.of(id(id)), Optional.of(name),
                 Optional.of(category), Optional.of(id("pack:slot/" + ordinal)),
                 learned, discovered, researchable, false, researchable, 5, 1, 0, 2);
     }

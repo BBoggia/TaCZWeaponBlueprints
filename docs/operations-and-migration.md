@@ -2,7 +2,7 @@
 
 ## Supported runtime
 
-Release 1.0.4 is built for Minecraft 1.20.1, Forge 47.x, TaCZ 1.1.8-hotfix, and Fzzy Config 0.5.9. Declared dependency ranges intentionally stop before TaCZ 1.2 and Fzzy Config 0.6 because those API lines have not been validated.
+Release 1.2.0 is built for Minecraft 1.20.1, Forge 47.x, TaCZ 1.1.8-hotfix, and Fzzy Config 0.5.9. Declared dependency ranges intentionally stop before TaCZ 1.2 and Fzzy Config 0.6 because those API lines have not been validated.
 
 TaCZ 1.1.8 can inject a Model 943 revolver and ammunition into a world's optional bonus chest. Obtaining those items does not unlock their gun-smithing recipes; blueprint progression and server-side crafting enforcement continue to operate normally.
 
@@ -15,7 +15,18 @@ Install the blueprint mod and required dependencies on both client and server. T
 3. Replace the mod JAR and confirm required dependency versions.
 4. Start the server and wait for the blueprint catalog and loot snapshot messages.
 5. Run `/gg loot status` and record the revision, catalog count, and distribution mode.
-6. Inspect and preview representative loot tables before reopening the server to players.
+6. Run `/gg research status`, inspect representative roots and leaves, and optionally export the live catalog.
+7. Inspect and preview representative loot tables before reopening the server to players.
+
+The Research Bench tree does not change the persisted player-data schema.
+Learned and discovered blueprint IDs, Research Points, and legacy recipe aliases
+remain readable without a world conversion. The custom network protocol is
+`15`, so clients and servers must update together. Protocol 15 transfers each
+disclosure-safe research graph and its matching group presentation as one
+bounded, atomic publication, hardens progression chunk generations, and uses
+the inventory-only Research Bench preview shape. This is a network-only
+compatibility change and does not alter learned blueprints, discoveries,
+Research Points, or datapack formats.
 
 Existing valid learned recipe IDs remain readable from the `Recipes` capability
 list. When an ID matches any current recipe alias, it is migrated to a durable
@@ -48,6 +59,24 @@ This table-selective bridge supports incremental datapack migration. The legacy 
 
 Definitions with the same namespace and path replace lower-priority definitions. Different IDs are additive. A failed reload does not publish a partial snapshot; verify that `/gg loot status` retains the previous revision.
 
+Research progression and presentation use three independent resource
+directories:
+
+```text
+data/<namespace>/taczweaponblueprints/research_profiles/<path>.json
+data/<namespace>/taczweaponblueprints/research_rules/<path>.json
+data/<namespace>/taczweaponblueprints/research_tree_groups/<path>.json
+```
+
+Roll out group resources after their referenced profile and rules. Group ranks
+organize the UI only; they never replace prerequisite rules. After `/reload`,
+use `research status`, inspect representative members, and run `research
+export`. Export format 2 records authored placements, automatic-fallback
+members, and authored IDs absent from the live TaCZ catalog. A malformed group,
+missing profile, duplicate active-profile membership, or rank that contradicts
+an effective prerequisite rejects the complete research reload and preserves
+the last published research snapshot.
+
 ## Rollback
 
 To roll back custom loot policy while keeping the current mod:
@@ -64,6 +93,9 @@ To roll back the mod version, stop the server, restore the previous JAR and matc
 - `inspect` includes disabled ownership and global opt-out rules.
 - `pool` reports flattened entries/selectors and current pre-blacklist candidates.
 - `preview` applies the current catalog, predicates, defaults, overrides, and immutable blacklist snapshot without consuming RNG.
+- `research status` audits rule assignment plus authored group coverage and missing members for the active profile.
+- `research inspect` reports the selected rule, visibility, cost, prerequisites, and authored group placement for one live blueprint.
+- `research export` writes a sorted format-2 authoring catalog with group and fallback metadata under the current world directory.
 
 Third-party TaCZ content packs can contain malformed recipes, language files, models, sounds, or missing definitions. The blueprint catalog isolates invalid recipes and reports aggregate samples while preserving valid entries. Fix those resources in the originating content pack; they are not blueprint datapack failures.
 
@@ -75,10 +107,13 @@ Run with JDK 17:
 ./gradlew cleanTest test build
 ./gradlew verifyReleaseArtifact
 ./gradlew verifyPublicationReadiness
+./gradlew certifyReleaseCandidate
 ```
 
 The artifact verifier rejects missing runtime classes, malformed packaged JSON,
 mismatched modifier indexes, incorrect Minecraft/Forge/FML/TaCZ/Fzzy dependency
 ranges, non-reproducible manifest timestamps, and unwanted cache or `.DS_Store`
-entries. Publication readiness additionally rejects the stock Forge MDK license
-placeholder until the project owner installs the intended license.
+entries. Publication readiness additionally verifies that the selected root
+license is not the stock Forge MDK placeholder.
+The final certification task records the verified JAR hash and exact dependency,
+protocol, and test metadata in `build/reports/release-candidate.json`.

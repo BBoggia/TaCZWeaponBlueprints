@@ -8,6 +8,7 @@ import java.util.function.Supplier;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchPreview;
+import com.gamergaming.taczweaponblueprints.progression.BlueprintRecyclingService;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCost;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchIngredient;
 
@@ -59,10 +60,16 @@ public final class SyncResearchBenchPreviewPacket {
             ingredients.add(new ResearchBenchPreview.IngredientPreview(
                     items, tag, buffer.readVarInt(), buffer.readVarInt()));
         }
+        ResearchBenchPreview.RecyclingPreview recycling = new ResearchBenchPreview.RecyclingPreview(
+                readOptionalId(buffer),
+                readRecyclingStatus(buffer),
+                buffer.readVarInt(),
+                buffer.readVarInt(),
+                buffer.readVarInt());
         this.preview = new ResearchBenchPreview(
                 blueprintId, pointCost, pointBalance,
                 policyEligible, ingredientsSatisfied, outputSpace,
-                researchable, creativeBypass, ingredients);
+                researchable, creativeBypass, ingredients, recycling);
     }
 
     public void toBytes(FriendlyByteBuf buffer) {
@@ -81,8 +88,13 @@ public final class SyncResearchBenchPreviewPacket {
             ingredient.items().forEach(id -> writeId(buffer, id));
             writeOptionalId(buffer, ingredient.tag());
             buffer.writeVarInt(ingredient.required());
-            buffer.writeVarInt(ingredient.available());
+            buffer.writeVarInt(ingredient.inventoryAvailable());
         }
+        writeOptionalId(buffer, preview.recycling().blueprintId());
+        buffer.writeVarInt(preview.recycling().status().ordinal());
+        buffer.writeVarInt(preview.recycling().pointValue());
+        buffer.writeVarInt(preview.recycling().pointBalance());
+        buffer.writeVarInt(preview.recycling().pointCap());
     }
 
     public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
@@ -117,6 +129,15 @@ public final class SyncResearchBenchPreviewPacket {
             throw new IllegalArgumentException("invalid resource ID in Research Bench preview");
         }
         return id;
+    }
+
+    private static BlueprintRecyclingService.Status readRecyclingStatus(FriendlyByteBuf buffer) {
+        int ordinal = buffer.readVarInt();
+        BlueprintRecyclingService.Status[] statuses = BlueprintRecyclingService.Status.values();
+        if (ordinal < 0 || ordinal >= statuses.length) {
+            throw new IllegalArgumentException("invalid Research Bench recycling status");
+        }
+        return statuses[ordinal];
     }
 
     private static void writeOptionalId(FriendlyByteBuf buffer, Optional<ResourceLocation> id) {

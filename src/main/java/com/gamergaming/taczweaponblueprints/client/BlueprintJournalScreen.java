@@ -397,7 +397,7 @@ public final class BlueprintJournalScreen extends Screen {
             int detailWidth,
             BlueprintJournalEntry entry) {
         int textX = x;
-        if (entry.blueprintId().isPresent()) {
+        if (entry.visibility().revealsIcon() && entry.blueprintId().isPresent()) {
             ItemStack stack = BlueprintItem.createBlueprint(entry.blueprintId().orElseThrow().toString());
             graphics.renderItem(stack, x, y);
             textX += 22;
@@ -436,9 +436,11 @@ public final class BlueprintJournalScreen extends Screen {
             line = detailLine(graphics, x, line, detailWidth,
                     Component.translatable("gui.taczweaponblueprints.journal.detail.prerequisites"),
                     Component.literal(Integer.toString(entry.prerequisiteCount())));
-            line = detailLine(graphics, x, line, detailWidth,
-                    Component.translatable("gui.taczweaponblueprints.journal.detail.points_available"),
-                    yesNo(entry.canAffordPoints()));
+            if (entry.visibility().revealsExactPolicy()) {
+                line = detailLine(graphics, x, line, detailWidth,
+                        Component.translatable("gui.taczweaponblueprints.journal.detail.points_available"),
+                        yesNo(entry.canAffordPoints()));
+            }
         }
         if (entry.recyclingValue() > 0) {
             line += font.lineHeight + 6;
@@ -516,6 +518,8 @@ public final class BlueprintJournalScreen extends Screen {
         } else if (entry.visibility() == JournalVisibility.SILHOUETTE
                 || entry.visibility() == JournalVisibility.NAME) {
             suffix = "unrevealed";
+        } else if (entry.visibility() == JournalVisibility.PREVIEW) {
+            suffix = "preview";
         } else {
             suffix = "locked";
         }

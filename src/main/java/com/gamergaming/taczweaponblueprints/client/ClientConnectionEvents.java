@@ -1,6 +1,9 @@
 package com.gamergaming.taczweaponblueprints.client;
 
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
+import com.gamergaming.taczweaponblueprints.network.SyncResearchTreePacket;
+import com.gamergaming.taczweaponblueprints.network.SyncBlueprintJournalPacket;
+import com.gamergaming.taczweaponblueprints.network.SyncPlayerProgressionPacket;
 
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
@@ -20,6 +23,10 @@ public final class ClientConnectionEvents {
     @SubscribeEvent
     public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
         ClientBlueprintJournal.clear();
+        ClientResearchTree.clear();
+        SyncPlayerProgressionPacket.clearClientState();
+        SyncBlueprintJournalPacket.clearClientState();
+        SyncResearchTreePacket.clearClientState();
     }
 
     @SubscribeEvent

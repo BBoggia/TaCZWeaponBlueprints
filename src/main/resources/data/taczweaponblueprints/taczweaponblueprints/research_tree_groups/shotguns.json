@@ -1,0 +1,14 @@
+{
+  "format": 1,
+  "profile": "taczweaponblueprints:duplicate_recovery",
+  "title": "Shotguns",
+  "translation_key": "gui.taczweaponblueprints.research_group.shotguns",
+  "icon": "tacz:db_long",
+  "order": 30,
+  "ranks": [
+    ["tacz:db_long"],
+    ["tacz:db_short", "tacz:m870"],
+    ["tacz:m1014"],
+    ["tacz:aa12", "tacz:spas_12"]
+  ]
+}

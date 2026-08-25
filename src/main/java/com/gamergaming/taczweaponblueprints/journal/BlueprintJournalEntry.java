@@ -66,6 +66,10 @@ public record BlueprintJournalEntry(
                     || prerequisiteCount != 0 || recyclingValue != 0) {
                 throw new IllegalArgumentException("name-only Journal entries contain disallowed metadata");
             }
+        } else if (visibility == JournalVisibility.PREVIEW
+                && (learned || discovered || researchable || recyclable || canAffordPoints
+                || recyclingValue != 0)) {
+            throw new IllegalArgumentException("preview Journal entry contains full policy state");
         } else if (blueprintId.isEmpty() || nameKey.isEmpty() || itemType.isEmpty() || displaySlotId.isEmpty()) {
             throw new IllegalArgumentException("preview and full Journal entries require presentation metadata");
         }
@@ -86,6 +90,7 @@ public record BlueprintJournalEntry(
             return anonymous(ordinal, visibility, Optional.of(data.getNameKey()));
         }
         boolean showResearch = policy.researchEnabled();
+        boolean showExactPolicy = visibility.revealsExactPolicy();
         BlueprintResearchCost cost = policy.researchCost();
         return new BlueprintJournalEntry(
                 ordinal,
@@ -94,15 +99,17 @@ public record BlueprintJournalEntry(
                 Optional.of(data.getNameKey()),
                 Optional.of(data.getItemType()),
                 Optional.of(data.getDisplaySlotKey()),
-                policy.learned(),
-                policy.discovered(),
-                policy.researchable(),
-                policy.recyclable(),
-                showResearch && policy.canAffordPoints(),
+                showExactPolicy && policy.learned(),
+                showExactPolicy && policy.discovered(),
+                showExactPolicy && policy.researchable(),
+                showExactPolicy && policy.recyclable(),
+                showExactPolicy && showResearch && policy.canAffordPoints(),
                 showResearch ? cost.points() : 0,
                 showResearch ? cost.ingredients().size() : 0,
                 showResearch ? policy.prerequisites().size() : 0,
-                policy.recyclingEnabled() ? policy.recyclingValue() : 0);
+                visibility.revealsExactPolicy() && policy.recyclingEnabled()
+                        ? policy.recyclingValue()
+                        : 0);
     }
 
     private static BlueprintJournalEntry anonymous(

@@ -14,18 +14,29 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.registries.ForgeRegistries;
 
-/** Finds an exact, overlap-safe ingredient allocation across the bench slots. */
+/** Finds an exact, overlap-safe ingredient allocation across supplied inventory slots. */
 public final class ResearchIngredientPlanner {
     private ResearchIngredientPlanner() {
     }
 
     public static Optional<Plan> plan(List<ItemStack> stacks, BlueprintResearchCost cost) {
+        return allocation(stacks, cost)
+                .filter(Allocation::complete)
+                .map(allocation -> new Plan(allocation.decrements));
+    }
+
+    /**
+     * Finds the largest overlap-safe allocation available from the supplied
+     * slots, even when the complete cost cannot yet be satisfied.
+     */
+    public static Optional<Allocation> allocation(List<ItemStack> stacks, BlueprintResearchCost cost) {
         if (stacks == null || cost == null || stacks.stream().anyMatch(java.util.Objects::isNull)) {
             return Optional.empty();
         }
         List<BlueprintResearchIngredient> ingredients = cost.ingredients();
         if (ingredients.isEmpty()) {
-            return Optional.of(new Plan(new int[stacks.size()]));
+            return Optional.of(new Allocation(
+                    new int[stacks.size()], new int[0][stacks.size()], 0, 0));
         }
 
         int ingredientCount = ingredients.size();
@@ -54,15 +65,21 @@ public final class ResearchIngredientPlanner {
 
         int[][] residual = copy(capacity);
         int flow = maximumFlow(residual, source, sink);
-        if (flow != required) {
-            return Optional.empty();
-        }
         int[] decrements = new int[slotCount];
         for (int slotIndex = 0; slotIndex < slotCount; slotIndex++) {
             int node = slotStart + slotIndex;
             decrements[slotIndex] = capacity[node][sink] - residual[node][sink];
         }
-        return Optional.of(new Plan(decrements));
+        int[][] ingredientAllocations = new int[ingredientCount][slotCount];
+        for (int ingredientIndex = 0; ingredientIndex < ingredientCount; ingredientIndex++) {
+            int ingredientNode = ingredientStart + ingredientIndex;
+            for (int slotIndex = 0; slotIndex < slotCount; slotIndex++) {
+                int slotNode = slotStart + slotIndex;
+                ingredientAllocations[ingredientIndex][slotIndex] =
+                        capacity[ingredientNode][slotNode] - residual[ingredientNode][slotNode];
+            }
+        }
+        return Optional.of(new Allocation(decrements, ingredientAllocations, required, flow));
     }
 
     static boolean matches(ItemStack stack, BlueprintResearchIngredient ingredient) {
@@ -170,6 +187,64 @@ public final class ResearchIngredientPlanner {
                 result.add(copy);
             }
             return List.copyOf(result);
+        }
+    }
+
+    /** Read-only maximum-flow allocation used by previews and safe auto-fill. */
+    public static final class Allocation {
+        private final int[] decrements;
+        private final int[][] ingredientAllocations;
+        private final int totalRequired;
+        private final int totalAllocated;
+
+        private Allocation(
+                int[] decrements,
+                int[][] ingredientAllocations,
+                int totalRequired,
+                int totalAllocated) {
+            this.decrements = decrements.clone();
+            this.ingredientAllocations = new int[ingredientAllocations.length][];
+            for (int index = 0; index < ingredientAllocations.length; index++) {
+                this.ingredientAllocations[index] = ingredientAllocations[index].clone();
+            }
+            this.totalRequired = totalRequired;
+            this.totalAllocated = totalAllocated;
+        }
+
+        public int slotCount() {
+            return decrements.length;
+        }
+
+        public int ingredientCount() {
+            return ingredientAllocations.length;
+        }
+
+        public int decrement(int slot) {
+            return decrements[slot];
+        }
+
+        public int allocatedForIngredient(int ingredient) {
+            return allocatedForIngredientFromSlots(ingredient, 0, decrements.length);
+        }
+
+        public int allocatedForIngredientFromSlots(int ingredient, int fromSlot, int toSlot) {
+            if (ingredient < 0 || ingredient >= ingredientAllocations.length
+                    || fromSlot < 0 || toSlot < fromSlot || toSlot > decrements.length) {
+                throw new IndexOutOfBoundsException("invalid research ingredient allocation range");
+            }
+            return Arrays.stream(ingredientAllocations[ingredient], fromSlot, toSlot).sum();
+        }
+
+        public int totalRequired() {
+            return totalRequired;
+        }
+
+        public int totalAllocated() {
+            return totalAllocated;
+        }
+
+        public boolean complete() {
+            return totalAllocated == totalRequired;
         }
     }
 }

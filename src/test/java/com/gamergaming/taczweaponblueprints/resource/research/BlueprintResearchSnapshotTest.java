@@ -300,6 +300,11 @@ class BlueprintResearchSnapshotTest {
                 BlueprintResearchDataManager.definitionId(
                         id("example:taczweaponblueprints/research_rules/hardcore/nether.json"),
                         BlueprintResearchDataManager.RULE_DIRECTORY));
+        assertEquals(
+                id("example:weapons/pistols"),
+                BlueprintResearchDataManager.definitionId(
+                        id("example:taczweaponblueprints/research_tree_groups/weapons/pistols.json"),
+                        BlueprintResearchDataManager.GROUP_DIRECTORY));
     }
 
     private static BlueprintResearchSnapshot snapshot(Map<ResourceLocation, BlueprintResearchRule> rules) {

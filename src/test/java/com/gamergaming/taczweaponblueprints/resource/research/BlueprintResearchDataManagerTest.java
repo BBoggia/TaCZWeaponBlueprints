@@ -1,5 +1,6 @@
 package com.gamergaming.taczweaponblueprints.resource.research;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -25,6 +26,39 @@ import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.profiling.InactiveProfiler;
 
 class BlueprintResearchDataManagerTest {
+    @Test
+    void preparesStrictResearchTreeGroupsAlongsideExistingDefinitions() {
+        ResourceManager resources = resourceManager(Map.of(
+                new ResourceLocation("test", "taczweaponblueprints/research_profiles/profile.json"),
+                resource(validProfileJson()),
+                new ResourceLocation("test", "taczweaponblueprints/research_tree_groups/pistols.json"),
+                resource("""
+                        {
+                          "format": 1,
+                          "profile": "test:profile",
+                          "title": "Pistols",
+                          "icon": "test:starter",
+                          "order": 10,
+                          "ranks": [["test:starter"]]
+                        }
+                        """)));
+
+        BlueprintResearchSnapshot prepared = BlueprintResearchDataManager.INSTANCE.prepare(
+                resources,
+                InactiveProfiler.INSTANCE);
+
+        assertEquals(1, prepared.groups().size());
+        assertEquals(
+                new ResearchTreeGroupPlacement(
+                        new ResourceLocation("test", "pistols"),
+                        0,
+                        0),
+                prepared.placementFor(
+                        new ResourceLocation("test", "profile"),
+                        new ResourceLocation("test", "starter"))
+                        .orElseThrow());
+    }
+
     @Test
     void failedPreparationLeavesThePublishedSnapshotUntouched() {
         BlueprintResearchDataManager.Publication before = BlueprintResearchDataManager.INSTANCE.publication();
@@ -55,9 +89,112 @@ class BlueprintResearchDataManagerTest {
         assertSame(before, BlueprintResearchDataManager.INSTANCE.publication());
     }
 
+    @Test
+    void invalidGroupPreparationLeavesThePublishedSnapshotUntouched() {
+        BlueprintResearchDataManager.Publication before = BlueprintResearchDataManager.INSTANCE.publication();
+        ResourceManager resources = resourceManager(Map.of(
+                new ResourceLocation("test", "taczweaponblueprints/research_profiles/profile.json"),
+                resource(validProfileJson()),
+                new ResourceLocation("test", "taczweaponblueprints/research_tree_groups/invalid.json"),
+                resource("""
+                        {
+                          "format": 1,
+                          "profile": "test:profile",
+                          "title": "Invalid",
+                          "icon": "test:starter",
+                          "order": 10,
+                          "ranks": [["test:starter"], ["test:starter"]]
+                        }
+                        """)));
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> BlueprintResearchDataManager.INSTANCE.prepare(resources, InactiveProfiler.INSTANCE));
+        assertSame(before, BlueprintResearchDataManager.INSTANCE.publication());
+    }
+
+    @Test
+    void oversizedDefinitionIsRejectedBeforeJsonMaterialization() {
+        ResourceManager resources = resourceManager(Map.of(
+                new ResourceLocation("test", "taczweaponblueprints/research_profiles/oversized.json"),
+                resource(validProfileJson() + " ".repeat(
+                        BlueprintResearchDataManager.MAX_DEFINITION_JSON_CHARACTERS + 1))));
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> BlueprintResearchDataManager.INSTANCE.prepare(
+                        resources,
+                        InactiveProfiler.INSTANCE));
+    }
+
+    @Test
+    void groupAdditionRemovalAndProfileSwitchPrepareIndependentSnapshots() {
+        ResourceLocation alphaProfile = new ResourceLocation(
+                "test", "taczweaponblueprints/research_profiles/alpha.json");
+        ResourceLocation betaProfile = new ResourceLocation(
+                "test", "taczweaponblueprints/research_profiles/beta.json");
+        ResourceLocation groupResource = new ResourceLocation(
+                "test", "taczweaponblueprints/research_tree_groups/weapons.json");
+
+        BlueprintResearchSnapshot alpha = BlueprintResearchDataManager.INSTANCE.prepare(
+                resourceManager(Map.of(
+                        alphaProfile, resource(validProfileJson()),
+                        betaProfile, resource(validProfileJson()),
+                        groupResource, resource(validGroupJson("test:alpha")))),
+                InactiveProfiler.INSTANCE);
+        BlueprintResearchSnapshot removed = BlueprintResearchDataManager.INSTANCE.prepare(
+                resourceManager(Map.of(
+                        alphaProfile, resource(validProfileJson()),
+                        betaProfile, resource(validProfileJson()))),
+                InactiveProfiler.INSTANCE);
+        BlueprintResearchSnapshot beta = BlueprintResearchDataManager.INSTANCE.prepare(
+                resourceManager(Map.of(
+                        alphaProfile, resource(validProfileJson()),
+                        betaProfile, resource(validProfileJson()),
+                        groupResource, resource(validGroupJson("test:beta")))),
+                InactiveProfiler.INSTANCE);
+
+        assertEquals(1, alpha.groupsForProfile(new ResourceLocation("test", "alpha")).size());
+        assertEquals(0, alpha.groupsForProfile(new ResourceLocation("test", "beta")).size());
+        assertEquals(0, removed.groups().size());
+        assertEquals(0, beta.groupsForProfile(new ResourceLocation("test", "alpha")).size());
+        assertEquals(1, beta.groupsForProfile(new ResourceLocation("test", "beta")).size());
+        assertEquals(1, alpha.groups().size());
+    }
+
     private static Resource resource(String json) {
         byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
         return new Resource(TEST_PACK, () -> new ByteArrayInputStream(bytes));
+    }
+
+    private static String validProfileJson() {
+        return """
+                {
+                  "format": 1,
+                  "journal_enabled": true,
+                  "visibility": "silhouette",
+                  "research_enabled": true,
+                  "recycling_enabled": true,
+                  "allow_unlearned_recycling": false,
+                  "recycling_value": 1,
+                  "research_cost": {"points": 8},
+                  "requires_discovery": false,
+                  "creative_bypasses_cost": false
+                }
+                """;
+    }
+
+    private static String validGroupJson(String profileId) {
+        return """
+                {
+                  "format": 1,
+                  "profile": "%s",
+                  "title": "Weapons",
+                  "icon": "test:starter",
+                  "order": 10,
+                  "ranks": [["test:starter"]]
+                }
+                """.formatted(profileId);
     }
 
     private static ResourceManager resourceManager(Map<ResourceLocation, Resource> resources) {

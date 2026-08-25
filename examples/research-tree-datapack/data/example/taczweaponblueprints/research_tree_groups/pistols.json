@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "profile": "example:custom_progression",
+  "title": "Example Pistols",
+  "translation_key": "gui.example_guns.research_group.pistols",
+  "icon": "example_guns:starter_pistol",
+  "order": 10,
+  "ranks": [
+    ["example_guns:starter_pistol"],
+    ["example_guns:advanced_pistol"]
+  ]
+}

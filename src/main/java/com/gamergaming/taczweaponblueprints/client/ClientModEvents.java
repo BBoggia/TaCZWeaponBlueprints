@@ -1,8 +1,11 @@
 package com.gamergaming.taczweaponblueprints.client;
 
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
+import com.gamergaming.taczweaponblueprints.init.ModBlocks;
 import com.gamergaming.taczweaponblueprints.init.ModMenus;
 
+import net.minecraft.client.renderer.ItemBlockRenderTypes;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -19,6 +22,9 @@ public final class ClientModEvents {
 
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
-        event.enqueueWork(() -> MenuScreens.register(ModMenus.RESEARCH_BENCH.get(), ResearchBenchScreen::new));
+        event.enqueueWork(() -> {
+            MenuScreens.register(ModMenus.RESEARCH_BENCH.get(), ResearchBenchScreen::new);
+            ItemBlockRenderTypes.setRenderLayer(ModBlocks.RESEARCH_BENCH.get(), RenderType.cutout());
+        });
     }
 }
