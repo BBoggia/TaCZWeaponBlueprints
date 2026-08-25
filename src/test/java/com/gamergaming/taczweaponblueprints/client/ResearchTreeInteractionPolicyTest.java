@@ -64,6 +64,64 @@ class ResearchTreeInteractionPolicyTest {
                 node(JournalVisibility.FULL, new ResourceLocation("test:full"))));
     }
 
+    @Test
+    void fullscreenPointerRoutingAlwaysPrefersTheFrontmostOverlay() {
+        ResearchTreeInteractionPolicy.PointerLayers everyLayer =
+                new ResearchTreeInteractionPolicy.PointerLayers(
+                        true, true, true, true, true, true, true);
+        assertEquals(
+                ResearchTreeInteractionPolicy.PointerTarget.GUIDANCE,
+                ResearchTreeInteractionPolicy.route(everyLayer));
+        assertEquals(
+                ResearchTreeInteractionPolicy.PointerTarget.CONTEXT_CARD,
+                ResearchTreeInteractionPolicy.route(new ResearchTreeInteractionPolicy.PointerLayers(
+                        false, true, true, true, true, true, true)));
+        assertEquals(
+                ResearchTreeInteractionPolicy.PointerTarget.SEARCH,
+                ResearchTreeInteractionPolicy.route(new ResearchTreeInteractionPolicy.PointerLayers(
+                        false, false, true, true, true, true, true)));
+        assertEquals(
+                ResearchTreeInteractionPolicy.PointerTarget.SIDEBAR,
+                ResearchTreeInteractionPolicy.route(new ResearchTreeInteractionPolicy.PointerLayers(
+                        false, false, false, true, true, true, true)));
+        assertEquals(
+                ResearchTreeInteractionPolicy.PointerTarget.CLOSE,
+                ResearchTreeInteractionPolicy.route(new ResearchTreeInteractionPolicy.PointerLayers(
+                        false, false, false, false, true, true, true)));
+        assertEquals(
+                ResearchTreeInteractionPolicy.PointerTarget.GRAPH_ELEMENT,
+                ResearchTreeInteractionPolicy.route(new ResearchTreeInteractionPolicy.PointerLayers(
+                        false, false, false, false, false, true, true)));
+        assertEquals(
+                ResearchTreeInteractionPolicy.PointerTarget.GRAPH_BACKGROUND,
+                ResearchTreeInteractionPolicy.route(new ResearchTreeInteractionPolicy.PointerLayers(
+                        false, false, false, false, false, false, true)));
+    }
+
+    @Test
+    void overlaysOwnScrollAndSuppressGraphHover() {
+        assertEquals(
+                ResearchTreeInteractionPolicy.ScrollTarget.SIDEBAR,
+                ResearchTreeInteractionPolicy.scrollTarget(
+                        ResearchTreeInteractionPolicy.PointerTarget.SIDEBAR, false));
+        assertEquals(
+                ResearchTreeInteractionPolicy.ScrollTarget.BLOCKED,
+                ResearchTreeInteractionPolicy.scrollTarget(
+                        ResearchTreeInteractionPolicy.PointerTarget.SEARCH, false));
+        assertEquals(
+                ResearchTreeInteractionPolicy.ScrollTarget.CONTEXT_CARD,
+                ResearchTreeInteractionPolicy.scrollTarget(
+                        ResearchTreeInteractionPolicy.PointerTarget.CONTEXT_CARD, true));
+        assertEquals(
+                ResearchTreeInteractionPolicy.ScrollTarget.GRAPH,
+                ResearchTreeInteractionPolicy.scrollTarget(
+                        ResearchTreeInteractionPolicy.PointerTarget.GRAPH_ELEMENT, false));
+        assertFalse(ResearchTreeInteractionPolicy.allowsGraphHover(
+                ResearchTreeInteractionPolicy.PointerTarget.CONTEXT_CARD));
+        assertTrue(ResearchTreeInteractionPolicy.allowsGraphHover(
+                ResearchTreeInteractionPolicy.PointerTarget.GRAPH_BACKGROUND));
+    }
+
     private static ResearchTreeGraph.Node node(
             JournalVisibility visibility,
             ResourceLocation blueprintId) {
