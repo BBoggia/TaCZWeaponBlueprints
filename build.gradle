@@ -445,6 +445,7 @@ tasks.register('verifyReleaseArtifact') {
                     'com/gamergaming/taczweaponblueprints/progression/BlueprintDiscoveryService.class',
                     'com/gamergaming/taczweaponblueprints/progression/BlueprintProgressionConfigSnapshot.class',
                     'com/gamergaming/taczweaponblueprints/progression/BlueprintProgressionSyncScheduler.class',
+                    'com/gamergaming/taczweaponblueprints/progression/BlueprintRecyclingService.class',
                     'com/gamergaming/taczweaponblueprints/progression/DuplicateBlueprintPolicy.class',
                     'com/gamergaming/taczweaponblueprints/resource/research/BlueprintResearchDataManager.class',
                     'com/gamergaming/taczweaponblueprints/resource/research/BlueprintResearchIngredientValidator.class',

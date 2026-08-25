@@ -9,6 +9,7 @@ import java.util.function.Consumer;
 
 import com.gamergaming.taczweaponblueprints.client.ClientRendererRegistry;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
+import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
 import com.gamergaming.taczweaponblueprints.init.ModItems;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
@@ -18,7 +19,9 @@ import com.gamergaming.taczweaponblueprints.util.ItemNameFilterHelper;
 
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
@@ -44,11 +47,29 @@ public class BlueprintItem extends Item {
     }
 
     public static String getBpId(ItemStack stack) {
-        if (stack == null || stack.isEmpty()) {
-            return "NULL";
+        return getBlueprintId(stack).map(ResourceLocation::toString).orElse("NULL");
+    }
+
+    /** Returns a bounded canonical ID only for a valid physical blueprint stack. */
+    public static Optional<ResourceLocation> getBlueprintId(ItemStack stack) {
+        if (stack == null || stack.isEmpty() || !(stack.getItem() instanceof BlueprintItem)) {
+            return Optional.empty();
         }
         CompoundTag tag = stack.getTag();
-        return (tag != null && tag.contains("bpId")) ? tag.getString("bpId") : "NULL";
+        if (tag == null || !tag.contains("bpId", Tag.TAG_STRING)) {
+            return Optional.empty();
+        }
+        return parseBlueprintId(tag.getString("bpId"));
+    }
+
+    public static Optional<ResourceLocation> parseBlueprintId(String value) {
+        if (value == null) {
+            return Optional.empty();
+        }
+        if (value.isBlank() || value.length() > PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(ResourceLocation.tryParse(value));
     }
 
     public static ItemStack createBlueprint(String bpId) {
