@@ -19,6 +19,7 @@ import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.network.ResearchBenchActionPacket;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintRecyclingService;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayout;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePresentation;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePublication;
 
@@ -98,6 +99,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     private ResearchTreeScreenLayout.Layout activeTreeLayout = COMPACT_TREE_LAYOUT;
     private ResearchTreeFullscreenLayout.Layout fullscreenOverlayLayout;
     private ResearchTreeFullscreenRailLayout.Layout fullscreenRailLayout;
+    private ResearchTreeContextCardLayout.Layout fullscreenContextCardLayout;
     private boolean fullscreen;
     private ResearchTreeCameraStore.Key activeCameraKey;
     private boolean lastProjectionCameraRestored;
@@ -116,6 +118,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     private Button researchModeButton;
     private Button recycleModeButton;
     private Button primaryResearchButton;
+    private Button returnToSelectionButton;
     private Button recycleButton;
     private Button zoomOutButton;
     private Button zoomInButton;
@@ -315,13 +318,10 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                         ? "gui.taczweaponblueprints.research_bench.tree.fullscreen.exit"
                         : "gui.taczweaponblueprints.research_bench.tree.fullscreen.enter")))
                 .build());
-        ResearchTreeScreenLayout.Rect actionBounds = ResearchTreeDetailLayout
-                .primaryAction(activeTreeLayout)
-                .orElseGet(() -> new ResearchTreeScreenLayout.Rect(
-                        activeTreeLayout.details().right() - 74,
-                        activeTreeLayout.details().bottom() - 22,
-                        64,
-                        20));
+        ResearchTreeScreenLayout.Rect actionBounds = fullscreen
+                ? new ResearchTreeScreenLayout.Rect(4, 4, 72, 20)
+                : ResearchTreeDetailLayout.primaryAction(activeTreeLayout)
+                        .orElseThrow();
         primaryResearchButton = addRenderableWidget(Button.builder(
                 Component.translatable("gui.taczweaponblueprints.research_bench.research"),
                 ignored -> requestResearch())
@@ -330,6 +330,18 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                         topPos + actionBounds.y(),
                         actionBounds.width(),
                         actionBounds.height())
+                .build());
+        returnToSelectionButton = addRenderableWidget(Button.builder(
+                Component.translatable(
+                        "gui.taczweaponblueprints.research_bench.tree.return_selection"),
+                ignored -> returnToPinnedNode())
+                .bounds(
+                        4,
+                        4,
+                        ResearchTreeContextCardLayout.RETURN_CHIP_WIDTH,
+                        ResearchTreeContextCardLayout.RETURN_CHIP_HEIGHT)
+                .tooltip(Tooltip.create(Component.translatable(
+                        "gui.taczweaponblueprints.research_bench.tree.return_selection.tooltip")))
                 .build());
         ResearchTreeGuidanceLayout.Guide guidance =
                 ResearchTreeGuidanceLayout.forLayout(activeTreeLayout);
@@ -411,6 +423,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         groupButton.setTabOrderGroup(34);
         fullscreenButton.setTabOrderGroup(35);
         primaryResearchButton.setTabOrderGroup(40);
+        returnToSelectionButton.setTabOrderGroup(39);
         guidanceDismissButton.setTabOrderGroup(41);
         helpButton.setTabOrderGroup(41);
         researchModeButton.setTabOrderGroup(50);
@@ -687,7 +700,8 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         fullscreenButton.visible = browseMode;
         guidanceDismissButton.visible = browseMode && guidanceVisible;
         helpButton.visible = browseMode && !fullscreen && !guidanceVisible;
-        primaryResearchButton.visible = browseMode;
+        primaryResearchButton.visible = browseMode && !fullscreen;
+        returnToSelectionButton.visible = false;
         recycleButton.visible = recycleMode;
 
         boolean hasGroups = !treeProjections.publication().presentation().groups().isEmpty();
@@ -728,16 +742,18 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                             "gui.taczweaponblueprints.research_bench.tree.search.results",
                             globalTreeSearchMatches.size())));
         }
-        primaryResearchButton.active = browseMode
-                && menu.preview().researchable()
-                && menu.selectedBlueprint().filter(id -> treeCanvas.focusedId().filter(id::equals).isPresent())
-                        .flatMap(treeCanvas.graph()::node)
-                        .filter(node -> node.visibility().allowsServerSelection())
-                        .isPresent();
-        if (browseMode && menu.preview().blueprintId().isPresent()) {
-            primaryResearchButton.setTooltip(Tooltip.create(readiness(menu.preview())));
-        } else {
-            primaryResearchButton.setTooltip(null);
+        if (!fullscreen) {
+            primaryResearchButton.active = browseMode
+                    && menu.preview().researchable()
+                    && menu.selectedBlueprint()
+                            .filter(id -> treeCanvas.focusedId().filter(id::equals).isPresent())
+                            .flatMap(treeCanvas.graph()::node)
+                            .filter(node -> node.visibility().allowsServerSelection())
+                            .isPresent();
+            primaryResearchButton.setTooltip(
+                    browseMode && menu.preview().blueprintId().isPresent()
+                            ? Tooltip.create(readiness(menu.preview()))
+                            : null);
         }
         recycleButton.active = recycleMode && menu.preview().recycling().recyclable();
         relationButtons.forEach(button -> button.refresh(browseMode));
@@ -746,6 +762,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 && !relationButton.visible) {
             setFocused(null);
         }
+        updateFullscreenContextCardWidgets();
         updateTreeSafeInsets();
     }
 
@@ -761,10 +778,124 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                         : safe.x();
         int top = safe.y();
         int right = width - safe.right();
-        int bottom = Math.max(
-                height - safe.bottom(),
-                height - primaryResearchButton.getY() + 8);
+        int bottom = height - safe.bottom();
+        if (fullscreenContextCardLayout != null) {
+            ResearchTreeScreenLayout.Rect card = fullscreenContextCardLayout.card();
+            switch (fullscreenContextCardLayout.placement()) {
+                case RIGHT -> right = Math.max(right, width - card.x() + 8);
+                case LEFT -> left = Math.max(left, card.right() + 8);
+                case BELOW -> bottom = Math.max(bottom, height - card.y() + 8);
+                case ABOVE -> top = Math.max(top, card.bottom() + 8);
+            }
+        }
         treeCanvas.setSafeInsets(new ResearchTreeViewport.Insets(left, top, right, bottom));
+    }
+
+    private void updateFullscreenContextCardWidgets() {
+        fullscreenContextCardLayout = null;
+        if (primaryResearchButton == null || returnToSelectionButton == null
+                || !fullscreen || visibleMode != ResearchBenchMenu.Mode.BROWSE
+                || fullscreenOverlayLayout == null) {
+            if (primaryResearchButton != null && fullscreen) {
+                primaryResearchButton.visible = false;
+            }
+            if (returnToSelectionButton != null) {
+                returnToSelectionButton.visible = false;
+            }
+            return;
+        }
+        Optional<ResourceLocation> pinned = fullscreenOverlayState.pinnedNodeId();
+        if (pinned.isEmpty() || treeCanvas.graph().node(pinned.orElseThrow()).isEmpty()) {
+            primaryResearchButton.visible = false;
+            returnToSelectionButton.visible = false;
+            return;
+        }
+        ResourceLocation pinnedId = pinned.orElseThrow();
+        Optional<ResearchTreeContextCardLayout.Anchor> anchor = fullscreenNodeAnchor(pinnedId);
+        if (anchor.isEmpty()) {
+            primaryResearchButton.visible = false;
+            returnToSelectionButton.visible = false;
+            return;
+        }
+        boolean exactPreview = ResearchTreeContextCardPolicy.hasMatchingAuthoritativePreview(
+                pinnedId,
+                treeCanvas.authoritativeSelectedId(),
+                menu.preview());
+        List<ResearchTreeScreenLayout.Rect> obstacles = fullscreenContextObstacles();
+        fullscreenContextCardLayout = ResearchTreeContextCardLayout.place(
+                width,
+                height,
+                anchor.orElseThrow(),
+                obstacles,
+                exactPreview ? menu.preview().ingredients().size() : 0,
+                exactPreview);
+
+        ResearchTreeScreenLayout.Rect action = fullscreenContextCardLayout.action();
+        primaryResearchButton.visible = action != null;
+        if (action != null) {
+            primaryResearchButton.setX(action.x());
+            primaryResearchButton.setY(action.y());
+            primaryResearchButton.setWidth(action.width());
+            primaryResearchButton.active = menu.preview().researchable();
+            primaryResearchButton.setTooltip(Tooltip.create(readiness(menu.preview())));
+        } else {
+            primaryResearchButton.active = false;
+            primaryResearchButton.setTooltip(null);
+        }
+
+        ArrayList<ResearchTreeScreenLayout.Rect> chipObstacles = new ArrayList<>(obstacles);
+        chipObstacles.add(fullscreenContextCardLayout.card());
+        boolean anchorVisible = ResearchTreeContextCardLayout.isAnchorVisible(
+                anchor.orElseThrow(), width, height, obstacles);
+        returnToSelectionButton.visible = !anchorVisible;
+        returnToSelectionButton.active = !anchorVisible;
+        if (!anchorVisible) {
+            ResearchTreeScreenLayout.Rect chip = ResearchTreeContextCardLayout.returnChip(
+                    width, height, chipObstacles);
+            returnToSelectionButton.setX(chip.x());
+            returnToSelectionButton.setY(chip.y());
+            returnToSelectionButton.setWidth(chip.width());
+        }
+    }
+
+    private Optional<ResearchTreeContextCardLayout.Anchor> fullscreenNodeAnchor(
+            ResourceLocation blueprintId) {
+        return treeCanvas.layout().position(blueprintId).map(position -> {
+            ResearchTreeViewport viewport = treeCanvas.viewport();
+            ResearchTreeScreenLayout.Rect canvas = treeCanvas.bounds();
+            int x = canvas.x() + viewport.viewportX(position.x());
+            int y = canvas.y() + viewport.viewportY(position.y());
+            int right = canvas.x() + viewport.viewportX(
+                    position.x() + ResearchTreeLayout.NODE_WIDTH);
+            int bottom = canvas.y() + viewport.viewportY(
+                    position.y() + ResearchTreeLayout.NODE_HEIGHT);
+            return new ResearchTreeContextCardLayout.Anchor(
+                    x, y, Math.max(1, right - x), Math.max(1, bottom - y));
+        });
+    }
+
+    private List<ResearchTreeScreenLayout.Rect> fullscreenContextObstacles() {
+        if (fullscreenOverlayLayout == null) {
+            return List.of();
+        }
+        ArrayList<ResearchTreeScreenLayout.Rect> obstacles = new ArrayList<>();
+        obstacles.add(fullscreenOverlayState.railState()
+                == ResearchTreeFullscreenOverlayState.RailState.EDGE_HANDLE
+                        ? fullscreenOverlayLayout.edgeReveal()
+                        : fullscreenOverlayLayout.rail());
+        obstacles.add(fullscreenOverlayLayout.close());
+        if (searchBox != null && searchBox.visible) {
+            obstacles.add(fullscreenOverlayLayout.searchField());
+        }
+        if (guidanceVisible) {
+            obstacles.add(ResearchTreeGuidanceLayout.forLayout(activeTreeLayout).panel());
+        }
+        return List.copyOf(obstacles);
+    }
+
+    private void returnToPinnedNode() {
+        fullscreenOverlayState.pinnedNodeId().ifPresent(treeCanvas::focusNode);
+        updateWidgets();
     }
 
     private void updateSidebarButtons(boolean browseMode) {
@@ -1144,6 +1275,9 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 : Math.max(0.0D, (cameraFrameMillis - lastCameraFrameMillis) / 1_000.0D);
         lastCameraFrameMillis = cameraFrameMillis;
         treeCanvas.tickCamera(cameraDeltaSeconds);
+        if (fullscreen && visibleMode == ResearchBenchMenu.Mode.BROWSE) {
+            updateFullscreenContextCardWidgets();
+        }
         lastMouseX = mouseX;
         lastMouseY = mouseY;
         if (fullscreen
@@ -1179,6 +1313,9 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 && graphHoverAllowed) {
             renderTreeTooltip(graphics, mouseX, mouseY);
         }
+        if (fullscreen && visibleMode == ResearchBenchMenu.Mode.BROWSE) {
+            renderFullscreenContextCardTooltip(graphics, mouseX, mouseY);
+        }
     }
 
     @Override
@@ -1202,7 +1339,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
 
     private void drawBrowseBackground(GuiGraphics graphics) {
         ResearchTreeScreenLayout.Rect details = activeTreeLayout.details();
-        if (activeTreeLayout.detailsPlacement()
+        if (!fullscreen && activeTreeLayout.detailsPlacement()
                 != ResearchTreeScreenLayout.DetailsPlacement.OVERLAY) {
             graphics.fill(
                     leftPos + details.x(),
@@ -1226,6 +1363,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 this::groupName);
         if (fullscreen) {
             renderFullscreenNavigationBackground(graphics);
+            renderFullscreenContextCardBackground(graphics);
         }
     }
 
@@ -1242,6 +1380,22 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         ResearchTreeScreenLayout.Rect rail = fullscreenOverlayLayout.rail();
         graphics.fill(rail.x(), rail.y(), rail.right(), rail.bottom(), 0xD8111820);
         graphics.renderOutline(rail.x(), rail.y(), rail.width(), rail.height(), BORDER);
+    }
+
+    private void renderFullscreenContextCardBackground(GuiGraphics graphics) {
+        if (fullscreenContextCardLayout == null) {
+            return;
+        }
+        ResearchTreeScreenLayout.Rect card = fullscreenContextCardLayout.card();
+        graphics.fill(card.x(), card.y(), card.right(), card.bottom(), 0xF2111820);
+        graphics.renderOutline(card.x(), card.y(), card.width(), card.height(), BORDER);
+        for (ResearchTreeScreenLayout.Rect ingredient : fullscreenContextCardLayout.ingredients()) {
+            graphics.fill(
+                    ingredient.x(), ingredient.y(), ingredient.right(), ingredient.bottom(), SLOT);
+            graphics.renderOutline(
+                    ingredient.x(), ingredient.y(), ingredient.width(), ingredient.height(),
+                    0xFF394552);
+        }
     }
 
     private void drawRecycleBackground(GuiGraphics graphics) {
@@ -1370,9 +1524,11 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             return ResearchTreeInteractionPolicy.PointerTarget.NONE;
         }
         boolean guidance = guidanceContains(mouseX, mouseY);
-        boolean contextCard = primaryResearchButton != null
-                && primaryResearchButton.visible
-                && primaryResearchButton.isMouseOver(mouseX, mouseY);
+        boolean contextCard = (fullscreenContextCardLayout != null
+                && fullscreenContextCardLayout.card().contains(mouseX, mouseY))
+                || (returnToSelectionButton != null
+                        && returnToSelectionButton.visible
+                        && returnToSelectionButton.isMouseOver(mouseX, mouseY));
         boolean close = fullscreenButton != null
                 && fullscreenButton.visible
                 && fullscreenButton.isMouseOver(mouseX, mouseY);
@@ -1423,15 +1579,12 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
 
     private void renderFullscreenBrowseLabels(GuiGraphics graphics) {
         ResearchTreeScreenLayout.Rect canvas = activeTreeLayout.canvas();
-        ResearchTreeScreenLayout.Rect details = activeTreeLayout.details();
-        boolean overlayDetails = activeTreeLayout.detailsPlacement()
-                == ResearchTreeScreenLayout.DetailsPlacement.OVERLAY;
         int messageX = fullscreenOverlayLayout == null
                 ? canvas.x() + 8
                 : fullscreenOverlayLayout.rail().right() + 8;
-        int stateMessageY = overlayDetails
-                ? fullscreenOverlayLayout.searchField().bottom() + 8
-                : canvas.y() + ResearchTreeCanvas.STICKY_HEADER_HEIGHT + 4;
+        int stateMessageY = fullscreenOverlayLayout == null
+                ? canvas.y() + 8
+                : fullscreenOverlayLayout.searchField().bottom() + 8;
         if (!guidanceVisible && treeCanvas.graph().nodes().isEmpty()) {
             graphics.drawWordWrap(
                     font,
@@ -1455,91 +1608,120 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                     false);
         }
 
-        if (overlayDetails) {
+        renderFullscreenContextCardContent(graphics);
+    }
+
+    private void renderFullscreenContextCardContent(GuiGraphics graphics) {
+        if (fullscreenContextCardLayout == null) {
             return;
         }
-
-        Optional<ResearchTreeGraph.Node> selected = focusedTreeNode();
+        Optional<ResourceLocation> pinned = fullscreenOverlayState.pinnedNodeId();
+        Optional<ResearchTreeGraph.Node> selected = pinned.flatMap(treeCanvas.graph()::node);
         if (selected.isEmpty()) {
-            graphics.drawWordWrap(
-                    font,
-                    Component.translatable("gui.taczweaponblueprints.research_bench.select_hint"),
-                    details.x() + 10,
-                    details.y() + 10,
-                    Math.max(80, details.width() - 20),
-                    MUTED);
+            return;
+        }
+        ResearchTreeGraph.Node node = selected.orElseThrow();
+        ResearchTreeContextCardLayout.Layout card = fullscreenContextCardLayout;
+        drawFocusedNodeIcon(graphics, node, card.icon().x(), card.icon().y());
+        graphics.drawString(
+                font,
+                clipped(nodeName(node), card.name().width()),
+                card.name().x(),
+                card.name().y(),
+                TEXT,
+                false);
+        ResearchTreeStatusGlyph.render(
+                graphics,
+                card.status().x(),
+                card.status().y() + 1,
+                nodeBorderColor(node),
+                ResearchTreeStatusGlyph.forSymbol(nodeStatusSymbol(node)));
+        graphics.drawString(
+                font,
+                clipped(nodeNextAction(node), card.status().width() - 10),
+                card.status().x() + 10,
+                card.status().y(),
+                nodeBorderColor(node),
+                false);
+        graphics.drawString(
+                font,
+                clipped(nodeCostOrVisibility(node), card.summary().width()),
+                card.summary().x(),
+                card.summary().y(),
+                MUTED,
+                false);
+        if (!card.exactPreview()) {
             return;
         }
 
-        ResearchTreeGraph.Node node = selected.orElseThrow();
-        switch (activeTreeLayout.detailsPlacement()) {
-            case RIGHT -> renderRightFullscreenDetails(graphics, details, node);
-            case BOTTOM -> renderBottomFullscreenDetails(graphics, details, node);
-            case DRAWER -> renderDrawerFullscreenDetails(graphics, details, node);
-            case OVERLAY -> {
-                // Fullscreen details are rendered contextually in the node tooltip.
+        ResearchBenchPreview preview = menu.preview();
+        graphics.drawString(
+                font,
+                clipped(Component.translatable(
+                        "gui.taczweaponblueprints.research_bench.tree.tooltip.balance",
+                        preview.pointBalance()), card.balance().width()),
+                card.balance().x(),
+                card.balance().y(),
+                preview.pointBalance() >= preview.pointCost() ? ACCENT : BAD,
+                false);
+        for (int index = 0; index < card.ingredients().size(); index++) {
+            ResearchTreeScreenLayout.Rect slot = card.ingredients().get(index);
+            ResearchBenchPreview.IngredientPreview ingredient = preview.ingredients().get(index);
+            ItemStack icon = ingredientIcon(ingredient);
+            if (!icon.isEmpty()) {
+                graphics.renderItem(icon, slot.x() + 1, slot.y() + 1);
+            } else {
+                graphics.drawCenteredString(font, "?", slot.x() + 9, slot.y() + 5, MUTED);
             }
+            Component count = Component.translatable(
+                    "gui.taczweaponblueprints.research_bench.tree.card.ingredient",
+                    ingredientName(ingredient),
+                    ingredient.totalAvailable(),
+                    ingredient.required());
+            graphics.drawString(
+                    font,
+                    clipped(count, Math.max(1, slot.width() - 20)),
+                    slot.x() + 19,
+                    slot.y() + 5,
+                    ingredient.totalAvailable() >= ingredient.required() ? GOOD : BAD,
+                    false);
         }
+        graphics.drawString(
+                font,
+                clipped(readiness(preview), card.readiness().width()),
+                card.readiness().x(),
+                card.readiness().y(),
+                preview.researchable() ? GOOD : WARN,
+                false);
     }
 
-    private void renderRightFullscreenDetails(
+    private void renderFullscreenContextCardTooltip(
             GuiGraphics graphics,
-            ResearchTreeScreenLayout.Rect details,
-            ResearchTreeGraph.Node node) {
-        drawFocusedNodeIcon(graphics, node, details.x() + 10, details.y() + 10);
-        graphics.drawString(
-                font, clipped(nodeName(node), details.width() - 54),
-                details.x() + 34, details.y() + 11, TEXT, false);
-        drawStatusAndAction(
-                graphics, node, details.x() + 10, details.y() + 31, details.width() - 20);
-        graphics.drawString(
-                font, clipped(nodeCostOrVisibility(node), details.width() - 20),
-                details.x() + 10, details.y() + 49, MUTED, false);
-        drawFullscreenBalance(graphics, details.x() + 10, details.y() + 62, details.width() - 20);
-        drawRelationshipLabels(
-                graphics, node,
-                details.x() + 10, details.y() + 77,
-                details.x() + 10, details.y() + 117,
-                details.width() - 20);
-    }
-
-    private void renderBottomFullscreenDetails(
-            GuiGraphics graphics,
-            ResearchTreeScreenLayout.Rect details,
-            ResearchTreeGraph.Node node) {
-        drawFocusedNodeIcon(graphics, node, details.x() + 10, details.y() + 9);
-        graphics.drawString(
-                font, clipped(nodeName(node), 176),
-                details.x() + 34, details.y() + 10, TEXT, false);
-        drawStatusAndAction(graphics, node, details.x() + 10, details.y() + 29, 200);
-        graphics.drawString(
-                font, clipped(nodeCostOrVisibility(node), 96),
-                details.x() + 10, details.y() + 45, MUTED, false);
-        drawFullscreenBalance(graphics, details.x() + 112, details.y() + 45, 98);
-        drawRelationshipLabels(
-                graphics, node,
-                details.x() + 220, details.y() + 8,
-                details.x() + 220, details.y() + 44,
-                details.width() - 230);
-    }
-
-    private void renderDrawerFullscreenDetails(
-            GuiGraphics graphics,
-            ResearchTreeScreenLayout.Rect details,
-            ResearchTreeGraph.Node node) {
-        drawFocusedNodeIcon(graphics, node, details.x() + 8, details.y() + 8);
-        graphics.drawString(
-                font, clipped(nodeName(node), 84),
-                details.x() + 30, details.y() + 9, TEXT, false);
-        drawStatusAndAction(graphics, node, details.x() + 8, details.y() + 29, 104);
-        graphics.drawString(
-                font, clipped(nodeCostOrVisibility(node), 104),
-                details.x() + 8, details.y() + 45, MUTED, false);
-        drawRelationshipLabels(
-                graphics, node,
-                details.x() + 120, details.y() + 7,
-                details.x() + 120, details.y() + 31,
-                Math.max(36, details.width() - 204));
+            int mouseX,
+            int mouseY) {
+        if (fullscreenContextCardLayout == null
+                || !fullscreenContextCardLayout.exactPreview()) {
+            return;
+        }
+        List<ResearchTreeScreenLayout.Rect> slots = fullscreenContextCardLayout.ingredients();
+        for (int index = 0; index < slots.size(); index++) {
+            if (!slots.get(index).contains(mouseX, mouseY)) {
+                continue;
+            }
+            ResearchBenchPreview.IngredientPreview ingredient = menu.preview().ingredients().get(index);
+            graphics.renderComponentTooltip(
+                    font,
+                    List.of(
+                            ingredientName(ingredient),
+                            Component.translatable(
+                                    "gui.taczweaponblueprints.research_bench.tree.tooltip.ingredient",
+                                    ingredientName(ingredient),
+                                    ingredient.totalAvailable(),
+                                    ingredient.required())),
+                    mouseX,
+                    mouseY);
+            return;
+        }
     }
 
     private void drawFocusedNodeIcon(
@@ -1557,27 +1739,6 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         }
     }
 
-    private void drawStatusAndAction(
-            GuiGraphics graphics,
-            ResearchTreeGraph.Node node,
-            int x,
-            int y,
-            int width) {
-        ResearchTreeStatusGlyph.render(
-                graphics,
-                x,
-                y + 1,
-                nodeBorderColor(node),
-                ResearchTreeStatusGlyph.forSymbol(nodeStatusSymbol(node)));
-        graphics.drawString(
-                font,
-                clipped(nodeNextAction(node), Math.max(0, width - 10)),
-                x + 10,
-                y,
-                nodeBorderColor(node),
-                false);
-    }
-
     private Component nodeCostOrVisibility(ResearchTreeGraph.Node node) {
         return node.visibility().revealsResearchSummary()
                 ? Component.translatable(
@@ -1585,45 +1746,6 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 : Component.translatable(
                         "gui.taczweaponblueprints.research_bench.tree.visibility."
                                 + node.visibility().serializedName());
-    }
-
-    private void drawFullscreenBalance(GuiGraphics graphics, int x, int y, int width) {
-        graphics.drawString(
-                font,
-                clipped(Component.translatable(
-                        "gui.taczweaponblueprints.research_bench.tree.balance", researchPoints), width),
-                x,
-                y,
-                ACCENT,
-                false);
-    }
-
-    private void drawRelationshipLabels(
-            GuiGraphics graphics,
-            ResearchTreeGraph.Node node,
-            int requirementsX,
-            int requirementsY,
-            int unlocksX,
-            int unlocksY,
-            int width) {
-        graphics.drawString(
-                font,
-                clipped(Component.translatable(
-                        "gui.taczweaponblueprints.research_bench.tree.needs_short",
-                        node.prerequisiteCount()), width),
-                requirementsX,
-                requirementsY,
-                ACCENT,
-                false);
-        graphics.drawString(
-                font,
-                clipped(Component.translatable(
-                        "gui.taczweaponblueprints.research_bench.tree.unlocks_short",
-                        treeCanvas.directUnlocks(node.blueprintId()).size()), width),
-                unlocksX,
-                unlocksY,
-                0xFF62C7D9,
-                false);
     }
 
     private void renderBrowseLabels(GuiGraphics graphics) {
@@ -1743,9 +1865,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     }
 
     private List<ResearchTreeDetailLayout.RelationSlot> activeRelationSlots() {
-        return fullscreen
-                ? ResearchTreeDetailLayout.fullscreen(activeTreeLayout)
-                : COMPACT_RELATION_SLOTS;
+        return fullscreen ? List.of() : COMPACT_RELATION_SLOTS;
     }
 
     private void drawRelationCard(
@@ -1889,24 +2009,16 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         }
         Optional<ResearchTreeGraph.Node> hovered = treeCanvas.nodeAt(mouseX, mouseY);
         if (hovered.isEmpty()) {
-            Optional<ResourceLocation> pinnedNodeId = fullscreenOverlayState.pinnedNodeId();
-            if (fullscreen && pinnedNodeId.isPresent()
-                    && treeCanvas.contains(mouseX, mouseY)
-                    && (primaryResearchButton == null || !primaryResearchButton.isMouseOver(mouseX, mouseY))) {
-                treeCanvas.graph().node(pinnedNodeId.orElseThrow()).ifPresent(node -> {
-                    ResearchTreeScreenLayout.Rect canvas = activeTreeLayout.canvas();
-                    graphics.renderComponentTooltip(
-                            font,
-                            treeTooltipLines(node, true),
-                            leftPos + canvas.right() - 12,
-                            topPos + fullscreenOverlayLayout.close().bottom() + 8);
-                });
-            }
             return;
         }
         ResearchTreeGraph.Node node = hovered.orElseThrow();
         graphics.renderComponentTooltip(
-                font, treeTooltipLines(node, false), mouseX, mouseY);
+                font,
+                fullscreen
+                        ? List.of(nodeName(node), nodeStatus(node))
+                        : treeTooltipLines(node, false),
+                mouseX,
+                mouseY);
     }
 
     private List<Component> treeTooltipLines(

@@ -77,6 +77,15 @@ of detail determines which graph labels appear as the camera zooms.
 - Exact preview content and the Research button require a matching authoritative
   preview ID.
 
+Phase 6 implements this as a single adaptive surface rather than retaining any
+fullscreen right, bottom, or drawer details panel. Card geometry evaluates the
+four sides of the selected node, minimizes overlap with active controls, and
+clamps to the screen. Exact costs, inventory counts, readiness, and the action
+are withheld until pinned node, authoritative menu selection, and server preview
+IDs all agree. The action then uses the existing menu transaction; the server
+still replans and consumes the player's inventory. A selected node that leaves
+the visible, unobstructed canvas exposes a return-to-weapon chip.
+
 ### Guidance
 
 The first-visit guide is a small non-blocking coachmark: `Drag to move • Scroll

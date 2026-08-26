@@ -8,7 +8,6 @@ public final class ResearchTreeDetailLayout {
     public static final int SLOT_SIZE = 16;
     public static final int COMPACT_MAX_REQUIREMENTS = 2;
     public static final int COMPACT_MAX_UNLOCKS = 1;
-    public static final int FULLSCREEN_MAX_PER_KIND = 8;
 
     private ResearchTreeDetailLayout() {
     }
@@ -40,30 +39,6 @@ public final class ResearchTreeDetailLayout {
         return slotAt(compact(details), x, y);
     }
 
-    /** Responsive relationship rows for the active fullscreen details panel. */
-    public static List<RelationSlot> fullscreen(ResearchTreeScreenLayout.Layout layout) {
-        if (layout == null || layout.mode() != ResearchTreeScreenLayout.ViewMode.FULLSCREEN) {
-            throw new IllegalArgumentException("fullscreen relationship layout requires fullscreen bounds");
-        }
-        ResearchTreeScreenLayout.Rect details = layout.details();
-        if (layout.detailsPlacement() == ResearchTreeScreenLayout.DetailsPlacement.OVERLAY) {
-            return List.of();
-        }
-        if (layout.detailsPlacement() == ResearchTreeScreenLayout.DetailsPlacement.DRAWER
-                && details.height() <= 24) {
-            return List.of();
-        }
-        return switch (layout.detailsPlacement()) {
-            case RIGHT -> rows(details.x() + 10, details.right() - 10,
-                    details.y() + 88, details.y() + 128);
-            case BOTTOM -> rows(details.x() + 220, details.right() - 10,
-                    details.y() + 20, details.y() + 56);
-            case DRAWER -> rows(details.x() + 120, details.right() - 84,
-                    details.y() + 18, details.y() + 42);
-            case OVERLAY -> List.of();
-        };
-    }
-
     public static Optional<ResearchTreeScreenLayout.Rect> primaryAction(
             ResearchTreeScreenLayout.Layout layout) {
         if (layout == null) {
@@ -72,37 +47,8 @@ public final class ResearchTreeDetailLayout {
         if (layout.mode() == ResearchTreeScreenLayout.ViewMode.COMPACT) {
             return Optional.of(new ResearchTreeScreenLayout.Rect(232, 199, 64, 20));
         }
-        ResearchTreeScreenLayout.Rect details = layout.details();
-        if (layout.detailsPlacement() == ResearchTreeScreenLayout.DetailsPlacement.OVERLAY) {
-            return Optional.of(new ResearchTreeScreenLayout.Rect(
-                    layout.screenWidth() - 100,
-                    layout.screenHeight() - 32,
-                    92,
-                    24));
-        }
-        if (layout.detailsPlacement() == ResearchTreeScreenLayout.DetailsPlacement.DRAWER) {
-            if (details.height() <= 24) {
-                return Optional.empty();
-            }
-            return Optional.of(new ResearchTreeScreenLayout.Rect(
-                    details.right() - 74, details.bottom() - 22, 64, 20));
-        }
-        return Optional.of(new ResearchTreeScreenLayout.Rect(
-                details.x() + 10, details.bottom() - 28, 72, 20));
-    }
-
-    public static Optional<ResearchTreeScreenLayout.Rect> drawerToggle(
-            ResearchTreeScreenLayout.Layout layout) {
-        if (layout == null) {
-            throw new IllegalArgumentException("Research Tree layout cannot be null");
-        }
-        if (layout.mode() != ResearchTreeScreenLayout.ViewMode.FULLSCREEN
-                || layout.detailsPlacement() != ResearchTreeScreenLayout.DetailsPlacement.DRAWER) {
-            return Optional.empty();
-        }
-        ResearchTreeScreenLayout.Rect details = layout.details();
-        return Optional.of(new ResearchTreeScreenLayout.Rect(
-                details.right() - 20, details.y() + 2, 18, 18));
+        // Fullscreen actions belong to the adaptive contextual card.
+        return Optional.empty();
     }
 
     public static Optional<RelationSlot> slotAt(
@@ -140,35 +86,6 @@ public final class ResearchTreeDetailLayout {
                 && y >= bounds.y() && y < bounds.bottom();
     }
 
-    private static List<RelationSlot> rows(
-            int startX,
-            int endX,
-            int requirementY,
-            int unlockY) {
-        int count = Math.min(
-                FULLSCREEN_MAX_PER_KIND,
-                Math.max(0, (endX - startX + 2) / (SLOT_SIZE + 2)));
-        if (count == 0) {
-            return List.of();
-        }
-        java.util.ArrayList<RelationSlot> slots = new java.util.ArrayList<>(count * 2);
-        for (int index = 0; index < count; index++) {
-            int x = startX + index * (SLOT_SIZE + 2);
-            slots.add(new RelationSlot(
-                    RelationKind.REQUIREMENT,
-                    index,
-                    new ResearchTreeScreenLayout.Rect(x, requirementY, SLOT_SIZE, SLOT_SIZE)));
-        }
-        for (int index = 0; index < count; index++) {
-            int x = startX + index * (SLOT_SIZE + 2);
-            slots.add(new RelationSlot(
-                    RelationKind.UNLOCK,
-                    index,
-                    new ResearchTreeScreenLayout.Rect(x, unlockY, SLOT_SIZE, SLOT_SIZE)));
-        }
-        return List.copyOf(slots);
-    }
-
     public record RelationSlot(
             RelationKind kind,
             int index,
@@ -176,7 +93,7 @@ public final class ResearchTreeDetailLayout {
         public RelationSlot {
             if (kind == null || index < 0 || bounds == null
                     || bounds.width() != SLOT_SIZE || bounds.height() != SLOT_SIZE
-                    || index >= FULLSCREEN_MAX_PER_KIND) {
+                    || index >= Math.max(COMPACT_MAX_REQUIREMENTS, COMPACT_MAX_UNLOCKS)) {
                 throw new IllegalArgumentException("invalid Research Tree relationship slot");
             }
         }

@@ -67,36 +67,21 @@ class ResearchTreeDetailLayoutTest {
     }
 
     @Test
-    void fullscreenUsesTooltipsInsteadOfPermanentRelationshipRows() {
+    void fullscreenDefersItsActionToTheAdaptiveContextCard() {
         for (ResearchTreeScreenLayout.Layout layout : List.of(
                 ResearchTreeScreenLayout.fullscreen(854, 480, true),
                 ResearchTreeScreenLayout.fullscreen(640, 360, true),
                 ResearchTreeScreenLayout.fullscreen(320, 240, true))) {
-            List<ResearchTreeDetailLayout.RelationSlot> slots =
-                    ResearchTreeDetailLayout.fullscreen(layout);
-
-            assertTrue(slots.isEmpty());
-            ResearchTreeScreenLayout.Rect action =
-                    ResearchTreeDetailLayout.primaryAction(layout).orElseThrow();
-            assertTrue(action.inside(layout.screenWidth(), layout.screenHeight()));
-            assertFalse(action.overlaps(layout.toolbar()));
-            assertTrue(ResearchTreeDetailLayout.drawerToggle(layout).isEmpty());
+            assertTrue(ResearchTreeDetailLayout.primaryAction(layout).isEmpty());
         }
         ResearchTreeScreenLayout.Layout collapsed =
                 ResearchTreeScreenLayout.fullscreen(320, 240, false);
-        assertTrue(ResearchTreeDetailLayout.fullscreen(collapsed).isEmpty());
-        assertTrue(ResearchTreeDetailLayout.primaryAction(collapsed).isPresent());
-        assertTrue(ResearchTreeDetailLayout.drawerToggle(collapsed).isEmpty());
-        assertThrows(IllegalArgumentException.class, () ->
-                ResearchTreeDetailLayout.fullscreen(ResearchTreeScreenLayout.compact()));
+        assertTrue(ResearchTreeDetailLayout.primaryAction(collapsed).isEmpty());
     }
 
     @Test
     void fullscreenHasNoRelationshipSlotHitTargets() {
-        ResearchTreeScreenLayout.Layout layout =
-                ResearchTreeScreenLayout.fullscreen(854, 480, true);
-        List<ResearchTreeDetailLayout.RelationSlot> slots =
-                ResearchTreeDetailLayout.fullscreen(layout);
+        List<ResearchTreeDetailLayout.RelationSlot> slots = List.of();
 
         assertTrue(slots.isEmpty());
         assertTrue(ResearchTreeDetailLayout.slotAt(slots, 100, 100).isEmpty());
@@ -105,14 +90,12 @@ class ResearchTreeDetailLayoutTest {
     }
 
     @Test
-    void primaryActionsAndDrawerTogglesFollowPresentationMode() {
+    void primaryActionsFollowPresentationMode() {
         assertEquals(
                 new ResearchTreeScreenLayout.Rect(232, 199, 64, 20),
                 ResearchTreeDetailLayout.primaryAction(
                         ResearchTreeScreenLayout.compact()).orElseThrow());
-        assertTrue(ResearchTreeDetailLayout.drawerToggle(
-                ResearchTreeScreenLayout.compact()).isEmpty());
-        assertTrue(ResearchTreeDetailLayout.drawerToggle(
+        assertTrue(ResearchTreeDetailLayout.primaryAction(
                 ResearchTreeScreenLayout.fullscreen(640, 360, true)).isEmpty());
         assertThrows(IllegalArgumentException.class, () ->
                 ResearchTreeDetailLayout.primaryAction(null));
