@@ -89,6 +89,8 @@ class ResearchTreeGestureTrackerTest {
     void aSecondButtonCannotReplaceAnActiveGesture() {
         ResearchTreeGestureTracker tracker = new ResearchTreeGestureTracker();
         assertTrue(tracker.press(4, 4, ResearchTreeGestureTracker.LEFT_BUTTON, NODE));
+        assertTrue(tracker.ownsButton(ResearchTreeGestureTracker.LEFT_BUTTON));
+        assertFalse(tracker.ownsButton(ResearchTreeGestureTracker.MIDDLE_BUTTON));
 
         assertFalse(tracker.press(4, 4, ResearchTreeGestureTracker.MIDDLE_BUTTON, null));
         ResearchTreeGestureTracker.Outcome outcome = tracker.release(
@@ -96,5 +98,6 @@ class ResearchTreeGestureTrackerTest {
 
         assertEquals(ResearchTreeGestureTracker.Type.NODE_CLICK, outcome.type());
         assertEquals(NODE, outcome.nodeId().orElseThrow());
+        assertFalse(tracker.ownsButton(ResearchTreeGestureTracker.LEFT_BUTTON));
     }
 }

@@ -224,6 +224,30 @@ class ResearchTreeCanvasTest {
     }
 
     @Test
+    void topologyReplacementCancelsAnActiveCanvasPointerGesture() {
+        ResearchTreeCanvas canvas = canvas();
+        canvas.setBounds(
+                ResearchTreeScreenLayout.ViewMode.COMPACT,
+                new ResearchTreeScreenLayout.Rect(0, 0, 120, 80));
+        canvas.setContent(
+                graph("test:a", JournalVisibility.FULL),
+                layout("test:a"),
+                Map.of(),
+                null);
+        assertTrue(canvas.mouseClicked(100, 70, 1, null));
+
+        ResearchTreeGraph replacement = chainGraph();
+        canvas.setContent(
+                replacement,
+                ResearchTreeLayoutEngine.layout(replacement),
+                Map.of(),
+                null);
+
+        assertFalse(canvas.mouseDragged(1, 10, 10));
+        assertFalse(canvas.mouseReleased(1));
+    }
+
+    @Test
     void hiddenAnchorsAreCulledWhenTheirWholeConnectionIsOffscreen() {
         ResearchTreeCanvas canvas = canvas();
         ResearchTreeGraph graph = graph("test:a", JournalVisibility.FULL);

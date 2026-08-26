@@ -7,6 +7,9 @@ public final class ResearchTreeViewport {
     public static final double MAX_SCALE = 1.5D;
     public static final double SCALE_STEP = 0.25D;
     private static final double MIN_FIT_SCALE = 1.0D / 1_000_000.0D;
+    private static final double EASING_SPEED = 14.0D;
+    private static final double PAN_SNAP_DISTANCE = 0.01D;
+    private static final double SCALE_SNAP_DISTANCE = 0.0001D;
 
     private int viewportWidth;
     private int viewportHeight;
@@ -15,13 +18,18 @@ public final class ResearchTreeViewport {
     private double panX;
     private double panY;
     private double scale = 1.0D;
+    private double targetPanX;
+    private double targetPanY;
+    private double targetScale = 1.0D;
+    private Insets safeInsets = Insets.NONE;
+    private boolean animated;
 
     public void configure(int viewportWidth, int viewportHeight, int canvasWidth, int canvasHeight) {
         this.viewportWidth = Math.max(1, viewportWidth);
         this.viewportHeight = Math.max(1, viewportHeight);
         this.canvasWidth = Math.max(0, canvasWidth);
         this.canvasHeight = Math.max(0, canvasHeight);
-        clamp();
+        clampBoth();
     }
 
     /** Replaces the content bounds while retaining this presentation's last viewport size. */
@@ -31,8 +39,23 @@ public final class ResearchTreeViewport {
         if (fit) {
             fit();
         } else {
-            clamp();
+            clampBoth();
         }
+    }
+
+    public void setAnimated(boolean animated) {
+        this.animated = animated;
+        if (!animated) {
+            finishAnimation();
+        }
+    }
+
+    public void setSafeInsets(Insets safeInsets) {
+        if (safeInsets == null) {
+            throw new IllegalArgumentException("Research Tree safe insets cannot be null");
+        }
+        this.safeInsets = safeInsets;
+        clampBoth();
     }
 
     public double panX() {
@@ -48,7 +71,7 @@ public final class ResearchTreeViewport {
     }
 
     public Snapshot snapshot() {
-        return new Snapshot(panX, panY, scale);
+        return new Snapshot(targetPanX, targetPanY, targetScale);
     }
 
     public void restore(Snapshot snapshot) {
@@ -58,7 +81,8 @@ public final class ResearchTreeViewport {
         panX = snapshot.panX();
         panY = snapshot.panY();
         scale = Math.max(MIN_FIT_SCALE, Math.min(snapshot.scale(), MAX_SCALE));
-        clamp();
+        syncTargetToCurrent();
+        clampBoth();
     }
 
     public double canvasX(double viewportX) {
@@ -78,35 +102,43 @@ public final class ResearchTreeViewport {
     }
 
     public void panByScreenDelta(double deltaX, double deltaY) {
+        validateFinite(deltaX, deltaY);
+        cancelAnimation();
         panX -= deltaX / scale;
         panY -= deltaY / scale;
-        clamp();
+        clampCurrent();
+        syncTargetToCurrent();
     }
 
     public void zoomAt(double wheelDelta, double viewportX, double viewportY) {
         if (wheelDelta == 0.0D) {
             return;
         }
-        if (scale < MIN_SCALE && wheelDelta < 0.0D) {
+        if (targetScale < MIN_SCALE && wheelDelta < 0.0D) {
             return;
         }
         double anchorX = canvasX(viewportX);
         double anchorY = canvasY(viewportY);
-        double nextScale = scale < MIN_SCALE
+        double nextScale = targetScale < MIN_SCALE
                 ? MIN_SCALE
-                : scale + Math.copySign(SCALE_STEP, wheelDelta);
-        scale = clampScale(nextScale);
-        panX = anchorX - viewportX / scale;
-        panY = anchorY - viewportY / scale;
-        clamp();
+                : targetScale + Math.copySign(SCALE_STEP, wheelDelta);
+        targetScale = clampScale(nextScale);
+        targetPanX = anchorX - viewportX / targetScale;
+        targetPanY = anchorY - viewportY / targetScale;
+        clampTarget();
+        applyTargetImmediatelyWhenStatic();
     }
 
     public void focus(double x, double y, double width, double height) {
-        double visibleWidth = viewportWidth / scale;
-        double visibleHeight = viewportHeight / scale;
-        panX = x + width / 2.0D - visibleWidth / 2.0D;
-        panY = y + height / 2.0D - visibleHeight / 2.0D;
-        clamp();
+        validateFocusBounds(x, y, width, height, false);
+        double safeCenterX = safeInsets.left()
+                + availableWidth() / 2.0D;
+        double safeCenterY = safeInsets.top()
+                + availableHeight() / 2.0D;
+        targetPanX = x + width / 2.0D - safeCenterX / targetScale;
+        targetPanY = y + height / 2.0D - safeCenterY / targetScale;
+        clampTarget();
+        applyTargetImmediatelyWhenStatic();
     }
 
     public void fit() {
@@ -114,26 +146,61 @@ public final class ResearchTreeViewport {
             scale = 1.0D;
             panX = 0.0D;
             panY = 0.0D;
+            syncTargetToCurrent();
             return;
         }
-        scale = clampFitScale(Math.min(
+        targetScale = clampFitScale(Math.min(
                 1.0D,
-                Math.min(viewportWidth / (double) canvasWidth, viewportHeight / (double) canvasHeight)));
+                Math.min(availableWidth() / (double) canvasWidth,
+                        availableHeight() / (double) canvasHeight)));
         focus(0, 0, canvasWidth, canvasHeight);
     }
 
     public void fit(double x, double y, double width, double height) {
-        if (!Double.isFinite(x) || !Double.isFinite(y)
-                || !Double.isFinite(width) || !Double.isFinite(height)
-                || x < 0.0D || y < 0.0D
-                || width <= 0.0D || height <= 0.0D
-                || x + width > canvasWidth || y + height > canvasHeight) {
-            throw new IllegalArgumentException("invalid Research Tree focus bounds");
-        }
-        scale = clampFitScale(Math.min(
+        validateFocusBounds(x, y, width, height, true);
+        targetScale = clampFitScale(Math.min(
                 1.0D,
-                Math.min(viewportWidth / width, viewportHeight / height)));
+                Math.min(availableWidth() / width, availableHeight() / height)));
         focus(x, y, width, height);
+    }
+
+    /** Advances a bounded fullscreen camera transition by one nominal render frame. */
+    public boolean tick() {
+        return tick(1.0D / 60.0D);
+    }
+
+    /** Advances using render-frame time so easing duration is frame-rate independent. */
+    public boolean tick(double deltaSeconds) {
+        if (!Double.isFinite(deltaSeconds) || deltaSeconds < 0.0D) {
+            throw new IllegalArgumentException("Research Tree camera delta time is invalid");
+        }
+        if (!animated || !isAnimating()) {
+            return false;
+        }
+        double factor = 1.0D - Math.exp(-EASING_SPEED * Math.min(deltaSeconds, 0.1D));
+        panX = approach(panX, targetPanX, factor, PAN_SNAP_DISTANCE);
+        panY = approach(panY, targetPanY, factor, PAN_SNAP_DISTANCE);
+        scale = approach(scale, targetScale, factor, SCALE_SNAP_DISTANCE);
+        clampCurrent();
+        return true;
+    }
+
+    public boolean isAnimating() {
+        return Math.abs(panX - targetPanX) > PAN_SNAP_DISTANCE
+                || Math.abs(panY - targetPanY) > PAN_SNAP_DISTANCE
+                || Math.abs(scale - targetScale) > SCALE_SNAP_DISTANCE;
+    }
+
+    public void finishAnimation() {
+        panX = targetPanX;
+        panY = targetPanY;
+        scale = targetScale;
+        clampCurrent();
+        syncTargetToCurrent();
+    }
+
+    public void cancelAnimation() {
+        syncTargetToCurrent();
     }
 
     public boolean intersects(double x, double y, double width, double height) {
@@ -143,18 +210,101 @@ public final class ResearchTreeViewport {
                 && y + height >= panY && y <= panY + visibleHeight;
     }
 
-    private void clamp() {
-        double visibleWidth = viewportWidth / scale;
-        double visibleHeight = viewportHeight / scale;
-        panX = clampAxis(panX, canvasWidth, visibleWidth);
-        panY = clampAxis(panY, canvasHeight, visibleHeight);
+    private void clampBoth() {
+        clampCurrent();
+        clampTarget();
     }
 
-    private static double clampAxis(double value, double canvasSize, double visibleSize) {
-        if (canvasSize <= visibleSize) {
-            return (canvasSize - visibleSize) / 2.0D;
+    private void clampCurrent() {
+        panX = clampAxis(
+                panX, canvasWidth, viewportWidth, scale, safeInsets.left(), safeInsets.right());
+        panY = clampAxis(
+                panY, canvasHeight, viewportHeight, scale, safeInsets.top(), safeInsets.bottom());
+    }
+
+    private void clampTarget() {
+        targetPanX = clampAxis(
+                targetPanX,
+                canvasWidth,
+                viewportWidth,
+                targetScale,
+                safeInsets.left(),
+                safeInsets.right());
+        targetPanY = clampAxis(
+                targetPanY,
+                canvasHeight,
+                viewportHeight,
+                targetScale,
+                safeInsets.top(),
+                safeInsets.bottom());
+    }
+
+    private static double clampAxis(
+            double value,
+            double canvasSize,
+            double viewportSize,
+            double scale,
+            int startInset,
+            int endInset) {
+        double safeSize = Math.max(1.0D, viewportSize - startInset - endInset);
+        double safeVisibleSize = safeSize / scale;
+        if (canvasSize <= safeVisibleSize) {
+            double safeCenter = startInset + safeSize / 2.0D;
+            return canvasSize / 2.0D - safeCenter / scale;
         }
-        return Math.max(0.0D, Math.min(value, canvasSize - visibleSize));
+        double minimum = -startInset / scale;
+        double maximum = canvasSize - (viewportSize - endInset) / scale;
+        return Math.max(minimum, Math.min(value, maximum));
+    }
+
+    private int availableWidth() {
+        return Math.max(1, viewportWidth - safeInsets.left() - safeInsets.right());
+    }
+
+    private int availableHeight() {
+        return Math.max(1, viewportHeight - safeInsets.top() - safeInsets.bottom());
+    }
+
+    private void applyTargetImmediatelyWhenStatic() {
+        if (!animated) {
+            finishAnimation();
+        }
+    }
+
+    private void syncTargetToCurrent() {
+        targetPanX = panX;
+        targetPanY = panY;
+        targetScale = scale;
+    }
+
+    private void validateFocusBounds(
+            double x,
+            double y,
+            double width,
+            double height,
+            boolean requireInsideCanvas) {
+        if (!Double.isFinite(x) || !Double.isFinite(y)
+                || !Double.isFinite(width) || !Double.isFinite(height)
+                || width <= 0.0D || height <= 0.0D
+                || requireInsideCanvas && (x < 0.0D || y < 0.0D
+                        || x + width > canvasWidth || y + height > canvasHeight)) {
+            throw new IllegalArgumentException("invalid Research Tree focus bounds");
+        }
+    }
+
+    private static void validateFinite(double first, double second) {
+        if (!Double.isFinite(first) || !Double.isFinite(second)) {
+            throw new IllegalArgumentException("Research Tree camera delta must be finite");
+        }
+    }
+
+    private static double approach(
+            double current,
+            double target,
+            double factor,
+            double snapDistance) {
+        double next = current + (target - current) * factor;
+        return Math.abs(next - target) <= snapDistance ? target : next;
     }
 
     private static double clampScale(double value) {
@@ -170,6 +320,16 @@ public final class ResearchTreeViewport {
             if (!Double.isFinite(panX) || !Double.isFinite(panY)
                     || !Double.isFinite(scale) || scale <= 0.0D) {
                 throw new IllegalArgumentException("invalid Research Tree viewport snapshot");
+            }
+        }
+    }
+
+    public record Insets(int left, int top, int right, int bottom) {
+        public static final Insets NONE = new Insets(0, 0, 0, 0);
+
+        public Insets {
+            if (left < 0 || top < 0 || right < 0 || bottom < 0) {
+                throw new IllegalArgumentException("Research Tree safe insets cannot be negative");
             }
         }
     }

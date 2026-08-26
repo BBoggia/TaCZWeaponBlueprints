@@ -159,4 +159,75 @@ class ResearchTreeViewportTest {
         assertThrows(IllegalArgumentException.class, () ->
                 new ResearchTreeViewport.Snapshot(0.0D, 0.0D, Double.NaN));
     }
+
+    @Test
+    void fullscreenTargetsEaseToFocusWithoutChangingStaticViewportBehavior() {
+        ResearchTreeViewport viewport = new ResearchTreeViewport();
+        viewport.configure(300, 180, 900, 600);
+        viewport.setAnimated(true);
+
+        double initialPanX = viewport.panX();
+        viewport.focus(600, 300, 32, 32);
+
+        assertEquals(initialPanX, viewport.panX(), TOLERANCE);
+        assertTrue(viewport.isAnimating());
+        viewport.tick(1.0D / 120.0D);
+        viewport.cancelAnimation();
+        assertFalse(viewport.isAnimating());
+        viewport.focus(600, 300, 32, 32);
+        for (int tick = 0; tick < 48; tick++) {
+            viewport.tick();
+        }
+        assertFalse(viewport.isAnimating());
+        assertEquals(150, viewport.viewportX(616));
+        assertEquals(90, viewport.viewportY(316));
+    }
+
+    @Test
+    void safeInsetsFrameEdgeNodesAndBoundIntentionalOverscroll() {
+        ResearchTreeViewport viewport = new ResearchTreeViewport();
+        viewport.configure(300, 200, 600, 400);
+        viewport.setSafeInsets(new ResearchTreeViewport.Insets(40, 30, 50, 20));
+
+        viewport.focus(0, 0, 32, 32);
+        assertEquals(40, viewport.viewportX(0));
+        assertTrue(viewport.viewportY(0) >= 30);
+
+        viewport.focus(568, 368, 32, 32);
+        assertEquals(250, viewport.viewportX(600));
+        assertEquals(180, viewport.viewportY(400));
+
+        viewport.panByScreenDelta(10_000, 10_000);
+        assertEquals(40, viewport.viewportX(0));
+        assertEquals(30, viewport.viewportY(0));
+        viewport.panByScreenDelta(-10_000, -10_000);
+        assertEquals(250, viewport.viewportX(600));
+        assertEquals(180, viewport.viewportY(400));
+    }
+
+    @Test
+    void animatedFitAndZoomStoreTheirFinalProjectionCamera() {
+        ResearchTreeViewport viewport = new ResearchTreeViewport();
+        viewport.configure(300, 200, 600, 400);
+        viewport.setSafeInsets(new ResearchTreeViewport.Insets(40, 30, 50, 20));
+        viewport.setAnimated(true);
+
+        viewport.fit();
+        ResearchTreeViewport.Snapshot fitTarget = viewport.snapshot();
+        assertEquals(0.35D, fitTarget.scale(), TOLERANCE);
+        assertTrue(viewport.isAnimating());
+
+        double cursorCanvasX = viewport.canvasX(40);
+        double cursorCanvasY = viewport.canvasY(40);
+        viewport.zoomAt(1.0D, 40, 40);
+        ResearchTreeViewport.Snapshot zoomTarget = viewport.snapshot();
+        assertEquals(cursorCanvasX, zoomTarget.panX() + 40 / zoomTarget.scale(), TOLERANCE);
+        assertEquals(cursorCanvasY, zoomTarget.panY() + 40 / zoomTarget.scale(), TOLERANCE);
+        assertThrows(IllegalArgumentException.class, () ->
+                viewport.setSafeInsets(null));
+        assertThrows(IllegalArgumentException.class, () ->
+                viewport.tick(Double.NaN));
+        assertThrows(IllegalArgumentException.class, () ->
+                new ResearchTreeViewport.Insets(-1, 0, 0, 0));
+    }
 }

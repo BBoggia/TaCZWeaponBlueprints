@@ -48,7 +48,7 @@
     "gui.taczweaponblueprints.research_bench.tree.guide.narration": "Tree help. Click a weapon to inspect it. Gold cards are requirements and blue cards are unlocks. Double-click a ready weapon to research it.",
     "gui.taczweaponblueprints.research_bench.tree.narration": "Tree focus: %s. %s. Requirements: %s. Immediate unlocks: %s. Next: %s. Cost: %s Research Points.",
     "gui.taczweaponblueprints.research_bench.tree.narration.redacted": "Tree focus: %s. %s. Requirements: %s. Immediate unlocks: %s. Next: %s.",
-    "gui.taczweaponblueprints.research_bench.tree.keyboard_usage": "Use arrow keys to move through the research tree. In search, use Up and Down to cycle matches and Enter to select.",
+    "gui.taczweaponblueprints.research_bench.tree.keyboard_usage": "Arrows move through the tree. Enter selects. F fits. Plus and minus zoom. Control-F or slash opens search.",
     "gui.taczweaponblueprints.research_bench.tree.balance": "%s RP",
     "gui.taczweaponblueprints.research_bench.tree.cost": "Cost: %s RP",
     "gui.taczweaponblueprints.research_bench.tree.needs": "Needs",

@@ -52,6 +52,24 @@ class ResearchTreeCameraStoreTest {
                         Optional.of(new ResourceLocation("test:first"))));
     }
 
+    @Test
+    void savingDuringEasingRestoresTheIntendedFinalCamera() {
+        ResearchTreeCameraStore store = new ResearchTreeCameraStore();
+        ResearchTreeViewport viewport = viewport();
+        viewport.setAnimated(true);
+        viewport.focus(420, 250, 32, 32);
+        ResearchTreeViewport.Snapshot target = viewport.snapshot();
+
+        store.save(key(ResearchTreePresentationContract.BrowseView.BRANCHES, "test:first"), viewport);
+        viewport.cancelAnimation();
+        assertTrue(store.restore(
+                key(ResearchTreePresentationContract.BrowseView.BRANCHES, "test:first"),
+                viewport));
+
+        assertEquals(target, viewport.snapshot());
+        assertFalse(viewport.isAnimating());
+    }
+
     private static ResearchTreeViewport viewport() {
         ResearchTreeViewport viewport = new ResearchTreeViewport();
         viewport.configure(120, 80, 600, 400);

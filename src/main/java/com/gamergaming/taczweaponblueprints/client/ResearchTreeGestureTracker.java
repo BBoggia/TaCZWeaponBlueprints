@@ -106,6 +106,10 @@ public final class ResearchTreeGestureTracker {
         return dragging;
     }
 
+    public boolean ownsButton(int mouseButton) {
+        return active && button == mouseButton;
+    }
+
     private static void validateCoordinates(double mouseX, double mouseY) {
         if (!Double.isFinite(mouseX) || !Double.isFinite(mouseY)) {
             throw new IllegalArgumentException("Research Tree pointer coordinates must be finite");

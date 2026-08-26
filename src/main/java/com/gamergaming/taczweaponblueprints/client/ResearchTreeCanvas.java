@@ -62,6 +62,7 @@ public final class ResearchTreeCanvas {
         this.viewMode = viewMode;
         this.bounds = bounds;
         dragging = false;
+        viewport().setAnimated(viewMode == ResearchTreeScreenLayout.ViewMode.FULLSCREEN);
         configureViewport();
     }
 
@@ -118,6 +119,7 @@ public final class ResearchTreeCanvas {
         this.portals = placePortals(graph, layout, this.crossGroupLinks);
         setAuthoritativeSelection(authoritativeSelection);
         if (topologyChanged) {
+            dragging = false;
             edgeIndex = ResearchTreeEdgeIndex.create(graph, layout);
             relations = ResearchTreeRelations.create(graph);
         }
@@ -330,6 +332,26 @@ public final class ResearchTreeCanvas {
     public boolean contains(double mouseX, double mouseY) {
         return mouseX >= bounds.x() && mouseX < bounds.right()
                 && mouseY >= bounds.y() && mouseY < bounds.bottom();
+    }
+
+    public void setSafeInsets(ResearchTreeViewport.Insets safeInsets) {
+        viewport().setSafeInsets(safeInsets);
+    }
+
+    public void panByScreenDelta(double deltaX, double deltaY) {
+        viewport().panByScreenDelta(deltaX, deltaY);
+    }
+
+    public boolean tickCamera() {
+        return viewport().tick();
+    }
+
+    public boolean tickCamera(double deltaSeconds) {
+        return viewport().tick(deltaSeconds);
+    }
+
+    public void cancelInteraction() {
+        dragging = false;
     }
 
     private boolean isCoveredByCompactChrome(double mouseX, double mouseY) {
