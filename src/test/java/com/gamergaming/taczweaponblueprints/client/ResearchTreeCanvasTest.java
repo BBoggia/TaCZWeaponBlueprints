@@ -248,6 +248,27 @@ class ResearchTreeCanvasTest {
     }
 
     @Test
+    void compactDragRemainsOwnedByItsInitiatingButton() {
+        ResearchTreeCanvas canvas = canvas();
+        canvas.setBounds(
+                ResearchTreeScreenLayout.ViewMode.COMPACT,
+                new ResearchTreeScreenLayout.Rect(0, 0, 120, 80));
+        canvas.setContent(
+                graph("test:a", JournalVisibility.FULL),
+                layout("test:a"),
+                Map.of(),
+                null);
+
+        assertTrue(canvas.mouseClicked(119, 79, 1, null));
+        assertFalse(canvas.mouseDragged(0, 8, 4));
+        assertFalse(canvas.mouseReleased(0));
+        assertFalse(canvas.mouseClicked(119, 79, 0, null));
+        assertTrue(canvas.mouseDragged(1, 8, 4));
+        assertTrue(canvas.mouseReleased(1));
+        assertFalse(canvas.mouseDragged(1, 8, 4));
+    }
+
+    @Test
     void hiddenAnchorsAreCulledWhenTheirWholeConnectionIsOffscreen() {
         ResearchTreeCanvas canvas = canvas();
         ResearchTreeGraph graph = graph("test:a", JournalVisibility.FULL);

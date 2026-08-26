@@ -43,6 +43,7 @@ public final class ResearchTreeCanvas {
     private ResourceLocation authoritativeSelectedId;
     private String categoryFilter;
     private boolean dragging;
+    private int dragButton = -1;
 
     public ResearchTreeCanvas(ResearchTreeViewState state, Style style) {
         if (state == null || style == null) {
@@ -61,7 +62,7 @@ public final class ResearchTreeCanvas {
         }
         this.viewMode = viewMode;
         this.bounds = bounds;
-        dragging = false;
+        cancelInteraction();
         viewport().setAnimated(viewMode == ResearchTreeScreenLayout.ViewMode.FULLSCREEN);
         configureViewport();
     }
@@ -119,7 +120,7 @@ public final class ResearchTreeCanvas {
         this.portals = placePortals(graph, layout, this.crossGroupLinks);
         setAuthoritativeSelection(authoritativeSelection);
         if (topologyChanged) {
-            dragging = false;
+            cancelInteraction();
             edgeIndex = ResearchTreeEdgeIndex.create(graph, layout);
             relations = ResearchTreeRelations.create(graph);
         }
@@ -234,6 +235,9 @@ public final class ResearchTreeCanvas {
         if (!contains(mouseX, mouseY)) {
             return false;
         }
+        if (dragging) {
+            return false;
+        }
         Optional<ResearchTreeGraph.Node> clicked = nodeAt(mouseX, mouseY);
         if (button == 0 && clicked.isPresent()) {
             if (nodeSelection != null) {
@@ -243,13 +247,14 @@ public final class ResearchTreeCanvas {
         }
         if (button == 0 || button == 1) {
             dragging = true;
+            dragButton = button;
             return true;
         }
         return false;
     }
 
     public boolean mouseDragged(int button, double dragX, double dragY) {
-        if (!dragging || (button != 0 && button != 1)) {
+        if (!dragging || button != dragButton) {
             return false;
         }
         viewport().panByScreenDelta(dragX, dragY);
@@ -257,10 +262,10 @@ public final class ResearchTreeCanvas {
     }
 
     public boolean mouseReleased(int button) {
-        if (!dragging || (button != 0 && button != 1)) {
+        if (!dragging || button != dragButton) {
             return false;
         }
-        dragging = false;
+        cancelInteraction();
         return true;
     }
 
@@ -352,6 +357,7 @@ public final class ResearchTreeCanvas {
 
     public void cancelInteraction() {
         dragging = false;
+        dragButton = -1;
     }
 
     private boolean isCoveredByCompactChrome(double mouseX, double mouseY) {

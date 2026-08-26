@@ -100,4 +100,17 @@ class ResearchTreeGestureTrackerTest {
         assertEquals(NODE, outcome.nodeId().orElseThrow());
         assertFalse(tracker.ownsButton(ResearchTreeGestureTracker.LEFT_BUTTON));
     }
+
+    @Test
+    void cancellationInvalidatesARecordedNodeCandidate() {
+        ResearchTreeGestureTracker tracker = new ResearchTreeGestureTracker();
+        assertTrue(tracker.press(4, 4, ResearchTreeGestureTracker.LEFT_BUTTON, NODE));
+
+        tracker.cancel();
+
+        assertEquals(
+                ResearchTreeGestureTracker.Outcome.NONE,
+                tracker.release(4, 4, ResearchTreeGestureTracker.LEFT_BUTTON));
+        assertFalse(tracker.active());
+    }
 }

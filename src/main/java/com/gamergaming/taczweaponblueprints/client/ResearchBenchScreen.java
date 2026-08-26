@@ -101,7 +101,6 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     private boolean fullscreen;
     private ResearchTreeCameraStore.Key activeCameraKey;
     private boolean lastProjectionCameraRestored;
-    private ResourceLocation pinnedDetailsId;
     private ResearchTreeProjection.CrossGroupLink pendingPortalActivation;
     private boolean guidanceInitialized;
     private boolean guidanceVisible;
@@ -394,7 +393,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
 
     @Override
     public void resize(Minecraft minecraft, int width, int height) {
-        cancelFullscreenGesture();
+        cancelTreeInteraction();
         lastCameraFrameMillis = 0L;
         saveActiveCamera();
         activeCameraKey = null;
@@ -538,7 +537,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     }
 
     private boolean applyActiveProjection(ResourceLocation preferredFocus) {
-        cancelFullscreenGesture();
+        cancelTreeInteraction();
         saveActiveCamera();
         ResearchTreeProjection projection = treeProjections.projection(
                 treeNavigation.browseView(),
@@ -556,10 +555,6 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 preferredFocus,
                 menu.selectedBlueprint().orElse(null),
                 projection.crossGroupLinks());
-        if (projection.graph().node(pinnedDetailsId).isEmpty()) {
-            pinnedDetailsId = null;
-            fullscreenOverlayState.clearPinnedNode();
-        }
         fullscreenOverlayState.retainVisibleNodes(projection.graph().nodes().stream()
                 .map(ResearchTreeGraph.Node::blueprintId)
                 .collect(java.util.stream.Collectors.toUnmodifiableSet()));
@@ -959,6 +954,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     }
 
     private void zoomTree(double direction) {
+        cancelTreeInteraction();
         treeCanvas.zoomAtCenter(direction);
         updateWidgets();
     }
@@ -969,6 +965,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     }
 
     private void fitTree() {
+        cancelTreeInteraction();
         treeCanvas.fit();
         updateWidgets();
     }
@@ -999,7 +996,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     }
 
     private void openFullscreenSearch(boolean focus) {
-        cancelFullscreenGesture();
+        cancelTreeInteraction();
         fullscreenOverlayState.openSearch(focus);
         updateWidgets();
         if (focus) {
@@ -1111,13 +1108,13 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     }
 
     private void rebuildPresentation() {
-        cancelFullscreenGesture();
+        cancelTreeInteraction();
         if (minecraft != null) {
             resize(minecraft, width, height);
         }
     }
 
-    private void cancelFullscreenGesture() {
+    private void cancelTreeInteraction() {
         fullscreenGesture.cancel();
         pendingPortalActivation = null;
         nodeActivation.reset();
@@ -1381,6 +1378,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 && fullscreenButton.isMouseOver(mouseX, mouseY);
         double localX = mouseX - leftPos;
         double localY = mouseY - topPos;
+        sidebarButtons.forEach(button -> button.updatePointerState(mouseX, mouseY));
         boolean sidebar = fullscreenRailPointerRegion().contains(localX, localY)
                 || sidebarButtons.stream().anyMatch(button ->
                         button.visible && button.ownsPointer(mouseX, mouseY));
@@ -1891,10 +1889,11 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         }
         Optional<ResearchTreeGraph.Node> hovered = treeCanvas.nodeAt(mouseX, mouseY);
         if (hovered.isEmpty()) {
-            if (fullscreen && pinnedDetailsId != null
+            Optional<ResourceLocation> pinnedNodeId = fullscreenOverlayState.pinnedNodeId();
+            if (fullscreen && pinnedNodeId.isPresent()
                     && treeCanvas.contains(mouseX, mouseY)
                     && (primaryResearchButton == null || !primaryResearchButton.isMouseOver(mouseX, mouseY))) {
-                treeCanvas.graph().node(pinnedDetailsId).ifPresent(node -> {
+                treeCanvas.graph().node(pinnedNodeId.orElseThrow()).ifPresent(node -> {
                     ResearchTreeScreenLayout.Rect canvas = activeTreeLayout.canvas();
                     graphics.renderComponentTooltip(
                             font,
@@ -2032,6 +2031,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (guidanceContains(mouseX, mouseY)) {
+            cancelTreeInteraction();
             if (super.mouseClicked(mouseX, mouseY, button)) {
                 return true;
             }
@@ -2042,6 +2042,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             ResearchTreeInteractionPolicy.PointerTarget pointerTarget =
                     fullscreenPointerTarget(mouseX, mouseY);
             if (!ResearchTreeInteractionPolicy.allowsGraphHover(pointerTarget)) {
+                cancelTreeInteraction();
                 if (pointerTarget == ResearchTreeInteractionPolicy.PointerTarget.SIDEBAR
                         && fullscreenOverlayState.railState()
                                 == ResearchTreeFullscreenOverlayState.RailState.EDGE_HANDLE) {
@@ -2067,8 +2068,11 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 }
                 return false;
             }
-        } else if (browseMode && super.mouseClicked(mouseX, mouseY, button)) {
-            return true;
+        } else if (browseMode) {
+            if (super.mouseClicked(mouseX, mouseY, button)) {
+                cancelTreeInteraction();
+                return true;
+            }
         }
         if (browseMode && fullscreen && treeCanvas.contains(mouseX, mouseY)) {
             Optional<ResearchTreeProjection.CrossGroupLink> portal = button == 0
@@ -2077,6 +2081,9 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             Optional<ResearchTreeGraph.Node> node = button == 0 && portal.isEmpty()
                     ? treeCanvas.nodeAt(mouseX, mouseY)
                     : Optional.empty();
+            if (node.isEmpty()) {
+                nodeActivation.reset();
+            }
             if (fullscreenGesture.press(
                     mouseX,
                     mouseY,
@@ -2095,7 +2102,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                     ? treeCanvas.portalAt(mouseX, mouseY)
                     : Optional.empty();
             if (clickedPortal.isPresent()) {
-                pinnedDetailsId = null;
+                nodeActivation.reset();
                 fullscreenOverlayState.clearPinnedNode();
                 navigateThroughPortal(clickedPortal.orElseThrow());
                 return true;
@@ -2107,9 +2114,9 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                     .map(node -> nodeActivation.click(node.blueprintId(), Util.getMillis()))
                     .orElse(false);
             if (clickedNode.isPresent()) {
-                pinnedDetailsId = clickedNode.orElseThrow().blueprintId();
+                fullscreenOverlayState.pinNode(clickedNode.orElseThrow().blueprintId());
             } else if (button == 0) {
-                pinnedDetailsId = null;
+                fullscreenOverlayState.clearPinnedNode();
             }
             setFocused(null);
             if (treeCanvas.mouseClicked(mouseX, mouseY, button, this::selectTreeNode)) {
@@ -2204,7 +2211,6 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             case NODE_CLICK -> outcome.nodeId().ifPresent(this::activateFullscreenNode);
             case BACKGROUND_CLICK -> {
                 nodeActivation.reset();
-                pinnedDetailsId = null;
                 fullscreenOverlayState.clearPinnedNode();
                 if (portal != null) {
                     navigateThroughPortal(portal);
@@ -2225,7 +2231,6 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             return;
         }
         ResearchTreeGraph.Node node = selected.orElseThrow();
-        pinnedDetailsId = blueprintId;
         fullscreenOverlayState.pinNode(blueprintId);
         selectTreeNodeInPlace(blueprintId);
         boolean doubleClick = nodeActivation.click(blueprintId, Util.getMillis());
@@ -2238,6 +2243,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        cancelTreeInteraction();
         if (guidanceContains(mouseX, mouseY)) {
             return true;
         }
@@ -2279,6 +2285,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        cancelTreeInteraction();
         if (fullscreen && visibleMode == ResearchBenchMenu.Mode.BROWSE) {
             boolean searchShortcut = keyCode == GLFW.GLFW_KEY_F && hasControlDown()
                     || keyCode == GLFW.GLFW_KEY_SLASH && getFocused() != searchBox;
@@ -2310,14 +2317,13 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 Optional<ResourceLocation> focusedNode = treeCanvas.focusedId();
                 if (focusedNode.isPresent()) {
                     ResourceLocation blueprintId = focusedNode.orElseThrow();
-                    pinnedDetailsId = blueprintId;
                     fullscreenOverlayState.pinNode(blueprintId);
                     selectTreeNode(blueprintId);
                     return true;
                 }
             }
             if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-                cancelFullscreenGesture();
+                cancelTreeInteraction();
                 ResearchTreeFullscreenOverlayState.EscapeResult escape =
                         fullscreenOverlayState.escape(true);
                 switch (escape) {
@@ -2328,7 +2334,6 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                         updateWidgets();
                     }
                     case CLOSED_CARD -> {
-                        pinnedDetailsId = null;
                         updateWidgets();
                     }
                     case EXIT_FULLSCREEN -> setFullscreen(false);
@@ -2504,6 +2509,8 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
 
     private final class RailEntryButton extends AbstractButton {
         private final int slot;
+        private final ResearchTreeRailHoverState hoverState =
+                new ResearchTreeRailHoverState();
         private int entryIndex = -1;
         private boolean selected;
 
@@ -2523,13 +2530,27 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             setMessage(name);
         }
 
+        private void updatePointerState(double mouseX, double mouseY) {
+            hoverState.update(
+                    visible,
+                    selected || isFocused(),
+                    isMouseOver(mouseX, mouseY),
+                    labelPointerBounds().contains(mouseX, mouseY));
+        }
+
         private boolean ownsPointer(double mouseX, double mouseY) {
             return isMouseOver(mouseX, mouseY)
-                    || (selected || isFocused()) && labelContains(mouseX, mouseY);
+                    || hoverState.ownsRevealedLabel(
+                            visible,
+                            selected || isFocused(),
+                            labelPointerBounds().contains(mouseX, mouseY));
         }
 
         private boolean labelContains(double mouseX, double mouseY) {
-            return labelBounds().contains(mouseX, mouseY);
+            return hoverState.ownsRevealedLabel(
+                    visible,
+                    selected || isFocused(),
+                    labelPointerBounds().contains(mouseX, mouseY));
         }
 
         private ResearchTreeScreenLayout.Rect labelBounds() {
@@ -2546,6 +2567,16 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                     getHeight() - 2);
         }
 
+        private ResearchTreeScreenLayout.Rect labelPointerBounds() {
+            ResearchTreeScreenLayout.Rect label = labelBounds();
+            int x = getX() + getWidth();
+            return new ResearchTreeScreenLayout.Rect(
+                    x,
+                    getY(),
+                    label.right() - x,
+                    getHeight());
+        }
+
         @Override
         public void onPress() {
             activateSidebarSlot(slot);
@@ -2557,8 +2588,10 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 int mouseX,
                 int mouseY,
                 float partialTick) {
-            int background = selected ? 0xE0283840 : isHoveredOrFocused() ? 0xE0202A34 : 0xD0111820;
-            int border = selected ? ACCENT : isHoveredOrFocused() ? TEXT : BORDER;
+            boolean labelVisible = hoverState.labelVisible(
+                    visible, selected || isFocused());
+            int background = selected ? 0xE0283840 : labelVisible ? 0xE0202A34 : 0xD0111820;
+            int border = selected ? ACCENT : labelVisible ? TEXT : BORDER;
             graphics.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), background);
             graphics.renderOutline(getX(), getY(), getWidth(), getHeight(), border);
 
@@ -2573,7 +2606,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                         getY() + 6,
                         selected ? ACCENT : TEXT);
             }
-            if (selected || isHoveredOrFocused()) {
+            if (labelVisible) {
                 String name = getMessage().getString();
                 ResearchTreeScreenLayout.Rect labelBounds = labelBounds();
                 int labelWidth = labelBounds.width();
