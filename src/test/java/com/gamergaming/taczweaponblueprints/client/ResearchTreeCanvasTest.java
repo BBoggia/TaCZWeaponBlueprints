@@ -248,6 +248,47 @@ class ResearchTreeCanvasTest {
     }
 
     @Test
+    void stateOnlyPublicationReusesPositionsWithoutReturningStaleNodes() {
+        ResearchTreeCanvas canvas = canvas();
+        ResearchTreeScreenLayout.Rect bounds =
+                new ResearchTreeScreenLayout.Rect(0, 0, 120, 80);
+        ResearchTreeGraph initial = graph("test:a", JournalVisibility.FULL);
+        ResearchTreeLayout layout = layout("test:a");
+        canvas.setBounds(ResearchTreeScreenLayout.ViewMode.FULLSCREEN, bounds);
+        canvas.setContent(initial, layout, Map.of(), null);
+        ResearchTreeLayout.PositionedNode position = layout.nodes().get(0);
+        double mouseX = canvas.viewport().viewportX(position.centerX());
+        double mouseY = canvas.viewport().viewportY(position.centerY());
+        assertEquals(
+                ResearchTreeGraph.Availability.AVAILABLE,
+                canvas.nodeAt(mouseX, mouseY).orElseThrow().availability());
+
+        ResearchTreeGraph.Node previous = initial.nodes().get(0);
+        ResearchTreeGraph stateOnly = new ResearchTreeGraph(List.of(
+                new ResearchTreeGraph.Node(
+                        previous.ordinal(),
+                        previous.blueprintId(),
+                        previous.nameKey(),
+                        previous.itemType(),
+                        previous.displaySlotId(),
+                        previous.visibility(),
+                        true,
+                        previous.discovered(),
+                        false,
+                        previous.pointCost(),
+                        previous.ingredientTypeCount(),
+                        previous.prerequisiteCount(),
+                        previous.hiddenPrerequisiteCount(),
+                        ResearchTreeGraph.Availability.LEARNED)),
+                List.of());
+        assertFalse(canvas.setContent(stateOnly, layout, Map.of(), null));
+
+        assertEquals(
+                ResearchTreeGraph.Availability.LEARNED,
+                canvas.nodeAt(mouseX, mouseY).orElseThrow().availability());
+    }
+
+    @Test
     void compactDragRemainsOwnedByItsInitiatingButton() {
         ResearchTreeCanvas canvas = canvas();
         canvas.setBounds(

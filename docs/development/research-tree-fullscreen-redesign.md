@@ -139,9 +139,10 @@ Keyboard behavior:
 ## Performance limits
 
 The design remains bounded for 4,096 nodes, 65,536 edges, and a large published
-group list. Edge culling reuses `ResearchTreeEdgeIndex`; later phases add a node
-spatial index, semantic zoom, visible-region culling, virtualized rail entries,
-and allocation-conscious render paths.
+group list. Edge culling uses `ResearchTreeEdgeIndex`; node rendering and hit
+testing use `ResearchTreeNodeIndex`; semantic zoom reduces connector, label,
+icon, and badge density; other graph decoration is clipped to the visible
+region; and the rail keeps its virtualized entry widgets.
 
 ## Phase gates
 

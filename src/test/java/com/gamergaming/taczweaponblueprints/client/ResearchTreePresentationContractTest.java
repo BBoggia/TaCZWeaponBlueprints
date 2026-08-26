@@ -182,6 +182,51 @@ class ResearchTreePresentationContractTest {
                 () -> ResearchTreePresentationContract.cardDetail(0.0D));
     }
 
+    @Test
+    void semanticZoomRetainsFocusedPathsWhileReducingGraphClutter() {
+        for (ResearchTreePresentationContract.RelationshipRole role
+                : ResearchTreePresentationContract.RelationshipRole.values()) {
+            assertTrue(ResearchTreePresentationContract.edgeVisible(
+                    ResearchTreePresentationContract.CardDetail.DETAILED, role));
+        }
+        assertFalse(ResearchTreePresentationContract.edgeVisible(
+                ResearchTreePresentationContract.CardDetail.COMPACT,
+                ResearchTreePresentationContract.RelationshipRole.UNRELATED));
+        assertTrue(ResearchTreePresentationContract.edgeVisible(
+                ResearchTreePresentationContract.CardDetail.COMPACT,
+                ResearchTreePresentationContract.RelationshipRole.NEUTRAL));
+        assertFalse(ResearchTreePresentationContract.edgeVisible(
+                ResearchTreePresentationContract.CardDetail.OVERVIEW,
+                ResearchTreePresentationContract.RelationshipRole.NEUTRAL));
+        assertTrue(ResearchTreePresentationContract.edgeVisible(
+                ResearchTreePresentationContract.CardDetail.OVERVIEW,
+                ResearchTreePresentationContract.RelationshipRole.REQUIREMENT_PATH));
+        assertTrue(ResearchTreePresentationContract.edgeVisible(
+                ResearchTreePresentationContract.CardDetail.OVERVIEW,
+                ResearchTreePresentationContract.RelationshipRole.DIRECT_UNLOCK));
+        assertThrows(IllegalArgumentException.class,
+                () -> ResearchTreePresentationContract.edgeVisible(
+                        null, ResearchTreePresentationContract.RelationshipRole.NEUTRAL));
+    }
+
+    @Test
+    void graphSpaceLabelsRevealStructureBeforeIndividualTiers() {
+        assertEquals(
+                ResearchTreePresentationContract.GraphLabels.NONE,
+                ResearchTreePresentationContract.graphLabels(
+                        ResearchTreePresentationContract.CardDetail.OVERVIEW));
+        assertEquals(
+                ResearchTreePresentationContract.GraphLabels.STRUCTURE,
+                ResearchTreePresentationContract.graphLabels(
+                        ResearchTreePresentationContract.CardDetail.COMPACT));
+        assertEquals(
+                ResearchTreePresentationContract.GraphLabels.FULL,
+                ResearchTreePresentationContract.graphLabels(
+                        ResearchTreePresentationContract.CardDetail.DETAILED));
+        assertThrows(IllegalArgumentException.class,
+                () -> ResearchTreePresentationContract.graphLabels(null));
+    }
+
     private static ResearchTreePresentationContract.StatusSymbol expected(
             ResearchTreeGraph.Availability availability) {
         return switch (availability) {

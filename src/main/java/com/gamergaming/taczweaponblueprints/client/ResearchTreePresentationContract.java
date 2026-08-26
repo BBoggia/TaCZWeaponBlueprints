@@ -101,6 +101,31 @@ public final class ResearchTreePresentationContract {
         return scale >= MIN_COMPACT_CARD_SCALE ? CardDetail.COMPACT : CardDetail.OVERVIEW;
     }
 
+    /** Controls connector density without hiding a focused relationship path. */
+    public static boolean edgeVisible(CardDetail detail, RelationshipRole role) {
+        if (detail == null || role == null) {
+            throw new IllegalArgumentException("Research Tree edge detail cannot be null");
+        }
+        return switch (detail) {
+            case DETAILED -> true;
+            case COMPACT -> role != RelationshipRole.UNRELATED;
+            case OVERVIEW -> role != RelationshipRole.UNRELATED
+                    && role != RelationshipRole.NEUTRAL;
+        };
+    }
+
+    /** Graph-space labels progressively reveal structure before individual tiers. */
+    public static GraphLabels graphLabels(CardDetail detail) {
+        if (detail == null) {
+            throw new IllegalArgumentException("Research Tree graph detail cannot be null");
+        }
+        return switch (detail) {
+            case OVERVIEW -> GraphLabels.NONE;
+            case COMPACT -> GraphLabels.STRUCTURE;
+            case DETAILED -> GraphLabels.FULL;
+        };
+    }
+
     /** Primary player-facing next step for the focused public node. */
     public static NextAction nextAction(ResearchTreeGraph.Node node, boolean canAffordPoints) {
         if (node == null) {
@@ -149,6 +174,12 @@ public final class ResearchTreePresentationContract {
         OVERVIEW,
         COMPACT,
         DETAILED
+    }
+
+    public enum GraphLabels {
+        NONE,
+        STRUCTURE,
+        FULL
     }
 
     public enum NextAction {

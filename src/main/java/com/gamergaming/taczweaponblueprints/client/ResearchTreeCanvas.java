@@ -33,6 +33,7 @@ public final class ResearchTreeCanvas {
     private ResearchTreeGraph graph = ResearchTreeGraph.EMPTY;
     private ResearchTreeLayout layout = ResearchTreeLayout.EMPTY;
     private ResearchTreeEdgeIndex edgeIndex = ResearchTreeEdgeIndex.EMPTY;
+    private ResearchTreeNodeIndex nodeIndex = ResearchTreeNodeIndex.EMPTY;
     private ResearchTreeRelations relations = ResearchTreeRelations.EMPTY;
     private ResearchTreeRelations.FocusPath focusPath = ResearchTreeRelations.FocusPath.EMPTY;
     private ResearchTreeRelations.FocusPath hoverPath = ResearchTreeRelations.FocusPath.EMPTY;
@@ -122,6 +123,7 @@ public final class ResearchTreeCanvas {
         if (topologyChanged) {
             cancelInteraction();
             edgeIndex = ResearchTreeEdgeIndex.create(graph, layout);
+            nodeIndex = ResearchTreeNodeIndex.create(layout);
             relations = ResearchTreeRelations.create(graph);
         }
         state.retainVisibleNodes(graph, preferredFocus);
@@ -181,19 +183,41 @@ public final class ResearchTreeCanvas {
                     0.0D);
             graphics.pose().scale(scale, scale, 1.0F);
             try {
-                drawGroupRegions(graphics);
-                drawCategoryLanes(graphics);
-                drawTierGuides(graphics);
                 double minimumX = viewport.canvasX(0.0D);
                 double minimumY = viewport.canvasY(0.0D);
                 double maximumX = viewport.canvasX(bounds.width());
                 double maximumY = viewport.canvasY(bounds.height());
+                ResearchTreePresentationContract.CardDetail detail =
+                        ResearchTreePresentationContract.cardDetail(viewport.scale());
+                ResearchTreePresentationContract.GraphLabels graphLabels =
+                        ResearchTreePresentationContract.graphLabels(detail);
+                boolean fullscreen =
+                        viewMode == ResearchTreeScreenLayout.ViewMode.FULLSCREEN;
+                drawGroupRegions(graphics, minimumX, minimumY, maximumX, maximumY);
+                drawCategoryLanes(graphics, minimumX, maximumX);
+                if (!fullscreen
+                        || detail != ResearchTreePresentationContract.CardDetail.OVERVIEW) {
+                    drawTierGuides(graphics, minimumY, maximumY);
+                }
+                if (fullscreen
+                        && graphLabels != ResearchTreePresentationContract.GraphLabels.NONE) {
+                    drawGraphGroupLabels(
+                            graphics, font, groupName,
+                            minimumX, minimumY, maximumX, maximumY);
+                    drawGraphCategoryLabels(
+                            graphics, font, minimumX, minimumY, maximumX, maximumY);
+                    if (graphLabels == ResearchTreePresentationContract.GraphLabels.FULL) {
+                        drawGraphTierLabels(graphics, font, minimumY, maximumY);
+                    }
+                }
                 List<ResearchTreeEdgeIndex.PositionedEdge> visibleEdges =
                         edgeIndex.visible(minimumX, minimumY, maximumX, maximumY);
                 for (int layer = 0; layer < 3; layer++) {
                     for (ResearchTreeEdgeIndex.PositionedEdge edge : visibleEdges) {
                         ResearchTreePresentationContract.RelationshipRole role = edgeRole(edge);
-                        if (edgeLayer(role) == layer) {
+                        if (edgeLayer(role) == layer
+                                && (!fullscreen
+                                || ResearchTreePresentationContract.edgeVisible(detail, role))) {
                             drawEdge(graphics, edge, role, nodeBorderColor);
                         }
                     }
@@ -203,16 +227,13 @@ public final class ResearchTreeCanvas {
                         drawHiddenAnchor(graphics, font, anchor);
                     }
                 }
-                drawPortals(graphics);
-                for (ResearchTreeLayout.PositionedNode position : layout.nodes()) {
-                    if (viewport.intersects(
-                            position.x(), position.y(),
-                            ResearchTreeLayout.NODE_WIDTH, ResearchTreeLayout.NODE_HEIGHT)) {
-                        graph.node(position.blueprintId()).ifPresent(node ->
-                                drawNode(
-                                        graphics, font, node, position,
-                                        nodeName, nodeBorderColor, statusSymbol));
-                    }
+                drawPortals(graphics, minimumX, minimumY, maximumX, maximumY);
+                for (ResearchTreeLayout.PositionedNode position
+                        : nodeIndex.visible(minimumX, minimumY, maximumX, maximumY)) {
+                    graph.node(position.blueprintId()).ifPresent(node ->
+                            drawNode(
+                                    graphics, font, node, position, detail,
+                                    nodeName, nodeBorderColor, statusSymbol));
                 }
             } finally {
                 graphics.pose().popPose();
@@ -285,15 +306,8 @@ public final class ResearchTreeCanvas {
         ResearchTreeViewport viewport = viewport();
         double canvasX = viewport.canvasX(mouseX - bounds.x());
         double canvasY = viewport.canvasY(mouseY - bounds.y());
-        for (ResearchTreeLayout.PositionedNode position : layout.nodes()) {
-            if (canvasX >= position.x()
-                    && canvasX < position.x() + ResearchTreeLayout.NODE_WIDTH
-                    && canvasY >= position.y()
-                    && canvasY < position.y() + ResearchTreeLayout.NODE_HEIGHT) {
-                return graph.node(position.blueprintId());
-            }
-        }
-        return Optional.empty();
+        return nodeIndex.at(canvasX, canvasY).flatMap(position ->
+                graph.node(position.blueprintId()));
     }
 
     public Optional<ResearchTreeProjection.CrossGroupLink> portalAt(
@@ -602,10 +616,10 @@ public final class ResearchTreeCanvas {
         }
     }
 
-    private void drawCategoryLanes(GuiGraphics graphics) {
-        ResearchTreeViewport viewport = viewport();
-        double minimumX = viewport.canvasX(0.0D);
-        double maximumX = viewport.canvasX(bounds.width());
+    private void drawCategoryLanes(
+            GuiGraphics graphics,
+            double minimumX,
+            double maximumX) {
         for (int index = 0; index < layout.categoryLanes().size(); index++) {
             ResearchTreeLayout.CategoryLane lane = layout.categoryLanes().get(index);
             if (lane.right() < minimumX || lane.x() > maximumX) {
@@ -618,14 +632,109 @@ public final class ResearchTreeCanvas {
         }
     }
 
-    private void drawGroupRegions(GuiGraphics graphics) {
+    private void drawGroupRegions(
+            GuiGraphics graphics,
+            double minimumX,
+            double minimumY,
+            double maximumX,
+            double maximumY) {
         for (int index = 0; index < layout.groupRegions().size(); index++) {
             ResearchTreeLayout.GroupRegion region = layout.groupRegions().get(index);
+            if (!intersects(
+                    region.x(), region.y(), region.right(), region.bottom(),
+                    minimumX, minimumY, maximumX, maximumY)) {
+                continue;
+            }
             int background = index % 2 == 0 ? style.laneEven() : style.laneOdd();
             graphics.fill(
                     region.x(), region.y(), region.right(), region.bottom(), background);
             graphics.renderOutline(
                     region.x(), region.y(), region.width(), region.height(), style.laneBorder());
+        }
+    }
+
+    private void drawGraphGroupLabels(
+            GuiGraphics graphics,
+            Font font,
+            Function<ResourceLocation, Component> groupName,
+            double minimumX,
+            double minimumY,
+            double maximumX,
+            double maximumY) {
+        for (ResearchTreeLayout.GroupRegion region : layout.groupRegions()) {
+            if (!intersects(
+                    region.x(), region.y(), region.right(), region.bottom(),
+                    minimumX, minimumY, maximumX, maximumY)) {
+                continue;
+            }
+            Component name = groupName.apply(region.groupId());
+            if (name == null) {
+                throw new IllegalArgumentException("Research Tree group name cannot be null");
+            }
+            int labelY = region.y() + 4;
+            if (labelY + font.lineHeight < minimumY || labelY > maximumY) {
+                continue;
+            }
+            String text = ellipsize(font, name.getString(), region.width() - 8);
+            if (!text.isEmpty()) {
+                graphics.drawCenteredString(
+                        font, text, region.x() + region.width() / 2, labelY, style.muted());
+            }
+        }
+    }
+
+    private void drawGraphCategoryLabels(
+            GuiGraphics graphics,
+            Font font,
+            double minimumX,
+            double minimumY,
+            double maximumX,
+            double maximumY) {
+        int labelY = 3;
+        if (labelY + font.lineHeight < minimumY || labelY > maximumY) {
+            return;
+        }
+        for (ResearchTreeLayout.CategoryLane lane : layout.categoryLanes()) {
+            if (lane.right() < minimumX || lane.x() > maximumX) {
+                continue;
+            }
+            String text = ellipsize(font, categoryLabel(lane).getString(), lane.width() - 8);
+            if (!text.isEmpty()) {
+                graphics.drawCenteredString(
+                        font, text, lane.x() + lane.width() / 2, labelY,
+                        lane.key().equals(categoryFilter) ? style.accent() : style.muted());
+            }
+        }
+    }
+
+    private void drawGraphTierLabels(
+            GuiGraphics graphics,
+            Font font,
+            double minimumY,
+            double maximumY) {
+        if (layout.categoryLanes().isEmpty()) {
+            return;
+        }
+        int x = ResearchTreeLayoutEngine.PADDING
+                + ResearchTreeLayoutEngine.TIER_GUTTER_WIDTH / 2;
+        for (int tier = 0; tier < layout.tierCount(); tier++) {
+            List<ResearchTreeLayout.PositionedNode> tierNodes = layout.tier(tier);
+            if (tierNodes.isEmpty()) {
+                continue;
+            }
+            int minimumTierY = tierNodes.stream()
+                    .mapToInt(ResearchTreeLayout.PositionedNode::y)
+                    .min()
+                    .orElse(0);
+            int maximumTierY = tierNodes.stream()
+                    .mapToInt(node -> node.y() + ResearchTreeLayout.NODE_HEIGHT)
+                    .max()
+                    .orElse(minimumTierY);
+            int y = (minimumTierY + maximumTierY - font.lineHeight) / 2;
+            if (y + font.lineHeight < minimumY || y > maximumY) {
+                continue;
+            }
+            graphics.drawCenteredString(font, "T" + (tier + 1), x, y, style.muted());
         }
     }
 
@@ -703,15 +812,15 @@ public final class ResearchTreeCanvas {
             if (tierNodes.isEmpty()) {
                 continue;
             }
-            int minimumY = tierNodes.stream()
+            int minimumTierY = tierNodes.stream()
                     .mapToInt(ResearchTreeLayout.PositionedNode::y)
                     .min()
                     .orElse(0);
             int maximumY = tierNodes.stream()
                     .mapToInt(node -> node.y() + ResearchTreeLayout.NODE_HEIGHT)
                     .max()
-                    .orElse(minimumY);
-            int y = bounds.y() + viewport.viewportY((minimumY + maximumY) / 2.0D)
+                    .orElse(minimumTierY);
+            int y = bounds.y() + viewport.viewportY((minimumTierY + maximumY) / 2.0D)
                     - font.lineHeight / 2;
             if (y < bounds.y() + STICKY_HEADER_HEIGHT || y + font.lineHeight > bounds.bottom()) {
                 continue;
@@ -759,23 +868,29 @@ public final class ResearchTreeCanvas {
         return result.isEmpty() ? "Other" : result.toString();
     }
 
-    private void drawTierGuides(GuiGraphics graphics) {
+    private void drawTierGuides(
+            GuiGraphics graphics,
+            double minimumY,
+            double maximumY) {
         for (int tier = 0; tier < layout.tierCount(); tier++) {
             List<ResearchTreeLayout.PositionedNode> tierNodes = layout.tier(tier);
             if (tierNodes.isEmpty()) {
                 continue;
             }
-            int minimumY = tierNodes.stream()
+            int minimumTierY = tierNodes.stream()
                     .mapToInt(ResearchTreeLayout.PositionedNode::y)
                     .min()
                     .orElse(0);
             int maximumBottom = tierNodes.stream()
                     .mapToInt(node -> node.y() + ResearchTreeLayout.NODE_HEIGHT)
                     .max()
-                    .orElse(minimumY);
+                    .orElse(minimumTierY);
             int separatorY = tier == 0
                     ? maximumBottom
                     : maximumBottom + ResearchTreeLayoutEngine.VERTICAL_GAP / 2;
+            if (separatorY < minimumY || separatorY > maximumY) {
+                continue;
+            }
             graphics.fill(
                     ResearchTreeLayoutEngine.PADDING,
                     separatorY,
@@ -785,10 +900,25 @@ public final class ResearchTreeCanvas {
         }
     }
 
-    private void drawPortals(GuiGraphics graphics) {
+    private void drawPortals(
+            GuiGraphics graphics,
+            double minimumX,
+            double minimumY,
+            double maximumX,
+            double maximumY) {
         for (PortalPlacement portal : portals) {
             ResearchTreeLayout.PositionedNode local = layout.position(portal.link().localNodeId())
                     .orElseThrow();
+            int portalMinimumY = Math.min(portal.y(), local.y());
+            int portalMaximumY = Math.max(
+                    portal.y() + PORTAL_SIZE,
+                    local.y() + ResearchTreeLayout.NODE_HEIGHT);
+            if (!intersects(
+                    portal.x(), portalMinimumY,
+                    portal.x() + PORTAL_SIZE, portalMaximumY,
+                    minimumX, minimumY, maximumX, maximumY)) {
+                continue;
+            }
             int color = portal.link().direction() == ResearchTreeProjection.Direction.REQUIREMENT
                     ? style.directRequirement()
                     : style.directUnlock();
@@ -971,6 +1101,7 @@ public final class ResearchTreeCanvas {
             Font font,
             ResearchTreeGraph.Node node,
             ResearchTreeLayout.PositionedNode position,
+            ResearchTreePresentationContract.CardDetail cardDetail,
             Function<ResearchTreeGraph.Node, Component> nodeName,
             ToIntFunction<ResearchTreeGraph.Node> nodeBorderColor,
             Function<ResearchTreeGraph.Node, ResearchTreePresentationContract.StatusSymbol> statusSymbol) {
@@ -983,8 +1114,6 @@ public final class ResearchTreeCanvas {
         if (symbol == null) {
             throw new IllegalArgumentException("Research Tree node status symbol cannot be null");
         }
-        ResearchTreePresentationContract.CardDetail cardDetail =
-                ResearchTreePresentationContract.cardDetail(viewport().scale());
         int fill = node.availability() == ResearchTreeGraph.Availability.LEARNED
                 ? style.learnedFill() : style.defaultFill();
         graphics.fill(x, y, x + ResearchTreeLayout.NODE_WIDTH, y + ResearchTreeLayout.NODE_HEIGHT, fill);
@@ -1124,6 +1253,19 @@ public final class ResearchTreeCanvas {
         int minimum = Math.min(fromX, toX);
         int maximum = Math.max(fromX, toX);
         graphics.fill(minimum, y - 1, maximum + 1, y + 1, color);
+    }
+
+    private static boolean intersects(
+            double left,
+            double top,
+            double right,
+            double bottom,
+            double visibleLeft,
+            double visibleTop,
+            double visibleRight,
+            double visibleBottom) {
+        return right >= visibleLeft && left <= visibleRight
+                && bottom >= visibleTop && top <= visibleBottom;
     }
 
     public record Style(
