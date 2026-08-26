@@ -15,7 +15,6 @@ class ResearchTreeFullscreenLayoutTest {
     @Test
     void canvasIsAlwaysTheCompleteScreenAndOverlaysRemainInsideIt() {
         for (int[] size : List.of(
-                new int[] {260, 180},
                 new int[] {320, 240},
                 new int[] {640, 360},
                 new int[] {854, 480},

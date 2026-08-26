@@ -1,6 +1,7 @@
 package com.gamergaming.taczweaponblueprints.client;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 /** Pure adaptive geometry for the pinned fullscreen Research Tree node card. */
@@ -11,8 +12,7 @@ public final class ResearchTreeContextCardLayout {
     public static final int CARD_GAP = 8;
     public static final int SCREEN_PADDING = 4;
     public static final int ACTION_HEIGHT = 20;
-    public static final int RETURN_CHIP_WIDTH = 116;
-    public static final int RETURN_CHIP_HEIGHT = 20;
+    public static final int RETURN_ACTION_SIZE = 18;
     private static final int CARD_PADDING = 7;
     private static final int INGREDIENT_ROW_HEIGHT = 20;
     private static final int ACTION_WIDTH = 72;
@@ -46,7 +46,9 @@ public final class ResearchTreeContextCardLayout {
         int cardHeight = exactPreview ? footerY + ACTION_HEIGHT + CARD_PADDING : 60;
         cardHeight = Math.min(cardHeight, screenHeight - SCREEN_PADDING * 2);
 
-        Candidate best = null;
+        List<NaturalPlacement> naturalPlacements = new ArrayList<>(Placement.values().length);
+        LinkedHashSet<Integer> candidateXs = new LinkedHashSet<>();
+        LinkedHashSet<Integer> candidateYs = new LinkedHashSet<>();
         for (Placement placement : Placement.values()) {
             int x;
             int y;
@@ -69,29 +71,69 @@ public final class ResearchTreeContextCardLayout {
                 }
                 default -> throw new IllegalStateException("unknown context card placement");
             }
-            int clampedX = clamp(x, SCREEN_PADDING, screenWidth - SCREEN_PADDING - cardWidth);
-            int clampedY = clamp(y, SCREEN_PADDING, screenHeight - SCREEN_PADDING - cardHeight);
-            ResearchTreeScreenLayout.Rect bounds = new ResearchTreeScreenLayout.Rect(
-                    clampedX, clampedY, cardWidth, cardHeight);
-            long displacement = Math.abs((long) clampedX - x) + Math.abs((long) clampedY - y);
-            long overlap = overlapArea(bounds, anchor);
-            for (ResearchTreeScreenLayout.Rect obstacle : avoided) {
-                overlap += overlapArea(bounds, obstacle);
-            }
-            Candidate candidate = new Candidate(
-                    placement,
-                    bounds,
-                    overlap * 1_000L + displacement * 10L + placement.ordinal());
-            if (best == null || candidate.score() < best.score()) {
-                best = candidate;
+            naturalPlacements.add(new NaturalPlacement(placement, x, y));
+            candidateXs.add(clamp(x, SCREEN_PADDING, screenWidth - SCREEN_PADDING - cardWidth));
+            candidateYs.add(clamp(y, SCREEN_PADDING, screenHeight - SCREEN_PADDING - cardHeight));
+        }
+        candidateXs.add(SCREEN_PADDING);
+        candidateXs.add(screenWidth - SCREEN_PADDING - cardWidth);
+        candidateYs.add(SCREEN_PADDING);
+        candidateYs.add(screenHeight - SCREEN_PADDING - cardHeight);
+        for (ResearchTreeScreenLayout.Rect obstacle : avoided) {
+            candidateXs.add(clamp(
+                    obstacle.right() + CARD_GAP,
+                    SCREEN_PADDING,
+                    screenWidth - SCREEN_PADDING - cardWidth));
+            candidateXs.add(clamp(
+                    obstacle.x() - CARD_GAP - cardWidth,
+                    SCREEN_PADDING,
+                    screenWidth - SCREEN_PADDING - cardWidth));
+            candidateYs.add(clamp(
+                    obstacle.bottom() + CARD_GAP,
+                    SCREEN_PADDING,
+                    screenHeight - SCREEN_PADDING - cardHeight));
+            candidateYs.add(clamp(
+                    obstacle.y() - CARD_GAP - cardHeight,
+                    SCREEN_PADDING,
+                    screenHeight - SCREEN_PADDING - cardHeight));
+        }
+
+        Candidate best = null;
+        for (int x : candidateXs) {
+            for (int y : candidateYs) {
+                ResearchTreeScreenLayout.Rect bounds = new ResearchTreeScreenLayout.Rect(
+                        x, y, cardWidth, cardHeight);
+                Placement placement = placementFor(bounds, anchor);
+                NaturalPlacement natural = naturalPlacements.get(placement.ordinal());
+                long displacement = Math.abs((long) x - natural.x())
+                        + Math.abs((long) y - natural.y());
+                long overlap = overlapArea(bounds, anchor);
+                for (ResearchTreeScreenLayout.Rect obstacle : avoided) {
+                    overlap += overlapArea(bounds, obstacle);
+                }
+                Candidate candidate = new Candidate(
+                        placement,
+                        bounds,
+                        overlap * 1_000L + displacement * 10L + placement.ordinal());
+                if (best == null || candidate.score() < best.score()) {
+                    best = candidate;
+                }
             }
         }
 
         ResearchTreeScreenLayout.Rect card = best.bounds();
         ResearchTreeScreenLayout.Rect icon = new ResearchTreeScreenLayout.Rect(
                 card.x() + CARD_PADDING, card.y() + CARD_PADDING, 16, 16);
+        ResearchTreeScreenLayout.Rect returnAction = new ResearchTreeScreenLayout.Rect(
+                card.right() - CARD_PADDING - RETURN_ACTION_SIZE,
+                card.y() + 5,
+                RETURN_ACTION_SIZE,
+                RETURN_ACTION_SIZE);
         ResearchTreeScreenLayout.Rect name = new ResearchTreeScreenLayout.Rect(
-                icon.right() + 5, card.y() + CARD_PADDING, card.width() - 35, 10);
+                icon.right() + 5,
+                card.y() + CARD_PADDING,
+                Math.max(1, returnAction.x() - icon.right() - 9),
+                10);
         ResearchTreeScreenLayout.Rect status = new ResearchTreeScreenLayout.Rect(
                 card.x() + CARD_PADDING, card.y() + 28, card.width() - CARD_PADDING * 2, 10);
         ResearchTreeScreenLayout.Rect summary = new ResearchTreeScreenLayout.Rect(
@@ -131,7 +173,7 @@ public final class ResearchTreeContextCardLayout {
                         10)
                 : null;
         return new Layout(
-                card, icon, name, status, summary, balance,
+                card, icon, name, status, summary, balance, returnAction,
                 ingredientSlots, readiness, action, best.placement(), columns);
     }
 
@@ -141,52 +183,13 @@ public final class ResearchTreeContextCardLayout {
             int screenHeight,
             List<ResearchTreeScreenLayout.Rect> covered) {
         validate(screenWidth, screenHeight, anchor, covered, 0);
-        boolean intersectsScreen = anchor.right() > 0 && anchor.bottom() > 0
-                && anchor.x() < screenWidth && anchor.y() < screenHeight;
-        if (!intersectsScreen) {
+        if (anchor.x() < 0 || anchor.y() < 0
+                || anchor.right() > screenWidth || anchor.bottom() > screenHeight) {
             return false;
         }
-        return covered.stream().noneMatch(rectangle ->
-                rectangle.contains(anchor.centerX(), anchor.centerY()));
-    }
-
-    public static ResearchTreeScreenLayout.Rect returnChip(
-            int screenWidth,
-            int screenHeight,
-            List<ResearchTreeScreenLayout.Rect> avoided) {
-        if (avoided == null || avoided.stream().anyMatch(java.util.Objects::isNull)
-                || screenWidth < RETURN_CHIP_WIDTH + SCREEN_PADDING * 2
-                || screenHeight < RETURN_CHIP_HEIGHT + SCREEN_PADDING * 2) {
-            throw new IllegalArgumentException("invalid Research Tree return chip bounds");
-        }
-        List<ResearchTreeScreenLayout.Rect> candidates = List.of(
-                new ResearchTreeScreenLayout.Rect(
-                        screenWidth - SCREEN_PADDING - RETURN_CHIP_WIDTH,
-                        screenHeight - SCREEN_PADDING - RETURN_CHIP_HEIGHT,
-                        RETURN_CHIP_WIDTH, RETURN_CHIP_HEIGHT),
-                new ResearchTreeScreenLayout.Rect(
-                        SCREEN_PADDING,
-                        screenHeight - SCREEN_PADDING - RETURN_CHIP_HEIGHT,
-                        RETURN_CHIP_WIDTH, RETURN_CHIP_HEIGHT),
-                new ResearchTreeScreenLayout.Rect(
-                        screenWidth - SCREEN_PADDING - RETURN_CHIP_WIDTH,
-                        SCREEN_PADDING,
-                        RETURN_CHIP_WIDTH, RETURN_CHIP_HEIGHT),
-                new ResearchTreeScreenLayout.Rect(
-                        SCREEN_PADDING, SCREEN_PADDING,
-                        RETURN_CHIP_WIDTH, RETURN_CHIP_HEIGHT));
-        ResearchTreeScreenLayout.Rect best = candidates.get(0);
-        long bestOverlap = Long.MAX_VALUE;
-        for (ResearchTreeScreenLayout.Rect candidate : candidates) {
-            long overlap = avoided.stream()
-                    .mapToLong(obstacle -> overlapArea(candidate, obstacle))
-                    .sum();
-            if (overlap < bestOverlap) {
-                best = candidate;
-                bestOverlap = overlap;
-            }
-        }
-        return best;
+        ResearchTreeScreenLayout.Rect anchorBounds = new ResearchTreeScreenLayout.Rect(
+                anchor.x(), anchor.y(), anchor.width(), anchor.height());
+        return covered.stream().noneMatch(rectangle -> rectangle.overlaps(anchorBounds));
     }
 
     private static void validate(
@@ -206,6 +209,17 @@ public final class ResearchTreeContextCardLayout {
 
     private static int clamp(int value, int minimum, int maximum) {
         return Math.max(minimum, Math.min(value, maximum));
+    }
+
+    private static Placement placementFor(
+            ResearchTreeScreenLayout.Rect card,
+            Anchor anchor) {
+        int horizontal = card.x() + card.width() / 2 - anchor.centerX();
+        int vertical = card.y() + card.height() / 2 - anchor.centerY();
+        if (Math.abs(horizontal) >= Math.abs(vertical)) {
+            return horizontal >= 0 ? Placement.RIGHT : Placement.LEFT;
+        }
+        return vertical >= 0 ? Placement.BELOW : Placement.ABOVE;
     }
 
     private static long overlapArea(
@@ -259,6 +273,7 @@ public final class ResearchTreeContextCardLayout {
             ResearchTreeScreenLayout.Rect status,
             ResearchTreeScreenLayout.Rect summary,
             ResearchTreeScreenLayout.Rect balance,
+            ResearchTreeScreenLayout.Rect returnAction,
             List<ResearchTreeScreenLayout.Rect> ingredients,
             ResearchTreeScreenLayout.Rect readiness,
             ResearchTreeScreenLayout.Rect action,
@@ -267,10 +282,13 @@ public final class ResearchTreeContextCardLayout {
         public Layout {
             ingredients = ingredients == null ? List.of() : List.copyOf(ingredients);
             if (card == null || icon == null || name == null || status == null || summary == null
+                    || returnAction == null
                     || ingredients.stream().anyMatch(java.util.Objects::isNull)
                     || placement == null || columns < 1 || columns > 2
                     || !card.contains(icon) || !card.contains(name)
                     || !card.contains(status) || !card.contains(summary)
+                    || !card.contains(returnAction) || returnAction.overlaps(icon)
+                    || returnAction.overlaps(name)
                     || (balance != null && !card.contains(balance))
                     || ingredients.stream().anyMatch(slot -> !card.contains(slot))
                     || (readiness != null && !card.contains(readiness))
@@ -297,5 +315,13 @@ public final class ResearchTreeContextCardLayout {
             Placement placement,
             ResearchTreeScreenLayout.Rect bounds,
             long score) {
+    }
+
+    private record NaturalPlacement(Placement placement, int x, int y) {
+        private NaturalPlacement {
+            if (placement == null) {
+                throw new IllegalArgumentException("context card placement cannot be null");
+            }
+        }
     }
 }

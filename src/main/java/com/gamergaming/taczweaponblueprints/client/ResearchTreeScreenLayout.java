@@ -10,8 +10,9 @@ import java.util.Optional;
 public final class ResearchTreeScreenLayout {
     public static final int COMPACT_WIDTH = 310;
     public static final int COMPACT_HEIGHT = 240;
-    public static final int MIN_FULLSCREEN_WIDTH = 260;
-    public static final int MIN_FULLSCREEN_HEIGHT = 180;
+    /** Minimum bounds that can contain the rail, search, coachmark, and a full action card. */
+    public static final int MIN_FULLSCREEN_WIDTH = 320;
+    public static final int MIN_FULLSCREEN_HEIGHT = 240;
     public static final int PADDING = 8;
     public static final int TOOLBAR_HEIGHT = 20;
     public static final int SIDEBAR_WIDTH = 96;

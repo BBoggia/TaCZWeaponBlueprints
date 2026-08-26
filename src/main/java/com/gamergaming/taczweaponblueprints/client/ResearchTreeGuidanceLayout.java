@@ -31,6 +31,21 @@ public final class ResearchTreeGuidanceLayout {
         return new Guide(panel, dismiss);
     }
 
+    /** Uses the dedicated overlay lane instead of reusing compact canvas geometry. */
+    public static Guide forFullscreen(ResearchTreeFullscreenLayout.Layout layout) {
+        if (layout == null) {
+            throw new IllegalArgumentException("fullscreen Research Tree layout cannot be null");
+        }
+        ResearchTreeScreenLayout.Rect panel = layout.coachmark();
+        int dismissWidth = Math.min(54, Math.max(36, panel.width() / 4));
+        ResearchTreeScreenLayout.Rect dismiss = new ResearchTreeScreenLayout.Rect(
+                panel.right() - dismissWidth - 3,
+                panel.y() + 3,
+                dismissWidth,
+                panel.height() - 6);
+        return new Guide(panel, dismiss);
+    }
+
     public record Guide(
             ResearchTreeScreenLayout.Rect panel,
             ResearchTreeScreenLayout.Rect dismiss) {

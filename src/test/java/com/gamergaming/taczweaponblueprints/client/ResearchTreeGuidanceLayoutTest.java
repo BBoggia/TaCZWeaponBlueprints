@@ -1,5 +1,6 @@
 package com.gamergaming.taczweaponblueprints.client;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -15,8 +16,7 @@ class ResearchTreeGuidanceLayoutTest {
                 ResearchTreeScreenLayout.compact(),
                 ResearchTreeScreenLayout.fullscreen(854, 480, true),
                 ResearchTreeScreenLayout.fullscreen(640, 360, true),
-                ResearchTreeScreenLayout.fullscreen(320, 240, true),
-                ResearchTreeScreenLayout.fullscreen(260, 180, false))) {
+                ResearchTreeScreenLayout.fullscreen(320, 240, true))) {
             ResearchTreeGuidanceLayout.Guide guide =
                     ResearchTreeGuidanceLayout.forLayout(layout);
 
@@ -25,6 +25,20 @@ class ResearchTreeGuidanceLayoutTest {
             assertFalse(guide.panel().overlaps(layout.toolbar()));
             assertFalse(guide.panel().overlaps(layout.details()));
         }
+    }
+
+    @Test
+    void fullscreenGuideUsesItsDedicatedOverlayWithoutCoveringTheRail() {
+        ResearchTreeFullscreenLayout.Layout fullscreen =
+                ResearchTreeFullscreenLayout.forScreen(320, 240);
+        ResearchTreeGuidanceLayout.Guide guide =
+                ResearchTreeGuidanceLayout.forFullscreen(fullscreen);
+
+        assertEquals(fullscreen.coachmark(), guide.panel());
+        assertTrue(guide.panel().contains(guide.dismiss()));
+        assertFalse(guide.panel().overlaps(fullscreen.rail()));
+        assertThrows(IllegalArgumentException.class, () ->
+                ResearchTreeGuidanceLayout.forFullscreen(null));
     }
 
     @Test

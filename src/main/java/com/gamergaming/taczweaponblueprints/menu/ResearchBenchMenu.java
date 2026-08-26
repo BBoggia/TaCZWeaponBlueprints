@@ -58,6 +58,7 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
     private final DataSlot modeData = DataSlot.standalone();
     private ResourceLocation selectedBlueprint;
     private ResearchBenchPreview preview = ResearchBenchPreview.EMPTY;
+    private ResearchInventorySnapshot previewInventory = ResearchInventorySnapshot.EMPTY;
 
     public ResearchBenchMenu(int containerId, Inventory inventory, FriendlyByteBuf buffer) {
         this(containerId, inventory, ContainerLevelAccess.create(
@@ -224,10 +225,27 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
         }
     }
 
+    /**
+     * Menus are broadcast every server tick. Use that existing lifecycle to refresh only when
+     * allocation-relevant inventory contents changed while a blueprint is selected.
+     */
+    @Override
+    public void broadcastChanges() {
+        super.broadcastChanges();
+        if (selectedBlueprint != null
+                && owner instanceof ServerPlayer serverPlayer
+                && serverPlayer.containerMenu == this
+                && stillValid(serverPlayer)
+                && !previewInventory.matches(playerInventory.items)) {
+            refreshPreview(serverPlayer);
+        }
+    }
+
     private void refreshPreview(ServerPlayer player) {
         ResearchBenchPreview next = buildPreview(player);
         preview = next;
-        broadcastChanges();
+        previewInventory = ResearchInventorySnapshot.capture(playerInventory.items);
+        super.broadcastChanges();
         NetworkHandler.sendResearchBenchPreview(player, containerId, next);
     }
 

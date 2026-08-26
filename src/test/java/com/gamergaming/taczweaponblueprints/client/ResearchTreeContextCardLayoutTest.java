@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -39,6 +38,9 @@ class ResearchTreeContextCardLayoutTest {
         assertEquals(2, layout.columns());
         assertEquals(6, layout.ingredients().size());
         assertTrue(layout.card().contains(layout.action()));
+        assertTrue(layout.card().contains(layout.returnAction()));
+        assertFalse(layout.returnAction().overlaps(layout.icon()));
+        assertFalse(layout.returnAction().overlaps(layout.name()));
         for (int first = 0; first < layout.ingredients().size(); first++) {
             assertTrue(layout.card().contains(layout.ingredients().get(first)));
             for (int second = first + 1; second < layout.ingredients().size(); second++) {
@@ -62,7 +64,7 @@ class ResearchTreeContextCardLayoutTest {
     }
 
     @Test
-    void obstaclesInfluencePlacementAndOffscreenNodesReceiveANonOverlappingChip() {
+    void obstaclesInfluencePlacementAndOnlyFullyUncoveredNodesCountAsVisible() {
         ResearchTreeScreenLayout.Rect obstacle = new ResearchTreeScreenLayout.Rect(
                 240, 60, 224, 170);
         ResearchTreeContextCardLayout.Layout layout = ResearchTreeContextCardLayout.place(
@@ -75,12 +77,41 @@ class ResearchTreeContextCardLayoutTest {
                 new ResearchTreeContextCardLayout.Anchor(-80, 100, 24, 24);
         assertFalse(ResearchTreeContextCardLayout.isAnchorVisible(
                 offscreen, 640, 360, List.of()));
-        ArrayList<ResearchTreeScreenLayout.Rect> avoided = new ArrayList<>();
-        avoided.add(layout.card());
-        ResearchTreeScreenLayout.Rect chip = ResearchTreeContextCardLayout.returnChip(
-                640, 360, avoided);
-        assertTrue(chip.inside(640, 360));
-        assertFalse(chip.overlaps(layout.card()));
+        ResearchTreeContextCardLayout.Anchor clipped =
+                new ResearchTreeContextCardLayout.Anchor(-1, 100, 24, 24);
+        assertFalse(ResearchTreeContextCardLayout.isAnchorVisible(
+                clipped, 640, 360, List.of()));
+        ResearchTreeContextCardLayout.Anchor covered =
+                new ResearchTreeContextCardLayout.Anchor(100, 100, 24, 24);
+        assertFalse(ResearchTreeContextCardLayout.isAnchorVisible(
+                covered, 640, 360,
+                List.of(new ResearchTreeScreenLayout.Rect(100, 100, 2, 2))));
+        assertTrue(ResearchTreeContextCardLayout.isAnchorVisible(
+                covered, 640, 360, List.of()));
+    }
+
+    @Test
+    void minimumFullscreenContainsTheCompleteSixIngredientActionCard() {
+        ResearchTreeFullscreenLayout.Layout fullscreen = ResearchTreeFullscreenLayout.forScreen(
+                ResearchTreeScreenLayout.MIN_FULLSCREEN_WIDTH,
+                ResearchTreeScreenLayout.MIN_FULLSCREEN_HEIGHT);
+        List<ResearchTreeScreenLayout.Rect> overlays = List.of(
+                fullscreen.rail(),
+                fullscreen.searchField(),
+                fullscreen.close(),
+                fullscreen.coachmark());
+        ResearchTreeContextCardLayout.Layout layout = ResearchTreeContextCardLayout.place(
+                fullscreen.screenWidth(),
+                fullscreen.screenHeight(),
+                new ResearchTreeContextCardLayout.Anchor(-80, -80, 24, 24),
+                overlays, 6, true);
+
+        assertTrue(layout.card().inside(
+                ResearchTreeScreenLayout.MIN_FULLSCREEN_WIDTH,
+                ResearchTreeScreenLayout.MIN_FULLSCREEN_HEIGHT));
+        assertTrue(overlays.stream().noneMatch(layout.card()::overlaps));
+        assertTrue(layout.card().contains(layout.returnAction()));
+        assertTrue(layout.card().contains(layout.action()));
     }
 
     @Test
@@ -92,7 +123,8 @@ class ResearchTreeContextCardLayoutTest {
                         List.of(), 7, true));
         assertThrows(IllegalArgumentException.class, () ->
                 ResearchTreeContextCardLayout.place(
-                        259, 240,
+                        ResearchTreeScreenLayout.MIN_FULLSCREEN_WIDTH - 1,
+                        ResearchTreeScreenLayout.MIN_FULLSCREEN_HEIGHT,
                         new ResearchTreeContextCardLayout.Anchor(10, 10, 24, 24),
                         List.of(), 0, false));
         assertThrows(IllegalArgumentException.class, () ->

@@ -12,7 +12,6 @@ class ResearchTreeFullscreenRailLayoutTest {
     void railEntriesAreBoundedAndGrowOnlyWithAvailableHeight() {
         int previousCount = 0;
         for (int[] size : List.of(
-                new int[] {260, 180},
                 new int[] {320, 240},
                 new int[] {640, 360},
                 new int[] {854, 480},
@@ -38,7 +37,9 @@ class ResearchTreeFullscreenRailLayoutTest {
     @Test
     void searchAndBottomActionsLeaveTheEntryWindowDisjoint() {
         ResearchTreeFullscreenLayout.Layout fullscreen =
-                ResearchTreeFullscreenLayout.forScreen(260, 180);
+                ResearchTreeFullscreenLayout.forScreen(
+                        ResearchTreeScreenLayout.MIN_FULLSCREEN_WIDTH,
+                        ResearchTreeScreenLayout.MIN_FULLSCREEN_HEIGHT);
         ResearchTreeFullscreenRailLayout.Layout rail =
                 ResearchTreeFullscreenRailLayout.forLayout(fullscreen);
 
