@@ -27,6 +27,23 @@ public final class ResearchTreeLayoutEngine {
     }
 
     public static ResearchTreeLayout layout(ResearchTreeGraph graph) {
+        return layout(graph, null);
+    }
+
+    /**
+     * Builds the global DAG from the disclosure-safe publication while
+     * preserving its authored or deterministic fallback rank and sibling order.
+     */
+    public static ResearchTreeLayout layout(ResearchTreePublication publication) {
+        if (publication == null) {
+            throw new IllegalArgumentException("research publication cannot be null");
+        }
+        return layout(publication.graph(), publication.presentation());
+    }
+
+    private static ResearchTreeLayout layout(
+            ResearchTreeGraph graph,
+            ResearchTreePresentation presentation) {
         if (graph == null || graph.nodes().isEmpty()) {
             return ResearchTreeLayout.EMPTY;
         }
@@ -41,10 +58,21 @@ public final class ResearchTreeLayoutEngine {
         int[] components = components(graph);
         Map<ResourceLocation, Integer> tiers = new HashMap<>();
         int maximumTier = 0;
-        for (ResearchTreeGraph.Node node : graph.nodes()) {
-            int tier = tier(node, prerequisites, nodesById, tiers);
-            tiers.put(node.blueprintId(), tier);
-            maximumTier = Math.max(maximumTier, tier);
+        if (presentation == null) {
+            for (ResearchTreeGraph.Node node : graph.nodes()) {
+                int tier = tier(node, prerequisites, nodesById, tiers);
+                tiers.put(node.blueprintId(), tier);
+                maximumTier = Math.max(maximumTier, tier);
+            }
+        } else {
+            for (ResearchTreeGraph.Node node : graph.nodes()) {
+                int tier = presentation.membership(node.blueprintId())
+                        .orElseThrow(() -> new IllegalArgumentException(
+                                "research presentation omits a global layout node"))
+                        .rank();
+                tiers.put(node.blueprintId(), tier);
+                maximumTier = Math.max(maximumTier, tier);
+            }
         }
 
         List<List<ResearchTreeGraph.Node>> nodesByTier = new ArrayList<>(maximumTier + 1);
@@ -67,12 +95,31 @@ public final class ResearchTreeLayoutEngine {
             laneOrder.put(laneKeys.get(index), index);
         }
 
-        Comparator<ResearchTreeGraph.Node> stableOrder = Comparator
-                .comparingInt((ResearchTreeGraph.Node node) -> laneOrder.get(node.itemType()))
-                .thenComparingInt(node -> components[node.ordinal()])
-                .thenComparing(node -> node.blueprintId().toString());
+        Comparator<ResearchTreeGraph.Node> stableOrder;
+        if (presentation == null) {
+            stableOrder = Comparator
+                    .comparingInt((ResearchTreeGraph.Node node) -> laneOrder.get(node.itemType()))
+                    .thenComparingInt(node -> components[node.ordinal()])
+                    .thenComparing(node -> node.blueprintId().toString());
+        } else {
+            Map<ResourceLocation, Integer> groupOrders = new HashMap<>();
+            Map<ResourceLocation, Integer> siblingOrders = new HashMap<>();
+            for (ResearchTreePresentation.Group group : presentation.groups()) {
+                for (ResearchTreePresentation.Member member : group.members()) {
+                    groupOrders.put(member.nodeId(), group.order());
+                    siblingOrders.put(member.nodeId(), member.orderInRank());
+                }
+            }
+            stableOrder = Comparator
+                    .comparingInt((ResearchTreeGraph.Node node) -> laneOrder.get(node.itemType()))
+                    .thenComparingInt(node -> groupOrders.get(node.blueprintId()))
+                    .thenComparingInt(node -> siblingOrders.get(node.blueprintId()))
+                    .thenComparing(node -> node.blueprintId().toString());
+        }
         nodesByTier.forEach(tierNodes -> tierNodes.sort(stableOrder));
-        reduceCrossings(nodesByTier, prerequisites, dependents, laneOrder, components);
+        if (presentation == null) {
+            reduceCrossings(nodesByTier, prerequisites, dependents, laneOrder, components);
+        }
 
         Map<String, Integer> maximumLanePopulation = new LinkedHashMap<>();
         laneKeys.forEach(key -> maximumLanePopulation.put(key, 1));
@@ -106,7 +153,7 @@ public final class ResearchTreeLayoutEngine {
             laneKeys.forEach(key -> tierByLane.put(key, new ArrayList<>()));
             tierNodes.forEach(node -> tierByLane.get(node.itemType()).add(node));
 
-            int tierRows = 1;
+            int tierRows = 0;
             int orderInTier = 0;
             for (String key : laneKeys) {
                 LaneSpec lane = laneSpecs.get(key);
@@ -127,8 +174,10 @@ public final class ResearchTreeLayoutEngine {
                             currentY + row * (ResearchTreeLayout.NODE_HEIGHT + ROW_GAP));
                 }
             }
-            currentY += tierRows * ResearchTreeLayout.NODE_HEIGHT
-                    + (tierRows - 1) * ROW_GAP + VERTICAL_GAP;
+            if (tierRows > 0) {
+                currentY += tierRows * ResearchTreeLayout.NODE_HEIGHT
+                        + (tierRows - 1) * ROW_GAP + VERTICAL_GAP;
+            }
         }
 
         int canvasHeight = currentY - VERTICAL_GAP + PADDING;

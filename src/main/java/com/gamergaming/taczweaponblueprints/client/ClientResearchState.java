@@ -100,9 +100,11 @@ public final class ClientResearchState {
             long generation,
             BlueprintJournalSnapshot journal,
             ResearchTreePublication tree) {
-        ResearchTreeLayout layout = publication.graph().hasSameLayoutTopology(tree.graph())
+        ResearchTreePublication currentTree = new ResearchTreePublication(
+                publication.graph(), publication.presentation());
+        ResearchTreeLayout layout = currentTree.hasSamePresentationTopology(tree)
                 ? publication.layout()
-                : ResearchTreeLayoutEngine.layout(tree.graph());
+                : ResearchTreeLayoutEngine.layout(tree);
         publication = new Publication(
                 generation,
                 journal,

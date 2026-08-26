@@ -1,5 +1,6 @@
 package com.gamergaming.taczweaponblueprints.client;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -26,18 +27,28 @@ public record ResearchTreeProjection(
         }
         groupId = groupId == null ? Optional.empty() : groupId;
         crossGroupLinks = List.copyOf(crossGroupLinks);
+        if (new LinkedHashSet<>(crossGroupLinks).size() != crossGroupLinks.size()) {
+            throw new IllegalArgumentException("Research Tree projection contains duplicate links");
+        }
         if (view == ResearchTreePresentationContract.BrowseView.ALL_WEAPONS) {
-            if (groupId.isPresent() || !crossGroupLinks.isEmpty()) {
+            if (groupId.isPresent() || !crossGroupLinks.isEmpty()
+                    || !layout.groupRegions().isEmpty()) {
                 throw new IllegalArgumentException(
-                        "All Weapons cannot carry a selected group or cross-group links");
+                        "All Weapons must use the unpartitioned global layout");
             }
         } else if (groupId.isEmpty() && !graph.nodes().isEmpty()) {
             throw new IllegalArgumentException("non-empty Branches projection requires a group");
+        } else if (groupId.isPresent()
+                && (layout.groupRegions().size() != 1
+                || !layout.groupRegions().get(0).groupId().equals(groupId.orElseThrow()))) {
+            throw new IllegalArgumentException(
+                    "Branches layout must contain exactly its selected group region");
         }
         validateLayout(graph, layout);
         for (CrossGroupLink link : crossGroupLinks) {
             if (graph.node(link.localNodeId()).isEmpty()
-                    || graph.node(link.remoteNodeId()).isPresent()) {
+                    || graph.node(link.remoteNodeId()).isPresent()
+                    || groupId.filter(link.remoteGroupId()::equals).isPresent()) {
                 throw new IllegalArgumentException(
                         "Research Tree cross-group link does not cross its projection boundary");
             }

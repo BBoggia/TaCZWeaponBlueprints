@@ -1,6 +1,7 @@
 package com.gamergaming.taczweaponblueprints.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -25,7 +26,8 @@ class ResearchTreeProjectionCacheTest {
         ResearchTreePublication publication = publication(
                 ResearchTreeGraph.Availability.PREREQUISITES_REQUIRED);
         ResearchTreeProjectionCache cache = new ResearchTreeProjectionCache();
-        cache.update(publication, ResearchTreeLayoutEngine.layout(publication.graph()));
+        ResearchTreeLayout globalLayout = ResearchTreeLayoutEngine.layout(publication);
+        cache.update(publication, globalLayout);
 
         assertEquals(0, cache.cachedProjectionCount());
         ResearchTreeProjection branch = cache.projection(
@@ -38,13 +40,20 @@ class ResearchTreeProjectionCacheTest {
         assertEquals(List.of(new ResearchTreeGraph.Edge(id("test:a"), id("test:b"))),
                 branch.graph().edges());
         assertEquals(1, branch.crossGroupLinks().size());
-        assertEquals(
+        ResearchTreeProjection.CrossGroupLink unlockLink =
                 new ResearchTreeProjection.CrossGroupLink(
                         id("test:b"),
                         id("test:c"),
                         id("test:second"),
-                        ResearchTreeProjection.Direction.UNLOCK),
-                branch.crossGroupLinks().get(0));
+                        ResearchTreeProjection.Direction.UNLOCK);
+        assertEquals(unlockLink, branch.crossGroupLinks().get(0));
+        assertTrue(cache.isPublishedCrossGroupLink(unlockLink));
+        assertFalse(cache.isPublishedCrossGroupLink(new ResearchTreeProjection.CrossGroupLink(
+                id("test:b"), id("test:c"), id("test:first"),
+                ResearchTreeProjection.Direction.UNLOCK)));
+        assertFalse(cache.isPublishedCrossGroupLink(new ResearchTreeProjection.CrossGroupLink(
+                id("test:b"), id("test:c"), id("test:second"),
+                ResearchTreeProjection.Direction.REQUIREMENT)));
         assertEquals(1, cache.cachedProjectionCount());
         assertEquals(List.of(id("test:first")), branch.layout().groupRegions().stream()
                 .map(ResearchTreeLayout.GroupRegion::groupId)
@@ -58,6 +67,8 @@ class ResearchTreeProjectionCacheTest {
         assertEquals(0, second.graph().nodes().get(0).prerequisiteCount());
         assertEquals(ResearchTreeProjection.Direction.REQUIREMENT,
                 second.crossGroupLinks().get(0).direction());
+        assertTrue(cache.isPublishedCrossGroupLink(second.crossGroupLinks().get(0)));
+        assertFalse(cache.isPublishedCrossGroupLink(null));
 
         ResearchTreeProjection all = cache.projection(
                 ResearchTreePresentationContract.BrowseView.ALL_WEAPONS,
@@ -66,10 +77,11 @@ class ResearchTreeProjectionCacheTest {
         assertEquals(publication.graph().edges(), all.graph().edges());
         assertTrue(all.crossGroupLinks().isEmpty());
         assertTrue(all.groupId().isEmpty());
-        assertEquals(List.of(id("test:first"), id("test:second")),
-                all.layout().groupRegions().stream()
-                        .map(ResearchTreeLayout.GroupRegion::groupId)
-                        .toList());
+        assertSame(globalLayout, all.layout());
+        assertTrue(all.layout().groupRegions().isEmpty());
+        assertEquals(List.of("rifle"), all.layout().categoryLanes().stream()
+                .map(ResearchTreeLayout.CategoryLane::key)
+                .toList());
         assertThrows(IllegalArgumentException.class, () -> cache.projection(
                 ResearchTreePresentationContract.BrowseView.BRANCHES,
                 id("test:missing")));
@@ -80,7 +92,11 @@ class ResearchTreeProjectionCacheTest {
         ResearchTreePublication first = publication(
                 ResearchTreeGraph.Availability.PREREQUISITES_REQUIRED);
         ResearchTreeProjectionCache cache = new ResearchTreeProjectionCache();
-        assertTrue(cache.update(first, ResearchTreeLayoutEngine.layout(first.graph())));
+        ResearchTreeLayout firstGlobalLayout = ResearchTreeLayoutEngine.layout(first);
+        assertTrue(cache.update(first, firstGlobalLayout));
+        ResearchTreeProjection firstAll = cache.projection(
+                ResearchTreePresentationContract.BrowseView.ALL_WEAPONS,
+                null);
         ResearchTreeProjection firstBranch = cache.projection(
                 ResearchTreePresentationContract.BrowseView.BRANCHES,
                 id("test:first"));
@@ -88,13 +104,16 @@ class ResearchTreeProjectionCacheTest {
 
         ResearchTreePublication stateOnly = publication(
                 ResearchTreeGraph.Availability.CONTENT_UNAVAILABLE);
-        assertTrue(!cache.update(stateOnly, ResearchTreeLayoutEngine.layout(stateOnly.graph())));
+        assertFalse(cache.update(stateOnly, ResearchTreeLayoutEngine.layout(stateOnly)));
         assertEquals(0, cache.cachedProjectionCount());
         ResearchTreeProjection nextBranch = cache.projection(
                 ResearchTreePresentationContract.BrowseView.BRANCHES,
                 id("test:first"));
 
         assertSame(firstBranch.layout(), nextBranch.layout());
+        assertSame(firstAll.layout(), cache.projection(
+                ResearchTreePresentationContract.BrowseView.ALL_WEAPONS,
+                null).layout());
         assertEquals(cachedLayouts, cache.cachedLayoutCount());
         assertEquals(ResearchTreeGraph.Availability.CONTENT_UNAVAILABLE,
                 nextBranch.graph().nodes().get(0).availability());
@@ -105,7 +124,7 @@ class ResearchTreeProjectionCacheTest {
         ResearchTreePublication publication = publication(
                 ResearchTreeGraph.Availability.PREREQUISITES_REQUIRED);
         ResearchTreeProjectionCache cache = new ResearchTreeProjectionCache();
-        cache.update(publication, ResearchTreeLayoutEngine.layout(publication.graph()));
+        cache.update(publication, ResearchTreeLayoutEngine.layout(publication));
         cache.projection(
                 ResearchTreePresentationContract.BrowseView.BRANCHES,
                 id("test:first"));
@@ -113,7 +132,7 @@ class ResearchTreeProjectionCacheTest {
 
         assertTrue(cache.update(
                 ResearchTreePublication.EMPTY,
-                ResearchTreeLayoutEngine.layout(ResearchTreeGraph.EMPTY)));
+                ResearchTreeLayoutEngine.layout(ResearchTreePublication.EMPTY)));
         assertEquals(1, cache.cachedLayoutCount());
         ResearchTreeProjection emptyBranch = cache.projection(
                 ResearchTreePresentationContract.BrowseView.BRANCHES,
@@ -121,6 +140,47 @@ class ResearchTreeProjectionCacheTest {
         assertTrue(emptyBranch.graph().nodes().isEmpty());
         assertTrue(emptyBranch.layout().nodes().isEmpty());
         assertTrue(emptyBranch.groupId().isEmpty());
+    }
+
+    @Test
+    void projectionContractsRejectGroupedGlobalAndMalformedBranchPortals() {
+        ResearchTreePublication publication = publication(
+                ResearchTreeGraph.Availability.PREREQUISITES_REQUIRED);
+        ResearchTreePresentation.Group first = publication.presentation()
+                .group(id("test:first"))
+                .orElseThrow();
+        ResearchTreeGraph firstGraph = new ResearchTreeGraph(
+                publication.graph().nodes().subList(0, 2),
+                List.of(new ResearchTreeGraph.Edge(id("test:a"), id("test:b"))));
+        ResearchTreeLayout branchLayout =
+                com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGroupedLayoutEngine
+                        .branch(firstGraph, first, 0);
+
+        assertThrows(IllegalArgumentException.class, () -> new ResearchTreeProjection(
+                ResearchTreePresentationContract.BrowseView.ALL_WEAPONS,
+                Optional.empty(),
+                firstGraph,
+                branchLayout,
+                List.of()));
+
+        ResearchTreeProjection.CrossGroupLink duplicate =
+                new ResearchTreeProjection.CrossGroupLink(
+                        id("test:b"), id("test:c"), id("test:second"),
+                        ResearchTreeProjection.Direction.UNLOCK);
+        assertThrows(IllegalArgumentException.class, () -> new ResearchTreeProjection(
+                ResearchTreePresentationContract.BrowseView.BRANCHES,
+                Optional.of(id("test:first")),
+                firstGraph,
+                branchLayout,
+                List.of(duplicate, duplicate)));
+        assertThrows(IllegalArgumentException.class, () -> new ResearchTreeProjection(
+                ResearchTreePresentationContract.BrowseView.BRANCHES,
+                Optional.of(id("test:first")),
+                firstGraph,
+                branchLayout,
+                List.of(new ResearchTreeProjection.CrossGroupLink(
+                        id("test:b"), id("test:c"), id("test:first"),
+                        ResearchTreeProjection.Direction.UNLOCK))));
     }
 
     private static ResearchTreePublication publication(

@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
@@ -161,9 +162,77 @@ class ResearchTreeLayoutEngineTest {
     }
 
     @Test
+    void globalPublicationLayoutPreservesPublishedRanksAndSiblingOrder() {
+        ResearchTreeGraph graph = new ResearchTreeGraph(
+                List.of(
+                        node(0, "test:a", 0, 0),
+                        node(1, "test:b", 0, 0),
+                        node(2, "test:c", 0, 0)),
+                List.of());
+        ResearchTreePresentation presentation = new ResearchTreePresentation(List.of(
+                new ResearchTreePresentation.Group(
+                        id("test:weapons"),
+                        "Weapons",
+                        Optional.empty(),
+                        Optional.of(id("test:b")),
+                        0,
+                        ResearchTreePresentation.Kind.AUTHORED,
+                        List.of(
+                                new ResearchTreePresentation.Member(id("test:b"), 0, 0),
+                                new ResearchTreePresentation.Member(id("test:a"), 0, 1),
+                                new ResearchTreePresentation.Member(id("test:c"), 2, 0)))));
+
+        ResearchTreeLayout layout = ResearchTreeLayoutEngine.layout(
+                new ResearchTreePublication(graph, presentation));
+
+        assertEquals(3, layout.tierCount());
+        assertEquals(0, layout.position(id("test:b")).orElseThrow().tier());
+        assertEquals(2, layout.position(id("test:c")).orElseThrow().tier());
+        assertTrue(layout.tier(1).isEmpty());
+        assertTrue(layout.position(id("test:b")).orElseThrow().x()
+                < layout.position(id("test:a")).orElseThrow().x());
+        assertTrue(layout.position(id("test:c")).orElseThrow().y()
+                < layout.position(id("test:b")).orElseThrow().y());
+        assertTrue(layout.groupRegions().isEmpty());
+        assertNoOverlap(layout);
+    }
+
+    @Test
+    void sparsePublishedRanksDoNotCreateAnUnboundedCanvas() {
+        ResearchTreeGraph graph = new ResearchTreeGraph(
+                List.of(
+                        node(0, "test:bottom", 0, 0),
+                        node(1, "test:top", 0, 0)),
+                List.of());
+        ResearchTreePresentation presentation = new ResearchTreePresentation(List.of(
+                new ResearchTreePresentation.Group(
+                        id("test:sparse"),
+                        "Sparse",
+                        Optional.empty(),
+                        Optional.of(id("test:bottom")),
+                        0,
+                        ResearchTreePresentation.Kind.AUTHORED,
+                        List.of(
+                                new ResearchTreePresentation.Member(id("test:bottom"), 0, 0),
+                                new ResearchTreePresentation.Member(
+                                        id("test:top"), ResearchTreeGraph.MAX_NODES - 1, 0)))));
+
+        ResearchTreeLayout layout = ResearchTreeLayoutEngine.layout(
+                new ResearchTreePublication(graph, presentation));
+
+        assertEquals(ResearchTreeGraph.MAX_NODES, layout.tierCount());
+        assertTrue(layout.height() < 256);
+        assertTrue(layout.position(id("test:top")).orElseThrow().y()
+                < layout.position(id("test:bottom")).orElseThrow().y());
+    }
+
+    @Test
     void emptyAndNullGraphsHaveAnEmptyLayout() {
-        assertEquals(ResearchTreeLayout.EMPTY, ResearchTreeLayoutEngine.layout(null));
+        assertEquals(ResearchTreeLayout.EMPTY,
+                ResearchTreeLayoutEngine.layout((ResearchTreeGraph) null));
         assertEquals(ResearchTreeLayout.EMPTY, ResearchTreeLayoutEngine.layout(ResearchTreeGraph.EMPTY));
+        assertThrows(IllegalArgumentException.class,
+                () -> ResearchTreeLayoutEngine.layout((ResearchTreePublication) null));
     }
 
     @Test

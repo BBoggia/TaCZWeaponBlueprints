@@ -1,6 +1,7 @@
 package com.gamergaming.taczweaponblueprints.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.util.List;
@@ -62,6 +63,35 @@ class ClientResearchStateTest {
         assertEquals(stateOnlyGraph, ClientResearchState.publication().graph());
         assertSame(originalLayout, ClientResearchState.publication().layout());
         assertEquals(originalPresentation, ClientResearchState.publication().presentation());
+    }
+
+    @Test
+    void presentationOnlyRankChangesInvalidateTheGlobalLayout() {
+        ResearchTreeGraph graph = new ResearchTreeGraph(
+                List.of(
+                        node(0, "test:a"),
+                        node(1, "test:b")),
+                List.of());
+        ResearchTreePublication first = publication(
+                graph,
+                List.of(
+                        new ResearchTreePresentation.Member(id("test:a"), 0, 0),
+                        new ResearchTreePresentation.Member(id("test:b"), 0, 1)));
+        ClientResearchState.acceptJournal(1L, journal(1), false);
+        ClientResearchState.acceptTree(1L, first);
+        var firstLayout = ClientResearchState.publication().layout();
+
+        ResearchTreePublication reranked = publication(
+                graph,
+                List.of(
+                        new ResearchTreePresentation.Member(id("test:a"), 0, 0),
+                        new ResearchTreePresentation.Member(id("test:b"), 1, 0)));
+        ClientResearchState.acceptJournal(2L, journal(1), false);
+        ClientResearchState.acceptTree(2L, reranked);
+
+        assertNotSame(firstLayout, ClientResearchState.publication().layout());
+        assertEquals(1, ClientResearchState.publication().layout()
+                .position(id("test:b")).orElseThrow().tier());
     }
 
     @Test
@@ -182,6 +212,40 @@ class ClientResearchStateTest {
                         ResearchTreePresentation.Kind.AUTHORED,
                         List.of(new ResearchTreePresentation.Member(nodeId, 0, 0)))));
         return new ResearchTreePublication(graph, presentation);
+    }
+
+    private static ResearchTreePublication publication(
+            ResearchTreeGraph graph,
+            List<ResearchTreePresentation.Member> members) {
+        ResearchTreePresentation presentation = new ResearchTreePresentation(List.of(
+                new ResearchTreePresentation.Group(
+                        id("test:published"),
+                        "Published",
+                        Optional.of("group.test.published"),
+                        Optional.of(members.get(0).nodeId()),
+                        0,
+                        ResearchTreePresentation.Kind.AUTHORED,
+                        members)));
+        return new ResearchTreePublication(graph, presentation);
+    }
+
+    private static ResearchTreeGraph.Node node(int ordinal, String value) {
+        ResourceLocation nodeId = id(value);
+        return new ResearchTreeGraph.Node(
+                ordinal,
+                nodeId,
+                "name." + nodeId.getPath(),
+                "rifle",
+                id("test:slot/" + nodeId.getPath()),
+                JournalVisibility.FULL,
+                false,
+                true,
+                true,
+                8,
+                0,
+                0,
+                0,
+                ResearchTreeGraph.Availability.AVAILABLE);
     }
 
     private static ResourceLocation id(String value) {

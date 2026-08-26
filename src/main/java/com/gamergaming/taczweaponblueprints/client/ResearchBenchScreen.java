@@ -2137,7 +2137,17 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     }
 
     private void navigateThroughPortal(ResearchTreeProjection.CrossGroupLink portal) {
+        if (!treeProjections.isPublishedCrossGroupLink(portal)
+                || treeCanvas.graph().node(portal.localNodeId()).isEmpty()) {
+            return;
+        }
         ResearchTreePresentation presentation = treeProjections.publication().presentation();
+        Optional<ResearchTreePresentation.Membership> remoteMembership =
+                presentation.membership(portal.remoteNodeId());
+        if (remoteMembership.isEmpty()
+                || !remoteMembership.orElseThrow().groupId().equals(portal.remoteGroupId())) {
+            return;
+        }
         treeNavigation.selectGroup(portal.remoteGroupId(), presentation);
         applyActiveProjection(portal.remoteNodeId());
         ensureSelectedSidebarVisible();

@@ -2,6 +2,11 @@
 
 Date: 2026-08-25
 
+> Historical implementation note: the fullscreen redesign in
+> `research-tree-fullscreen-redesign.md` supersedes this phase's grouped
+> All Weapons atlas. The active All Weapons projection now uses the global DAG;
+> the grouped layout remains in use only for isolated Branches projections.
+
 Phase 5 completes the visual and interaction layer for the grouped Research
 Tree publication introduced in Phases 1 through 4. The implementation remains
 client-only: it does not change prerequisite authority, research costs,
@@ -96,4 +101,3 @@ Automated coverage verifies:
 
 In-game GUI-scale, localization, world-background, and interaction checks
 remain in `docs/research-tree-manual-qa.md` for Phase 8 release validation.
-

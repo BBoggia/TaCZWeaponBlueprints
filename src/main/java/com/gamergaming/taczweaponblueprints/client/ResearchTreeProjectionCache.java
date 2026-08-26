@@ -47,13 +47,12 @@ public final class ResearchTreeProjectionCache {
         projections.clear();
         if (topologyChanged) {
             layouts.clear();
-            layouts.put(
-                    ALL_WEAPONS,
-                    ResearchTreeGroupedLayoutEngine.allWeapons(nextPublication));
+            layouts.put(ALL_WEAPONS, allWeaponsLayout);
         } else {
-            layouts.computeIfAbsent(
-                    ALL_WEAPONS,
-                    ignored -> ResearchTreeGroupedLayoutEngine.allWeapons(nextPublication));
+            // ClientResearchState owns the canonical global layout. Keep the
+            // existing instance for a state-only publication, but seed a
+            // freshly cleared cache from the supplied publication layout.
+            layouts.putIfAbsent(ALL_WEAPONS, allWeaponsLayout);
         }
         return topologyChanged;
     }
@@ -83,6 +82,34 @@ public final class ResearchTreeProjectionCache {
         return layouts.size();
     }
 
+    /**
+     * Revalidates a portal against the active authoritative publication before
+     * it is allowed to change branch or camera state.
+     */
+    public boolean isPublishedCrossGroupLink(ResearchTreeProjection.CrossGroupLink link) {
+        if (link == null
+                || publication.graph().node(link.localNodeId()).isEmpty()
+                || publication.graph().node(link.remoteNodeId()).isEmpty()) {
+            return false;
+        }
+        Optional<ResearchTreePresentation.Membership> localMembership =
+                publication.presentation().membership(link.localNodeId());
+        Optional<ResearchTreePresentation.Membership> remoteMembership =
+                publication.presentation().membership(link.remoteNodeId());
+        if (localMembership.isEmpty() || remoteMembership.isEmpty()
+                || localMembership.orElseThrow().groupId()
+                        .equals(remoteMembership.orElseThrow().groupId())
+                || !remoteMembership.orElseThrow().groupId().equals(link.remoteGroupId())) {
+            return false;
+        }
+        ResourceLocation prerequisiteId = link.direction() == ResearchTreeProjection.Direction.UNLOCK
+                ? link.localNodeId() : link.remoteNodeId();
+        ResourceLocation dependentId = link.direction() == ResearchTreeProjection.Direction.UNLOCK
+                ? link.remoteNodeId() : link.localNodeId();
+        return publication.graph().edges().contains(
+                new ResearchTreeGraph.Edge(prerequisiteId, dependentId));
+    }
+
     private ProjectionKey key(
             ResearchTreePresentationContract.BrowseView view,
             ResourceLocation groupId) {
@@ -103,9 +130,11 @@ public final class ResearchTreeProjectionCache {
 
     private ResearchTreeProjection build(ProjectionKey key) {
         if (key.view() == ResearchTreePresentationContract.BrowseView.ALL_WEAPONS) {
-            ResearchTreeLayout layout = layouts.computeIfAbsent(
-                    key,
-                    ignored -> ResearchTreeGroupedLayoutEngine.allWeapons(publication));
+            ResearchTreeLayout layout = layouts.get(key);
+            if (layout == null) {
+                throw new IllegalStateException(
+                        "All Weapons layout was not initialized for the active publication");
+            }
             return new ResearchTreeProjection(
                     key.view(),
                     Optional.empty(),
