@@ -17,6 +17,8 @@
     "gui.taczweaponblueprints.research_bench.search.narration": "Search available blueprints",
     "gui.taczweaponblueprints.research_bench.search.empty": "No weapons match that search.",
     "gui.taczweaponblueprints.research_bench.search.unavailable": "No weapons are available to research yet.",
+    "gui.taczweaponblueprints.research_bench.tree.search.toggle": "Open weapon search",
+    "gui.taczweaponblueprints.research_bench.tree.search.results": "%s search matches",
     "gui.taczweaponblueprints.research_bench.tree.center": "Center",
     "gui.taczweaponblueprints.research_bench.tree.fit": "Fit",
     "gui.taczweaponblueprints.research_bench.tree.filter.all": "All",

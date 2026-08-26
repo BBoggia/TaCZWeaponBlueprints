@@ -5,7 +5,7 @@ import java.util.Set;
 
 import net.minecraft.resources.ResourceLocation;
 
-/** Pure, client-only state machine for the future fullscreen Research Tree overlays. */
+/** Pure, client-only state machine for the fullscreen Research Tree overlays. */
 public final class ResearchTreeFullscreenOverlayState {
     private RailState railState = RailState.VISIBLE;
     private SearchState searchState = SearchState.CLOSED;

@@ -1,7 +1,7 @@
 package com.gamergaming.taczweaponblueprints.client;
 
 /**
- * Pure geometry contract for the future edge-to-edge Research Tree presentation.
+ * Pure geometry contract for the edge-to-edge Research Tree presentation.
  * All controls intentionally overlay the full-screen canvas.
  */
 public final class ResearchTreeFullscreenLayout {
