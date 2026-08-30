@@ -4,6 +4,7 @@
   "priority": 100,
   "target": { "blueprints": ["tacz:hk_mp5a5"] },
   "visibility": "full",
+  "tree_enabled": true,
   "research_cost": { "points": 6, "ingredients": [{ "items": ["minecraft:paper"], "count": 3 }, { "items": ["minecraft:iron_ingot"], "count": 2 }] },
   "prerequisites": ["tacz:uzi"]
 }

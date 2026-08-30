@@ -29,6 +29,17 @@ base {
     archivesName = mod_id
 }
 
+// Phase 10 pins the public automatic-tree compatibility tuple. Deliberate
+// changes must update the runtime constant, this release gate, and migration
+// documentation together.
+def certifiedAutomaticPlacementVersion = 'tacz-gun-placement-v12'
+def certifiedResearchTreeProtocol = '36'
+def certifiedResearchCatalogExportFormat = 12
+def certifiedAutomaticPublicationContract =
+        'canonical-branches-decisions-finalized-ranks-v1'
+def certifiedAutomaticPublicationHealthContract =
+        'staged-failure-recovery-v1'
+
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
 
@@ -133,6 +144,20 @@ sourceSets {
     main {
         ext.refMap = "/META-INF/${mod_id}.refmap.json"
     }
+    authoring {
+        java.srcDir 'src/authoring/java'
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += output + compileClasspath
+    }
+    test {
+        compileClasspath += sourceSets.authoring.output
+        runtimeClasspath += sourceSets.authoring.output
+    }
+}
+
+configurations {
+    authoringImplementation.extendsFrom implementation
+    authoringRuntimeOnly.extendsFrom runtimeOnly
 }
 
 // Include generated data, but never package the data generator's cache metadata.
@@ -219,9 +244,15 @@ dependencies {
     implementation fg.deobf("me.fzzyhmstrs:fzzy_config:${fzzy_config_version}+forge")
     implementation("thedarkcolour:kotlinforforge:4.11.0")
 
-    // Forge
-	// compileOnly fg.deobf("dev.emi:emi-forge:${emi_version}:api")
-	// runtimeOnly fg.deobf("dev.emi:emi-forge:${emi_version}")
+    // Optional recipe-viewer APIs. Their implementations are deliberately not
+    // bundled or required at runtime; integration entry points are discovered
+    // only when the corresponding client mod is installed.
+    compileOnly fg.deobf("dev.emi:emi-forge:${emi_version}:api")
+    // Load EMI in the development runtime so runClient exercises the optional
+    // integration without making it a required dependency of the published jar.
+    runtimeOnly fg.deobf("dev.emi:emi-forge:${emi_version}")
+    compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}-common-api:${jei_version}")
+    compileOnly(fg.deobf("mezz.jei:jei-${minecraft_version}-forge-api:${jei_version}"))
 
     // implementation fg.deobf("curse.maven:balm-531761:5644976")
 
@@ -315,10 +346,6 @@ dependencies {
         runtimeOnly fg.deobf("curse.maven:packet-fixer-689467:5416166")
     }
 
-    // compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}-common-api:${jei_version}")
-    // compileOnly(fg.deobf("mezz.jei:jei-${minecraft_version}-forge-api:${jei_version}"))
-    // runtimeOnly fg.deobf("mezz.jei:jei-${minecraft_version}-forge:${jei_version}")
-
     // implementation fg.deobf("curse.maven:tacz-gucci-vuitton-attachments-1103436:5728618") {
     //     exclude group: 'org.apache.commons', module: 'commons-math3'
     // }
@@ -341,6 +368,75 @@ dependencies {
                 details.useVersion '3.6.1'
             }
         }
+    }
+}
+
+tasks.register('generateResearchTechTreeRatings', JavaExec) {
+    group = 'authoring'
+    description = 'Extracts TaCZ gun-pack evidence and writes non-authoritative Tech Tree rating suggestions.'
+    dependsOn tasks.named('authoringClasses')
+    classpath = sourceSets.authoring.runtimeClasspath
+    mainClass = 'com.gamergaming.taczweaponblueprints.research.tree.authoring.ResearchTechTreeRatingTool'
+
+    def gunPack = providers.gradleProperty('researchGunPack')
+            .orElse(layout.projectDirectory.dir('run/tacz/tacz_default_gun').asFile.absolutePath)
+    def report = providers.gradleProperty('researchRatingReport')
+            .orElse(layout.buildDirectory.file('reports/research-tech-tree/tacz-weapon-ratings.json')
+                    .map { it.asFile.absolutePath })
+    def appeal = providers.gradleProperty('researchAppealRatings')
+            .orElse(layout.projectDirectory
+                    .file('src/authoring/resources/tacz-1.1.8-appeal-ratings.json')
+                    .asFile.absolutePath)
+    def sourceVersion = providers.gradleProperty('researchGunPackVersion').orElse(tacz_version)
+    def expectedGunCount = providers.gradleProperty('researchExpectedGunCount').orElse('53')
+
+    inputs.dir(gunPack).withPropertyName('gunPackContents')
+    inputs.property('gunPackPath', gunPack)
+    inputs.property('sourceVersion', sourceVersion)
+    inputs.property('expectedGunCount', expectedGunCount)
+    inputs.files(appeal).withPropertyName('appealRatingsFile').optional()
+    outputs.file(report)
+
+    doFirst {
+        args = [
+                '--pack', gunPack.get(),
+                '--output', report.get(),
+                '--source-version', sourceVersion.get(),
+                '--expected-count', expectedGunCount.get()
+        ]
+        args += ['--appeal', appeal.get()]
+    }
+}
+
+tasks.register('generateAutomaticWeaponReference', JavaExec) {
+    group = 'authoring'
+    description = 'Regenerates the checked-in TaCZ 1.1.8 mechanical reference catalog.'
+    dependsOn tasks.named('authoringClasses')
+    classpath = sourceSets.authoring.runtimeClasspath
+    mainClass = 'com.gamergaming.taczweaponblueprints.research.tree.authoring.ResearchAutomaticReferenceTool'
+
+    def gunPack = providers.gradleProperty('researchGunPack')
+            .orElse(layout.projectDirectory.dir('run/tacz/tacz_default_gun').asFile.absolutePath)
+    def output = providers.gradleProperty('researchAutomaticReference')
+            .orElse(layout.projectDirectory.file(
+                    'src/main/resources/assets/taczweaponblueprints/research/automatic/'
+                            + 'tacz-1.1.8-mechanical-v2.json').asFile.absolutePath)
+    def sourceVersion = providers.gradleProperty('researchGunPackVersion').orElse(tacz_version)
+    def expectedGunCount = providers.gradleProperty('researchExpectedGunCount').orElse('53')
+
+    inputs.dir(gunPack).withPropertyName('gunPackContents')
+    inputs.property('gunPackPath', gunPack)
+    inputs.property('sourceVersion', sourceVersion)
+    inputs.property('expectedGunCount', expectedGunCount)
+    outputs.file(output)
+
+    doFirst {
+        args = [
+                '--pack', gunPack.get(),
+                '--output', output.get(),
+                '--source-version', sourceVersion.get(),
+                '--expected-count', expectedGunCount.get()
+        ]
     }
 }
 
@@ -394,6 +490,14 @@ tasks.named('jar', Jar).configure {
                 'Implementation-Title'    : project.name,
                 'Implementation-Version'  : project.jar.archiveVersion,
                 'Implementation-Vendor'   : mod_authors,
+                'Automatic-Placement-Version': certifiedAutomaticPlacementVersion,
+                'Research-Tree-Protocol'  : certifiedResearchTreeProtocol,
+                'Research-Catalog-Export-Format':
+                        certifiedResearchCatalogExportFormat.toString(),
+                'Automatic-Publication-Contract':
+                        certifiedAutomaticPublicationContract,
+                'Automatic-Publication-Health':
+                        certifiedAutomaticPublicationHealthContract,
 
                 // Add this line to specify your Mixin config file
                 'MixinConfigs'            : "${mod_id}.mixins.json",
@@ -403,10 +507,420 @@ tasks.named('jar', Jar).configure {
     finalizedBy 'reobfJar'
 }
 
+tasks.register('verifySharedLayoutKernelMigration') {
+    group = 'verification'
+    description = 'Rejects production regressions to the compatibility-only Research Tree layout engines.'
+    dependsOn tasks.named('compileJava')
+
+    def productionSources = fileTree('src/main/java') {
+        include '**/*.java'
+    }
+    inputs.files(productionSources)
+    inputs.dir(layout.buildDirectory.dir('classes/java/main'))
+
+    doLast {
+        def jdepsName = System.getProperty('os.name')
+                .toLowerCase(java.util.Locale.ROOT).contains('windows')
+                ? 'jdeps.exe' : 'jdeps'
+        def jdepsExecutable = new File(System.getProperty('java.home'), "bin/${jdepsName}")
+        if (!jdepsExecutable.isFile()) {
+            throw new GradleException("JDK dependency analyzer does not exist: ${jdepsExecutable}")
+        }
+        def dependencyOutput = new ByteArrayOutputStream()
+        def dependencyErrors = new ByteArrayOutputStream()
+        def dependencyResult = exec {
+            commandLine jdepsExecutable.absolutePath,
+                    '--ignore-missing-deps',
+                    '-verbose:class',
+                    layout.buildDirectory.dir('classes/java/main').get().asFile.absolutePath
+            standardOutput = dependencyOutput
+            errorOutput = dependencyErrors
+            ignoreExitValue = true
+        }
+        if (dependencyResult.exitValue != 0) {
+            throw new GradleException(
+                    'Could not inspect compiled Research Tree dependencies: '
+                            + dependencyErrors.toString('UTF-8'))
+        }
+        def compiledDependencies = new LinkedHashMap<String, Set<String>>()
+        dependencyOutput.toString('UTF-8').eachLine { line ->
+            def match = line =~ /^\s*(\S+)\s+->\s+(\S+)\s+.*$/
+            if (match.matches()) {
+                compiledDependencies.computeIfAbsent(match.group(1)) {
+                    new LinkedHashSet<String>()
+                }.add(match.group(2))
+            }
+        }
+
+        def legacyClasses = [
+                'com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayoutEngine',
+                'com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGroupedLayoutEngine'
+        ] as Set
+        def legacyReferences = compiledDependencies.collectMany { source, dependencies ->
+            legacyClasses.contains(source)
+                    ? []
+                    : dependencies.findAll { legacyClasses.contains(it) }.collect {
+                        "${source} -> ${it}"
+                    }
+        }.sort()
+        if (!legacyReferences.isEmpty()) {
+            throw new GradleException(
+                    'Production code references a compatibility-only Research Tree layout engine: '
+                            + legacyReferences)
+        }
+
+        def requiredSources = [
+                'src/main/java/com/gamergaming/taczweaponblueprints/client/ResearchTreeProjectionCache.java',
+                'src/main/java/com/gamergaming/taczweaponblueprints/client/ResearchTreeRecommendationEngine.java',
+                'src/main/java/com/gamergaming/taczweaponblueprints/client/ResearchTreePlanner.java',
+                'src/main/java/com/gamergaming/taczweaponblueprints/client/ClientResearchPlannerState.java',
+                'src/main/java/com/gamergaming/taczweaponblueprints/client/ResearchTechTreeDomainSelectorLayout.java',
+                'src/main/java/com/gamergaming/taczweaponblueprints/client/ResearchTechTreeDomainMenu.java',
+                'src/main/java/com/gamergaming/taczweaponblueprints/compat/fzzy_config/ResearchTreeClientConfig.java',
+                'src/main/java/com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeBranchLayoutComposer.java',
+                'src/main/java/com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeGroupSkeletonBuilder.java',
+                'src/main/java/com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeGroupSkeletonCatalog.java',
+                'src/main/java/com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeLayeredLayoutEngine.java',
+                'src/main/java/com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeLayoutPolicy.java',
+                'src/main/java/com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeOverviewLayoutComposer.java'
+        ]
+        def missingSources = requiredSources.findAll { !file(it).isFile() }
+        if (!missingSources.isEmpty()) {
+            throw new GradleException(
+                    "Shared Research Tree layout kernel is incomplete: ${missingSources}")
+        }
+
+        def projectionCacheClass =
+                'com.gamergaming.taczweaponblueprints.client.ResearchTreeProjectionCache'
+        def requiredCacheComponents = [
+                'com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGroupSkeletonBuilder',
+                'com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeOverviewLayoutComposer',
+                'com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeBranchLayoutComposer',
+                'com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayoutPolicy'
+        ] as Set
+        def projectionCacheDependencies = compiledDependencies.getOrDefault(
+                projectionCacheClass, [] as Set)
+        def missingCacheComponents = requiredCacheComponents.findAll {
+            !projectionCacheDependencies.contains(it)
+        }
+        if (!missingCacheComponents.isEmpty()) {
+            throw new GradleException(
+                    'The runtime Research Tree projection cache is not wired to the complete shared kernel: '
+                            + missingCacheComponents)
+        }
+
+        def techLayoutClass =
+                'com.gamergaming.taczweaponblueprints.client.ResearchTechTreeLayoutEngine'
+        def requiredTechComponents = [
+                'com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayeredLayoutEngine',
+                'com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayoutInput',
+                'com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayoutPolicy'
+        ] as Set
+        def techLayoutDependencies = compiledDependencies.getOrDefault(
+                techLayoutClass, [] as Set)
+        def missingTechComponents = requiredTechComponents.findAll {
+            !techLayoutDependencies.contains(it)
+        }
+        if (!missingTechComponents.isEmpty()) {
+            throw new GradleException(
+                    'Research Tech Tree domains are not wired to the shared layered kernel: '
+                            + missingTechComponents)
+        }
+
+        // jdeps intentionally suppresses same-package dependencies. Pin these
+        // screen-level integrations at source and require the selector class in
+        // the packaged-artifact gate below.
+        def benchScreenSource = file(
+                'src/main/java/com/gamergaming/taczweaponblueprints/client/ResearchBenchScreen.java')
+                .getText('UTF-8')
+        def missingTechUiComponents = [
+                'ResearchTechTreeDomainSelectorLayout.forBounds',
+                'ResearchTechTreeDomainMenu.create',
+                'ResearchTechTreeViewState techTreeNavigation',
+                'ResearchTreeRecommendationEngine.recommend',
+                'ResearchTreePlanner.plan',
+                'ClientResearchPlannerState.track',
+                'treeCanvas.setTrackedPlan'
+        ].findAll { !benchScreenSource.contains(it) }
+        if (!missingTechUiComponents.isEmpty()) {
+            throw new GradleException(
+                    'The Research Bench no longer exposes the stateful Tech Tree domain selector: '
+                            + missingTechUiComponents)
+        }
+
+        def configRegistration = file(
+                'src/main/java/com/gamergaming/taczweaponblueprints/init/ModConfigs.java')
+                .getText('UTF-8')
+        if (!(configRegistration =~ /ResearchTreeClientConfig\s+RESEARCH_TREE_CLIENT\s*=\s*\R\s*register\(ResearchTreeClientConfig::new,\s*RegisterType\.CLIENT\)/).find()) {
+            throw new GradleException(
+                    'Research Tree layout policy must remain registered as a client-only config')
+        }
+    }
+}
+
+def releaseCandidateReportFile = layout.buildDirectory.file('reports/release-candidate.json')
+def invalidateReleaseCandidateReport = tasks.register('invalidateReleaseCandidateReport') {
+    group = 'verification'
+    description = 'Removes certification evidence before a release artifact is rebuilt or rechecked.'
+    outputs.upToDateWhen { false }
+    doLast {
+        delete releaseCandidateReportFile
+    }
+}
+
+def taperedAutomaticTopologyReportFile =
+        layout.buildDirectory.file('reports/tapered-automatic-topology.json')
+tasks.register('verifyTaperedAutomaticTopologyContract') {
+    group = 'verification'
+    description = 'Certifies the Phase 10 automatic tapered-tree compatibility contract and regression suites.'
+    dependsOn tasks.named('test')
+
+    inputs.files(
+            'src/main/java/com/gamergaming/taczweaponblueprints/research/tree/ResearchTechTreeContract.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/network/NetworkHandler.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/resource/research/BlueprintResearchCatalogExporter.java')
+    inputs.files(layout.buildDirectory.dir('test-results/test'))
+    outputs.file(taperedAutomaticTopologyReportFile)
+
+    doLast {
+        def requireSourceConstant = { String path, java.util.regex.Pattern pattern,
+                String expected, String label ->
+            def source = file(path).getText('UTF-8')
+            def matcher = source =~ pattern
+            if (!matcher.find()) {
+                throw new GradleException("Could not determine ${label} from ${path}")
+            }
+            def actual = matcher.group(1)
+            if (actual != expected) {
+                throw new GradleException(
+                        "${label} changed from certified value ${expected} to ${actual}; "
+                                + 'update the Phase 10 contract and migration documentation together')
+            }
+            actual
+        }
+        def placementVersion = requireSourceConstant(
+                'src/main/java/com/gamergaming/taczweaponblueprints/research/tree/ResearchTechTreeContract.java',
+                ~/AUTOMATIC_PLACEMENT_VERSION\s*=\s*"([^"]+)"/,
+                certifiedAutomaticPlacementVersion,
+                'automatic placement version')
+        def protocolVersion = requireSourceConstant(
+                'src/main/java/com/gamergaming/taczweaponblueprints/network/NetworkHandler.java',
+                ~/PROTOCOL_VERSION\s*=\s*"([^"]+)"/,
+                certifiedResearchTreeProtocol,
+                'Research Tree protocol')
+        def exportFormat = requireSourceConstant(
+                'src/main/java/com/gamergaming/taczweaponblueprints/resource/research/BlueprintResearchCatalogExporter.java',
+                ~/CURRENT_FORMAT\s*=\s*(\d+)/,
+                certifiedResearchCatalogExportFormat.toString(),
+                'research catalog export format')
+
+        def requiredSuites = [
+                'com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPrerequisitePlannerTest',
+                'com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponRankFinalizerTest',
+                'com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementDiagnosticsTest',
+                'com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponCandidateClassificationTest',
+                'com.gamergaming.taczweaponblueprints.client.ResearchTechTreeLayoutEngineTest',
+                'com.gamergaming.taczweaponblueprints.network.SyncResearchTreePacketTest',
+                'com.gamergaming.taczweaponblueprints.resource.research.DefaultTaCZResearchTreeTest'
+        ]
+        def suiteEvidence = requiredSuites.collect { suiteName ->
+            def result = file("${buildDir}/test-results/test/TEST-${suiteName}.xml")
+            if (!result.isFile()) {
+                throw new GradleException(
+                        "Phase 10 regression suite did not run: ${suiteName}")
+            }
+            def suite = new XmlSlurper().parse(result)
+            def evidence = [
+                    suite   : suiteName,
+                    tests   : (suite.@tests.toString() ?: '0') as int,
+                    failures: (suite.@failures.toString() ?: '0') as int,
+                    errors  : (suite.@errors.toString() ?: '0') as int,
+                    skipped : (suite.@skipped.toString() ?: '0') as int
+            ]
+            if (evidence.tests < 1 || evidence.failures != 0 || evidence.errors != 0) {
+                throw new GradleException(
+                        "Phase 10 regression suite is not clean: ${evidence}")
+            }
+            evidence
+        }
+
+        def report = [
+                schema             : 1,
+                phase              : 10,
+                status             : 'passed',
+                placementVersion   : placementVersion,
+                networkProtocol    : protocolVersion,
+                exportFormat       : exportFormat as int,
+                publicationContract: certifiedAutomaticPublicationContract,
+                invariants         : [
+                        'canonical_branch_coordinates_for_every_connected_candidate',
+                        'prerequisite_decision_for_every_connected_candidate',
+                        'finalized_rank_for_every_connected_decision',
+                        'atomic_rejection_of_incomplete_current_publications',
+                        'no_fabricated_branch_coordinates_for_compatibility_plans',
+                        'attachments_and_ammo_disabled_by_default'
+                ],
+                regressionSuites   : suiteEvidence,
+                manualRuntimeGate  : 'docs/research-tree-manual-qa.md'
+        ]
+        def output = taperedAutomaticTopologyReportFile.get().asFile
+        output.parentFile.mkdirs()
+        def reportText = groovy.json.JsonOutput.prettyPrint(
+                groovy.json.JsonOutput.toJson(report)) + '\n'
+        def temporaryReport = java.nio.file.Files.createTempFile(
+                output.parentFile.toPath(), 'tapered-automatic-', '.json.tmp')
+        try {
+            java.nio.file.Files.writeString(
+                    temporaryReport,
+                    reportText,
+                    java.nio.charset.StandardCharsets.UTF_8)
+            try {
+                java.nio.file.Files.move(
+                        temporaryReport,
+                        output.toPath(),
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            } catch (java.nio.file.AtomicMoveNotSupportedException ignored) {
+                java.nio.file.Files.move(
+                        temporaryReport,
+                        output.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            }
+        } finally {
+            java.nio.file.Files.deleteIfExists(temporaryReport)
+        }
+        logger.lifecycle("Phase 10 tapered automatic topology report: ${output}")
+    }
+}
+
+def automaticPublicationRecoveryReportFile =
+        layout.buildDirectory.file('reports/automatic-publication-recovery.json')
+tasks.register('verifyAutomaticPublicationRecoveryContract') {
+    group = 'verification'
+    description = 'Certifies Phase 12 automatic-publication failure observability and recovery.'
+    dependsOn tasks.named('test')
+
+    inputs.files(
+            'src/main/java/com/gamergaming/taczweaponblueprints/research/tree/automatic/tacz/AutomaticWeaponPlacementCandidateManager.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/command/sub/BlueprintResearchCommand.java',
+            'src/main/resources/assets/taczweaponblueprints/lang/en_us.json')
+    inputs.files(layout.buildDirectory.dir('test-results/test'))
+    outputs.file(automaticPublicationRecoveryReportFile)
+
+    doLast {
+        def suiteName =
+                'com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponEvidenceManagerTest'
+        def result = file("${buildDir}/test-results/test/TEST-${suiteName}.xml")
+        if (!result.isFile()) {
+            throw new GradleException(
+                    "Phase 12 publication recovery suite did not run: ${suiteName}")
+        }
+        def suite = new XmlSlurper().parse(result)
+        def requiredRegressionTests = [
+                'candidatePublicationIsRevisionCoupledAndInvalidatesAtomically',
+                'candidatePublicationRetainsBoundedFailureStageUntilRecoveryStarts',
+                'candidateRebuildFailuresAreAtomicAndRecoverAcrossEveryDeclaredStage',
+                'nonemptyCandidatePublicationFailsClosedWithoutLeakingPartialStages',
+                'candidatePublicationRevisionRolloverRemainsPositive'
+        ]
+        def executedRegressionTests = suite.testcase.collect {
+            it.@name.toString().replaceFirst(/\(\)$/, '')
+        }.toSet()
+        def missingRegressionTests = requiredRegressionTests.findAll {
+            !executedRegressionTests.contains(it)
+        }
+        def suiteEvidence = [
+                suite   : suiteName,
+                tests   : (suite.@tests.toString() ?: '0') as int,
+                failures: (suite.@failures.toString() ?: '0') as int,
+                errors  : (suite.@errors.toString() ?: '0') as int,
+                skipped : (suite.@skipped.toString() ?: '0') as int,
+                requiredTests: requiredRegressionTests,
+                missingRequiredTests: missingRegressionTests
+        ]
+        if (!missingRegressionTests.isEmpty()
+                || suiteEvidence.failures != 0 || suiteEvidence.errors != 0) {
+            throw new GradleException(
+                    "Phase 12 publication recovery suite is not clean: ${suiteEvidence}")
+        }
+
+        def language = new groovy.json.JsonSlurper().parse(
+                file('src/main/resources/assets/taczweaponblueprints/lang/en_us.json'),
+                'UTF-8')
+        def requiredTranslations = [
+                'commands.taczweaponblueprints.research.automatic.state',
+                'commands.taczweaponblueprints.research.automatic.last_failure'
+        ]
+        def missingTranslations = requiredTranslations.findAll { key ->
+            !(language[key] instanceof String) || language[key].isBlank()
+        }
+        if (!missingTranslations.isEmpty()) {
+            throw new GradleException(
+                    "Phase 12 publication health translations are missing: ${missingTranslations}")
+        }
+        if (!language['commands.taczweaponblueprints.research.automatic']
+                        .contains('resolved visual-row capacity')
+                || !language['commands.taczweaponblueprints.research.topology']
+                        .contains('widest semantic rank')) {
+            throw new GradleException(
+                    'Research status must distinguish visual-row capacity from semantic-rank width')
+        }
+
+        def report = [
+                schema          : 1,
+                phase           : 12,
+                status          : 'passed',
+                healthContract  : certifiedAutomaticPublicationHealthContract,
+                states          : ['empty', 'awaiting_rebuild', 'ready', 'failed'],
+                failureStages   : [
+                        'classification', 'positioning', 'prerequisite_planning',
+                        'rank_finalization', 'rank_reconciliation', 'publication'
+                ],
+                maximumFailureMessageCharacters: 512,
+                recoveryPolicy : 'new_revision_clears_stale_failure',
+                stageCoverage  : 'real_rebuild_fault_injection_for_every_declared_stage',
+                revisionRollover: 'long_maximum_wraps_to_one_zero_reserved_for_empty',
+                operatorSurface: '/gg research status',
+                regressionSuite: suiteEvidence
+        ]
+        def output = automaticPublicationRecoveryReportFile.get().asFile
+        output.parentFile.mkdirs()
+        def reportText = groovy.json.JsonOutput.prettyPrint(
+                groovy.json.JsonOutput.toJson(report)) + '\n'
+        def temporaryReport = java.nio.file.Files.createTempFile(
+                output.parentFile.toPath(), 'automatic-recovery-', '.json.tmp')
+        try {
+            java.nio.file.Files.writeString(
+                    temporaryReport,
+                    reportText,
+                    java.nio.charset.StandardCharsets.UTF_8)
+            try {
+                java.nio.file.Files.move(
+                        temporaryReport,
+                        output.toPath(),
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            } catch (java.nio.file.AtomicMoveNotSupportedException ignored) {
+                java.nio.file.Files.move(
+                        temporaryReport,
+                        output.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            }
+        } finally {
+            java.nio.file.Files.deleteIfExists(temporaryReport)
+        }
+        logger.lifecycle("Phase 12 automatic publication recovery report: ${output}")
+    }
+}
+
 tasks.register('verifyReleaseArtifact') {
     group = 'verification'
     description = 'Validates the reobfuscated release JAR, metadata, JSON, and generated loot index.'
-    dependsOn tasks.named('reobfJar'), tasks.named('test')
+    dependsOn invalidateReleaseCandidateReport,
+            tasks.named('reobfJar'), tasks.named('test'),
+            tasks.named('verifySharedLayoutKernelMigration'),
+            tasks.named('verifyTaperedAutomaticTopologyContract'),
+            tasks.named('verifyAutomaticPublicationRecoveryContract')
 
     doLast {
         def artifact = tasks.named('jar', Jar).get().archiveFile.get().asFile
@@ -420,7 +934,13 @@ tasks.register('verifyReleaseArtifact') {
             def names = entries.collect { it.name }
             def forbidden = names.findAll {
                 it == '.DS_Store' || it.endsWith('/.DS_Store') || it == '.cache/' || it.startsWith('.cache/') || it.contains('/.cache/')
+                        || it == 'tacz-1.1.8-appeal-ratings.json'
+                        || it.endsWith('/tacz-1.1.8-appeal-ratings.json')
                         || it == 'com/gamergaming/taczweaponblueprints/mixin/IScreenAccessor.class'
+                        || it == 'com/gamergaming/taczweaponblueprints/menu/ResearchBenchActionValidator.class'
+                        || it == 'com/gamergaming/taczweaponblueprints/menu/ResearchBenchPreview.class'
+                        || it.startsWith(
+                                'com/gamergaming/taczweaponblueprints/research/tree/authoring/')
             }
             if (!forbidden.isEmpty()) {
                 throw new GradleException("Release artifact contains forbidden metadata: ${forbidden}")
@@ -428,26 +948,95 @@ tasks.register('verifyReleaseArtifact') {
 
             def required = [
                     'com/gamergaming/taczweaponblueprints/loot/DynamicBlueprintLootModifier.class',
+                    'com/gamergaming/taczweaponblueprints/loot/ResearchDataLootModifier.class',
                     'com/gamergaming/taczweaponblueprints/loot/BlueprintLootPolicyResolver.class',
                     'com/gamergaming/taczweaponblueprints/command/sub/BlueprintLootCommand.class',
                     'com/gamergaming/taczweaponblueprints/client/BlueprintRecipeFilter.class',
                     'com/gamergaming/taczweaponblueprints/client/BlueprintJournalKeyMappings.class',
                     'com/gamergaming/taczweaponblueprints/client/BlueprintJournalQuery.class',
                     'com/gamergaming/taczweaponblueprints/client/BlueprintJournalScreen.class',
+                    'com/gamergaming/taczweaponblueprints/client/BlueprintOnboardingPlan.class',
+                    'com/gamergaming/taczweaponblueprints/compat/recipeviewer/BlueprintRecipeViewerInfo.class',
+                    'com/gamergaming/taczweaponblueprints/compat/jei/TaCZWeaponBlueprintsJeiPlugin.class',
+                    'com/gamergaming/taczweaponblueprints/compat/emi/TaCZWeaponBlueprintsEmiPlugin.class',
                     'com/gamergaming/taczweaponblueprints/client/ResearchBenchScreen.class',
+                    'com/gamergaming/taczweaponblueprints/client/ClientModEvents.class',
+                    'com/gamergaming/taczweaponblueprints/init/ModBlocks.class',
+                    'com/gamergaming/taczweaponblueprints/init/ModItems.class',
+                    'com/gamergaming/taczweaponblueprints/init/ModMenus.class',
                     'com/gamergaming/taczweaponblueprints/block/ResearchBenchBlock.class',
+                    'com/gamergaming/taczweaponblueprints/block/BlueprintRecyclerBlock.class',
+                    'com/gamergaming/taczweaponblueprints/client/BlueprintRecyclerScreen.class',
+                    'com/gamergaming/taczweaponblueprints/client/BlueprintRecyclerScreenModel.class',
+                    'com/gamergaming/taczweaponblueprints/menu/BlueprintRecyclerMenu.class',
+                    'com/gamergaming/taczweaponblueprints/menu/BlueprintRecyclerMenuBridge.class',
+                    'com/gamergaming/taczweaponblueprints/menu/BlueprintRecyclerPreview.class',
+                    'com/gamergaming/taczweaponblueprints/menu/BlueprintRecyclerActionContract.class',
+                    'com/gamergaming/taczweaponblueprints/menu/BlueprintRecyclerActionValidator.class',
+                    'com/gamergaming/taczweaponblueprints/network/BlueprintRecyclerActionPacket.class',
+                    'com/gamergaming/taczweaponblueprints/network/BlueprintRecyclerActionResultPacket.class',
+                    'com/gamergaming/taczweaponblueprints/network/SyncBlueprintRecyclerPreviewPacket.class',
                     'com/gamergaming/taczweaponblueprints/command/sub/BlueprintProgressionCommand.class',
                     'com/gamergaming/taczweaponblueprints/client/ClientBlueprintJournal.class',
                     'com/gamergaming/taczweaponblueprints/client/ClientConnectionEvents.class',
                     'com/gamergaming/taczweaponblueprints/client/ClientResearchState.class',
                     'com/gamergaming/taczweaponblueprints/client/ClientResearchTree.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeFeedbackState.class',
+                    'com/gamergaming/taczweaponblueprints/network/ResearchBenchActionResultPacket.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeCameraStore.class',
                     'com/gamergaming/taczweaponblueprints/client/ResearchTreeCanvas.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeCategoryFilter.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeContextCardLayout.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeContextCardPolicy.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeContextCardPresenter.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeDetailLayout.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeDisplayPolicy.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeFullscreenLayout.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeFullscreenOverlayState.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeFullscreenRailLayout.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeGestureTracker.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeHoldActivationController.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeGuidanceLayout.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeGuidancePreference.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeInteractionPolicy.class',
                     'com/gamergaming/taczweaponblueprints/client/ResearchTreeNavigationState.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeNodeIndex.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeOverviewBuilder.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreePresentationContract.class',
                     'com/gamergaming/taczweaponblueprints/client/ResearchTreeProjection.class',
                     'com/gamergaming/taczweaponblueprints/client/ResearchTreeProjectionCache.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeRecommendationEngine.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreePlanner.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreePlanner$Plan.class',
+                    'com/gamergaming/taczweaponblueprints/client/ClientResearchPlannerState.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTechTreeProjection.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTechTreeProjectionBuilder.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTechTreeProjectionCatalog.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTechTreeRelationshipIndex.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTechTreeLayout.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTechTreeLayoutCatalog.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTechTreeLayoutEngine.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTechTreeLayoutPolicy.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTechTreeBranchCompactor.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTechTreeDomainSelectorLayout.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTechTreeDomainMenu.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTechTreeViewState.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeRelations.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeSearchController.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeSearchResultLayout.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeSelectedNodePresenter.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeSelectionController.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeUiUpdateController.class',
+                    'com/gamergaming/taczweaponblueprints/compat/fzzy_config/ResearchTreeClientConfig.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeRailHoverState.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeScreenLayout.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeStatusGlyph.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeViewState.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeViewport.class',
                     'com/gamergaming/taczweaponblueprints/journal/BlueprintJournalBuilder.class',
                     'com/gamergaming/taczweaponblueprints/journal/BlueprintJournalEntry.class',
                     'com/gamergaming/taczweaponblueprints/journal/BlueprintJournalSnapshot.class',
+                    'com/gamergaming/taczweaponblueprints/mixin/EmiScreenBaseMixin.class',
                     'com/gamergaming/taczweaponblueprints/mixin/GunSmithTableScreenMixin.class',
                     'com/gamergaming/taczweaponblueprints/network/SyncBlueprintJournalPacket.class',
                     'com/gamergaming/taczweaponblueprints/network/SyncPlayerProgressionPacket.class',
@@ -455,36 +1044,149 @@ tasks.register('verifyReleaseArtifact') {
                     'com/gamergaming/taczweaponblueprints/network/SyncResearchBenchPreviewPacket.class',
                     'com/gamergaming/taczweaponblueprints/network/SyncResearchTreePacket.class',
                     'com/gamergaming/taczweaponblueprints/menu/ResearchBenchMenu.class',
-                    'com/gamergaming/taczweaponblueprints/menu/ResearchBenchActionValidator.class',
+                    'com/gamergaming/taczweaponblueprints/menu/ResearchBenchResearchAction.class',
+                    'com/gamergaming/taczweaponblueprints/menu/ResearchBenchResearchActionValidator.class',
+                    'com/gamergaming/taczweaponblueprints/menu/ResearchSelectionPreview.class',
                     'com/gamergaming/taczweaponblueprints/client/ResearchTreeNavigator.class',
                     'com/gamergaming/taczweaponblueprints/client/ResearchTreeEdgeIndex.class',
                     'com/gamergaming/taczweaponblueprints/progression/BlueprintDiscoveryService.class',
                     'com/gamergaming/taczweaponblueprints/progression/BlueprintProgressionConfigSnapshot.class',
+                    'com/gamergaming/taczweaponblueprints/progression/BlueprintAccessConfigSnapshot.class',
+                    'com/gamergaming/taczweaponblueprints/progression/BlueprintProgressionAccess.class',
+                    'com/gamergaming/taczweaponblueprints/progression/StartingBlueprintGrantService.class',
                     'com/gamergaming/taczweaponblueprints/progression/BlueprintProgressionSyncScheduler.class',
                     'com/gamergaming/taczweaponblueprints/progression/BlueprintRecyclingService.class',
+                    'com/gamergaming/taczweaponblueprints/capabilities/BlueprintLearningMutation.class',
+                    'com/gamergaming/taczweaponblueprints/progression/BlueprintAccessPolicy.class',
+                    'com/gamergaming/taczweaponblueprints/progression/BlueprintLearningService.class',
+                    'com/gamergaming/taczweaponblueprints/progression/BlueprintUnlockOrigin.class',
+                    'com/gamergaming/taczweaponblueprints/progression/TreeResearchResultMode.class',
+                    'com/gamergaming/taczweaponblueprints/progression/PhysicalBlueprintLearningMode.class',
+                    'com/gamergaming/taczweaponblueprints/progression/PhysicalItemBlueprintResolver.class',
+                    'com/gamergaming/taczweaponblueprints/progression/BlueprintReverseEngineeringEvaluator.class',
+                    'com/gamergaming/taczweaponblueprints/progression/BlueprintReverseEngineeringService.class',
+                    'com/gamergaming/taczweaponblueprints/item/BlueprintProvenance.class',
+                    'com/gamergaming/taczweaponblueprints/resource/research/BlueprintReverseEngineeringPolicy.class',
+                    'com/gamergaming/taczweaponblueprints/resource/research/BlueprintReverseEngineeringOverride.class',
                     'com/gamergaming/taczweaponblueprints/progression/BlueprintResearchService.class',
+                    'com/gamergaming/taczweaponblueprints/progression/ResearchPointTransactionService.class',
+                    'com/gamergaming/taczweaponblueprints/progression/ResearchPointAwardDispatcher.class',
+                    'com/gamergaming/taczweaponblueprints/progression/ResearchPointCombatTracker.class',
+                    'com/gamergaming/taczweaponblueprints/progression/ResearchDataRedemptionService.class',
+                    'com/gamergaming/taczweaponblueprints/event/ResearchPointAwardEvents.class',
                     'com/gamergaming/taczweaponblueprints/progression/ResearchIngredientPlanner.class',
                     'com/gamergaming/taczweaponblueprints/progression/PlayerProgressionAdminService.class',
                     'com/gamergaming/taczweaponblueprints/progression/DuplicateBlueprintPolicy.class',
+                    'com/gamergaming/taczweaponblueprints/capabilities/ResearchPointAwardLedger.class',
+                    'com/gamergaming/taczweaponblueprints/resource/award/ResearchPointAwardContext.class',
+                    'com/gamergaming/taczweaponblueprints/resource/award/ResearchPointAwardDefinition.class',
+                    'com/gamergaming/taczweaponblueprints/resource/award/ResearchPointAwardSnapshot.class',
+                    'com/gamergaming/taczweaponblueprints/resource/award/ResearchPointAwardResolver.class',
+                    'com/gamergaming/taczweaponblueprints/resource/award/ResearchPointAwardDataManager.class',
+                    'com/gamergaming/taczweaponblueprints/resource/award/ResearchPointAwardDiagnostics.class',
                     'com/gamergaming/taczweaponblueprints/resource/research/BlueprintResearchDataManager.class',
                     'com/gamergaming/taczweaponblueprints/resource/research/BlueprintResearchCatalogExporter.class',
                     'com/gamergaming/taczweaponblueprints/resource/research/BlueprintResearchDiagnostics.class',
                     'com/gamergaming/taczweaponblueprints/resource/research/BlueprintResearchIngredientValidator.class',
                     'com/gamergaming/taczweaponblueprints/resource/research/BlueprintResearchPolicyResolver.class',
                     'com/gamergaming/taczweaponblueprints/resource/research/ResearchTreeGroupDefinition.class',
+                    'com/gamergaming/taczweaponblueprints/resource/research/ResearchTechTreeDefinition.class',
+                    'com/gamergaming/taczweaponblueprints/resource/research/ResearchTechTreeEntryBundle.class',
+                    'com/gamergaming/taczweaponblueprints/resource/research/ResearchTechTreePlacementResolver.class',
+                    'com/gamergaming/taczweaponblueprints/resource/research/ResearchTechTreeCatalogValidator.class',
+                    'com/gamergaming/taczweaponblueprints/resource/research/ResearchAutomaticPlacementProfile.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/ResearchTechTreeContract.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/ResearchTechTreePresentation.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/ResearchTechTreePresentationBuilder.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/ResearchTechTreeTopologyAudit.class',
                     'com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeBuilder.class',
                     'com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeGraph.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeBranchLayoutComposer.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeGroupSkeleton.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeGroupSkeletonBuilder.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeGroupSkeletonCatalog.class',
                     'com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeGroupedLayoutEngine.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeLayeredLayoutEngine.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeLayoutEngine.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeLayoutInput.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeLayoutPolicy.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeLayoutStrategy.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeOverviewLayoutComposer.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeUnifiedLayoutEngine.class',
                     'com/gamergaming/taczweaponblueprints/research/tree/ResearchTreePresentation.class',
                     'com/gamergaming/taczweaponblueprints/research/tree/ResearchTreePublication.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/MechanicalMetric.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/WeaponStatEvidence.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/WeaponMechanicalMetrics.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/WeaponMetricReference.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/WeaponMechanicalScore.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/WeaponMechanicalScorer.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/WeaponMechanicalReferenceCatalog.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponPlacementPolicy.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponProgressionBand.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponPlacementProposal.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponPlacementPlan.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponPlacementPlanner.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponLayerPlanner.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponBranchAnalyzer.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponBranchLayerPlanner.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponBranchModel.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponPrerequisitePlan.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponPrerequisitePlanner.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponPrerequisiteDecision.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponPrerequisiteOverlay.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponPlacementDiagnostics.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponRankFinalizer.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponRoleAnalyzer.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponRoleSignature.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponTerminalCluster.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponTerminalClusterResolver.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/tacz/TaCZRuntimeWeaponEvidenceAdapter.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/tacz/AutomaticWeaponCandidateClassification.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/tacz/AutomaticWeaponCandidatePositioner.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/tacz/AutomaticWeaponEvidenceSnapshot.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/tacz/AutomaticWeaponEvidenceManager.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/tacz/AutomaticWeaponPlacementCandidateSnapshot.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/tacz/AutomaticWeaponPlacementCandidateClassifier.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/automatic/tacz/AutomaticWeaponPlacementCandidateManager.class',
                     'com/gamergaming/taczweaponblueprints/command/sub/BlueprintResearchCommand.class',
+                    'com/gamergaming/taczweaponblueprints/command/sub/BlueprintResearchPointAwardCommand.class',
+                    'com/gamergaming/taczweaponblueprints/command/sub/BlueprintSetupCommand.class',
+                    'com/gamergaming/taczweaponblueprints/network/SyncBalancePresetPacket.class',
+                    'com/gamergaming/taczweaponblueprints/progression/BlueprintBalancePreset.class',
+                    'com/gamergaming/taczweaponblueprints/progression/BlueprintBalanceSettings.class',
+                    'com/gamergaming/taczweaponblueprints/progression/BlueprintSetupAssistant.class',
                     'data/taczweaponblueprints/loot_modifiers/dynamic_blueprints.json',
+                    'data/taczweaponblueprints/loot_modifiers/research_data/note_chests_simple_dungeon.json',
+                    'data/taczweaponblueprints/loot_modifiers/research_data/report_chests_stronghold_library.json',
+                    'data/taczweaponblueprints/loot_modifiers/research_data/dossier_chests_end_city_treasure.json',
                     'data/taczweaponblueprints/taczweaponblueprints/research_profiles/duplicate_recovery.json',
                     'data/taczweaponblueprints/taczweaponblueprints/research_rules/default_tree/roots.json',
+                    'data/taczweaponblueprints/taczweaponblueprints/research_rules/default_tree/branch_roots.json',
+                    'data/taczweaponblueprints/taczweaponblueprints/research_rules/fallback_guns.json',
+                    'data/taczweaponblueprints/taczweaponblueprints/research_rules/fallback_attachments.json',
+                    'data/taczweaponblueprints/taczweaponblueprints/research_rules/fallback_ammo.json',
                     'data/taczweaponblueprints/taczweaponblueprints/research_tree_groups/pistols.json',
                     'data/taczweaponblueprints/taczweaponblueprints/research_tree_groups/rifles.json',
+                    'data/taczweaponblueprints/taczweaponblueprints/research_tech_trees/default.json',
+                    'data/taczweaponblueprints/taczweaponblueprints/research_tech_tree_entries/default_weapons.json',
+                    'data/taczweaponblueprints/taczweaponblueprints/research_tech_tree_entries/default_attachments.json',
+                    'data/taczweaponblueprints/taczweaponblueprints/research_tech_tree_entries/default_ammo.json',
+                    'data/taczweaponblueprints/taczweaponblueprints/research_tech_tree_entries/default_fallbacks.json',
+                    'data/taczweaponblueprints/taczweaponblueprints/research_automatic_placement_profiles/default.json',
+                    'data/taczweaponblueprints/taczweaponblueprints/research_point_awards/blueprints/first_discovery.json',
+                    'data/taczweaponblueprints/taczweaponblueprints/research_point_awards/research_data/note.json',
+                    'data/taczweaponblueprints/taczweaponblueprints/research_point_awards/research_data/report.json',
+                    'data/taczweaponblueprints/taczweaponblueprints/research_point_awards/research_data/dossier.json',
                     'data/taczweaponblueprints/recipes/research_bench.json',
+                    'data/taczweaponblueprints/recipes/blueprint_recycler.json',
+                    'data/taczweaponblueprints/advancements/recipes/misc/blueprint_recycler.json',
+                    'data/taczweaponblueprints/loot_tables/blocks/blueprint_recycler.json',
                     'data/taczweaponblueprints/loot_tables/blocks/research_bench.json',
+                    'assets/taczweaponblueprints/blockstates/blueprint_recycler.json',
+                    'assets/taczweaponblueprints/models/block/blueprint_recycler.json',
+                    'assets/taczweaponblueprints/models/item/blueprint_recycler.json',
+                    'assets/taczweaponblueprints/textures/block/blueprint_recycler.png',
                     'assets/taczweaponblueprints/blockstates/research_bench.json',
                     'assets/taczweaponblueprints/models/block/research_bench_north.obj',
                     'assets/taczweaponblueprints/models/block/research_bench_east.obj',
@@ -493,6 +1195,8 @@ tasks.register('verifyReleaseArtifact') {
                     'assets/taczweaponblueprints/models/block/research_bench.mtl',
                     'assets/taczweaponblueprints/models/item/research_bench.obj',
                     'assets/taczweaponblueprints/models/item/research_bench.mtl',
+                    'assets/taczweaponblueprints/lang/en_us.json',
+                    'assets/taczweaponblueprints/research/automatic/tacz-1.1.8-mechanical-v2.json',
                     'assets/taczweaponblueprints/textures/block/research_bench.png',
                     'data/forge/loot_modifiers/global_loot_modifiers.json',
                     'taczweaponblueprints.mixins.json',
@@ -508,8 +1212,8 @@ tasks.register('verifyReleaseArtifact') {
             def modifierFiles = names.findAll {
                 it.startsWith('data/taczweaponblueprints/loot_modifiers/') && it.endsWith('.json')
             }
-            if (modifierFiles.size() != 486) {
-                throw new GradleException("Expected 486 blueprint loot modifiers, found ${modifierFiles.size()}")
+            if (modifierFiles.size() != 494) {
+                throw new GradleException("Expected 494 packaged loot modifiers, found ${modifierFiles.size()}")
             }
             def schemaFiles = names.findAll {
                 (it.startsWith('data/taczweaponblueprints/taczweaponblueprints/loot_pools/')
@@ -531,9 +1235,9 @@ tasks.register('verifyReleaseArtifact') {
                 it.startsWith('data/taczweaponblueprints/taczweaponblueprints/research_rules/default_tree/')
                         && it.endsWith('.json')
             }
-            if (researchRuleFiles.size() != 32) {
+            if (researchRuleFiles.size() != 55) {
                 throw new GradleException(
-                        "Expected 32 built-in default-tree research rules, found ${researchRuleFiles.size()}")
+                        "Expected 55 built-in default-tree research rules, found ${researchRuleFiles.size()}")
             }
             def researchGroupFiles = names.findAll {
                 it.startsWith('data/taczweaponblueprints/taczweaponblueprints/research_tree_groups/')
@@ -542,6 +1246,38 @@ tasks.register('verifyReleaseArtifact') {
             if (researchGroupFiles.size() != 7) {
                 throw new GradleException(
                         "Expected seven built-in research-tree groups, found ${researchGroupFiles.size()}")
+            }
+            def researchTechTreeFiles = names.findAll {
+                it.startsWith('data/taczweaponblueprints/taczweaponblueprints/research_tech_trees/')
+                        && it.endsWith('.json')
+            }
+            if (researchTechTreeFiles.size() != 1) {
+                throw new GradleException(
+                        "Expected one built-in Research Tech Tree, found ${researchTechTreeFiles.size()}")
+            }
+            def researchTechTreeEntryFiles = names.findAll {
+                it.startsWith('data/taczweaponblueprints/taczweaponblueprints/research_tech_tree_entries/')
+                        && it.endsWith('.json')
+            }
+            if (researchTechTreeEntryFiles.size() != 4) {
+                throw new GradleException(
+                        "Expected four built-in Research Tech Tree entry bundles, found ${researchTechTreeEntryFiles.size()}")
+            }
+            def automaticPlacementProfileFiles = names.findAll {
+                it.startsWith('data/taczweaponblueprints/taczweaponblueprints/research_automatic_placement_profiles/')
+                        && it.endsWith('.json')
+            }
+            if (automaticPlacementProfileFiles.size() != 1) {
+                throw new GradleException(
+                        "Expected one built-in automatic-placement profile, found ${automaticPlacementProfileFiles.size()}")
+            }
+            def researchPointAwardFiles = names.findAll {
+                it.startsWith('data/taczweaponblueprints/taczweaponblueprints/research_point_awards/')
+                        && it.endsWith('.json')
+            }
+            if (researchPointAwardFiles.size() != 15) {
+                throw new GradleException(
+                        "Expected 15 built-in Research Point awards, found ${researchPointAwardFiles.size()}")
             }
 
             def jsonParser = new groovy.json.JsonSlurper()
@@ -555,11 +1291,775 @@ tasks.register('verifyReleaseArtifact') {
                 }
             }
 
+            def parsePackagedJson = { String path ->
+                def entry = zip.getEntry(path)
+                zip.getInputStream(entry).withCloseable { stream ->
+                    jsonParser.parse(stream, 'UTF-8')
+                }
+            }
+            def recyclerModelPath =
+                    'assets/taczweaponblueprints/models/block/blueprint_recycler.json'
+            def recyclerModel = parsePackagedJson(recyclerModelPath)
+            def recyclerElementNames = [
+                    'cabinet', 'top_deck', 'rear_console', 'paper_intake',
+                    'output_drawer', 'front_left_foot', 'front_right_foot', 'rear_feet'
+            ] as Set
+            def recyclerTexture = 'taczweaponblueprints:block/blueprint_recycler'
+            if (recyclerModel['parent'] != 'minecraft:block/block'
+                    || recyclerModel['ambientocclusion'] != false
+                    || recyclerModel['textures']?.keySet()
+                            != (['particle', 'side', 'front', 'top', 'control'] as Set)
+                    || recyclerModel['textures']?.values()?.toSet() != ([recyclerTexture] as Set)
+                    || !(recyclerModel['elements'] instanceof List)
+                    || recyclerModel['elements'].size() != 8
+                    || recyclerModel['elements'].collect { it['name'] }.toSet()
+                            != recyclerElementNames
+                    || recyclerModel['elements'].any { element ->
+                        !(element['from'] instanceof List) || element['from'].size() != 3
+                                || !(element['to'] instanceof List) || element['to'].size() != 3
+                                || (0..<3).any { axis ->
+                                    !(element['from'][axis] instanceof Number)
+                                            || !(element['to'][axis] instanceof Number)
+                                            || element['from'][axis] < 0
+                                            || element['to'][axis] > 16
+                                            || element['from'][axis] >= element['to'][axis]
+                                }
+                                || element['faces']?.keySet()
+                                        != (['north', 'east', 'south', 'west', 'up', 'down'] as Set)
+                                || element['faces'].values().any { face ->
+                                    !(face['texture'] instanceof String)
+                                            || !face['texture'].startsWith('#')
+                                            || !(face['uv'] instanceof List) || face['uv'].size() != 4
+                                            || face['uv'].any { coordinate ->
+                                                !(coordinate instanceof Number)
+                                                        || coordinate < 0 || coordinate > 16
+                                            }
+                                }
+                    }) {
+                throw new GradleException(
+                        'Packaged Blueprint Recycler model is not the final bounded eight-part workstation')
+            }
+            def recyclerBlockstate = parsePackagedJson(
+                    'assets/taczweaponblueprints/blockstates/blueprint_recycler.json')
+            def recyclerVariants = recyclerBlockstate['variants']
+            def expectedRecyclerRotations = [
+                    'facing=north': 0,
+                    'facing=east' : 90,
+                    'facing=south': 180,
+                    'facing=west' : 270
+            ]
+            if (!(recyclerVariants instanceof Map)
+                    || recyclerVariants.keySet() != expectedRecyclerRotations.keySet()
+                    || expectedRecyclerRotations.any { state, rotation ->
+                        recyclerVariants[state]?.get('model')
+                                != 'taczweaponblueprints:block/blueprint_recycler'
+                                || (recyclerVariants[state].containsKey('y')
+                                        ? recyclerVariants[state]['y'] : 0) != rotation
+                    }) {
+                throw new GradleException(
+                        'Packaged Blueprint Recycler blockstate must preserve all four horizontal facings')
+            }
+            def recyclerItemModel = parsePackagedJson(
+                    'assets/taczweaponblueprints/models/item/blueprint_recycler.json')
+            if (recyclerItemModel != [
+                    parent: 'taczweaponblueprints:block/blueprint_recycler'
+            ]) {
+                throw new GradleException(
+                        'Packaged Blueprint Recycler item must inherit the final block model')
+            }
+            def recyclerTextureEntry = zip.getEntry(
+                    'assets/taczweaponblueprints/textures/block/blueprint_recycler.png')
+            def recyclerTextureImage = zip.getInputStream(recyclerTextureEntry).withCloseable { stream ->
+                javax.imageio.ImageIO.read(stream)
+            }
+            if (recyclerTextureImage == null
+                    || recyclerTextureImage.width != 256
+                    || recyclerTextureImage.height != 256) {
+                throw new GradleException(
+                        'Packaged Blueprint Recycler texture must be a readable 256x256 PNG')
+            }
+            def packagedAwards = researchPointAwardFiles.sort().collectEntries { path ->
+                [(path): parsePackagedJson(path)]
+            }
+            def awardTriggerCounts = packagedAwards.values().countBy {
+                it['trigger']?.get('type')
+            }
+            if (awardTriggerCounts != [
+                    advancement_completed: 6,
+                    blueprint_discovered: 1,
+                    blueprint_milestone: 5,
+                    inventory_turn_in: 3
+            ]) {
+                throw new GradleException(
+                        "Packaged Research Point trigger mix changed without an economy review: ${awardTriggerCounts}")
+            }
+            def researchDataValues = packagedAwards.findAll { path, award ->
+                award['trigger']?.get('type') == 'inventory_turn_in'
+            }.values().collectEntries { award ->
+                [(award['trigger']['target']['ids'].first()): award['reward']['points']]
+            }
+            if (researchDataValues != [
+                    'taczweaponblueprints:research_note': 1,
+                    'taczweaponblueprints:research_report': 3,
+                    'taczweaponblueprints:research_dossier': 6
+            ] || packagedAwards.values().any { award ->
+                award['trigger']?.get('type') == 'inventory_turn_in'
+                        && (award['reward']?.get('overflow') != 'require_full'
+                                || award['repeat']?.get('type') != 'unlimited')
+            }) {
+                throw new GradleException(
+                        'Packaged Research Data economy must retain the exact safe 1/3/6 exchange')
+            }
+            def fixedProgressionPoints = packagedAwards.values().findAll { award ->
+                award['trigger']?.get('type') in [
+                        'advancement_completed', 'blueprint_milestone'
+                ]
+            }.sum { award -> award['reward']['points'] as int } ?: 0
+            def firstDiscovery = packagedAwards.find { path, award ->
+                award['trigger']?.get('type') == 'blueprint_discovered'
+            }?.value
+            if (fixedProgressionPoints != 46
+                    || firstDiscovery?.get('reward')?.get('points') != 1
+                    || firstDiscovery?.get('repeat')?.get('type') != 'once_per_target'
+                    || firstDiscovery?.get('trigger')?.get('retroactive') != true
+                    || packagedAwards.values().any { award ->
+                        award['repeat']?.get('type') != 'unlimited'
+                                && (award['reward']?.get('overflow') != 'require_full'
+                                        || award['trigger']?.get('retroactive') != true)
+                    }) {
+                throw new GradleException(
+                        'Packaged finite RP income changed without updating the Phase 8 economy audit')
+            }
+            def automaticReferencePath =
+                    'assets/taczweaponblueprints/research/automatic/tacz-1.1.8-mechanical-v2.json'
+            def automaticReference = parsePackagedJson(automaticReferencePath)
+            def automaticPlacementProfile =
+                    parsePackagedJson(automaticPlacementProfileFiles.first())
+            def packagedMergeInterval = automaticPlacementProfile['merge_interval']
+            if (automaticPlacementProfile.keySet()
+                    != (['format', 'tree', 'mode', 'review_handling',
+                            'foundation_count', 'max_prerequisites', 'merge_interval'] as Set)
+                    || automaticPlacementProfile['format'] != 2
+                    || automaticPlacementProfile['tree'] != 'taczweaponblueprints:default'
+                    || automaticPlacementProfile['mode'] != 'connected'
+                    || automaticPlacementProfile['review_handling'] != 'place_connected'
+                    || automaticPlacementProfile['foundation_count'] != 2
+                    || automaticPlacementProfile['max_prerequisites'] != 2
+                    || !(packagedMergeInterval instanceof Number)
+                    || packagedMergeInterval.intValue() != packagedMergeInterval
+                    || packagedMergeInterval.intValue() < 0
+                    || packagedMergeInterval.intValue() > 64) {
+                throw new GradleException(
+                        'Packaged automatic-placement profile must enable bounded connected add-on placement')
+            }
+            def expectedAutomaticMetrics = [
+                    'sustained_dps', 'effective_damage', 'headshot_multiplier', 'effective_range',
+                    'armor_effectiveness', 'projectile_speed', 'aimed_inaccuracy',
+                    'recoil_magnitude', 'magazine_capacity', 'reload_seconds',
+                    'aim_time', 'draw_time', 'weight', 'aim_movement',
+                    'fire_mode_count', 'attachment_type_count'
+            ] as Set
+            if (automaticReference['format'] != 1
+                    || automaticReference['reference_version'] != 'tacz-1.1.8-mechanical-v2'
+                    || automaticReference['metric_formula'] != 'tacz-gun-mechanical-v2'
+                    || automaticReference['source']?.get('version') != '1.1.8-hotfix'
+                    || automaticReference['source']?.get('recipe_backed_guns') != 53
+                    || automaticReference['source']?.get('fingerprint')
+                            != '765a83ea3df8bb3591aba2a5657c1fff75122178381f947a5e6e079e0730fb95'
+                    || automaticReference['metrics_fingerprint']
+                            != '7fbc1233719df0524d15e66b3065bf47241426befc052887b99fa8cb249438d4'
+                    || !(automaticReference['blueprints'] instanceof List)
+                    || automaticReference['blueprints'].size() != 53
+                    || automaticReference['blueprints']
+                            != automaticReference['blueprints'].toList().sort()
+                    || automaticReference['blueprints'].toSet().size() != 53
+                    || !(automaticReference['metrics'] instanceof Map)
+                    || automaticReference['metrics'].keySet() != expectedAutomaticMetrics
+                    || automaticReference['metrics'].any { name, samples ->
+                        !(samples instanceof List)
+                                || samples.size() < 2 || samples.size() > 53
+                                || samples != samples.toList().sort()
+                    }) {
+                throw new GradleException(
+                        'Packaged automatic weapon reference is incomplete, unbounded, or incompatible')
+            }
+            def packagedTechTree = parsePackagedJson(researchTechTreeFiles.first())
+            def expectedTechDomains = ['weapons', 'attachments', 'ammo']
+            // The active weapon bundle uses explicit format-2 ranks. Dormant
+            // attachment/ammo data stays format 1 as a compatibility/opt-in asset.
+            def expectedTechTiers = [
+                    'starter', 'basic', 'established', 'advanced', 'elite', 'apex'
+            ]
+            if (packagedTechTree['format'] != 2
+                    || packagedTechTree['layout']?.get('width_mode') != 'dynamic'
+                    || packagedTechTree['layout']?.get('min_nodes_per_layer') != 9
+                    || packagedTechTree['layout']?.get('max_nodes_per_layer') != 20
+                    || packagedTechTree['bands']?.get('mode') != 'dynamic'
+                    || packagedTechTree['bands']?.get('ranks_per_band') != 3
+                    || packagedTechTree.containsKey('tiers')
+                    || packagedTechTree['domains']?.collect { it['id'] } != expectedTechDomains
+                    ) {
+                throw new GradleException(
+                        'Packaged Research Tech Tree must use the dynamic rank-band presentation')
+            }
+            def exactTechPlacements = new LinkedHashMap<String, Map>()
+            def fallbackDomainByKind = new LinkedHashMap<String, String>()
+            researchTechTreeEntryFiles.sort().each { path ->
+                def bundle = parsePackagedJson(path)
+                def expectedBundleFormat = path.endsWith('/default_weapons.json') ? 2 : 1
+                if (bundle['format'] != expectedBundleFormat
+                        || bundle['tree'] != 'taczweaponblueprints:default'
+                        || !(bundle['entries'] instanceof List)
+                        || bundle['entries'].isEmpty()) {
+                    throw new GradleException(
+                            "Packaged Research Tech Tree entry bundle is invalid: ${path}")
+                }
+                def priority = bundle.containsKey('priority') ? bundle['priority'] : 0
+                bundle['entries'].each { placement ->
+                    def target = placement['target']
+                    def domain = placement['domain']
+                    if (!(target instanceof Map) || !(domain in expectedTechDomains)) {
+                        throw new GradleException(
+                                "Packaged Research Tech Tree placement is invalid: ${path}")
+                    }
+                    if (target.keySet() == (['blueprints'] as Set)) {
+                        def blueprints = target['blueprints']
+                        def tier = placement['tier']
+                        def order = placement['order']
+                        def rank = placement['rank']
+                        if (priority != 100
+                                || !(blueprints instanceof List) || blueprints.size() != 1
+                                || !(blueprints.first() instanceof String)
+                                || blueprints.first().isBlank()
+                                || !(tier in expectedTechTiers)
+                                || !(order instanceof Number)
+                                || expectedBundleFormat == 2
+                                        && (!(rank instanceof Number)
+                                                || rank.intValue() != rank
+                                                || rank.intValue() < 0
+                                                || rank.intValue() > 1_000_000)
+                                || expectedBundleFormat == 1
+                                        && placement.containsKey('rank')) {
+                            throw new GradleException(
+                                    "Packaged exact Research Tech Tree placement is invalid: ${path}")
+                        }
+                        def blueprint = blueprints.first()
+                        if (exactTechPlacements.put(blueprint, [
+                                domain: domain,
+                                tier  : tier,
+                                rank  : rank instanceof Number ? rank.intValue() : null,
+                                order : order as int
+                        ]) != null) {
+                            throw new GradleException(
+                                    "Packaged Research Tech Tree places a blueprint more than once: ${blueprint}")
+                        }
+                    } else if (target.keySet() == (['selector'] as Set)) {
+                        def selector = target['selector']
+                        def kinds = selector instanceof Map
+                                ? selector['blueprint_kinds'] : null
+                        if (priority != 0
+                                || expectedBundleFormat != 1
+                                || !(selector instanceof Map)
+                                || selector.keySet() != (['blueprint_kinds'] as Set)
+                                || !(kinds instanceof List) || kinds.size() != 1
+                                || fallbackDomainByKind.put(kinds.first(), domain) != null) {
+                            throw new GradleException(
+                                    "Packaged Research Tech Tree fallback placement is invalid: ${path}")
+                        }
+                    } else {
+                        throw new GradleException(
+                                "Packaged Research Tech Tree placement target is not exact or a kind fallback: ${path}")
+                    }
+                }
+            }
+            def expectedTechCounts = [weapons: 53, attachments: 95, ammo: 24]
+            def actualTechCounts = expectedTechDomains.collectEntries { domain ->
+                [(domain): exactTechPlacements.values().count { it.domain == domain }]
+            }
+            if (actualTechCounts != expectedTechCounts) {
+                throw new GradleException(
+                        "Packaged Research Tech Tree coverage must be 53/95/24, found ${actualTechCounts}")
+            }
+            if (fallbackDomainByKind != [
+                    gun: 'weapons', attachment: 'attachments', ammo: 'ammo'
+            ]) {
+                throw new GradleException(
+                        "Packaged Research Tech Tree kind fallbacks are incomplete or misrouted: ${fallbackDomainByKind}")
+            }
+            def profile = parsePackagedJson(researchProfileFiles.first())
+            if (profile['format'] != 2
+                    || profile['tree_enabled'] != false
+                    || profile['domain_policies'] != [
+                            weapons: [tree_enabled: true, research_enabled: true],
+                            attachments: [tree_enabled: false, research_enabled: false],
+                            ammo: [tree_enabled: false, research_enabled: false]
+                    ]
+                    || profile['tech_tree'] != 'taczweaponblueprints:default'
+                    || !(profile['entry_point_candidates'] instanceof List)
+                    || profile['entry_point_candidates'].isEmpty()
+                    || profile['entry_point_candidates'].first() != 'tacz:glock_17'
+                    || !(profile['tech_entry_point_candidates']?.get('attachments') instanceof List)
+                    || profile['tech_entry_point_candidates']['attachments'].first() != 'tacz:grip_rk6'
+                    || !(profile['tech_entry_point_candidates']?.get('ammo') instanceof List)
+                    || profile['tech_entry_point_candidates']['ammo'].first() != 'tacz:9mm') {
+                throw new GradleException(
+                        'Packaged research profile must publish weapon research only while retaining authored domain entries')
+            }
+            def fallbackGunRulePath =
+                    'data/taczweaponblueprints/taczweaponblueprints/research_rules/fallback_guns.json'
+            if (!names.contains(fallbackGunRulePath)) {
+                throw new GradleException('Packaged research data is missing the add-on gun fallback rule')
+            }
+            def fallbackGunRule = parsePackagedJson(fallbackGunRulePath)
+            if (fallbackGunRule['visibility'] != 'preview'
+                    || fallbackGunRule['tree_enabled'] != true
+                    || fallbackGunRule['target']?.get('selector')?.get('blueprint_kinds') != ['gun']) {
+                throw new GradleException(
+                        'Packaged add-on gun fallback must be a selectable gun-only tree rule')
+            }
+            [
+                    'fallback_attachments.json': 'attachment',
+                    'fallback_ammo.json': 'ammo'
+            ].each { fileName, blueprintKind ->
+                def path = 'data/taczweaponblueprints/taczweaponblueprints/research_rules/' + fileName
+                def rule = parsePackagedJson(path)
+                if (rule['visibility'] != 'preview'
+                        || rule['tree_enabled'] != true
+                        || rule['research_enabled'] != true
+                        || rule['research_cost']?.get('points') != 4
+                        || rule['target']?.get('selector')?.get('blueprint_kinds') != [blueprintKind]) {
+                    throw new GradleException(
+                            "Packaged ${blueprintKind} fallback must be a selectable 4 RP kind-only tree rule")
+                }
+            }
+            def prerequisitesByTarget = new LinkedHashMap<String, Set<String>>()
+            researchRuleFiles.sort().each { path ->
+                def rule = parsePackagedJson(path)
+                def target = rule['target']
+                def blueprints = target instanceof Map ? target['blueprints'] : null
+                if (!(blueprints instanceof List) || blueprints.isEmpty()
+                        || target.keySet() != (['blueprints'] as Set)
+                        || !blueprints.every { it instanceof String && !it.isBlank() }) {
+                    throw new GradleException(
+                            "Packaged default-tree rule must use a nonempty exact blueprint target: ${path}")
+                }
+                def prerequisites = rule.containsKey('prerequisites')
+                        ? rule['prerequisites'] : []
+                if (rule['visibility'] != 'full'
+                        || rule['tree_enabled'] != true
+                        || rule['research_enabled'] == false
+                        || rule['requires_discovery'] == true
+                        || !(rule['research_cost'] instanceof Map)
+                        || !(rule['research_cost']['points'] in [2, 4, 6, 8, 10, 12])) {
+                    throw new GradleException(
+                            "Packaged default-tree rules must be full, selectable, and tier-costed: ${path}")
+                }
+                if (!(prerequisites instanceof List)
+                        || !prerequisites.every { it instanceof String && !it.isBlank() }) {
+                    throw new GradleException(
+                            "Packaged default-tree rule has invalid prerequisites: ${path}")
+                }
+                blueprints.each { blueprint ->
+                    if (prerequisitesByTarget.put(blueprint, new LinkedHashSet<>(prerequisites)) != null) {
+                        throw new GradleException(
+                                "Packaged default-tree blueprint is targeted more than once: ${blueprint}")
+                    }
+                }
+            }
+            if (prerequisitesByTarget.size() != 172) {
+                throw new GradleException(
+                        "Expected the packaged default policies to cover 172 recipe-backed TaCZ blueprints, found "
+                                + prerequisitesByTarget.size())
+            }
+            def unknownPrerequisites = prerequisitesByTarget.values().flatten().findAll {
+                !prerequisitesByTarget.containsKey(it)
+            }.toSet()
+            if (!unknownPrerequisites.isEmpty()) {
+                throw new GradleException(
+                        "Packaged default tree references unknown prerequisites: ${unknownPrerequisites}")
+            }
+            if (exactTechPlacements.keySet() != prerequisitesByTarget.keySet()) {
+                def missingPlacements = new LinkedHashSet<String>(prerequisitesByTarget.keySet())
+                missingPlacements.removeAll(exactTechPlacements.keySet())
+                def placementsWithoutRules = new LinkedHashSet<String>(exactTechPlacements.keySet())
+                placementsWithoutRules.removeAll(prerequisitesByTarget.keySet())
+                throw new GradleException(
+                        'Packaged Research Tech Tree placements and research rules differ; '
+                                + "missing placements ${missingPlacements}, placements without rules ${placementsWithoutRules}")
+            }
+            def tierOrdinal = expectedTechTiers.withIndex().collectEntries { tier, index ->
+                [(tier): index]
+            }
+            def expectedTechRoots = [
+                    weapons: 'tacz:glock_17',
+                    attachments: 'tacz:grip_rk6',
+                    ammo: 'tacz:9mm'
+            ]
+            expectedTechDomains.each { domain ->
+                def domainTargets = exactTechPlacements.findAll { ignored, placement ->
+                    placement.domain == domain
+                }.keySet()
+                def domainRoots = domainTargets.findAll { target ->
+                    prerequisitesByTarget[target].isEmpty()
+                } as Set
+                if (domainRoots != ([expectedTechRoots[domain]] as Set)) {
+                    throw new GradleException(
+                            "Packaged ${domain} Tech Tree must have only ${expectedTechRoots[domain]} as its root, found ${domainRoots}")
+                }
+                domainTargets.each { target ->
+                    def targetPlacement = exactTechPlacements[target]
+                    prerequisitesByTarget[target].each { prerequisite ->
+                        def prerequisitePlacement = exactTechPlacements[prerequisite]
+                        if (prerequisitePlacement.domain != domain) {
+                            throw new GradleException(
+                                    "Packaged ${domain} Tech Tree has a cross-domain prerequisite: ${prerequisite} -> ${target}")
+                        }
+                        boolean movesBackward
+                        if (domain == 'weapons') {
+                            movesBackward = targetPlacement.rank <= prerequisitePlacement.rank
+                        } else {
+                            int prerequisiteTier = tierOrdinal[prerequisitePlacement.tier]
+                            int targetTier = tierOrdinal[targetPlacement.tier]
+                            movesBackward = targetTier < prerequisiteTier
+                                    || targetTier == prerequisiteTier
+                                    && targetPlacement.order <= prerequisitePlacement.order
+                        }
+                        if (movesBackward) {
+                            throw new GradleException(
+                                    "Packaged ${domain} Tech Tree prerequisite moves backward: ${prerequisite} -> ${target}")
+                        }
+                    }
+                }
+                def reachable = new LinkedHashSet<String>(domainRoots)
+                boolean expanded
+                do {
+                    expanded = false
+                    domainTargets.each { target ->
+                        if (!reachable.contains(target)
+                                && reachable.containsAll(prerequisitesByTarget[target])
+                                && reachable.add(target)) {
+                            expanded = true
+                        }
+                    }
+                } while (expanded)
+                if (reachable != domainTargets) {
+                    def unreachable = new LinkedHashSet<String>(domainTargets)
+                    unreachable.removeAll(reachable)
+                    throw new GradleException(
+                            "Packaged ${domain} Tech Tree is not fully reachable: ${unreachable}")
+                }
+            }
+            def weaponRanks = exactTechPlacements.findAll { ignored, placement ->
+                placement.domain == 'weapons'
+            }.values().collect { it.rank as int }
+            def occupiedWeaponRanks = weaponRanks.toSet().toList().sort()
+            def expectedWeaponRanks = (0..occupiedWeaponRanks.last()).toList()
+            def maximumWeaponRankPopulation = weaponRanks.countBy { it }.values().max()
+            if (occupiedWeaponRanks != expectedWeaponRanks
+                    || maximumWeaponRankPopulation > packagedTechTree['layout']['min_nodes_per_layer']) {
+                throw new GradleException(
+                        'Packaged weapon ranks must be contiguous and fit the format-2 layer cap; '
+                                + "ranks=${occupiedWeaponRanks}, maximum population=${maximumWeaponRankPopulation}")
+            }
+            def weaponTopologyManifest = exactTechPlacements.findAll { ignored, placement ->
+                placement.domain == 'weapons'
+            }.keySet().toList().sort().collect { blueprint ->
+                def prerequisites = prerequisitesByTarget[blueprint].toList().sort().join(',')
+                "${blueprint}|${exactTechPlacements[blueprint].rank}|${prerequisites}\n"
+            }.join('')
+            def weaponTopologyFingerprint = java.security.MessageDigest
+                    .getInstance('SHA-256')
+                    .digest(weaponTopologyManifest.getBytes('UTF-8'))
+                    .encodeHex().toString()
+            if (weaponTopologyFingerprint
+                    != 'd6e3e62e77370a2a76cb486489f1cdb25b0d7f7767d9523874fc476485b85e08') {
+                throw new GradleException(
+                        'Packaged weapon topology changed without updating its fingerprint: '
+                                + weaponTopologyFingerprint)
+            }
+            def groupedTargets = new LinkedHashSet<String>()
+            researchGroupFiles.sort().each { path ->
+                def group = parsePackagedJson(path)
+                if (group.containsKey('include_in_overview') && group['include_in_overview'] != true) {
+                    throw new GradleException(
+                            "Packaged default group must be included in All Weapons: ${path}")
+                }
+                def ranks = group['ranks']
+                if (!(ranks instanceof List) || !ranks.every { it instanceof List }) {
+                    throw new GradleException("Packaged default group has invalid ranks: ${path}")
+                }
+                ranks.flatten().each { member ->
+                    if (!(member instanceof String) || member.isBlank()) {
+                        throw new GradleException(
+                                "Packaged default group has an invalid member: ${path}")
+                    }
+                    if (!groupedTargets.add(member)) {
+                        throw new GradleException(
+                                "Packaged default group member appears more than once: ${member}")
+                    }
+                }
+            }
+            if (groupedTargets.size() != 53 || !prerequisitesByTarget.keySet().containsAll(groupedTargets)) {
+                throw new GradleException(
+                        'Packaged default research groups must cover exactly 53 targeted weapons')
+            }
+            def weaponPrerequisites = prerequisitesByTarget.findAll { target, ignored ->
+                groupedTargets.contains(target)
+            }
+            if (!weaponPrerequisites.values().flatten().every { groupedTargets.contains(it) }) {
+                throw new GradleException(
+                        'Packaged legacy weapon prerequisites must remain within the weapon presentation subset')
+            }
+            def weaponRoots = weaponPrerequisites.findAll { ignored, prerequisites ->
+                prerequisites.isEmpty()
+            }.keySet()
+            if (weaponRoots != (['tacz:glock_17'] as Set)) {
+                throw new GradleException(
+                        "Packaged weapon tree must have only tacz:glock_17 as its root, found ${weaponRoots}")
+            }
+            def reachableWeapons = new LinkedHashSet<String>(weaponRoots)
+            boolean expandedWeapons
+            do {
+                expandedWeapons = false
+                weaponPrerequisites.each { targetId, prerequisites ->
+                    if (!reachableWeapons.contains(targetId) && reachableWeapons.containsAll(prerequisites)) {
+                        if (reachableWeapons.add(targetId)) {
+                            expandedWeapons = true
+                        }
+                    }
+                }
+            } while (expandedWeapons)
+            if (reachableWeapons != groupedTargets) {
+                def unreachable = new LinkedHashSet<String>(groupedTargets)
+                unreachable.removeAll(reachableWeapons)
+                throw new GradleException(
+                        "Packaged weapon tree is not one connected progression; unreachable: ${unreachable}")
+            }
+            def languageEntry = zip.getEntry('assets/taczweaponblueprints/lang/en_us.json')
+            def language = zip.getInputStream(languageEntry).withCloseable { stream ->
+                jsonParser.parse(stream, 'UTF-8')
+            }
+            def requiredResearchTreeLanguageKeys = [
+                    'gui.taczweaponblueprints.research_bench.tree.search.toggle',
+                    'gui.taczweaponblueprints.research_bench.tree.search.close',
+                    'gui.taczweaponblueprints.research_bench.tree.search.results_action',
+                    'gui.taczweaponblueprints.research_bench.tree.search.narration.results',
+                    'gui.taczweaponblueprints.research_bench.tree.search.result.tooltip',
+                    'gui.taczweaponblueprints.research_bench.tree.search.result.narration',
+                    'gui.taczweaponblueprints.research_bench.tree.view.branches',
+                    'gui.taczweaponblueprints.research_bench.tree.view.all_weapons',
+                    'gui.taczweaponblueprints.research_bench.tree.view.tech_tree',
+                    'gui.taczweaponblueprints.research_bench.tree.view.branches.short',
+                    'gui.taczweaponblueprints.research_bench.tree.view.all_weapons.short',
+                    'gui.taczweaponblueprints.research_bench.tree.view.tech_tree.short',
+                    'gui.taczweaponblueprints.research_bench.tree.view.action.show_all_weapons',
+                    'gui.taczweaponblueprints.research_bench.tree.view.action.show_branches',
+                    'gui.taczweaponblueprints.research_bench.tree.view.action.show_tech_tree',
+                    'gui.taczweaponblueprints.research_bench.tree.view.tooltip',
+                    'gui.taczweaponblueprints.research_bench.tree.view.narration',
+                    'gui.taczweaponblueprints.research_bench.tree.domain.tooltip.count',
+                    'gui.taczweaponblueprints.research_bench.tree.domain.tooltip.unavailable',
+                    'gui.taczweaponblueprints.research_bench.tree.domain.weapons.short',
+                    'gui.taczweaponblueprints.research_bench.tree.domain.attachments.short',
+                    'gui.taczweaponblueprints.research_bench.tree.domain.ammo.short',
+                    'gui.taczweaponblueprints.research_bench.tree.domain.selected',
+                    'gui.taczweaponblueprints.research_bench.tree.domain.available',
+                    'gui.taczweaponblueprints.research_bench.tree.domain.unavailable',
+                    'gui.taczweaponblueprints.research_bench.tree.domain.narration',
+                    'gui.taczweaponblueprints.research_bench.tree.overview.empty',
+                    'gui.taczweaponblueprints.research_bench.tree.portal.requirement',
+                    'gui.taczweaponblueprints.research_bench.tree.portal.unlock',
+                    'gui.taczweaponblueprints.research_bench.tree.portal.open',
+                    'gui.taczweaponblueprints.research_bench.tree.portal.open_connected',
+                    'gui.taczweaponblueprints.research_bench.tree.portal.groups',
+                    'gui.taczweaponblueprints.research_bench.tree.portal.connections',
+                    'gui.taczweaponblueprints.research_bench.tree.rail.pin',
+                    'gui.taczweaponblueprints.research_bench.tree.rail.unpin',
+                    'gui.taczweaponblueprints.research_bench.tree.rail.entry.selected',
+                    'gui.taczweaponblueprints.research_bench.tree.rail.entry.available',
+                    'gui.taczweaponblueprints.research_bench.tree.rail.entry.view_action',
+                    'gui.taczweaponblueprints.research_bench.tree.rail.entry.usage',
+                    'gui.taczweaponblueprints.research_bench.tree.guide.fullscreen',
+                    'gui.taczweaponblueprints.research_bench.tree.guide.help',
+                    'gui.taczweaponblueprints.research_bench.tree.guide.navigation',
+                    'gui.taczweaponblueprints.research_bench.tree.guide.narration',
+                    'gui.taczweaponblueprints.research_bench.tree.recommendation.button',
+                    'gui.taczweaponblueprints.research_bench.tree.recommendation.none',
+                    'gui.taczweaponblueprints.research_bench.tree.recommendation.opens_paths',
+                    'gui.taczweaponblueprints.research_bench.tree.recommendation.within_budget',
+                    'gui.taczweaponblueprints.research_bench.tree.recommendation.lowest_cost',
+                    'gui.taczweaponblueprints.research_bench.tree.recommendation.narration',
+                    'gui.taczweaponblueprints.research_bench.tree.plan.track',
+                    'gui.taczweaponblueprints.research_bench.tree.plan.untrack',
+                    'gui.taczweaponblueprints.research_bench.tree.plan.unavailable',
+                    'gui.taczweaponblueprints.research_bench.tree.plan.no_next',
+                    'gui.taczweaponblueprints.research_bench.tree.plan.track.tooltip',
+                    'gui.taczweaponblueprints.research_bench.tree.plan.replace.tooltip',
+                    'gui.taczweaponblueprints.research_bench.tree.plan.untrack.tooltip',
+                    'gui.taczweaponblueprints.research_bench.tree.plan.complete',
+                    'gui.taczweaponblueprints.research_bench.tree.plan.summary',
+                    'gui.taczweaponblueprints.research_bench.tree.plan.summary.partial',
+                    'gui.taczweaponblueprints.research_bench.tree.plan.narration',
+                    'gui.taczweaponblueprints.research_bench.tree.legend.learned',
+                    'gui.taczweaponblueprints.research_bench.tree.legend.available',
+                    'gui.taczweaponblueprints.research_bench.tree.legend.locked',
+                    'gui.taczweaponblueprints.research_bench.tree.legend.hidden',
+                    'gui.taczweaponblueprints.research_bench.tree.card.narration',
+                    'gui.taczweaponblueprints.research_bench.tree.card.narration.exact',
+                    'gui.taczweaponblueprints.research_bench.tree.card.narration.cost',
+                    'gui.taczweaponblueprints.research_bench.tree.card.narration.cost_bypassed',
+                    'gui.taczweaponblueprints.research_bench.tree.card.narration.materials',
+                    'gui.taczweaponblueprints.research_bench.tree.card.narration.materials_bypassed',
+                    'gui.taczweaponblueprints.research_bench.tree.narration',
+                    'gui.taczweaponblueprints.research_bench.tree.narration.redacted',
+                    'gui.taczweaponblueprints.research_bench.tree.cost_bypassed',
+                    'gui.taczweaponblueprints.research_bench.tree.next.prepare_materials',
+                    'gui.taczweaponblueprints.research_bench.tree.status.available',
+                    'gui.taczweaponblueprints.research_bench.tree.tooltip.ingredient_count',
+                    'gui.taczweaponblueprints.research_bench.tree.tooltip.research_action',
+                    'gui.taczweaponblueprints.research_bench.tree.card.ingredient_bypassed',
+                    'gui.taczweaponblueprints.research_bench.tree.card.summary',
+                    'gui.taczweaponblueprints.research_bench.tree.card.relationships',
+                    'gui.taczweaponblueprints.research_bench.tree.selection.follow_path',
+                    'gui.taczweaponblueprints.research_bench.tree.selection.checking_requirements',
+                    'gui.taczweaponblueprints.research_bench.tree.selection.learned',
+                    'gui.taczweaponblueprints.research_bench.tree.selection.points_required',
+                    'gui.taczweaponblueprints.research_bench.tree.selection.materials_required',
+                    'gui.taczweaponblueprints.research_bench.tree.selection.inventory_space_required',
+                    'gui.taczweaponblueprints.research_bench.tree.selection.ready',
+                    'gui.taczweaponblueprints.research_bench.tree.selection.locked',
+                    'gui.taczweaponblueprints.research_bench.tree.selection.discovery_required',
+                    'gui.taczweaponblueprints.research_bench.tree.selection.prerequisites_required',
+                    'gui.taczweaponblueprints.research_bench.tree.selection.research_disabled',
+                    'gui.taczweaponblueprints.research_bench.tree.selection.cost_unavailable',
+                    'gui.taczweaponblueprints.research_bench.tree.selection.content_unavailable',
+                    'gui.taczweaponblueprints.research_bench.tree.selection.research_pending',
+                    'gui.taczweaponblueprints.research_bench.tree.selection.research_success',
+                    'gui.taczweaponblueprints.research_bench.tree.selection.selection_failed',
+                    'gui.taczweaponblueprints.research_bench.tree.keyboard_usage',
+                    'message.taczweaponblueprints.research.request_timeout',
+                    'commands.taczweaponblueprints.progression.points.give.success',
+                    'commands.taczweaponblueprints.progression.points.give.capped',
+                    'commands.taczweaponblueprints.progression.points.give.unavailable',
+                    'commands.taczweaponblueprints.research.automatic',
+                    'commands.taczweaponblueprints.research.automatic.unavailable',
+                    'commands.taczweaponblueprints.research.inspect.automatic',
+                    'gui.taczweaponblueprints.research_group.pistols',
+                    'gui.taczweaponblueprints.research_group.smgs',
+                    'gui.taczweaponblueprints.research_group.shotguns',
+                    'gui.taczweaponblueprints.research_group.rifles',
+                    'gui.taczweaponblueprints.research_group.snipers',
+                    'gui.taczweaponblueprints.research_group.machine_guns',
+                    'gui.taczweaponblueprints.research_group.special_weapons',
+                    'gui.taczweaponblueprints.research_group.undisclosed',
+                    'config.taczweaponblueprints.research_tree_client',
+                    'config.taczweaponblueprints.research_tree_client.desc',
+                    'config.taczweaponblueprints.research_tree_client.holdToResearch',
+                    'config.taczweaponblueprints.research_tree_client.holdToResearch.desc',
+                    'config.taczweaponblueprints.research_tree_client.holdDurationMillis',
+                    'config.taczweaponblueprints.research_tree_client.holdDurationMillis.desc',
+                    'config.taczweaponblueprints.research_tree_client.reduceMotion',
+                    'config.taczweaponblueprints.research_tree_client.reduceMotion.desc',
+                    'config.taczweaponblueprints.research_tree_client.showBackgroundGrid',
+                    'config.taczweaponblueprints.research_tree_client.showBackgroundGrid.desc',
+                    'config.taczweaponblueprints.research_tree_client.canvasPadding',
+                    'config.taczweaponblueprints.research_tree_client.canvasPadding.desc',
+                    'config.taczweaponblueprints.research_tree_client.nodeGap',
+                    'config.taczweaponblueprints.research_tree_client.nodeGap.desc',
+                    'config.taczweaponblueprints.research_tree_client.tierGap',
+                    'config.taczweaponblueprints.research_tree_client.tierGap.desc',
+                    'config.taczweaponblueprints.research_tree_client.componentGap',
+                    'config.taczweaponblueprints.research_tree_client.componentGap.desc',
+                    'config.taczweaponblueprints.research_tree_client.intraGroupGap',
+                    'config.taczweaponblueprints.research_tree_client.intraGroupGap.desc',
+                    'config.taczweaponblueprints.research_tree_client.interGroupGap',
+                    'config.taczweaponblueprints.research_tree_client.interGroupGap.desc',
+                    'config.taczweaponblueprints.research_tree_client.groupPadding',
+                    'config.taczweaponblueprints.research_tree_client.groupPadding.desc',
+                    'config.taczweaponblueprints.research_tree_client.groupHeaderHeight',
+                    'config.taczweaponblueprints.research_tree_client.groupHeaderHeight.desc',
+                    'config.taczweaponblueprints.research_tree_client.portalPadding',
+                    'config.taczweaponblueprints.research_tree_client.portalPadding.desc',
+                    'config.taczweaponblueprints.research_tree_client.maxRankBlockWidth',
+                    'config.taczweaponblueprints.research_tree_client.maxRankBlockWidth.desc',
+                    'config.taczweaponblueprints.research_tree_client.orderingSweeps',
+                    'config.taczweaponblueprints.research_tree_client.orderingSweeps.desc',
+                    'config.taczweaponblueprints.research_tree_client.compactionSweeps',
+                    'config.taczweaponblueprints.research_tree_client.compactionSweeps.desc',
+                    'config.taczweaponblueprints.blueprint.progressionExemptBlueprints',
+                    'config.taczweaponblueprints.blueprint.progressionExemptBlueprints.desc',
+                    'config.taczweaponblueprints.blueprint.balancePreset',
+                    'config.taczweaponblueprints.blueprint.balancePreset.desc',
+                    'config.taczweaponblueprints.blueprint.balancePreset.CUSTOM',
+                    'config.taczweaponblueprints.blueprint.balancePreset.CUSTOM.desc',
+                    'config.taczweaponblueprints.blueprint.balancePreset.ACCESSIBLE',
+                    'config.taczweaponblueprints.blueprint.balancePreset.ACCESSIBLE.desc',
+                    'config.taczweaponblueprints.blueprint.balancePreset.BALANCED',
+                    'config.taczweaponblueprints.blueprint.balancePreset.BALANCED.desc',
+                    'config.taczweaponblueprints.blueprint.balancePreset.SCARCE',
+                    'config.taczweaponblueprints.blueprint.balancePreset.SCARCE.desc',
+                    'config.taczweaponblueprints.blueprint.progressionExemptKinds',
+                    'config.taczweaponblueprints.blueprint.progressionExemptKinds.desc',
+                    'config.taczweaponblueprints.blueprint.progressionExemptItemTypes',
+                    'config.taczweaponblueprints.blueprint.progressionExemptItemTypes.desc',
+                    'config.taczweaponblueprints.blueprint.startingBlueprints',
+                    'config.taczweaponblueprints.blueprint.startingBlueprints.desc',
+                    'message.taczweaponblueprints.onboarding.journal_hint',
+                    'gui.taczweaponblueprints.journal.points.compact',
+                    'gui.taczweaponblueprints.journal.onboarding.help',
+                    'gui.taczweaponblueprints.journal.onboarding.title',
+                    'gui.taczweaponblueprints.journal.onboarding.intro',
+                    'gui.taczweaponblueprints.journal.onboarding.step.journal',
+                    'gui.taczweaponblueprints.journal.onboarding.step.points',
+                    'gui.taczweaponblueprints.journal.onboarding.step.bench',
+                    'gui.taczweaponblueprints.journal.onboarding.step.research',
+                    'gui.taczweaponblueprints.journal.onboarding.step.analyzer',
+                    'gui.taczweaponblueprints.journal.onboarding.earning_title',
+                    'gui.taczweaponblueprints.journal.onboarding.earning',
+                    'gui.taczweaponblueprints.journal.onboarding.got_it',
+                    'gui.taczweaponblueprints.journal.onboarding.narration',
+                    'gui.taczweaponblueprints.journal.onboarding.step.narration',
+                    'gui.taczweaponblueprints.journal.onboarding.state.complete',
+                    'gui.taczweaponblueprints.journal.onboarding.state.current',
+                    'gui.taczweaponblueprints.journal.onboarding.state.later',
+                    'gui.taczweaponblueprints.journal.onboarding.state.optional',
+                    'recipe_viewer.taczweaponblueprints.research_bench.1',
+                    'recipe_viewer.taczweaponblueprints.research_bench.2',
+                    'recipe_viewer.taczweaponblueprints.research_bench.3',
+                    'recipe_viewer.taczweaponblueprints.blueprint_analyzer.1',
+                    'recipe_viewer.taczweaponblueprints.blueprint_analyzer.2',
+                    'recipe_viewer.taczweaponblueprints.blueprint_analyzer.3',
+                    'recipe_viewer.taczweaponblueprints.blueprint.1',
+                    'recipe_viewer.taczweaponblueprints.blueprint.2',
+                    'recipe_viewer.taczweaponblueprints.research_data.1',
+                    'recipe_viewer.taczweaponblueprints.research_data.2'
+            ]
+            def authoredTechTreeLanguageKeys = [packagedTechTree['translation_key']]
+            authoredTechTreeLanguageKeys.addAll(
+                    (packagedTechTree['tiers'] ?: []).collect { it['translation_key'] })
+            packagedTechTree['domains'].each { domain ->
+                authoredTechTreeLanguageKeys.add(domain['translation_key'])
+                authoredTechTreeLanguageKeys.addAll(
+                        domain['lanes'].collect { it['translation_key'] })
+            }
+            requiredResearchTreeLanguageKeys.addAll(
+                    authoredTechTreeLanguageKeys.findAll {
+                        it instanceof String && !it.isBlank()
+                    })
+            def missingResearchTreeLanguageKeys = requiredResearchTreeLanguageKeys.findAll {
+                !language.containsKey(it) || !(language[it] instanceof String) || language[it].isBlank()
+            }
+            if (!missingResearchTreeLanguageKeys.isEmpty()) {
+                throw new GradleException(
+                        "Packaged Research Tree localization is incomplete: ${missingResearchTreeLanguageKeys}")
+            }
+
             def mixinEntry = zip.getEntry('taczweaponblueprints.mixins.json')
             def mixinConfig = zip.getInputStream(mixinEntry).withCloseable { stream ->
                 jsonParser.parse(stream, 'UTF-8')
             }
             def expectedClientMixins = [
+                    'EmiScreenBaseMixin',
                     'GunSmithTableScreenMixin',
                     'ICreativeModeTabsAccessor',
                     'IAbstractContainerScreenAccessor'
@@ -572,8 +2072,8 @@ tasks.register('verifyReleaseArtifact') {
             def globalIndex = zip.getInputStream(globalEntry).withCloseable { stream ->
                 jsonParser.parse(stream, 'UTF-8')
             }
-            if (!(globalIndex.entries instanceof List) || globalIndex.entries.size() != 486) {
-                throw new GradleException('Packaged global loot-modifier index must contain exactly 486 entries')
+            if (!(globalIndex.entries instanceof List) || globalIndex.entries.size() != 494) {
+                throw new GradleException('Packaged global loot-modifier index must contain exactly 494 entries')
             }
             if (globalIndex.entries.toSet().size() != globalIndex.entries.size()) {
                 throw new GradleException('Packaged global loot-modifier index contains duplicate entries')
@@ -618,6 +2118,19 @@ tasks.register('verifyReleaseArtifact') {
             def attributes = manifest.mainAttributes
             if (attributes.getValue('Implementation-Version') != project.version.toString()) {
                 throw new GradleException('Manifest implementation version does not match the project version')
+            }
+            if (attributes.getValue('Automatic-Placement-Version')
+                            != certifiedAutomaticPlacementVersion
+                    || attributes.getValue('Research-Tree-Protocol')
+                            != certifiedResearchTreeProtocol
+                    || attributes.getValue('Research-Catalog-Export-Format')
+                            != certifiedResearchCatalogExportFormat.toString()
+                    || attributes.getValue('Automatic-Publication-Contract')
+                            != certifiedAutomaticPublicationContract
+                    || attributes.getValue('Automatic-Publication-Health')
+                            != certifiedAutomaticPublicationHealthContract) {
+                throw new GradleException(
+                        'Packaged manifest does not match the certified automatic-tree contracts')
             }
             if (attributes.getValue('Implementation-Timestamp') != null) {
                 throw new GradleException('Manifest contains a non-reproducible implementation timestamp')
@@ -724,6 +2237,8 @@ tasks.register('verifyRuntimeSmokeLog') {
                 ~/(?i)mixin apply failed[^\n]*taczweaponblueprints/,
                 ~/(?i)taczweaponblueprints[^\n]*(invalidinjectionexception|nosuchmethoderror|noclassdeffounderror)/,
                 ~/(?i)(invalidinjectionexception|nosuchmethoderror|noclassdeffounderror)[^\n]*taczweaponblueprints/,
+                ~/(?i)(illegalargumentexception|illegalstateexception|indexoutofboundsexception|nullpointerexception):[^\n]*research tree/,
+                ~/(?is)suspected mod:\s*(?:\r?\n\s*)?tacz weapon blueprints/,
                 ~/(?i)failed to create mod instance[^\n]*taczweaponblueprints/,
                 ~/(?i)\[(?:[^\]]*\/)?(?:fatal|error)\][^\n]*taczweaponblueprints/
         ]
@@ -744,15 +2259,19 @@ tasks.register('certifyReleaseCandidate') {
     description = 'Runs publication gates and writes a machine-readable release-candidate artifact report.'
     dependsOn tasks.named('verifyPublicationReadiness')
 
-    def reportFile = layout.buildDirectory.file('reports/release-candidate.json')
+    def reportFile = releaseCandidateReportFile
     inputs.file(tasks.named('jar', Jar).flatMap { it.archiveFile })
     inputs.file('src/main/java/com/gamergaming/taczweaponblueprints/network/NetworkHandler.java')
+    inputs.file(taperedAutomaticTopologyReportFile)
+    inputs.file(automaticPublicationRecoveryReportFile)
     inputs.files(layout.buildDirectory.dir('test-results/test'))
     inputs.properties([
             minecraft_version : minecraft_version,
             forge_version     : forge_version,
             tacz_version      : tacz_version,
-            fzzy_config_version: fzzy_config_version
+            fzzy_config_version: fzzy_config_version,
+            jei_version       : jei_version,
+            emi_version       : emi_version
     ])
     outputs.file(reportFile)
 
@@ -801,6 +2320,132 @@ tasks.register('certifyReleaseCandidate') {
                 tacz           : tacz_version,
                 fzzyConfig     : fzzy_config_version,
                 networkProtocol: protocolMatch.group(1),
+                researchWorkstations: [
+                        researchBench: [
+                                registryId  : 'taczweaponblueprints:research_bench',
+                                presentation: 'permanent_fullscreen_research_tree',
+                                actions     : ['select', 'research'],
+                                localInputs : 0
+                        ],
+                        blueprintRecycler: [
+                                registryId  : 'taczweaponblueprints:blueprint_recycler',
+                                displayName : 'Blueprint Analyzer',
+                                presentation: 'two_slot_contextual_analyzer',
+                                actions     : ['recycle', 'redeem', 'redeem_stack', 'reverse_engineer'],
+                                localInputs : 1,
+                                localOutputs: 1,
+                                modelElements: 8,
+                                texture     : '256x256'
+                        ],
+                        recipeDiscovery: 'blueprint_or_bench_or_research_data',
+                        artifactGate   : 'verifyReleaseArtifact',
+                        manualQa       : 'docs/research-tree-manual-qa.md'
+                ],
+                blueprintAccess: [
+                        exemptions: ['exact_id', 'coarse_kind', 'item_type'],
+                        startingGrants: 'exact_id_idempotent_additive',
+                        exemptionPersistence: 'live_policy_only',
+                        awardPolicy: 'starting_grants_do_not_award'
+                ],
+                playerGuidance: [
+                        onboarding: 'journal_getting_started',
+                        reopening: 'journal_help_button',
+                        earningHelp: 'server_filtered',
+                        recipeViewers: [
+                                jei: [version: jei_version, dependency: 'optional'],
+                                emi: [version: emi_version, dependency: 'optional']
+                        ],
+                        viewerContent: 'generic_information_only',
+                        recipeTransfer: 'none',
+                        hiddenCatalogEnumeration: 'none'
+                ],
+                setupAssistant: [
+                        scope               : 'discovery_pacing_only',
+                        presets             : ['custom', 'accessible', 'balanced', 'scarce'],
+                        recommendationInputs: ['catalog_size', 'addon_count', 'research_audit'],
+                        application         : 'preview_then_explicit_confirm',
+                        customValues        : 'preserved',
+                        playerProgression   : 'unchanged',
+                        exportFormat        : 1,
+                        artifactGate        : 'verifyReleaseArtifact'
+                ],
+                unifiedTechTree: [
+                        viewOrder: ['branches', 'all_weapons', 'tech_tree'],
+                        domains : [
+                                [id: 'weapons', blueprints: 53, root: 'tacz:glock_17',
+                                        published: true, placementFormat: 2],
+                                [id: 'attachments', blueprints: 95, root: 'tacz:grip_rk6',
+                                        published: false, placementFormat: 1],
+                                [id: 'ammo', blueprints: 24, root: 'tacz:9mm',
+                                        published: false, placementFormat: 1]
+                        ],
+                        bandMode: 'dynamic',
+                        ranksPerBand: 3,
+                        weaponTopologyFingerprint:
+                                'd6e3e62e77370a2a76cb486489f1cdb25b0d7f7767d9523874fc476485b85e08',
+                        artifactGate: 'verifyReleaseArtifact'
+                ],
+                automaticPlacement: [
+                        profile         : 'taczweaponblueprints:default',
+                        tree            : 'taczweaponblueprints:default',
+                        bundledMode     : 'connected',
+                        reviewHandling  : 'place_connected',
+                        formulaVersion  : 'tacz-gun-mechanical-v2',
+                        referenceVersion: 'tacz-1.1.8-mechanical-v2',
+                        placementVersion: certifiedAutomaticPlacementVersion,
+                        layeringStrategy: 'dynamic_stat_layers',
+                        widthMode       : 'dynamic',
+                        widthFormula    : 'ceil_sqrt_four_thirds_topology_population',
+                        minNodesPerLayer: 9,
+                        maxNodesPerLayer: 20,
+                        baselineResolvedNodesPerLayer: 9,
+                        mixedRankCapacity: 'authored_slots_reserved',
+                        manualMinimumZoom: 0.15,
+                        widthSource     : 'tree_layout',
+                        foundationCount : 2,
+                        mergePolicy     : 'gradual_second_parent_taper_with_closure_guard',
+                        packagedMergeInterval: 4,
+                        progressionBands: 'tree_owned_none_dynamic_or_configured',
+                        maxCandidates   : 4096,
+                        exportFormat    : certifiedResearchCatalogExportFormat,
+                        publicationContract: certifiedAutomaticPublicationContract,
+                        publicationHealthContract:
+                                certifiedAutomaticPublicationHealthContract,
+                        publicationCompleteness:
+                                'candidate_branch_coordinate_decision_finalized_rank',
+                        incompleteCurrentPublication: 'reject_atomically',
+                        compatibilityBranchEvidence: 'optional_never_inferred',
+                        acceptanceCatalogSize: 287,
+                        acceptanceReport:
+                                'build/reports/tapered-automatic-topology.json',
+                        recoveryReport:
+                                'build/reports/automatic-publication-recovery.json',
+                        publicationHealthStates:
+                                ['empty', 'awaiting_rebuild', 'ready', 'failed'],
+                        failureStageDiagnostics: true,
+                        failureRecovery: 'new_revision_clears_stale_failure',
+                        topologyGate   : 'verifyTaperedAutomaticTopologyContract',
+                        recoveryGate   : 'verifyAutomaticPublicationRecoveryContract',
+                        artifactGate    : 'verifyReleaseArtifact'
+                ],
+                researchPointEconomy: [
+                        definitions          : 15,
+                        fixedProgressionPoints: 46,
+                        firstDiscoveryPoints : 1,
+                        pinnedCatalogMaximum : 218,
+                        pinnedResearchCost   : 1246,
+                        allPolicyResearchCost: 1246,
+                        enabledWeaponTreeCost: 418,
+                        weaponLeafSinglePaths: [minimum: 10, maximum: 54],
+                        weaponLeafClosures   : [minimum: 10, maximum: 88],
+                        weaponAndMerges      : 16,
+                        costAuthority        : 'research_policy',
+                        automaticCostCurve   : false,
+                        researchDataValues   : [note: 1, report: 3, dossier: 6],
+                        finiteOverflow       : 'require_full',
+                        combatDefault        : 'disabled',
+                        artifactGate         : 'verifyReleaseArtifact'
+                ],
                 tests          : [
                         total   : sumAttribute('tests'),
                         failures: sumAttribute('failures'),
@@ -815,9 +2460,30 @@ tasks.register('certifyReleaseCandidate') {
         ]
         def output = reportFile.get().asFile
         output.parentFile.mkdirs()
-        output.setText(
-                groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(report)) + '\n',
-                'UTF-8')
+        def reportText = groovy.json.JsonOutput.prettyPrint(
+                groovy.json.JsonOutput.toJson(report)) + '\n'
+        def temporaryReport = java.nio.file.Files.createTempFile(
+                output.parentFile.toPath(), 'release-candidate-', '.json.tmp')
+        try {
+            java.nio.file.Files.writeString(
+                    temporaryReport,
+                    reportText,
+                    java.nio.charset.StandardCharsets.UTF_8)
+            try {
+                java.nio.file.Files.move(
+                        temporaryReport,
+                        output.toPath(),
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            } catch (java.nio.file.AtomicMoveNotSupportedException ignored) {
+                java.nio.file.Files.move(
+                        temporaryReport,
+                        output.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            }
+        } finally {
+            java.nio.file.Files.deleteIfExists(temporaryReport)
+        }
         logger.lifecycle("Release candidate report: ${output}")
         logger.lifecycle("SHA-256: ${sha256}")
     }

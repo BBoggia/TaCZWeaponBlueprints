@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -16,6 +17,19 @@ import net.minecraft.resources.ResourceLocation;
 public final class ResearchTreeEdgeIndex {
     public static final ResearchTreeEdgeIndex EMPTY = new ResearchTreeEdgeIndex(null);
 
+    /**
+     * Explicit connector policy. Visual layout metadata must not silently decide
+     * whether an internal prerequisite is routed through a distant frame gutter.
+     */
+    public enum RoutingProfile {
+        /** Compatibility behavior for callers that have not selected a projection policy. */
+        AUTO,
+        /** Group-local tree with distinct fan-in/fan-out ports and nearby tracks. */
+        LOCAL_BRANCH,
+        /** Curated atlas with shared fork/merge ports and nearby tracks. */
+        UNIFIED_OVERVIEW
+    }
+
     private final IntervalNode root;
 
     private ResearchTreeEdgeIndex(IntervalNode root) {
@@ -23,6 +37,16 @@ public final class ResearchTreeEdgeIndex {
     }
 
     public static ResearchTreeEdgeIndex create(ResearchTreeGraph graph, ResearchTreeLayout layout) {
+        return create(graph, layout, RoutingProfile.AUTO);
+    }
+
+    public static ResearchTreeEdgeIndex create(
+            ResearchTreeGraph graph,
+            ResearchTreeLayout layout,
+            RoutingProfile routingProfile) {
+        if (routingProfile == null) {
+            throw new IllegalArgumentException("Research Tree routing profile cannot be null");
+        }
         if (graph == null || layout == null || graph.edges().isEmpty()) {
             return EMPTY;
         }
@@ -47,6 +71,17 @@ public final class ResearchTreeEdgeIndex {
                 .thenComparing(edge -> edge.prerequisiteId().toString());
         Map<ResearchTreeGraph.Edge, Port> outgoingPorts = indexPorts(outgoing, outgoingOrder);
         Map<ResearchTreeGraph.Edge, Port> incomingPorts = indexPorts(incoming, incomingOrder);
+        boolean automaticSharedPorts = layout.categoryLanes().isEmpty()
+                && layout.groupRegions().isEmpty();
+        boolean sharedPorts = switch (routingProfile) {
+            case AUTO -> automaticSharedPorts;
+            case LOCAL_BRANCH -> false;
+            case UNIFIED_OVERVIEW -> true;
+        };
+        boolean obstacleRouting = routingProfile != RoutingProfile.AUTO || automaticSharedPorts;
+        UnifiedObstacleIndex obstacleIndex = obstacleRouting
+                ? UnifiedObstacleIndex.create(layout)
+                : UnifiedObstacleIndex.EMPTY;
         for (ResearchTreeGraph.Edge edge : graph.edges()) {
             ResearchTreeLayout.PositionedNode prerequisite = layout.position(edge.prerequisiteId())
                     .orElseThrow(() -> new IllegalArgumentException("edge prerequisite is absent from layout"));
@@ -58,7 +93,11 @@ public final class ResearchTreeEdgeIndex {
                     dependent,
                     outgoingPorts.get(edge),
                     incomingPorts.get(edge),
-                    sourceRegion(layout, prerequisite)));
+                    sourceRegion(layout, prerequisite),
+                    layout,
+                    obstacleIndex,
+                    sharedPorts,
+                    obstacleRouting));
         }
         edges.sort(Comparator.comparingInt(PositionedEdge::minimumY)
                 .thenComparingInt(PositionedEdge::maximumY)
@@ -180,12 +219,31 @@ public final class ResearchTreeEdgeIndex {
             int endX,
             int endY,
             int arrowBaseY,
+            List<RoutePoint> points,
             int minimumX,
             int minimumY,
             int maximumX,
             int maximumY) {
         public PositionedEdge {
+            points = points == null ? List.of() : List.copyOf(points);
+            boolean hasDiagonalSegment = false;
+            for (int index = 1; index < points.size(); index++) {
+                RoutePoint previous = points.get(index - 1);
+                RoutePoint current = points.get(index);
+                if (previous != null && current != null
+                        && previous.x() != current.x()
+                        && previous.y() != current.y()) {
+                    hasDiagonalSegment = true;
+                    break;
+                }
+            }
             if (edge == null
+                    || points.size() < 2
+                    || points.stream().anyMatch(java.util.Objects::isNull)
+                    || hasDiagonalSegment
+                    || !points.get(0).equals(new RoutePoint(startX, startY))
+                    || !points.get(points.size() - 1).equals(
+                            new RoutePoint(endX, arrowBaseY))
                     || startY <= sourceExitY
                     || sourceExitY < targetApproachY
                     || targetApproachY < arrowBaseY
@@ -201,28 +259,88 @@ public final class ResearchTreeEdgeIndex {
                 ResearchTreeLayout.PositionedNode dependent,
                 Port outgoing,
                 Port incoming,
-                RoutingRegion sourceRegion) {
+                RoutingRegion sourceRegion,
+                ResearchTreeLayout layout,
+                UnifiedObstacleIndex obstacleIndex,
+                boolean sharedPorts,
+                boolean obstacleRouting) {
             if (outgoing == null || incoming == null) {
                 throw new IllegalArgumentException("research tree edge is missing a node port");
             }
-            int startX = portX(prerequisite, outgoing);
+            int startX = sharedPorts
+                    ? prerequisite.centerX()
+                    : portX(prerequisite, outgoing);
             int startY = prerequisite.y() - 1;
             int sourceExitY = startY - 6;
-            int endX = portX(dependent, incoming);
+            int endX = sharedPorts
+                    ? dependent.centerX()
+                    : portX(dependent, incoming);
             int endY = dependent.y() + ResearchTreeLayout.NODE_HEIGHT;
             int arrowBaseY = endY + 4;
             int targetApproachY = endY + 8;
+            boolean aligned = startX == endX;
             boolean routeRight = routeRight(prerequisite, dependent, sourceRegion);
-            int trackX;
-            if (sourceRegion == null) {
-                trackX = routeRight
-                        ? Math.min(prerequisite.x() + ResearchTreeLayout.NODE_WIDTH + 4,
-                                Math.max(prerequisite.centerX(), dependent.centerX()))
-                        : Math.max(prerequisite.x() - 4,
-                                Math.min(prerequisite.centerX(), dependent.centerX()));
-            } else {
-                trackX = routeRight ? sourceRegion.right() - 3 : sourceRegion.x() + 3;
+            ResearchTreeLayout.EdgeRouteHint routeHint = layout.edgeRouteHint(
+                    edge.prerequisiteId(), edge.dependentId()).orElse(null);
+            int trackX = routeHint != null
+                    ? routeHint.waypoints().get(0).x()
+                    : trackXWithoutHint(
+                            layout,
+                            prerequisite,
+                            dependent,
+                            startX,
+                            endX,
+                            sourceExitY,
+                            targetApproachY,
+                            routeRight,
+                            aligned,
+                            sourceRegion,
+                            obstacleIndex,
+                            obstacleRouting);
+            List<RoutePoint> points = routePoints(
+                    routeHint,
+                    startX,
+                    startY,
+                    sourceExitY,
+                    trackX,
+                    targetApproachY,
+                    endX,
+                    arrowBaseY);
+            if (routeHint != null && routeIntersectsUnrelatedNode(
+                    points, layout, prerequisite, dependent)) {
+                // Reusable group-local hints cannot anticipate the final position of every
+                // neighboring group in the unified atlas. Drop only the unsafe hint and let
+                // the ordinary obstacle router derive a truthful connector for this edge.
+                routeHint = null;
+                trackX = trackXWithoutHint(
+                        layout,
+                        prerequisite,
+                        dependent,
+                        startX,
+                        endX,
+                        sourceExitY,
+                        targetApproachY,
+                        routeRight,
+                        aligned,
+                        sourceRegion,
+                        obstacleIndex,
+                        obstacleRouting);
+                points = routePoints(
+                        null,
+                        startX,
+                        startY,
+                        sourceExitY,
+                        trackX,
+                        targetApproachY,
+                        endX,
+                        arrowBaseY);
             }
+            int minimumX = points.stream().mapToInt(RoutePoint::x).min().orElseThrow();
+            int maximumX = points.stream().mapToInt(RoutePoint::x).max().orElseThrow();
+            int minimumY = Math.min(
+                    points.stream().mapToInt(RoutePoint::y).min().orElseThrow(), endY);
+            int maximumY = Math.max(
+                    points.stream().mapToInt(RoutePoint::y).max().orElseThrow(), endY);
             return new PositionedEdge(
                     edge,
                     startX,
@@ -233,10 +351,175 @@ public final class ResearchTreeEdgeIndex {
                     endX,
                     endY,
                     arrowBaseY,
-                    Math.min(Math.min(startX, trackX), endX - 3) - 1,
-                    Math.min(startY, endY) - 1,
-                    Math.max(Math.max(startX, trackX), endX + 3) + 1,
-                    Math.max(startY, endY) + 1);
+                    points,
+                    Math.min(minimumX, endX - 3) - 1,
+                    minimumY - 1,
+                    Math.max(maximumX, endX + 3) + 1,
+                    maximumY + 1);
+        }
+
+        private static int trackXWithoutHint(
+                ResearchTreeLayout layout,
+                ResearchTreeLayout.PositionedNode prerequisite,
+                ResearchTreeLayout.PositionedNode dependent,
+                int startX,
+                int endX,
+                int sourceExitY,
+                int targetApproachY,
+                boolean routeRight,
+                boolean aligned,
+                RoutingRegion sourceRegion,
+                UnifiedObstacleIndex obstacleIndex,
+                boolean obstacleRouting) {
+            if (obstacleRouting) {
+                return unifiedTrackX(
+                        layout,
+                        prerequisite,
+                        dependent,
+                        startX,
+                        endX,
+                        sourceExitY,
+                        targetApproachY,
+                        routeRight,
+                        aligned,
+                        obstacleIndex);
+            }
+            if (sourceRegion == null) {
+                return routeRight
+                        ? Math.min(prerequisite.x() + ResearchTreeLayout.NODE_WIDTH + 4,
+                                Math.max(prerequisite.centerX(), dependent.centerX()))
+                        : Math.max(prerequisite.x() - 4,
+                                Math.min(prerequisite.centerX(), dependent.centerX()));
+            }
+            return routeRight ? sourceRegion.right() - 3 : sourceRegion.x() + 3;
+        }
+
+        private static boolean routeIntersectsUnrelatedNode(
+                List<RoutePoint> points,
+                ResearchTreeLayout layout,
+                ResearchTreeLayout.PositionedNode prerequisite,
+                ResearchTreeLayout.PositionedNode dependent) {
+            for (int pointIndex = 1; pointIndex < points.size(); pointIndex++) {
+                RoutePoint start = points.get(pointIndex - 1);
+                RoutePoint end = points.get(pointIndex);
+                for (ResearchTreeLayout.PositionedNode node : layout.nodes()) {
+                    if (!node.blueprintId().equals(prerequisite.blueprintId())
+                            && !node.blueprintId().equals(dependent.blueprintId())
+                            && segmentIntersectsInterior(start, end, node)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        private static boolean segmentIntersectsInterior(
+                RoutePoint start,
+                RoutePoint end,
+                ResearchTreeLayout.PositionedNode node) {
+            int minimumX = Math.min(start.x(), end.x());
+            int maximumX = Math.max(start.x(), end.x());
+            int minimumY = Math.min(start.y(), end.y());
+            int maximumY = Math.max(start.y(), end.y());
+            if (start.x() == end.x()) {
+                return start.x() > node.x()
+                        && start.x() < node.x() + ResearchTreeLayout.NODE_WIDTH
+                        && maximumY > node.y()
+                        && minimumY < node.y() + ResearchTreeLayout.NODE_HEIGHT;
+            }
+            return start.y() > node.y()
+                    && start.y() < node.y() + ResearchTreeLayout.NODE_HEIGHT
+                    && maximumX > node.x()
+                    && minimumX < node.x() + ResearchTreeLayout.NODE_WIDTH;
+        }
+
+        private static List<RoutePoint> routePoints(
+                ResearchTreeLayout.EdgeRouteHint routeHint,
+                int startX,
+                int startY,
+                int sourceExitY,
+                int trackX,
+                int targetApproachY,
+                int endX,
+                int arrowBaseY) {
+            List<RoutePoint> points = new ArrayList<>();
+            addPoint(points, startX, startY);
+            addPoint(points, startX, sourceExitY);
+            if (routeHint == null) {
+                addPoint(points, trackX, sourceExitY);
+                addPoint(points, trackX, targetApproachY);
+                addPoint(points, endX, targetApproachY);
+            } else {
+                int currentY = sourceExitY;
+                for (ResearchTreeLayout.RouteWaypoint waypoint : routeHint.waypoints()) {
+                    addPoint(points, waypoint.x(), currentY);
+                    currentY = waypoint.y() - ResearchTreeLayout.NODE_HEIGHT / 2 - 6;
+                    addPoint(points, waypoint.x(), currentY);
+                }
+                addPoint(points, endX, currentY);
+                addPoint(points, endX, targetApproachY);
+            }
+            addPoint(points, endX, arrowBaseY);
+            return List.copyOf(points);
+        }
+
+        private static void addPoint(List<RoutePoint> points, int x, int y) {
+            RoutePoint point = new RoutePoint(x, y);
+            if (points.isEmpty() || !points.get(points.size() - 1).equals(point)) {
+                points.add(point);
+            }
+        }
+
+        private static int unifiedTrackX(
+                ResearchTreeLayout layout,
+                ResearchTreeLayout.PositionedNode prerequisite,
+                ResearchTreeLayout.PositionedNode dependent,
+                int startX,
+                int endX,
+                int sourceExitY,
+                int targetApproachY,
+                boolean routeRight,
+                boolean aligned,
+                UnifiedObstacleIndex obstacleIndex) {
+            Integer directTrack = obstacleIndex.bestFeasibleBetween(
+                    startX,
+                    endX,
+                    sourceExitY,
+                    targetApproachY,
+                    prerequisite,
+                    dependent);
+            if (directTrack != null) {
+                return directTrack;
+            }
+            LinkedHashSet<Integer> candidates = new LinkedHashSet<>();
+            if (aligned) {
+                candidates.add(startX);
+            }
+            candidates.add(routeRight
+                    ? prerequisite.x() + ResearchTreeLayout.NODE_WIDTH + 4
+                    : prerequisite.x() - 4);
+            candidates.add(routeRight
+                    ? dependent.x() + ResearchTreeLayout.NODE_WIDTH + 4
+                    : dependent.x() - 4);
+            candidates.addAll(obstacleIndex.tracks());
+            candidates.add(0);
+            candidates.add(layout.width());
+            return candidates.stream()
+                    .filter(candidate -> candidate >= 0 && candidate <= layout.width())
+                    .filter(candidate -> !obstacleIndex.intersects(
+                            candidate,
+                            sourceExitY,
+                            targetApproachY,
+                            prerequisite,
+                            dependent))
+                    .min(Comparator
+                            .comparingInt((Integer candidate) ->
+                                    Math.abs(startX - candidate) + Math.abs(endX - candidate))
+                            .thenComparingInt(candidate -> Math.abs(startX - candidate))
+                            .thenComparingInt(Integer::intValue))
+                    .orElse(routeRight
+                            ? prerequisite.x() + ResearchTreeLayout.NODE_WIDTH + 4
+                            : prerequisite.x() - 4);
         }
 
         private static int portX(ResearchTreeLayout.PositionedNode node, Port port) {
@@ -257,6 +540,121 @@ public final class ResearchTreeEdgeIndex {
                     ? prerequisite.centerX()
                     : region.x() + region.width() / 2;
             return prerequisite.centerX() >= center;
+        }
+    }
+
+    public record RoutePoint(int x, int y) {
+    }
+
+    /** Precomputes only the track coordinates the unified router can request. */
+    private static final class UnifiedObstacleIndex {
+        private static final UnifiedObstacleIndex EMPTY =
+                new UnifiedObstacleIndex(
+                        java.util.Collections.emptyNavigableSet(), Map.of());
+        private final java.util.NavigableSet<Integer> tracks;
+        private final Map<Integer, List<ResearchTreeLayout.PositionedNode>> nodesByTrack;
+
+        private UnifiedObstacleIndex(
+                java.util.NavigableSet<Integer> tracks,
+                Map<Integer, List<ResearchTreeLayout.PositionedNode>> nodesByTrack) {
+            this.tracks = tracks;
+            this.nodesByTrack = nodesByTrack;
+        }
+
+        private static UnifiedObstacleIndex create(ResearchTreeLayout layout) {
+            java.util.NavigableSet<Integer> tracks = new java.util.TreeSet<>();
+            tracks.add(0);
+            tracks.add(layout.width());
+            for (ResearchTreeLayout.PositionedNode node : layout.nodes()) {
+                tracks.add(node.centerX());
+                if (node.x() >= 4) {
+                    tracks.add(node.x() - 4);
+                }
+                if (node.x() + ResearchTreeLayout.NODE_WIDTH + 4 <= layout.width()) {
+                    tracks.add(node.x() + ResearchTreeLayout.NODE_WIDTH + 4);
+                }
+            }
+            Map<Integer, List<ResearchTreeLayout.PositionedNode>> mutable =
+                    new HashMap<>();
+            for (ResearchTreeLayout.PositionedNode node : layout.nodes()) {
+                tracks.subSet(
+                                node.x() + 1,
+                                true,
+                                node.x() + ResearchTreeLayout.NODE_WIDTH - 1,
+                                true)
+                        .forEach(track -> mutable.computeIfAbsent(
+                                track, ignored -> new ArrayList<>()).add(node));
+            }
+            mutable.replaceAll((ignored, nodes) -> nodes.stream()
+                    .sorted(Comparator
+                            .comparingInt(ResearchTreeLayout.PositionedNode::y)
+                            .thenComparing(node -> node.blueprintId().toString()))
+                    .toList());
+            return new UnifiedObstacleIndex(
+                    java.util.Collections.unmodifiableNavigableSet(
+                            new java.util.TreeSet<>(tracks)),
+                    Map.copyOf(mutable));
+        }
+
+        private java.util.NavigableSet<Integer> tracks() {
+            return tracks;
+        }
+
+        /**
+         * Every track between the two connector ports has the same minimum
+         * Manhattan length. Walking away from the source therefore finds the
+         * exact comparator winner without scanning every track on the canvas.
+         */
+        private Integer bestFeasibleBetween(
+                int startX,
+                int endX,
+                int firstY,
+                int secondY,
+                ResearchTreeLayout.PositionedNode prerequisite,
+                ResearchTreeLayout.PositionedNode dependent) {
+            java.util.NavigableSet<Integer> between = startX <= endX
+                    ? tracks.subSet(startX, true, endX, true)
+                    : tracks.subSet(endX, true, startX, true).descendingSet();
+            for (Integer track : between) {
+                if (!intersects(
+                        track, firstY, secondY, prerequisite, dependent)) {
+                    return track;
+                }
+            }
+            return null;
+        }
+
+        private boolean intersects(
+                int trackX,
+                int firstY,
+                int secondY,
+                ResearchTreeLayout.PositionedNode prerequisite,
+                ResearchTreeLayout.PositionedNode dependent) {
+            int minimumY = Math.min(firstY, secondY);
+            int maximumY = Math.max(firstY, secondY);
+            List<ResearchTreeLayout.PositionedNode> nodes =
+                    nodesByTrack.getOrDefault(trackX, List.of());
+            int low = 0;
+            int high = nodes.size();
+            while (low < high) {
+                int middle = (low + high) >>> 1;
+                if (nodes.get(middle).y() + ResearchTreeLayout.NODE_HEIGHT <= minimumY) {
+                    low = middle + 1;
+                } else {
+                    high = middle;
+                }
+            }
+            for (int index = low; index < nodes.size(); index++) {
+                ResearchTreeLayout.PositionedNode node = nodes.get(index);
+                if (node.y() >= maximumY) {
+                    break;
+                }
+                if (!node.blueprintId().equals(prerequisite.blueprintId())
+                        && !node.blueprintId().equals(dependent.blueprintId())) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 

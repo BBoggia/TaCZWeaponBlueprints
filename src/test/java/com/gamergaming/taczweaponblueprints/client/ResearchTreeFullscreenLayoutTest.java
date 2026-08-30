@@ -46,6 +46,9 @@ class ResearchTreeFullscreenLayoutTest {
         assertEquals(0, layout.edgeReveal().x());
         assertEquals(ResearchTreeFullscreenLayout.EDGE_REVEAL_WIDTH,
                 layout.edgeReveal().width());
+        assertTrue(layout.edgeRevealHitTarget().contains(layout.edgeReveal()));
+        assertTrue(layout.edgeRevealHitTarget().width()
+                >= ResearchTreeFullscreenLayout.EDGE_REVEAL_HIT_WIDTH);
     }
 
     @Test

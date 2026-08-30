@@ -6,6 +6,7 @@
     "blueprints": ["example_guns:starter_pistol"]
   },
   "visibility": "preview",
+  "tree_enabled": true,
   "research_cost": {
     "points": 4,
     "ingredients": [{ "items": ["minecraft:paper"], "count": 2 }]

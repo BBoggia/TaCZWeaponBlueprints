@@ -6,6 +6,7 @@
   "icon": "tacz:springfield1873",
   "order": 50,
   "ranks": [
+    [],
     ["tacz:springfield1873"],
     ["tacz:kar98", "tacz:m700"],
     ["tacz:ai_awp"],

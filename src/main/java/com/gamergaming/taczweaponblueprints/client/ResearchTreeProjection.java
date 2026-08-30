@@ -11,8 +11,8 @@ import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayout;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * One client-only view of the authoritative public graph. Branch projections
- * retain cross-group edges as disclosure-safe links for the later portal UI.
+ * One client-only view of the authoritative public graph. Branch and curated
+ * overview projections retain boundary edges as disclosure-safe portal links.
  */
 public record ResearchTreeProjection(
         ResearchTreePresentationContract.BrowseView view,
@@ -30,11 +30,14 @@ public record ResearchTreeProjection(
         if (new LinkedHashSet<>(crossGroupLinks).size() != crossGroupLinks.size()) {
             throw new IllegalArgumentException("Research Tree projection contains duplicate links");
         }
+        if (view == ResearchTreePresentationContract.BrowseView.TECH_TREE) {
+            throw new IllegalArgumentException(
+                    "Tech Tree projections require their typed domain contract");
+        }
         if (view == ResearchTreePresentationContract.BrowseView.ALL_WEAPONS) {
-            if (groupId.isPresent() || !crossGroupLinks.isEmpty()
-                    || !layout.groupRegions().isEmpty()) {
+            if (groupId.isPresent() || !layout.groupRegions().isEmpty()) {
                 throw new IllegalArgumentException(
-                        "All Weapons must use the unpartitioned global layout");
+                        "All Weapons must use an unpartitioned overview layout");
             }
         } else if (groupId.isEmpty() && !graph.nodes().isEmpty()) {
             throw new IllegalArgumentException("non-empty Branches projection requires a group");

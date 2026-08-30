@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IRI",
+    "IGI",
+    "IHI"
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:grindstone"
+    },
+    "H": {
+      "item": "minecraft:hopper"
+    },
+    "I": {
+      "tag": "forge:ingots/iron"
+    },
+    "R": {
+      "item": "minecraft:redstone"
+    }
+  },
+  "result": {
+    "item": "taczweaponblueprints:blueprint_recycler"
+  },
+  "show_notification": true
+}

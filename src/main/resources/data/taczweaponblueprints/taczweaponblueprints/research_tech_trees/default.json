@@ -1,0 +1,71 @@
+{
+  "format": 2,
+  "title": "Research Tech Tree",
+  "translation_key": "gui.taczweaponblueprints.tech_tree.title",
+  "icon": "tacz:glock_17",
+  "layout": {
+    "width_mode": "dynamic",
+    "min_nodes_per_layer": 9,
+    "max_nodes_per_layer": 20
+  },
+  "bands": {
+    "mode": "dynamic",
+    "ranks_per_band": 3
+  },
+  "domains": [
+    {
+      "id": "weapons",
+      "title": "Weapons",
+      "translation_key": "gui.taczweaponblueprints.tech_tree.domain.weapons",
+      "icon": "tacz:glock_17",
+      "fallback_lane": "taczweaponblueprints:weapons/general",
+      "fallback_tier": "basic",
+      "lanes": [
+        {"id": "taczweaponblueprints:weapons/handguns", "title": "Handguns", "translation_key": "gui.taczweaponblueprints.tech_tree.lane.handguns", "icon": "tacz:glock_17", "order": 10},
+        {"id": "taczweaponblueprints:weapons/smgs", "title": "Submachine Guns", "translation_key": "gui.taczweaponblueprints.tech_tree.lane.smgs", "icon": "tacz:uzi", "order": 20},
+        {"id": "taczweaponblueprints:weapons/shotguns", "title": "Shotguns", "translation_key": "gui.taczweaponblueprints.tech_tree.lane.shotguns", "icon": "tacz:db_long", "order": 30},
+        {"id": "taczweaponblueprints:weapons/rifles", "title": "Rifles", "translation_key": "gui.taczweaponblueprints.tech_tree.lane.rifles", "icon": "tacz:m16a4", "order": 40},
+        {"id": "taczweaponblueprints:weapons/snipers", "title": "Sniper Rifles", "translation_key": "gui.taczweaponblueprints.tech_tree.lane.snipers", "icon": "tacz:springfield1873", "order": 50},
+        {"id": "taczweaponblueprints:weapons/machine_guns", "title": "Machine Guns", "translation_key": "gui.taczweaponblueprints.tech_tree.lane.machine_guns", "icon": "tacz:rpk", "order": 60},
+        {"id": "taczweaponblueprints:weapons/heavy", "title": "Heavy Weapons", "translation_key": "gui.taczweaponblueprints.tech_tree.lane.heavy", "icon": "tacz:m320", "order": 70},
+        {"id": "taczweaponblueprints:weapons/general", "title": "Other Weapons", "translation_key": "gui.taczweaponblueprints.tech_tree.lane.other_weapons", "order": 1000}
+      ]
+    },
+    {
+      "id": "attachments",
+      "title": "Attachments",
+      "translation_key": "gui.taczweaponblueprints.tech_tree.domain.attachments",
+      "icon": "tacz:sight_t1",
+      "fallback_lane": "taczweaponblueprints:attachments/general",
+      "fallback_tier": "basic",
+      "lanes": [
+        {"id": "taczweaponblueprints:attachments/optics", "title": "Optics", "translation_key": "gui.taczweaponblueprints.tech_tree.lane.optics", "icon": "tacz:sight_t1", "order": 10},
+        {"id": "taczweaponblueprints:attachments/muzzles", "title": "Muzzle Devices", "translation_key": "gui.taczweaponblueprints.tech_tree.lane.muzzles", "icon": "tacz:muzzle_silencer_mirage", "order": 20},
+        {"id": "taczweaponblueprints:attachments/grips", "title": "Grips", "translation_key": "gui.taczweaponblueprints.tech_tree.lane.grips", "icon": "tacz:grip_rk6", "order": 30},
+        {"id": "taczweaponblueprints:attachments/stocks", "title": "Stocks", "translation_key": "gui.taczweaponblueprints.tech_tree.lane.stocks", "icon": "tacz:oem_stock_light", "order": 40},
+        {"id": "taczweaponblueprints:attachments/magazines", "title": "Magazines", "translation_key": "gui.taczweaponblueprints.tech_tree.lane.magazines", "icon": "tacz:light_extended_mag_1", "order": 50},
+        {"id": "taczweaponblueprints:attachments/lasers", "title": "Lasers", "translation_key": "gui.taczweaponblueprints.tech_tree.lane.lasers", "icon": "tacz:laser_compact", "order": 60},
+        {"id": "taczweaponblueprints:attachments/ammo_mods", "title": "Ammunition Modifiers", "translation_key": "gui.taczweaponblueprints.tech_tree.lane.ammo_mods", "icon": "tacz:ammo_mod_fmj", "order": 70},
+        {"id": "taczweaponblueprints:attachments/general", "title": "Other Attachments", "translation_key": "gui.taczweaponblueprints.tech_tree.lane.other_attachments", "order": 1000}
+      ]
+    },
+    {
+      "id": "ammo",
+      "title": "Ammunition",
+      "translation_key": "gui.taczweaponblueprints.tech_tree.domain.ammo",
+      "icon": "tacz:9mm",
+      "fallback_lane": "taczweaponblueprints:ammo/general",
+      "fallback_tier": "basic",
+      "lanes": [
+        {"id": "taczweaponblueprints:ammo/handgun", "title": "Handgun Cartridges", "translation_key": "gui.taczweaponblueprints.tech_tree.lane.handgun_ammo", "icon": "tacz:9mm", "order": 10},
+        {"id": "taczweaponblueprints:ammo/pdw", "title": "PDW Cartridges", "translation_key": "gui.taczweaponblueprints.tech_tree.lane.pdw_ammo", "icon": "tacz:57x28", "order": 20},
+        {"id": "taczweaponblueprints:ammo/intermediate", "title": "Intermediate Rifle", "translation_key": "gui.taczweaponblueprints.tech_tree.lane.intermediate_ammo", "icon": "tacz:556x45", "order": 30},
+        {"id": "taczweaponblueprints:ammo/full_power", "title": "Full-Power Rifle", "translation_key": "gui.taczweaponblueprints.tech_tree.lane.full_power_ammo", "icon": "tacz:308", "order": 40},
+        {"id": "taczweaponblueprints:ammo/precision", "title": "Precision and Anti-Materiel", "translation_key": "gui.taczweaponblueprints.tech_tree.lane.precision_ammo", "icon": "tacz:50bmg", "order": 50},
+        {"id": "taczweaponblueprints:ammo/shotgun", "title": "Shotgun Shells", "translation_key": "gui.taczweaponblueprints.tech_tree.lane.shotgun_ammo", "icon": "tacz:12g", "order": 60},
+        {"id": "taczweaponblueprints:ammo/ordnance", "title": "Ordnance", "translation_key": "gui.taczweaponblueprints.tech_tree.lane.ordnance", "icon": "tacz:40mm", "order": 70},
+        {"id": "taczweaponblueprints:ammo/general", "title": "Other Ammunition", "translation_key": "gui.taczweaponblueprints.tech_tree.lane.other_ammo", "order": 1000}
+      ]
+    }
+  ]
+}

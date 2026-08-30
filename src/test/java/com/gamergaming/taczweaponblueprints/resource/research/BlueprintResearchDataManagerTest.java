@@ -27,6 +27,30 @@ import net.minecraft.util.profiling.InactiveProfiler;
 
 class BlueprintResearchDataManagerTest {
     @Test
+    void preparesTechTreeMapsAndAdditiveEntryBundlesAtomically() {
+        ResourceManager resources = resourceManager(Map.of(
+                new ResourceLocation("test", "taczweaponblueprints/research_profiles/profile.json"),
+                resource(validProfileJsonWithTechTree()),
+                new ResourceLocation("test", "taczweaponblueprints/research_tech_trees/progression.json"),
+                resource(validTechTreeJson()),
+                new ResourceLocation("test", "taczweaponblueprints/research_tech_tree_entries/base.json"),
+                resource(validTechTreeEntryJson())));
+
+        BlueprintResearchSnapshot prepared = BlueprintResearchDataManager.INSTANCE.prepare(
+                resources,
+                InactiveProfiler.INSTANCE);
+
+        assertEquals(1, prepared.techTrees().size());
+        assertEquals(1, prepared.techTreeEntryBundles().size());
+        assertEquals(
+                new ResourceLocation("test", "progression"),
+                prepared.profiles().get(new ResourceLocation("test", "profile"))
+                        .techTree().orElseThrow());
+        assertEquals(1, prepared.techTreeEntriesFor(
+                new ResourceLocation("test", "progression")).size());
+    }
+
+    @Test
     void preparesStrictResearchTreeGroupsAlongsideExistingDefinitions() {
         ResourceManager resources = resourceManager(Map.of(
                 new ResourceLocation("test", "taczweaponblueprints/research_profiles/profile.json"),
@@ -180,6 +204,56 @@ class BlueprintResearchDataManagerTest {
                   "research_cost": {"points": 8},
                   "requires_discovery": false,
                   "creative_bypasses_cost": false
+                }
+                """;
+    }
+
+    private static String validProfileJsonWithTechTree() {
+        return validProfileJson().replace(
+                "\"creative_bypasses_cost\": false",
+                "\"creative_bypasses_cost\": false,\n  \"tech_tree\": \"test:progression\"");
+    }
+
+    private static String validTechTreeJson() {
+        return """
+                {
+                  "format": 1,
+                  "title": "Progression",
+                  "tiers": [
+                    {"id": "starter", "title": "Starter"},
+                    {"id": "basic", "title": "Basic"},
+                    {"id": "established", "title": "Established"},
+                    {"id": "advanced", "title": "Advanced"},
+                    {"id": "elite", "title": "Elite"},
+                    {"id": "apex", "title": "Apex"}
+                  ],
+                  "domains": [{
+                    "id": "weapons",
+                    "title": "Weapons",
+                    "fallback_lane": "test:weapons/general",
+                    "fallback_tier": "starter",
+                    "lanes": [{
+                      "id": "test:weapons/general",
+                      "title": "General",
+                      "order": 10
+                    }]
+                  }]
+                }
+                """;
+    }
+
+    private static String validTechTreeEntryJson() {
+        return """
+                {
+                  "format": 1,
+                  "tree": "test:progression",
+                  "entries": [{
+                    "target": {"blueprints": ["test:starter"]},
+                    "domain": "weapons",
+                    "lane": "test:weapons/general",
+                    "tier": "starter",
+                    "order": 10
+                  }]
                 }
                 """;
     }

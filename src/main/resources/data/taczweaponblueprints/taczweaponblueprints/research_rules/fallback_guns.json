@@ -1,0 +1,14 @@
+{
+  "format": 1,
+  "profile": "taczweaponblueprints:duplicate_recovery",
+  "priority": 0,
+  "target": {
+    "selector": {
+      "blueprint_kinds": ["gun"]
+    }
+  },
+  "visibility": "preview",
+  "tree_enabled": true,
+  "research_enabled": true,
+  "requires_discovery": false
+}

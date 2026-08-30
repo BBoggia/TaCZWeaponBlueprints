@@ -2,10 +2,9 @@ package com.gamergaming.taczweaponblueprints.client;
 
 import com.gamergaming.taczweaponblueprints.journal.BlueprintJournalSnapshot;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
-import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayout;
-import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayoutEngine;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePresentation;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePublication;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreePresentation;
 
 /** One atomic client publication for the Journal and its matching research tree. */
 public final class ClientResearchState {
@@ -39,7 +38,8 @@ public final class ClientResearchState {
                     && Long.compare(pendingTreeGeneration, publication.generation()) > 0
                     && Long.compare(pendingTreeGeneration, generation) <= 0
                     ? pendingTree
-                    : new ResearchTreePublication(publication.graph(), publication.presentation());
+                    : new ResearchTreePublication(
+                            publication.graph(), publication.presentation(), publication.techTree());
             publish(generation, journal, reusableTree);
             discardPendingThrough(generation);
             return;
@@ -70,7 +70,7 @@ public final class ClientResearchState {
 
     static synchronized void publishJournalOnly(BlueprintJournalSnapshot journal) {
         publish(publication.generation(), journal, new ResearchTreePublication(
-                publication.graph(), publication.presentation()));
+                publication.graph(), publication.presentation(), publication.techTree()));
     }
 
     static synchronized void publishTreeOnly(ResearchTreePublication tree) {
@@ -100,17 +100,12 @@ public final class ClientResearchState {
             long generation,
             BlueprintJournalSnapshot journal,
             ResearchTreePublication tree) {
-        ResearchTreePublication currentTree = new ResearchTreePublication(
-                publication.graph(), publication.presentation());
-        ResearchTreeLayout layout = currentTree.hasSamePresentationTopology(tree)
-                ? publication.layout()
-                : ResearchTreeLayoutEngine.layout(tree);
         publication = new Publication(
                 generation,
                 journal,
                 tree.graph(),
                 tree.presentation(),
-                layout);
+                tree.techTree());
     }
 
     private static void clearPending() {
@@ -142,33 +137,27 @@ public final class ClientResearchState {
             BlueprintJournalSnapshot journal,
             ResearchTreeGraph graph,
             ResearchTreePresentation presentation,
-            ResearchTreeLayout layout) {
+            ResearchTechTreePresentation techTree) {
         private static final Publication EMPTY = new Publication(
                 Long.MIN_VALUE,
                 BlueprintJournalSnapshot.EMPTY,
                 ResearchTreeGraph.EMPTY,
                 ResearchTreePresentation.EMPTY,
-                ResearchTreeLayout.EMPTY);
+                ResearchTechTreePresentation.EMPTY);
+
+        public Publication(
+                long generation,
+                BlueprintJournalSnapshot journal,
+                ResearchTreeGraph graph,
+                ResearchTreePresentation presentation) {
+            this(generation, journal, graph, presentation, ResearchTechTreePresentation.EMPTY);
+        }
 
         public Publication {
-            if (journal == null || graph == null || presentation == null || layout == null
-                    || graph.nodes().size() != layout.nodes().size()) {
+            if (journal == null || graph == null || presentation == null || techTree == null) {
                 throw new IllegalArgumentException("invalid combined research publication");
             }
-            new ResearchTreePublication(graph, presentation);
-            for (int ordinal = 0; ordinal < graph.nodes().size(); ordinal++) {
-                if (!graph.nodes().get(ordinal).blueprintId()
-                        .equals(layout.nodes().get(ordinal).blueprintId())) {
-                    throw new IllegalArgumentException("research graph and layout do not match");
-                }
-            }
-            for (ResearchTreeLayout.HiddenAnchor anchor : layout.hiddenAnchors()) {
-                ResearchTreeGraph.Node node = graph.node(anchor.dependentId()).orElseThrow(() ->
-                        new IllegalArgumentException("hidden anchor references an unknown node"));
-                if (node.hiddenPrerequisiteCount() != anchor.hiddenCount()) {
-                    throw new IllegalArgumentException("hidden anchor count does not match its node");
-                }
-            }
+            new ResearchTreePublication(graph, presentation, techTree);
         }
     }
 }

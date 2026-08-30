@@ -212,6 +212,32 @@ class BlueprintResearchSnapshotTest {
         }
         assertThrows(IllegalArgumentException.class, () -> snapshot(excessiveTargets));
 
+        Map<ResourceLocation, BlueprintResearchRule> excessiveExpandedPrerequisites =
+                new LinkedHashMap<>();
+        List<ResourceLocation> sharedPrerequisites = IntStream.range(
+                        0, BlueprintResearchTarget.MAX_TERMS)
+                .mapToObj(index -> id("test:shared_prerequisite_" + index))
+                .toList();
+        for (int ruleIndex = 0; ruleIndex < 2; ruleIndex++) {
+            int currentRule = ruleIndex;
+            List<ResourceLocation> targets = IntStream.range(
+                            0, BlueprintResearchTarget.MAX_TERMS)
+                    .mapToObj(termIndex -> id(
+                            "test:dependent_" + currentRule + "_" + termIndex))
+                    .toList();
+            excessiveExpandedPrerequisites.put(
+                    id("test:prerequisite_rule_" + ruleIndex),
+                    rule(
+                            target(targets, List.of(), false),
+                            0,
+                            Optional.empty(),
+                            Optional.empty(),
+                            Optional.of(sharedPrerequisites)));
+        }
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> snapshot(excessiveExpandedPrerequisites));
+
         ResourceLocation tagId = id("test:large_tag");
         BlueprintLootTag tag = new BlueprintLootTag(
                 1,
@@ -281,15 +307,44 @@ class BlueprintResearchSnapshotTest {
                             JsonParser.parseReader(new InputStreamReader(stream, StandardCharsets.UTF_8)))
                     .result()
                     .orElseThrow();
+            String treePath =
+                    "data/taczweaponblueprints/taczweaponblueprints/research_tech_trees/default.json";
+            ResearchTechTreeDefinition tree;
+            try (var treeStream = getClass().getClassLoader().getResourceAsStream(treePath)) {
+                if (treeStream == null) {
+                    throw new IllegalStateException("Missing packaged Research Tech Tree " + treePath);
+                }
+                tree = ResearchTechTreeDefinition.CODEC.parse(
+                                JsonOps.INSTANCE,
+                                JsonParser.parseReader(new InputStreamReader(
+                                        treeStream, StandardCharsets.UTF_8)))
+                        .result()
+                        .orElseThrow();
+            }
             BlueprintResearchSnapshot loaded = BlueprintResearchSnapshot.create(
                     Map.of(),
                     Map.of(BlueprintResearchDataManager.DEFAULT_PROFILE, packaged),
+                    Map.of(),
+                    Map.of(),
+                    Map.of(id("taczweaponblueprints:default"), tree),
                     Map.of());
 
             assertEquals(1, loaded.profiles().size());
+            assertEquals(2, packaged.format());
+            assertEquals(BlueprintResearchProfile.DomainPolicy.ENABLED,
+                    packaged.domainPolicy(com.gamergaming.taczweaponblueprints.research.tree
+                            .ResearchTechTreeContract.Domain.WEAPONS));
+            assertEquals(new BlueprintResearchProfile.DomainPolicy(false, false),
+                    packaged.domainPolicy(com.gamergaming.taczweaponblueprints.research.tree
+                            .ResearchTechTreeContract.Domain.ATTACHMENTS));
+            assertEquals(new BlueprintResearchProfile.DomainPolicy(false, false),
+                    packaged.domainPolicy(com.gamergaming.taczweaponblueprints.research.tree
+                            .ResearchTechTreeContract.Domain.AMMO));
             assertEquals(JournalVisibility.SILHOUETTE, packaged.visibility());
             assertEquals(1, packaged.recyclingValue());
             assertEquals(8, packaged.researchCost().points());
+            assertTrue(packaged.reverseEngineering().allowKnown());
+            assertEquals(false, packaged.reverseEngineering().outputRecyclable());
         }
     }
 
@@ -305,6 +360,16 @@ class BlueprintResearchSnapshotTest {
                 BlueprintResearchDataManager.definitionId(
                         id("example:taczweaponblueprints/research_tree_groups/weapons/pistols.json"),
                         BlueprintResearchDataManager.GROUP_DIRECTORY));
+        assertEquals(
+                id("example:default/progression"),
+                BlueprintResearchDataManager.definitionId(
+                        id("example:taczweaponblueprints/research_tech_trees/default/progression.json"),
+                        BlueprintResearchDataManager.TECH_TREE_DIRECTORY));
+        assertEquals(
+                id("example:weapons/base"),
+                BlueprintResearchDataManager.definitionId(
+                        id("example:taczweaponblueprints/research_tech_tree_entries/weapons/base.json"),
+                        BlueprintResearchDataManager.TECH_TREE_ENTRY_DIRECTORY));
     }
 
     private static BlueprintResearchSnapshot snapshot(Map<ResourceLocation, BlueprintResearchRule> rules) {

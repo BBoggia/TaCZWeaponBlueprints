@@ -9,16 +9,16 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
-import com.gamergaming.taczweaponblueprints.menu.ResearchBenchPreview;
+import com.gamergaming.taczweaponblueprints.menu.ResearchSelectionPreview;
 
 import net.minecraft.resources.ResourceLocation;
 
 class ResearchTreeContextCardPolicyTest {
     private static final ResourceLocation NODE = new ResourceLocation("test:node");
     private static final ResourceLocation OTHER = new ResourceLocation("test:other");
-    private static final ResearchBenchPreview MATCHING = new ResearchBenchPreview(
+    private static final ResearchSelectionPreview MATCHING = new ResearchSelectionPreview(
             Optional.of(NODE), 4, 8, true, true, true, true, false,
-            List.of(), ResearchBenchPreview.RecyclingPreview.EMPTY);
+            List.of());
 
     @Test
     void exactContentRequiresPinnedSelectionAndPreviewToAgree() {
@@ -29,7 +29,7 @@ class ResearchTreeContextCardPolicyTest {
         assertFalse(ResearchTreeContextCardPolicy.hasMatchingAuthoritativePreview(
                 NODE, Optional.of(OTHER), MATCHING));
         assertFalse(ResearchTreeContextCardPolicy.hasMatchingAuthoritativePreview(
-                NODE, Optional.of(NODE), ResearchBenchPreview.EMPTY));
+                NODE, Optional.of(NODE), ResearchSelectionPreview.EMPTY));
     }
 
     @Test

@@ -4,6 +4,7 @@ import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
+import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionAccess;
 import com.tacz.guns.inventory.GunSmithTableMenu;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
@@ -26,10 +27,11 @@ public abstract class GunSmithTableMenuMixin {
         boolean learned = recipeId != null
                 && recipeId.equals(canonicalRecipe)
                 && blueprintId != null
-                && player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
+                && (BlueprintProgressionAccess.isProgressionExempt(blueprintId)
+                    || player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
                         .map(recipeData -> recipeData.hasBlueprint(blueprintId.toString())
                                 || recipeData.hasRecipe(recipeId.toString()))
-                        .orElse(false);
+                        .orElse(false));
         if (!learned) {
             TaCZWeaponBlueprints.LOGGER.debug(
                     "Denied locked TaCZ recipe {} requested by {}",

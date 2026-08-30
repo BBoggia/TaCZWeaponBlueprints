@@ -2,63 +2,259 @@ package com.gamergaming.taczweaponblueprints.client;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
+import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeBranchLayoutComposer;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
-import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGroupedLayoutEngine;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGroupSkeleton;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGroupSkeletonBuilder;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGroupSkeletonCatalog;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayout;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayeredLayoutEngine;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayoutPolicy;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeOverviewLayoutComposer;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePresentation;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePublication;
 
 import net.minecraft.resources.ResourceLocation;
 
-/** Lazily builds Branches projections while retaining layouts across state-only publications. */
+/** Lazily builds curated overview and Branches projections with reusable layouts. */
 public final class ResearchTreeProjectionCache {
+    private static final ResearchTreeLayoutPolicy DEFAULT_LAYOUT_POLICY =
+            ResearchTreeLayoutPolicy.UNIFIED_OVERVIEW;
     private static final ProjectionKey ALL_WEAPONS = new ProjectionKey(
             ResearchTreePresentationContract.BrowseView.ALL_WEAPONS,
             Optional.empty());
 
     private ResearchTreePublication publication = ResearchTreePublication.EMPTY;
+    private ResearchTreePublication legacyPublication = ResearchTreePublication.EMPTY;
+    private ResearchTreeOverviewBuilder.Result overview =
+            ResearchTreeOverviewBuilder.build(ResearchTreePublication.EMPTY);
+    private ResearchTreeGroupSkeletonCatalog groupSkeletons =
+            ResearchTreeGroupSkeletonCatalog.EMPTY;
+    private ResearchTechTreeProjectionCatalog techTreeProjections =
+            ResearchTechTreeProjectionCatalog.EMPTY;
+    private ResearchTechTreeLayoutCatalog techTreeLayouts =
+            ResearchTechTreeLayoutCatalog.EMPTY;
+    private ResearchTreeUnlockIndex unlocks = ResearchTreeUnlockIndex.EMPTY;
     private final Map<ProjectionKey, ResearchTreeProjection> projections = new LinkedHashMap<>();
     private final Map<ProjectionKey, ResearchTreeLayout> layouts = new LinkedHashMap<>();
+    private final Map<TechViewportKey, ResearchTechTreeLayout> responsiveTechLayouts =
+            new LinkedHashMap<>();
+    private final OverviewLayoutFactory overviewLayoutFactory;
+    private final FallbackLayoutFactory fallbackLayoutFactory;
+    private final BranchLayoutFactory branchLayoutFactory;
+    private final TechLayoutFactory techLayoutFactory;
+    private ResearchTreeLayoutPolicy layoutPolicy = DEFAULT_LAYOUT_POLICY;
+    private ResearchTechTreeLayoutPolicy techLayoutPolicy =
+            ResearchTechTreeLayoutPolicy.fromShared(DEFAULT_LAYOUT_POLICY);
+    private boolean overviewFallbackActive;
 
-    /** Returns true only when projection topology and cached layouts were invalidated. */
+    public ResearchTreeProjectionCache() {
+        this(
+                ResearchTreeOverviewLayoutComposer::compose,
+                ResearchTreeLayeredLayoutEngine::layout,
+                ResearchTreeBranchLayoutComposer::compose,
+                ResearchTechTreeLayoutEngine::layoutCatalog);
+    }
+
+    ResearchTreeProjectionCache(OverviewLayoutFactory overviewLayoutFactory) {
+        this(
+                overviewLayoutFactory,
+                ResearchTreeLayeredLayoutEngine::layout,
+                ResearchTreeBranchLayoutComposer::compose,
+                ResearchTechTreeLayoutEngine::layoutCatalog);
+    }
+
+    ResearchTreeProjectionCache(
+            OverviewLayoutFactory overviewLayoutFactory,
+            BranchLayoutFactory branchLayoutFactory) {
+        this(
+                overviewLayoutFactory,
+                ResearchTreeLayeredLayoutEngine::layout,
+                branchLayoutFactory,
+                ResearchTechTreeLayoutEngine::layoutCatalog);
+    }
+
+    ResearchTreeProjectionCache(
+            OverviewLayoutFactory overviewLayoutFactory,
+            FallbackLayoutFactory fallbackLayoutFactory) {
+        this(
+                overviewLayoutFactory,
+                fallbackLayoutFactory,
+                ResearchTreeBranchLayoutComposer::compose,
+                ResearchTechTreeLayoutEngine::layoutCatalog);
+    }
+
+    ResearchTreeProjectionCache(
+            OverviewLayoutFactory overviewLayoutFactory,
+            BranchLayoutFactory branchLayoutFactory,
+            TechLayoutFactory techLayoutFactory) {
+        this(
+                overviewLayoutFactory,
+                ResearchTreeLayeredLayoutEngine::layout,
+                branchLayoutFactory,
+                techLayoutFactory);
+    }
+
+    ResearchTreeProjectionCache(
+            OverviewLayoutFactory overviewLayoutFactory,
+            FallbackLayoutFactory fallbackLayoutFactory,
+            BranchLayoutFactory branchLayoutFactory,
+            TechLayoutFactory techLayoutFactory) {
+        if (overviewLayoutFactory == null) {
+            throw new IllegalArgumentException("Research Tree overview layout factory cannot be null");
+        }
+        if (fallbackLayoutFactory == null) {
+            throw new IllegalArgumentException("Research Tree fallback layout factory cannot be null");
+        }
+        if (branchLayoutFactory == null) {
+            throw new IllegalArgumentException("Research Tree branch layout factory cannot be null");
+        }
+        if (techLayoutFactory == null) {
+            throw new IllegalArgumentException("Research Tech Tree layout factory cannot be null");
+        }
+        this.overviewLayoutFactory = overviewLayoutFactory;
+        this.fallbackLayoutFactory = fallbackLayoutFactory;
+        this.branchLayoutFactory = branchLayoutFactory;
+        this.techLayoutFactory = techLayoutFactory;
+    }
+
+    /** Uses the stable built-in visual defaults for compatibility callers. */
+    public boolean update(ResearchTreePublication nextPublication) {
+        return update(nextPublication, DEFAULT_LAYOUT_POLICY);
+    }
+
+    /**
+     * Returns true when legacy or Tech Tree geometry changed and saved camera
+     * state must be invalidated. Legacy and typed layouts remain independently
+     * reusable when only player state changes.
+     */
     public boolean update(
             ResearchTreePublication nextPublication,
-            ResearchTreeLayout allWeaponsLayout) {
-        if (nextPublication == null || allWeaponsLayout == null) {
+            ResearchTreeLayoutPolicy nextLayoutPolicy) {
+        if (nextPublication == null) {
             throw new IllegalArgumentException("Research Tree projection publication cannot be null");
         }
-        // The projection record performs the same ordinal/ID pairing check used
-        // by every lazily built branch.
-        new ResearchTreeProjection(
-                ResearchTreePresentationContract.BrowseView.ALL_WEAPONS,
-                Optional.empty(),
-                nextPublication.graph(),
-                allWeaponsLayout,
-                List.of());
-
-        boolean topologyChanged = !publication.hasSamePresentationTopology(nextPublication);
-        publication = nextPublication;
-        projections.clear();
-        if (topologyChanged) {
-            layouts.clear();
-            layouts.put(ALL_WEAPONS, allWeaponsLayout);
-        } else {
-            // ClientResearchState owns the canonical global layout. Keep the
-            // existing instance for a state-only publication, but seed a
-            // freshly cleared cache from the supplied publication layout.
-            layouts.putIfAbsent(ALL_WEAPONS, allWeaponsLayout);
+        if (nextLayoutPolicy == null) {
+            throw new IllegalArgumentException("Research Tree layout policy cannot be null");
         }
-        return topologyChanged;
+
+        ResearchTreePublication nextLegacyPublication = nextPublication.legacyView();
+        boolean topologyChanged = !legacyPublication.hasSamePresentationTopology(
+                nextLegacyPublication);
+        boolean policyChanged = !layoutPolicy.equals(nextLayoutPolicy);
+        boolean geometryChanged = topologyChanged || policyChanged;
+        ResearchTreeOverviewBuilder.Result nextOverview =
+                ResearchTreeOverviewBuilder.build(nextLegacyPublication);
+        ResearchTechTreeProjectionCatalog nextTechTreeProjections =
+                ResearchTechTreeProjectionBuilder.build(nextPublication);
+        ResearchTreeUnlockIndex nextUnlocks = ResearchTreeUnlockIndex.create(
+                nextPublication.graph());
+        ResearchTechTreeLayoutPolicy nextTechLayoutPolicy =
+                ResearchTechTreeLayoutPolicy.fromShared(nextLayoutPolicy);
+        boolean techGeometryChanged = !techTreeProjections.hasSameTopology(
+                nextTechTreeProjections)
+                || !techLayoutPolicy.equals(nextTechLayoutPolicy);
+        ResearchTechTreeLayoutCatalog nextTechTreeLayouts = techGeometryChanged
+                ? techLayoutFactory.layout(
+                        nextTechTreeProjections, nextTechLayoutPolicy)
+                : techTreeLayouts;
+        ResearchTreeGroupSkeletonCatalog nextGroupSkeletons = geometryChanged
+                ? ResearchTreeGroupSkeletonBuilder.build(
+                        nextLegacyPublication, nextLayoutPolicy)
+                : groupSkeletons;
+        boolean seedMissingOverview = !geometryChanged && !layouts.containsKey(ALL_WEAPONS);
+        OverviewLayoutBuild nextOverviewLayout = geometryChanged || seedMissingOverview
+                ? buildOverviewLayout(nextOverview, nextGroupSkeletons, nextLayoutPolicy)
+                : null;
+
+        // Commit only after every derived topology object has been prepared.
+        // Search, navigation, layouts, and the canvas must never observe halves
+        // of different publications if a layout implementation rejects input.
+        publication = nextPublication;
+        legacyPublication = nextLegacyPublication;
+        overview = nextOverview;
+        groupSkeletons = nextGroupSkeletons;
+        techTreeProjections = nextTechTreeProjections;
+        techTreeLayouts = nextTechTreeLayouts;
+        unlocks = nextUnlocks;
+        layoutPolicy = nextLayoutPolicy;
+        techLayoutPolicy = nextTechLayoutPolicy;
+        projections.clear();
+        if (techGeometryChanged) {
+            responsiveTechLayouts.clear();
+        }
+        if (geometryChanged) {
+            layouts.clear();
+            layouts.put(ALL_WEAPONS, nextOverviewLayout.layout());
+            overviewFallbackActive = nextOverviewLayout.fallbackUsed();
+        } else {
+            // A freshly cleared empty cache has no prior derived layout. All
+            // non-empty state-only updates necessarily follow a topology
+            // commit and therefore retain the existing immutable instance.
+            if (seedMissingOverview) {
+                layouts.put(ALL_WEAPONS, nextOverviewLayout.layout());
+                overviewFallbackActive = nextOverviewLayout.fallbackUsed();
+            }
+        }
+        return geometryChanged || techGeometryChanged;
     }
 
     public ResearchTreePublication publication() {
         return publication;
+    }
+
+    public ResearchTechTreeProjectionCatalog techTreeProjections() {
+        return techTreeProjections;
+    }
+
+    public ResearchTechTreeLayoutCatalog techTreeLayouts() {
+        return techTreeLayouts;
+    }
+
+    /**
+     * Returns cached default geometry for ordinary compact/fullscreen widths,
+     * and a capacity-keyed responsive layout only for an unusually narrow
+     * embedding. Responsive wrapping remains client presentation state.
+     */
+    public Optional<ResearchTechTreeLayout> techTreeLayout(
+            Domain domain,
+            int viewportWidth) {
+        if (domain == null || viewportWidth < 1) {
+            throw new IllegalArgumentException(
+                    "Research Tech Tree viewport lookup is invalid");
+        }
+        Optional<ResearchTechTreeProjection> projection =
+                techTreeProjections.projection(domain);
+        if (projection.isEmpty()) {
+            return Optional.empty();
+        }
+        int effectiveCapacity = techLayoutPolicy.effectiveNodesPerRow(
+                projection.orElseThrow().maxNodesPerLayer(), viewportWidth);
+        int defaultCapacity = techLayoutPolicy.effectiveNodesPerRow(
+                projection.orElseThrow().maxNodesPerLayer(), Integer.MAX_VALUE);
+        if (effectiveCapacity == defaultCapacity) {
+            return techTreeLayouts.layout(domain);
+        }
+        TechViewportKey key = new TechViewportKey(domain, effectiveCapacity);
+        return Optional.of(responsiveTechLayouts.computeIfAbsent(
+                key,
+                ignored -> ResearchTechTreeLayoutEngine.layout(
+                        projection.orElseThrow(), techLayoutPolicy, viewportWidth)));
+    }
+
+    public ResearchTreeUnlockIndex unlocks() {
+        return unlocks;
+    }
+
+    /** True only when the current publication required its bounded emergency overview. */
+    public boolean overviewFallbackActive() {
+        return overviewFallbackActive;
     }
 
     public ResearchTreeProjection projection(
@@ -70,8 +266,17 @@ public final class ResearchTreeProjectionCache {
 
     public void clear() {
         publication = ResearchTreePublication.EMPTY;
+        legacyPublication = ResearchTreePublication.EMPTY;
+        overview = ResearchTreeOverviewBuilder.build(ResearchTreePublication.EMPTY);
+        groupSkeletons = ResearchTreeGroupSkeletonCatalog.EMPTY;
+        techTreeProjections = ResearchTechTreeProjectionCatalog.EMPTY;
+        techTreeLayouts = ResearchTechTreeLayoutCatalog.EMPTY;
+        layoutPolicy = DEFAULT_LAYOUT_POLICY;
+        techLayoutPolicy = ResearchTechTreeLayoutPolicy.fromShared(DEFAULT_LAYOUT_POLICY);
+        overviewFallbackActive = false;
         projections.clear();
         layouts.clear();
+        responsiveTechLayouts.clear();
     }
 
     int cachedProjectionCount() {
@@ -82,14 +287,18 @@ public final class ResearchTreeProjectionCache {
         return layouts.size();
     }
 
+    ResearchTreeGroupSkeletonCatalog groupSkeletons() {
+        return groupSkeletons;
+    }
+
     /**
      * Revalidates a portal against the active authoritative publication before
      * it is allowed to change branch or camera state.
      */
     public boolean isPublishedCrossGroupLink(ResearchTreeProjection.CrossGroupLink link) {
         if (link == null
-                || publication.graph().node(link.localNodeId()).isEmpty()
-                || publication.graph().node(link.remoteNodeId()).isEmpty()) {
+                || legacyPublication.graph().node(link.localNodeId()).isEmpty()
+                || legacyPublication.graph().node(link.remoteNodeId()).isEmpty()) {
             return false;
         }
         Optional<ResearchTreePresentation.Membership> localMembership =
@@ -106,7 +315,7 @@ public final class ResearchTreeProjectionCache {
                 ? link.localNodeId() : link.remoteNodeId();
         ResourceLocation dependentId = link.direction() == ResearchTreeProjection.Direction.UNLOCK
                 ? link.remoteNodeId() : link.localNodeId();
-        return publication.graph().edges().contains(
+        return groupSkeletons.containsCrossGroupEdge(
                 new ResearchTreeGraph.Edge(prerequisiteId, dependentId));
     }
 
@@ -116,10 +325,14 @@ public final class ResearchTreeProjectionCache {
         if (view == null) {
             throw new IllegalArgumentException("Research Tree projection view cannot be null");
         }
+        if (view == ResearchTreePresentationContract.BrowseView.TECH_TREE) {
+            throw new IllegalArgumentException(
+                    "Tech Tree projections must use the typed domain catalog");
+        }
         if (view == ResearchTreePresentationContract.BrowseView.ALL_WEAPONS) {
             return ALL_WEAPONS;
         }
-        if (publication.graph().nodes().isEmpty() && groupId == null) {
+        if (legacyPublication.graph().nodes().isEmpty() && groupId == null) {
             return new ProjectionKey(view, Optional.empty());
         }
         if (groupId == null || publication.presentation().group(groupId).isEmpty()) {
@@ -130,17 +343,23 @@ public final class ResearchTreeProjectionCache {
 
     private ResearchTreeProjection build(ProjectionKey key) {
         if (key.view() == ResearchTreePresentationContract.BrowseView.ALL_WEAPONS) {
+            // Empty client state and a screen rebuild are both valid entry
+            // points. Lazily recover the deterministic overview layout if a
+            // prior publication has not seeded this cache yet.
             ResearchTreeLayout layout = layouts.get(key);
             if (layout == null) {
-                throw new IllegalStateException(
-                        "All Weapons layout was not initialized for the active publication");
+                OverviewLayoutBuild built = buildOverviewLayout(
+                        overview, groupSkeletons, layoutPolicy);
+                layout = built.layout();
+                overviewFallbackActive = built.fallbackUsed();
+                layouts.put(key, layout);
             }
             return new ResearchTreeProjection(
                     key.view(),
                     Optional.empty(),
-                    publication.graph(),
+                    overview.publication().graph(),
                     layout,
-                    List.of());
+                    overview.boundaryLinks());
         }
         if (key.groupId().isEmpty()) {
             return new ResearchTreeProjection(
@@ -152,66 +371,51 @@ public final class ResearchTreeProjectionCache {
         }
 
         ResourceLocation groupId = key.groupId().orElseThrow();
-        ResearchTreePresentation.Group group = publication.presentation()
-                .group(groupId)
+        ResearchTreeGroupSkeleton skeleton = groupSkeletons.group(groupId)
                 .orElseThrow();
-        Set<ResourceLocation> memberIds = new LinkedHashSet<>();
-        group.members().forEach(member -> memberIds.add(member.nodeId()));
 
         Map<ResourceLocation, Integer> internalPrerequisiteCounts = new LinkedHashMap<>();
-        memberIds.forEach(id -> internalPrerequisiteCounts.put(id, 0));
-        List<ResearchTreeGraph.Edge> internalEdges = new ArrayList<>();
+        skeleton.nodes().forEach(node ->
+                internalPrerequisiteCounts.put(node.nodeId(), 0));
+        List<ResearchTreeGraph.Edge> internalEdges = skeleton.internalEdges();
+        internalEdges.forEach(edge -> internalPrerequisiteCounts.compute(
+                edge.dependentId(), (ignored, count) -> count == null ? 1 : count + 1));
         List<ResearchTreeProjection.CrossGroupLink> crossGroupLinks = new ArrayList<>();
-        for (ResearchTreeGraph.Edge edge : publication.graph().edges()) {
-            boolean prerequisiteLocal = memberIds.contains(edge.prerequisiteId());
-            boolean dependentLocal = memberIds.contains(edge.dependentId());
-            if (prerequisiteLocal && dependentLocal) {
-                internalEdges.add(edge);
-                internalPrerequisiteCounts.compute(
-                        edge.dependentId(),
-                        (ignored, count) -> count == null ? 1 : count + 1);
-            } else if (prerequisiteLocal != dependentLocal) {
-                ResourceLocation localId = prerequisiteLocal
-                        ? edge.prerequisiteId() : edge.dependentId();
-                ResourceLocation remoteId = prerequisiteLocal
-                        ? edge.dependentId() : edge.prerequisiteId();
-                ResourceLocation remoteGroupId = publication.presentation()
-                        .membership(remoteId)
-                        .orElseThrow()
-                        .groupId();
+        for (ResearchTreeGroupSkeletonCatalog.CrossGroupEdge edge
+                : groupSkeletons.incidentEdges(groupId)) {
+            if (edge.prerequisiteGroupId().equals(groupId)) {
                 crossGroupLinks.add(new ResearchTreeProjection.CrossGroupLink(
-                        localId,
-                        remoteId,
-                        remoteGroupId,
-                        prerequisiteLocal
-                                ? ResearchTreeProjection.Direction.UNLOCK
-                                : ResearchTreeProjection.Direction.REQUIREMENT));
+                        edge.prerequisiteId(),
+                        edge.dependentId(),
+                        edge.dependentGroupId(),
+                        ResearchTreeProjection.Direction.UNLOCK));
+            } else if (edge.dependentGroupId().equals(groupId)) {
+                crossGroupLinks.add(new ResearchTreeProjection.CrossGroupLink(
+                        edge.dependentId(),
+                        edge.prerequisiteId(),
+                        edge.prerequisiteGroupId(),
+                        ResearchTreeProjection.Direction.REQUIREMENT));
             }
         }
 
-        List<ResearchTreeGraph.Node> nodes = new ArrayList<>(memberIds.size());
-        for (ResearchTreeGraph.Node node : publication.graph().nodes()) {
-            if (memberIds.contains(node.blueprintId())) {
-                nodes.add(copyNode(
-                        node,
-                        nodes.size(),
-                        internalPrerequisiteCounts.getOrDefault(node.blueprintId(), 0)));
-            }
+        List<ResearchTreeGraph.Node> nodes = new ArrayList<>(skeleton.nodes().size());
+        for (ResearchTreeGroupSkeleton.PositionedNode positioned : skeleton.nodes()) {
+            ResearchTreeGraph.Node source = legacyPublication.graph()
+                    .node(positioned.nodeId())
+                    .orElseThrow();
+            nodes.add(copyNode(
+                    source,
+                    nodes.size(),
+                    internalPrerequisiteCounts.getOrDefault(source.blueprintId(), 0)));
         }
         ResearchTreeGraph graph = new ResearchTreeGraph(nodes, internalEdges);
-        Map<PortalBank, Integer> portalCounts = new LinkedHashMap<>();
-        for (ResearchTreeProjection.CrossGroupLink link : crossGroupLinks) {
-            portalCounts.merge(
-                    new PortalBank(link.localNodeId(), link.direction()), 1, Integer::sum);
-        }
-        int minimumPortalWidth = portalCounts.values().stream()
-                .mapToInt(ResearchTreeCanvas::portalBankWidth)
-                .max()
-                .orElse(0);
+        int minimumPortalWidth = Math.addExact(
+                ResearchTreeCanvas.maximumPortalBankWidth(crossGroupLinks),
+                Math.multiplyExact(2, ResearchTreeLayout.PORTAL_BANK_SIDE_PADDING));
         ResearchTreeLayout layout = layouts.computeIfAbsent(
                 key,
-                ignored -> ResearchTreeGroupedLayoutEngine.branch(
-                        graph, group, minimumPortalWidth));
+                ignored -> branchLayoutFactory.compose(
+                        skeleton, minimumPortalWidth, layoutPolicy));
         return new ResearchTreeProjection(
                 key.view(),
                 key.groupId(),
@@ -226,6 +430,7 @@ public final class ResearchTreeProjectionCache {
             int prerequisiteCount) {
         return new ResearchTreeGraph.Node(
                 ordinal,
+                node.sourceOrdinal(),
                 node.blueprintId(),
                 node.nameKey(),
                 node.itemType(),
@@ -241,6 +446,163 @@ public final class ResearchTreeProjectionCache {
                 node.availability());
     }
 
+    private static ResearchTreeLayout ensurePortalWidth(
+            ResearchTreeLayout layout,
+            List<ResearchTreeProjection.CrossGroupLink> links) {
+        if (layout.nodes().isEmpty() || links.isEmpty()) {
+            return layout;
+        }
+        int minimumWidth = Math.addExact(
+                ResearchTreeCanvas.maximumPortalBankWidth(links),
+                Math.multiplyExact(2, ResearchTreeLayout.PORTAL_BANK_SIDE_PADDING));
+        if (layout.width() >= minimumWidth) {
+            return layout;
+        }
+        return new ResearchTreeLayout(
+                minimumWidth,
+                layout.height(),
+                layout.tierCount(),
+                layout.nodes(),
+                layout.hiddenAnchors(),
+                layout.categoryLanes(),
+                layout.groupRegions(),
+                layout.edgeRouteHints());
+    }
+
+    private OverviewLayoutBuild buildOverviewLayout(
+            ResearchTreeOverviewBuilder.Result overview,
+            ResearchTreeGroupSkeletonCatalog skeletons,
+            ResearchTreeLayoutPolicy policy) {
+        try {
+            return new OverviewLayoutBuild(
+                    ensurePortalWidth(
+                            overviewLayoutFactory.compose(
+                                    overview.publication(), skeletons, policy),
+                            overview.boundaryLinks()),
+                    false);
+        } catch (RuntimeException primaryFailure) {
+            try {
+                ResearchTreeLayout fallback = addPortalEnvelope(
+                        fallbackLayoutFactory.compose(overview.publication(), policy),
+                        overview.boundaryLinks(),
+                        policy);
+                TaCZWeaponBlueprints.LOGGER.warn(
+                        "Research Tree overview composition failed; using the bounded "
+                                + "same-publication fallback layout",
+                        primaryFailure);
+                return new OverviewLayoutBuild(fallback, true);
+            } catch (RuntimeException fallbackFailure) {
+                primaryFailure.addSuppressed(fallbackFailure);
+                throw primaryFailure;
+            }
+        }
+    }
+
+    private static ResearchTreeLayout addPortalEnvelope(
+            ResearchTreeLayout layout,
+            List<ResearchTreeProjection.CrossGroupLink> links,
+            ResearchTreeLayoutPolicy policy) {
+        if (layout.nodes().isEmpty() || links.isEmpty()) {
+            return layout;
+        }
+        int minimumWidth = Math.addExact(
+                ResearchTreeCanvas.maximumPortalBankWidth(links),
+                Math.multiplyExact(2, ResearchTreeLayout.PORTAL_BANK_SIDE_PADDING));
+        int width = Math.max(layout.width(), minimumWidth);
+        int offsetX = (width - layout.width()) / 2;
+        int offsetY = policy.portalClearance();
+        int height = Math.addExact(layout.height(), Math.multiplyExact(2, offsetY));
+        List<ResearchTreeLayout.PositionedNode> nodes = layout.nodes().stream()
+                .map(node -> new ResearchTreeLayout.PositionedNode(
+                        node.nodeOrdinal(),
+                        node.blueprintId(),
+                        node.component(),
+                        node.tier(),
+                        node.orderInTier(),
+                        Math.addExact(node.x(), offsetX),
+                        Math.addExact(node.y(), offsetY)))
+                .toList();
+        List<ResearchTreeLayout.HiddenAnchor> hiddenAnchors = layout.hiddenAnchors().stream()
+                .map(anchor -> new ResearchTreeLayout.HiddenAnchor(
+                        anchor.dependentId(),
+                        anchor.hiddenCount(),
+                        Math.addExact(anchor.x(), offsetX),
+                        Math.addExact(anchor.y(), offsetY)))
+                .toList();
+        List<ResearchTreeLayout.CategoryLane> categoryLanes = layout.categoryLanes().stream()
+                .map(lane -> new ResearchTreeLayout.CategoryLane(
+                        lane.key(),
+                        Math.addExact(lane.x(), offsetX),
+                        lane.width()))
+                .toList();
+        List<ResearchTreeLayout.GroupRegion> groupRegions = layout.groupRegions().stream()
+                .map(region -> new ResearchTreeLayout.GroupRegion(
+                        region.groupId(),
+                        Math.addExact(region.x(), offsetX),
+                        Math.addExact(region.y(), offsetY),
+                        region.width(),
+                        region.height()))
+                .toList();
+        List<ResearchTreeLayout.EdgeRouteHint> routeHints = layout.edgeRouteHints().stream()
+                .map(hint -> new ResearchTreeLayout.EdgeRouteHint(
+                        hint.prerequisiteId(),
+                        hint.dependentId(),
+                        hint.waypoints().stream()
+                                .map(waypoint -> new ResearchTreeLayout.RouteWaypoint(
+                                        waypoint.rank(),
+                                        Math.addExact(waypoint.x(), offsetX),
+                                        Math.addExact(waypoint.y(), offsetY)))
+                                .toList()))
+                .toList();
+        return new ResearchTreeLayout(
+                width,
+                height,
+                layout.tierCount(),
+                nodes,
+                hiddenAnchors,
+                categoryLanes,
+                groupRegions,
+                routeHints);
+    }
+
+    @FunctionalInterface
+    interface OverviewLayoutFactory {
+        ResearchTreeLayout compose(
+                ResearchTreePublication publication,
+                ResearchTreeGroupSkeletonCatalog skeletons,
+                ResearchTreeLayoutPolicy policy);
+    }
+
+    @FunctionalInterface
+    interface FallbackLayoutFactory {
+        ResearchTreeLayout compose(
+                ResearchTreePublication publication,
+                ResearchTreeLayoutPolicy policy);
+    }
+
+    @FunctionalInterface
+    interface BranchLayoutFactory {
+        ResearchTreeLayout compose(
+                ResearchTreeGroupSkeleton skeleton,
+                int minimumPortalWidth,
+                ResearchTreeLayoutPolicy policy);
+    }
+
+    @FunctionalInterface
+    interface TechLayoutFactory {
+        ResearchTechTreeLayoutCatalog layout(
+                ResearchTechTreeProjectionCatalog projections,
+                ResearchTechTreeLayoutPolicy policy);
+    }
+
+    private record OverviewLayoutBuild(ResearchTreeLayout layout, boolean fallbackUsed) {
+        private OverviewLayoutBuild {
+            if (layout == null) {
+                throw new IllegalArgumentException("Research Tree overview build cannot be null");
+            }
+        }
+    }
+
     private record ProjectionKey(
             ResearchTreePresentationContract.BrowseView view,
             Optional<ResourceLocation> groupId) {
@@ -249,8 +611,16 @@ public final class ResearchTreeProjectionCache {
         }
     }
 
-    private record PortalBank(
-            ResourceLocation localNodeId,
-            ResearchTreeProjection.Direction direction) {
+    private record TechViewportKey(
+            Domain domain,
+            int effectiveCapacity) {
+        private TechViewportKey {
+            if (domain == null || effectiveCapacity < 1
+                    || effectiveCapacity
+                            > ResearchTechTreeLayoutPolicy.MAXIMUM_NODES_PER_ROW) {
+                throw new IllegalArgumentException(
+                        "invalid Research Tech Tree viewport cache key");
+            }
+        }
     }
 }

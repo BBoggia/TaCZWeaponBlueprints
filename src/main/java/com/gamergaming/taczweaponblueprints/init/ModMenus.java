@@ -2,6 +2,7 @@ package com.gamergaming.taczweaponblueprints.init;
 
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
+import com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerMenu;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
@@ -17,6 +18,11 @@ public final class ModMenus {
     public static final RegistryObject<MenuType<ResearchBenchMenu>> RESEARCH_BENCH = MENUS.register(
             "research_bench",
             () -> IForgeMenuType.create(ResearchBenchMenu::new));
+
+    public static final RegistryObject<MenuType<BlueprintRecyclerMenu>> BLUEPRINT_RECYCLER =
+            MENUS.register(
+                    "blueprint_recycler",
+                    () -> IForgeMenuType.create(BlueprintRecyclerMenu::new));
 
     private ModMenus() {
     }

@@ -1,0 +1,968 @@
+{
+  "format": 2,
+  "tree": "taczweaponblueprints:default",
+  "priority": 100,
+  "entries": [
+    {
+      "target": {
+        "blueprints": [
+          "tacz:glock_17"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/handguns",
+      "tier": "starter",
+      "order": 0,
+      "rating": {
+        "combat": 2,
+        "utility": 98,
+        "appeal": 95
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Starter band; the reviewed rating remains supporting evidence.",
+      "rank": 0
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:m9a4"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/handguns",
+      "tier": "established",
+      "order": 100,
+      "rating": {
+        "combat": 0,
+        "utility": 94,
+        "appeal": 80
+      },
+      "rank": 2
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:m1911"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/handguns",
+      "tier": "advanced",
+      "order": 101,
+      "rating": {
+        "combat": 11,
+        "utility": 74,
+        "appeal": 96
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Advanced band; the reviewed rating remains supporting evidence.",
+      "rank": 4
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:cz75"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/handguns",
+      "tier": "advanced",
+      "order": 102,
+      "rating": {
+        "combat": 4,
+        "utility": 90,
+        "appeal": 72
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Advanced band; the reviewed rating remains supporting evidence.",
+      "rank": 4
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:p320"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/handguns",
+      "tier": "advanced",
+      "level": 1,
+      "order": 103,
+      "rating": {
+        "combat": 14,
+        "utility": 66,
+        "appeal": 78
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Advanced band; the reviewed rating remains supporting evidence.",
+      "rank": 5
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:hk_mk23"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/handguns",
+      "tier": "advanced",
+      "level": 2,
+      "order": 104,
+      "rating": {
+        "combat": 18,
+        "utility": 81,
+        "appeal": 72
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Advanced band; the reviewed rating remains supporting evidence.",
+      "rank": 6
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:rhino357"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/handguns",
+      "tier": "advanced",
+      "level": 1,
+      "order": 200,
+      "rating": {
+        "combat": 21,
+        "utility": 37,
+        "appeal": 74
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Advanced band; the reviewed rating remains supporting evidence.",
+      "rank": 5
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:lonetrail"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/handguns",
+      "tier": "elite",
+      "order": 201,
+      "rating": {
+        "combat": 44,
+        "utility": 15,
+        "appeal": 55
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Elite band; the reviewed rating remains supporting evidence.",
+      "rank": 8
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:b93r"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/handguns",
+      "tier": "elite",
+      "order": 202,
+      "rating": {
+        "combat": 33,
+        "utility": 94,
+        "appeal": 75
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Elite band; the reviewed rating remains supporting evidence.",
+      "rank": 8
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:deagle"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/handguns",
+      "tier": "elite",
+      "order": 203,
+      "rating": {
+        "combat": 40,
+        "utility": 66,
+        "appeal": 98
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Elite band; the reviewed rating remains supporting evidence.",
+      "rank": 8
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:deagle_golden"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/handguns",
+      "tier": "elite",
+      "level": 1,
+      "order": 204,
+      "rating": {
+        "combat": 38,
+        "utility": 66,
+        "appeal": 92
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Elite band; the reviewed rating remains supporting evidence.",
+      "rank": 9
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:timeless50"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/handguns",
+      "tier": "elite",
+      "level": 1,
+      "order": 205,
+      "rating": {
+        "combat": 35,
+        "utility": 54,
+        "appeal": 75
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Elite band; the reviewed rating remains supporting evidence.",
+      "rank": 9
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:taurus500"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/handguns",
+      "tier": "apex",
+      "level": 1,
+      "order": 300,
+      "rating": {
+        "combat": 77,
+        "utility": 29,
+        "appeal": 70
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Apex band; the reviewed rating remains supporting evidence.",
+      "rank": 12
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:m320"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/heavy",
+      "tier": "basic",
+      "order": 100,
+      "rating": {
+        "combat": 29,
+        "utility": 22,
+        "appeal": 72
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Basic band; the reviewed rating remains supporting evidence.",
+      "rank": 1
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:rpg7"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/heavy",
+      "tier": "elite",
+      "order": 200,
+      "rating": {
+        "combat": 62,
+        "utility": 1,
+        "appeal": 100
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Elite band; the reviewed rating remains supporting evidence.",
+      "rank": 8
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:rpk"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/machine_guns",
+      "tier": "basic",
+      "order": 100,
+      "rating": {
+        "combat": 81,
+        "utility": 40,
+        "appeal": 85
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Basic band; the reviewed rating remains supporting evidence.",
+      "rank": 1
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:m249"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/machine_guns",
+      "tier": "established",
+      "order": 200,
+      "rating": {
+        "combat": 67,
+        "utility": 12,
+        "appeal": 94
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Established band; the reviewed rating remains supporting evidence.",
+      "rank": 2
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:fn_evolys"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/machine_guns",
+      "tier": "advanced",
+      "order": 300,
+      "rating": {
+        "combat": 89,
+        "utility": 19,
+        "appeal": 55
+      },
+      "rank": 4
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:minigun"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/machine_guns",
+      "tier": "apex",
+      "level": 1,
+      "order": 400,
+      "rating": {
+        "combat": 89,
+        "utility": 8,
+        "appeal": 100
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Apex band; the reviewed rating remains supporting evidence.",
+      "rank": 12
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:m16a4"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "basic",
+      "order": 100,
+      "rating": {
+        "combat": 52,
+        "utility": 77,
+        "appeal": 88
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Basic band; the reviewed rating remains supporting evidence.",
+      "rank": 1
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:m4a1"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "established",
+      "order": 200,
+      "rating": {
+        "combat": 49,
+        "utility": 88,
+        "appeal": 100
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Established band; the reviewed rating remains supporting evidence.",
+      "rank": 2
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:type_81"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "established",
+      "order": 201,
+      "rating": {
+        "combat": 67,
+        "utility": 48,
+        "appeal": 65
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Established band; the reviewed rating remains supporting evidence.",
+      "rank": 2
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:aug"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "established",
+      "level": 1,
+      "order": 202,
+      "rating": {
+        "combat": 49,
+        "utility": 48,
+        "appeal": 86
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Established band; the reviewed rating remains supporting evidence.",
+      "rank": 3
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:hk_g3"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "established",
+      "level": 1,
+      "order": 203,
+      "rating": {
+        "combat": 81,
+        "utility": 37,
+        "appeal": 82
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Established band; the reviewed rating remains supporting evidence.",
+      "rank": 3
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:m16a1"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "advanced",
+      "order": 300,
+      "rating": {
+        "combat": 74,
+        "utility": 52,
+        "appeal": 92
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Advanced band; the reviewed rating remains supporting evidence.",
+      "rank": 4
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:ak47"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "advanced",
+      "order": 301,
+      "rating": {
+        "combat": 71,
+        "utility": 56,
+        "appeal": 100
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Advanced band; the reviewed rating remains supporting evidence.",
+      "rank": 4
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:qbz_95"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "advanced",
+      "level": 1,
+      "order": 302,
+      "rating": {
+        "combat": 44,
+        "utility": 59,
+        "appeal": 60
+      },
+      "rank": 5
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:g36k"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "advanced",
+      "level": 1,
+      "order": 303,
+      "rating": {
+        "combat": 55,
+        "utility": 66,
+        "appeal": 78
+      },
+      "rank": 5
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:scar_l"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "advanced",
+      "level": 2,
+      "order": 304,
+      "rating": {
+        "combat": 67,
+        "utility": 86,
+        "appeal": 92
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Advanced band; the reviewed rating remains supporting evidence.",
+      "rank": 6
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:fn_fal"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "advanced",
+      "level": 2,
+      "order": 305,
+      "rating": {
+        "combat": 89,
+        "utility": 42,
+        "appeal": 88
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Advanced band; the reviewed rating remains supporting evidence.",
+      "rank": 7
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:sks_tactical"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "advanced",
+      "level": 2,
+      "order": 306,
+      "rating": {
+        "combat": 62,
+        "utility": 31,
+        "appeal": 86
+      },
+      "rank": 6
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:hk416d"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "elite",
+      "order": 400,
+      "rating": {
+        "combat": 58,
+        "utility": 81,
+        "appeal": 90
+      },
+      "rank": 8
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:qbz_191"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "elite",
+      "level": 1,
+      "order": 401,
+      "rating": {
+        "combat": 81,
+        "utility": 71,
+        "appeal": 62
+      },
+      "rank": 9
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:mk14"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "elite",
+      "level": 2,
+      "order": 402,
+      "rating": {
+        "combat": 85,
+        "utility": 37,
+        "appeal": 84
+      },
+      "rank": 10
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:spr15hb"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "apex",
+      "order": 500,
+      "rating": {
+        "combat": 89,
+        "utility": 74,
+        "appeal": 58
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Apex band; the reviewed rating remains supporting evidence.",
+      "rank": 11
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:scar_h"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "apex",
+      "level": 1,
+      "order": 501,
+      "rating": {
+        "combat": 98,
+        "utility": 44,
+        "appeal": 92
+      },
+      "rank": 12
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:db_long"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/shotguns",
+      "tier": "basic",
+      "order": 100,
+      "rating": {
+        "combat": 14,
+        "utility": 48,
+        "appeal": 60
+      },
+      "rank": 1
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:db_short"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/shotguns",
+      "tier": "established",
+      "order": 200,
+      "rating": {
+        "combat": 6,
+        "utility": 86,
+        "appeal": 58
+      },
+      "rank": 2
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:m870"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/shotguns",
+      "tier": "established",
+      "level": 1,
+      "order": 201,
+      "rating": {
+        "combat": 11,
+        "utility": 33,
+        "appeal": 88
+      },
+      "rank": 3
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:m1014"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/shotguns",
+      "tier": "advanced",
+      "order": 300,
+      "rating": {
+        "combat": 18,
+        "utility": 22,
+        "appeal": 80
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Advanced band; the reviewed rating remains supporting evidence.",
+      "rank": 4
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:aa12"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/shotguns",
+      "tier": "elite",
+      "order": 400,
+      "rating": {
+        "combat": 44,
+        "utility": 25,
+        "appeal": 82
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Elite band; the reviewed rating remains supporting evidence.",
+      "rank": 8
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:spas_12"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/shotguns",
+      "tier": "elite",
+      "level": 1,
+      "order": 401,
+      "rating": {
+        "combat": 29,
+        "utility": 27,
+        "appeal": 88
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Elite band; the reviewed rating remains supporting evidence.",
+      "rank": 9
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:uzi"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/smgs",
+      "tier": "basic",
+      "order": 100,
+      "rating": {
+        "combat": 8,
+        "utility": 62,
+        "appeal": 94
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Basic band; the reviewed rating remains supporting evidence.",
+      "rank": 1
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:hk_mp5a5"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/smgs",
+      "tier": "established",
+      "order": 200,
+      "rating": {
+        "combat": 25,
+        "utility": 100,
+        "appeal": 96
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Established band; the reviewed rating remains supporting evidence.",
+      "rank": 2
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:ump45"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/smgs",
+      "tier": "advanced",
+      "order": 300,
+      "rating": {
+        "combat": 55,
+        "utility": 81,
+        "appeal": 86
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Advanced band; the reviewed rating remains supporting evidence.",
+      "rank": 4
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:p90"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/smgs",
+      "tier": "advanced",
+      "level": 1,
+      "order": 301,
+      "rating": {
+        "combat": 38,
+        "utility": 59,
+        "appeal": 96
+      },
+      "rank": 5
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:vector45"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/smgs",
+      "tier": "elite",
+      "order": 400,
+      "rating": {
+        "combat": 23,
+        "utility": 94,
+        "appeal": 95
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Elite band; the reviewed rating remains supporting evidence.",
+      "rank": 8
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:springfield1873"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/snipers",
+      "tier": "basic",
+      "order": 100,
+      "rating": {
+        "combat": 29,
+        "utility": 15,
+        "appeal": 72
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Basic band; the reviewed rating remains supporting evidence.",
+      "rank": 1
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:kar98"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/snipers",
+      "tier": "established",
+      "order": 200,
+      "rating": {
+        "combat": 62,
+        "utility": 6,
+        "appeal": 94
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Established band; the reviewed rating remains supporting evidence.",
+      "rank": 2
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:m700"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/snipers",
+      "tier": "established",
+      "level": 1,
+      "order": 201,
+      "rating": {
+        "combat": 74,
+        "utility": 15,
+        "appeal": 82
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Established band; the reviewed rating remains supporting evidence.",
+      "rank": 3
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:ai_awp"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/snipers",
+      "tier": "advanced",
+      "order": 300,
+      "rating": {
+        "combat": 94,
+        "utility": 10,
+        "appeal": 96
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Advanced band; the reviewed rating remains supporting evidence.",
+      "rank": 4
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:m95"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/snipers",
+      "tier": "elite",
+      "order": 400,
+      "rating": {
+        "combat": 96,
+        "utility": 1,
+        "appeal": 78
+      },
+      "rank": 8
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:m107"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/snipers",
+      "tier": "apex",
+      "order": 500,
+      "rating": {
+        "combat": 100,
+        "utility": 4,
+        "appeal": 83
+      },
+      "tier_override_reason": "Authoritative prerequisite depth and RP progression place this weapon in the Apex band; the reviewed rating remains supporting evidence.",
+      "rank": 11
+    }
+  ]
+}

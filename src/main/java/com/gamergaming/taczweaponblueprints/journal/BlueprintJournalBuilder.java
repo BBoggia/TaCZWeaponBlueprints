@@ -14,6 +14,8 @@ import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchP
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchPolicyResolver;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchSnapshot;
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPrerequisiteOverlay;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPrerequisitePlan;
 
 import net.minecraft.resources.ResourceLocation;
 
@@ -28,6 +30,40 @@ public final class BlueprintJournalBuilder {
             BlueprintProgressionConfigSnapshot config,
             IPlayerRecipeData playerData,
             Predicate<String> blockedPredicate) {
+        return build(
+                catalog,
+                researchSnapshot,
+                config,
+                playerData,
+                blockedPredicate,
+                null);
+    }
+
+    public static BlueprintJournalSnapshot build(
+            Map<ResourceLocation, BlueprintData> catalog,
+            BlueprintResearchSnapshot researchSnapshot,
+            BlueprintProgressionConfigSnapshot config,
+            IPlayerRecipeData playerData,
+            Predicate<String> blockedPredicate,
+            AutomaticWeaponPrerequisitePlan automaticPrerequisites) {
+        return build(
+                catalog,
+                researchSnapshot,
+                config,
+                playerData,
+                blockedPredicate,
+                ignored -> false,
+                automaticPrerequisites);
+    }
+
+    public static BlueprintJournalSnapshot build(
+            Map<ResourceLocation, BlueprintData> catalog,
+            BlueprintResearchSnapshot researchSnapshot,
+            BlueprintProgressionConfigSnapshot config,
+            IPlayerRecipeData playerData,
+            Predicate<String> blockedPredicate,
+            Predicate<ResourceLocation> progressionExemptPredicate,
+            AutomaticWeaponPrerequisitePlan automaticPrerequisites) {
         if (catalog == null || researchSnapshot == null || config == null || playerData == null) {
             return BlueprintJournalSnapshot.EMPTY;
         }
@@ -35,6 +71,9 @@ public final class BlueprintJournalBuilder {
             return BlueprintJournalSnapshot.EMPTY;
         }
         Predicate<String> blocked = blockedPredicate == null ? ignored -> false : blockedPredicate;
+        Predicate<ResourceLocation> exempt = progressionExemptPredicate == null
+                ? ignored -> false
+                : progressionExemptPredicate;
         List<Map.Entry<ResourceLocation, BlueprintData>> sortedCatalog =
                 new ArrayList<>(catalog.entrySet());
         sortedCatalog.sort(Map.Entry.comparingByKey(Comparator.comparing(ResourceLocation::toString)));
@@ -45,14 +84,26 @@ public final class BlueprintJournalBuilder {
         int researchable = 0;
         for (Map.Entry<ResourceLocation, BlueprintData> catalogEntry : sortedCatalog) {
             ResourceLocation blueprintId = catalogEntry.getKey();
+            if (exempt.test(blueprintId)) {
+                continue;
+            }
             BlueprintResearchPolicy datapackPolicy = BlueprintResearchPolicyResolver.resolve(
                     researchSnapshot,
                     catalog,
                     config.activeProfileId(),
                     blueprintId,
                     playerData,
-                    blocked);
+                    blocked,
+                    exempt);
             BlueprintResearchPolicy policy = config.apply(datapackPolicy);
+            policy = AutomaticWeaponPrerequisiteOverlay.apply(
+                    policy,
+                    automaticPrerequisites,
+                    playerData,
+                    blocked,
+                    config.maximumUndiscoveredVisibility().allowsServerSelection(),
+                    catalog::containsKey,
+                    exempt);
             if (!policy.journalEnabled() || !policy.visibility().appearsInJournal() || policy.blocked()) {
                 continue;
             }

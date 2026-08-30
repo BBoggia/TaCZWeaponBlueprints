@@ -7,6 +7,7 @@ import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
 /** Applies permanent blueprint discovery using server-authoritative state. */
@@ -34,6 +35,11 @@ public final class BlueprintDiscoveryService {
                 BlueprintDataManager.SERVER,
                 true);
         if (result == DiscoveryResult.DISCOVERED) {
+            ResourceLocation blueprintId = ResourceLocation.tryParse(BlueprintItem.getBpId(stack));
+            if (blueprintId != null) {
+                ResearchPointAwardDispatcher.blueprintTransitions(
+                        player, data, blueprintId, true, false);
+            }
             BlueprintProgressionSyncScheduler.markDirty(player);
         }
         return result;

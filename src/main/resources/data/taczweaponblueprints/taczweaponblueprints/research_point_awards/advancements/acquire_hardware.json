@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "award_group": "taczweaponblueprints:advancement_progression",
+  "trigger": {
+    "type": "advancement_completed",
+    "target": {"ids": ["minecraft:story/smelt_iron"]},
+    "retroactive": true
+  },
+  "reward": {"points": 2, "overflow": "require_full"},
+  "repeat": {"type": "once"},
+  "presentation": {
+    "visibility": "public",
+    "name": "research_points.taczweaponblueprints.acquire_hardware"
+  }
+}

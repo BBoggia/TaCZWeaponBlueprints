@@ -1,0 +1,40 @@
+{
+  "format": 1,
+  "profile": "taczweaponblueprints:duplicate_recovery",
+  "priority": 100,
+  "target": {
+    "blueprints": [
+      "tacz:ammo_mod_i",
+      "tacz:ammo_mod_fmj",
+      "tacz:grip_vertical_military",
+      "tacz:grip_rk1_b25u",
+      "tacz:light_extended_mag_3",
+      "tacz:shotgun_extended_mag_3",
+      "tacz:sniper_extended_mag_2",
+      "tacz:muzzle_brake_pioneer",
+      "tacz:muzzle_brake_mastiff_sg",
+      "tacz:muzzle_brake_cthulhu",
+      "tacz:muzzle_brake_trex",
+      "tacz:scope_elcan_4x",
+      "tacz:scope_hamr",
+      "tacz:scope_lpvo_1_6",
+      "tacz:scope_vudu",
+      "tacz:sight_552",
+      "tacz:sight_exp3",
+      "tacz:stock_hk_slim_line",
+      "tacz:stock_militech_b5"
+    ]
+  },
+  "visibility": "full",
+  "tree_enabled": true,
+  "research_enabled": true,
+  "requires_discovery": false,
+  "research_cost": {
+    "points": 10,
+    "ingredients": [
+      { "items": ["minecraft:paper"], "count": 5 },
+      { "items": ["minecraft:iron_ingot"], "count": 4 }
+    ]
+  },
+  "prerequisites": ["tacz:sight_coyote"]
+}

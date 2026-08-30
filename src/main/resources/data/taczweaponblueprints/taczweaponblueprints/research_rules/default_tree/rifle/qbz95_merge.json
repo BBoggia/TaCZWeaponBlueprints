@@ -1,0 +1,10 @@
+{
+  "format": 1,
+  "profile": "taczweaponblueprints:duplicate_recovery",
+  "priority": 100,
+  "target": { "blueprints": ["tacz:qbz_95"] },
+  "visibility": "full",
+  "tree_enabled": true,
+  "research_cost": { "points": 8, "ingredients": [{ "items": ["minecraft:paper"], "count": 4 }, { "items": ["minecraft:iron_ingot"], "count": 3 }] },
+  "prerequisites": ["tacz:type_81", "tacz:ak47"]
+}

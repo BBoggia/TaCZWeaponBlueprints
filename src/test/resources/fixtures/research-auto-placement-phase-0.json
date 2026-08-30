@@ -1,0 +1,100 @@
+{
+  "format": 1,
+  "catalogs": [
+    {
+      "id": "small_pack",
+      "weapons": [
+        {
+          "blueprint": "addon_alpha:compact_9mm",
+          "archetype": "pistol",
+          "stats": {"damage": 5.0, "rpm": 420.0, "magazine": 12, "reload_seconds": 1.8}
+        },
+        {
+          "blueprint": "addon_alpha:service_carbine",
+          "archetype": "rifle",
+          "stats": {"damage": 8.0, "rpm": 650.0, "magazine": 30, "reload_seconds": 2.4}
+        },
+        {
+          "blueprint": "addon_alpha:precision_rifle",
+          "archetype": "sniper",
+          "stats": {"damage": 24.0, "rpm": 48.0, "magazine": 5, "reload_seconds": 3.0}
+        }
+      ]
+    },
+    {
+      "id": "multiple_packs",
+      "weapons": [
+        {
+          "blueprint": "addon_alpha:service_carbine",
+          "archetype": "rifle",
+          "stats": {"damage": 8.0, "rpm": 650.0, "magazine": 30, "reload_seconds": 2.4}
+        },
+        {
+          "blueprint": "addon_beta:burst_carbine",
+          "archetype": "rifle",
+          "stats": {"damage": 9.0, "rpm": 720.0, "magazine": 24, "reload_seconds": 2.6}
+        },
+        {
+          "blueprint": "addon_gamma:support_lmg",
+          "archetype": "machine_gun",
+          "stats": {"damage": 7.0, "rpm": 760.0, "magazine": 80, "reload_seconds": 5.8}
+        }
+      ]
+    },
+    {
+      "id": "missing_statistics",
+      "weapons": [
+        {
+          "blueprint": "incomplete_pack:mystery_weapon",
+          "archetype": "special",
+          "stats": {"damage": 6.0}
+        }
+      ]
+    },
+    {
+      "id": "script_controlled",
+      "weapons": [
+        {
+          "blueprint": "scripted_pack:charge_launcher",
+          "archetype": "special",
+          "script_id": "scripted_pack:charge_launcher_behavior",
+          "stats": {"damage": 12.0, "magazine": 1}
+        }
+      ]
+    },
+    {
+      "id": "mechanical_extremes",
+      "weapons": [
+        {
+          "blueprint": "balance_pack:scrap_pipegun",
+          "archetype": "pistol",
+          "stats": {"damage": 2.0, "rpm": 30.0, "magazine": 1, "reload_seconds": 5.0}
+        },
+        {
+          "blueprint": "balance_pack:rail_destroyer",
+          "archetype": "special",
+          "stats": {"damage": 100.0, "rpm": 600.0, "magazine": 100, "reload_seconds": 0.5}
+        }
+      ]
+    },
+    {
+      "id": "unusual_valid_identifier",
+      "weapons": [
+        {
+          "blueprint": "odd.pack:weapons/prototype.v2",
+          "archetype": "special",
+          "stats": {"damage": 10.0, "rpm": 300.0, "magazine": 8, "reload_seconds": 2.0}
+        }
+      ]
+    }
+  ],
+  "invalid_catalogs": [
+    {
+      "id": "duplicate_blueprint",
+      "weapons": [
+        {"blueprint": "broken_pack:duplicate", "archetype": "pistol", "stats": {"damage": 5.0}},
+        {"blueprint": "broken_pack:duplicate", "archetype": "rifle", "stats": {"damage": 8.0}}
+      ]
+    }
+  ]
+}

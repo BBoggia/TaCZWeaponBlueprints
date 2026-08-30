@@ -16,20 +16,34 @@ import com.gamergaming.taczweaponblueprints.client.ClientResearchState;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePresentation;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePublication;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.PlacementOrigin;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Tier;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.WeaponRating;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreePresentation;
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
+import com.gamergaming.taczweaponblueprints.resource.research.ResearchTechTreeDefinition;
 import com.gamergaming.taczweaponblueprints.resource.research.ResearchTreeGroupDefinition;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.NetworkEvent;
 
-/** Chunked synchronization for one disclosure-safe graph and its matching groups. */
+/**
+ * Chunked synchronization for one disclosure-safe graph, its matching branch
+ * groups, and its optional Tech Tree presentation metadata.
+ */
 public final class SyncResearchTreePacket {
     private static final int HEADER_RESERVE = 96;
     private static final int NODE_FIXED_RESERVE = 40;
     private static final int EDGE_RESERVE = 10;
-    private static final int GROUP_FIXED_RESERVE = 24;
+    private static final int GROUP_FIXED_RESERVE = 25;
     private static final int MEMBER_RESERVE = 15;
+    private static final int TECH_TREE_FIXED_RESERVE = 64;
+    private static final int TECH_DOMAIN_FIXED_RESERVE = 32;
+    private static final int TECH_LANE_FIXED_RESERVE = 32;
+    private static final int TECH_MEMBER_RESERVE = 64;
     private static final ClientAccumulator CLIENT_ACCUMULATOR = new ClientAccumulator();
 
     private final long syncId;
@@ -39,9 +53,11 @@ public final class SyncResearchTreePacket {
     private final int totalEdges;
     private final int totalGroups;
     private final int totalMembers;
+    private final int totalTechTrees;
     private final List<ResearchTreeGraph.Node> nodes;
     private final List<WireEdge> edges;
     private final List<WireGroup> groups;
+    private final List<WireTechTree> techTrees;
 
     private SyncResearchTreePacket(
             long syncId,
@@ -51,9 +67,11 @@ public final class SyncResearchTreePacket {
             int totalEdges,
             int totalGroups,
             int totalMembers,
+            int totalTechTrees,
             List<ResearchTreeGraph.Node> nodes,
             List<WireEdge> edges,
-            List<WireGroup> groups) {
+            List<WireGroup> groups,
+            List<WireTechTree> techTrees) {
         this.syncId = syncId;
         this.chunkIndex = chunkIndex;
         this.chunkCount = chunkCount;
@@ -61,9 +79,11 @@ public final class SyncResearchTreePacket {
         this.totalEdges = totalEdges;
         this.totalGroups = totalGroups;
         this.totalMembers = totalMembers;
+        this.totalTechTrees = totalTechTrees;
         this.nodes = nodes == null ? List.of() : List.copyOf(nodes);
         this.edges = edges == null ? List.of() : List.copyOf(edges);
         this.groups = groups == null ? List.of() : List.copyOf(groups);
+        this.techTrees = techTrees == null ? List.of() : List.copyOf(techTrees);
         validateCommonState();
         if (estimatedPayloadBytes() > BlueprintSyncLimits.MAX_CHUNK_BYTES) {
             throw new IllegalArgumentException("Research tree synchronization chunk exceeds the byte budget");
@@ -79,8 +99,9 @@ public final class SyncResearchTreePacket {
         totalEdges = buf.readVarInt();
         totalGroups = buf.readVarInt();
         totalMembers = buf.readVarInt();
+        totalTechTrees = buf.readVarInt();
         validateChunkMetadata(chunkIndex, chunkCount);
-        validateTotals(totalNodes, totalEdges, totalGroups, totalMembers);
+        validateTotals(totalNodes, totalEdges, totalGroups, totalMembers, totalTechTrees);
 
         int nodeCount = readBoundedCount(buf, totalNodes, "Research tree node");
         List<ResearchTreeGraph.Node> decodedNodes = new ArrayList<>(nodeCount);
@@ -106,9 +127,15 @@ public final class SyncResearchTreePacket {
             decodedGroups.add(group);
             remainingMembers -= group.members().size();
         }
+        int techTreeCount = readBoundedCount(buf, totalTechTrees, "Research Tech Tree");
+        List<WireTechTree> decodedTechTrees = new ArrayList<>(techTreeCount);
+        for (int index = 0; index < techTreeCount; index++) {
+            decodedTechTrees.add(readTechTree(buf, totalNodes));
+        }
         nodes = List.copyOf(decodedNodes);
         edges = List.copyOf(decodedEdges);
         groups = List.copyOf(decodedGroups);
+        techTrees = List.copyOf(decodedTechTrees);
         validateCommonState();
         if (buf.readerIndex() - start > BlueprintSyncLimits.MAX_CHUNK_BYTES) {
             throw new IllegalArgumentException("Research tree synchronization chunk exceeds the byte budget");
@@ -124,6 +151,7 @@ public final class SyncResearchTreePacket {
         buf.writeVarInt(totalEdges);
         buf.writeVarInt(totalGroups);
         buf.writeVarInt(totalMembers);
+        buf.writeVarInt(totalTechTrees);
         buf.writeVarInt(nodes.size());
         nodes.forEach(node -> writeNode(buf, node));
         buf.writeVarInt(edges.size());
@@ -133,6 +161,8 @@ public final class SyncResearchTreePacket {
         });
         buf.writeVarInt(groups.size());
         groups.forEach(group -> writeGroup(buf, group));
+        buf.writeVarInt(techTrees.size());
+        techTrees.forEach(tree -> writeTechTree(buf, tree));
         if (buf.writerIndex() - start > BlueprintSyncLimits.MAX_CHUNK_BYTES) {
             throw new IllegalArgumentException("Research tree synchronization chunk exceeds the byte budget");
         }
@@ -156,7 +186,13 @@ public final class SyncResearchTreePacket {
         ResearchTreeGraph graph = publication.graph();
         ResearchTreePresentation presentation = publication.presentation();
         Map<ResourceLocation, Integer> ordinals = new HashMap<>();
-        graph.nodes().forEach(node -> ordinals.put(node.blueprintId(), node.ordinal()));
+        graph.nodes().forEach(node -> {
+            if (node.sourceOrdinal() != node.ordinal()) {
+                throw new IllegalArgumentException(
+                        "Research tree synchronization requires full-publication ordinals");
+            }
+            ordinals.put(node.blueprintId(), node.ordinal());
+        });
         List<WireEdge> wireEdges = graph.edges().stream()
                 .map(edge -> new WireEdge(
                         ordinalFor(ordinals, edge.prerequisiteId()),
@@ -165,6 +201,9 @@ public final class SyncResearchTreePacket {
         List<WireGroup> wireGroups = presentation.groups().stream()
                 .map(group -> WireGroup.from(group, ordinals))
                 .toList();
+        List<WireTechTree> wireTechTrees = publication.techTree().available()
+                ? List.of(WireTechTree.from(publication.techTree(), ordinals))
+                : List.of();
         int memberCount = wireGroups.stream().mapToInt(group -> group.members().size()).sum();
 
         List<Chunk> chunks = new ArrayList<>();
@@ -202,6 +241,18 @@ public final class SyncResearchTreePacket {
             current.groups.add(group);
             current.estimatedBytes += bytes;
         }
+        for (WireTechTree techTree : wireTechTrees) {
+            int bytes = estimatedTechTreeBytes(techTree);
+            if (HEADER_RESERVE + bytes > BlueprintSyncLimits.MAX_CHUNK_BYTES) {
+                throw new IllegalArgumentException("One Research Tech Tree exceeds the chunk byte budget");
+            }
+            if (!current.empty() && current.estimatedBytes + bytes > BlueprintSyncLimits.MAX_CHUNK_BYTES) {
+                chunks.add(current);
+                current = new Chunk();
+            }
+            current.techTrees.add(techTree);
+            current.estimatedBytes += bytes;
+        }
         if (!current.empty() || chunks.isEmpty()) {
             chunks.add(current);
         }
@@ -220,9 +271,11 @@ public final class SyncResearchTreePacket {
                     graph.edges().size(),
                     presentation.groups().size(),
                     memberCount,
+                    wireTechTrees.size(),
                     chunk.nodes,
                     chunk.edges,
-                    chunk.groups));
+                    chunk.groups,
+                    chunk.techTrees));
         }
         return List.copyOf(packets);
     }
@@ -236,15 +289,19 @@ public final class SyncResearchTreePacket {
         for (WireGroup group : groups) {
             bytes += estimatedGroupBytes(group);
         }
+        for (WireTechTree techTree : techTrees) {
+            bytes += estimatedTechTreeBytes(techTree);
+        }
         return bytes;
     }
 
     private void validateCommonState() {
         validateChunkMetadata(chunkIndex, chunkCount);
-        validateTotals(totalNodes, totalEdges, totalGroups, totalMembers);
+        validateTotals(totalNodes, totalEdges, totalGroups, totalMembers, totalTechTrees);
         int chunkMembers = groups.stream().mapToInt(group -> group.members().size()).sum();
         if (nodes.size() > totalNodes || edges.size() > totalEdges
-                || groups.size() > totalGroups || chunkMembers > totalMembers) {
+                || groups.size() > totalGroups || chunkMembers > totalMembers
+                || techTrees.size() > totalTechTrees) {
             throw new IllegalArgumentException("Research tree chunk contains more entries than declared");
         }
         for (WireEdge edge : edges) {
@@ -257,6 +314,9 @@ public final class SyncResearchTreePacket {
                     || group.members().stream().anyMatch(member -> member.nodeOrdinal() >= totalNodes)) {
                 throw new IllegalArgumentException("Research tree group ordinal is outside the node table");
             }
+        }
+        for (WireTechTree techTree : techTrees) {
+            techTree.validateOrdinals(totalNodes);
         }
     }
 
@@ -329,6 +389,7 @@ public final class SyncResearchTreePacket {
         if (kindOrdinal >= kinds.length) {
             throw new IllegalArgumentException("Invalid synchronized Research tree group kind");
         }
+        boolean includedInOverview = buf.readBoolean();
         int memberCount = readBoundedCount(buf, maximumMembers, "Research tree group member");
         List<WireMember> members = new ArrayList<>(memberCount);
         for (int index = 0; index < memberCount; index++) {
@@ -341,6 +402,7 @@ public final class SyncResearchTreePacket {
                 iconOrdinal,
                 order,
                 kinds[kindOrdinal],
+                includedInOverview,
                 members);
     }
 
@@ -353,12 +415,228 @@ public final class SyncResearchTreePacket {
         buf.writeVarInt(group.iconOrdinal() + 1);
         buf.writeVarInt(group.order());
         buf.writeByte(group.kind().ordinal());
+        buf.writeBoolean(group.includedInOverview());
         buf.writeVarInt(group.members().size());
         group.members().forEach(member -> {
             buf.writeVarInt(member.nodeOrdinal());
             buf.writeVarInt(member.rank());
             buf.writeVarInt(member.orderInRank());
         });
+    }
+
+    private static WireTechTree readTechTree(FriendlyByteBuf buf, int maximumMembers) {
+        ResourceLocation treeId = readId(buf);
+        String title = buf.readUtf(ResearchTechTreeDefinition.MAX_TITLE_LENGTH);
+        Optional<String> translationKey = readOptionalTranslationKey(buf);
+        int iconOrdinal = buf.readVarInt() - 1;
+        int maxNodesPerLayer = buf.readVarInt();
+        if (maxNodesPerLayer
+                        < ResearchTechTreeDefinition.LayoutDefinition.MIN_NODES_PER_LAYER
+                || maxNodesPerLayer
+                        > ResearchTechTreeDefinition.LayoutDefinition.MAX_NODES_PER_LAYER) {
+            throw new IllegalArgumentException(
+                    "Invalid synchronized Research Tech Tree layer capacity");
+        }
+        int tierCount = readBoundedCount(buf, Tier.values().length, "Research Tech Tree tier");
+        List<WireTechTier> tiers = new ArrayList<>(tierCount);
+        for (int index = 0; index < tierCount; index++) {
+            tiers.add(new WireTechTier(
+                    readTier(buf),
+                    buf.readUtf(ResearchTechTreeDefinition.MAX_TITLE_LENGTH),
+                    readOptionalTranslationKey(buf)));
+        }
+        int bandCount = readBoundedCount(
+                buf,
+                ResearchTechTreeDefinition.MAX_PRESENTATION_BANDS,
+                "Research Tech Tree progression band");
+        List<WireTechBand> bands = new ArrayList<>(bandCount);
+        for (int index = 0; index < bandCount; index++) {
+            bands.add(new WireTechBand(
+                    readId(buf),
+                    buf.readUtf(ResearchTechTreeDefinition.MAX_TITLE_LENGTH),
+                    readOptionalTranslationKey(buf),
+                    buf.readBoolean() ? Optional.of(buf.readInt()) : Optional.empty(),
+                    buf.readBoolean() ? Optional.of(readId(buf)) : Optional.empty()));
+        }
+        int domainCount = readBoundedCount(buf, Domain.values().length, "Research Tech Tree domain");
+        List<WireTechDomain> domains = new ArrayList<>(domainCount);
+        int remainingMembers = maximumMembers;
+        for (int domainIndex = 0; domainIndex < domainCount; domainIndex++) {
+            Domain domain = readDomain(buf);
+            String domainTitle = buf.readUtf(ResearchTechTreeDefinition.MAX_TITLE_LENGTH);
+            Optional<String> domainTranslationKey = readOptionalTranslationKey(buf);
+            int domainIconOrdinal = buf.readVarInt() - 1;
+            int laneCount = readBoundedCount(
+                    buf,
+                    ResearchTechTreeDefinition.MAX_LANES_PER_DOMAIN,
+                    "Research Tech Tree lane");
+            List<WireTechLane> lanes = new ArrayList<>(laneCount);
+            for (int laneIndex = 0; laneIndex < laneCount; laneIndex++) {
+                ResourceLocation laneId = readId(buf);
+                String laneTitle = buf.readUtf(ResearchTechTreeDefinition.MAX_TITLE_LENGTH);
+                Optional<String> laneTranslationKey = readOptionalTranslationKey(buf);
+                int laneIconOrdinal = buf.readVarInt() - 1;
+                int order = buf.readVarInt();
+                int memberCount = readBoundedCount(
+                        buf, remainingMembers, "Research Tech Tree lane member");
+                List<WireTechMember> members = new ArrayList<>(memberCount);
+                for (int memberIndex = 0; memberIndex < memberCount; memberIndex++) {
+                    int nodeOrdinal = buf.readVarInt();
+                    int rank = buf.readVarInt();
+                    long siblingOrder = buf.readVarLong();
+                    Optional<ResourceLocation> bandId = buf.readBoolean()
+                            ? Optional.of(readId(buf))
+                            : Optional.empty();
+                    PlacementOrigin origin = readPlacementOrigin(buf);
+                    Optional<WeaponRating> rating = buf.readBoolean()
+                            ? Optional.of(new WeaponRating(
+                                    buf.readUnsignedByte(),
+                                    buf.readUnsignedByte(),
+                                    buf.readUnsignedByte()))
+                            : Optional.empty();
+                    Optional<ResearchTechTreePresentation.AutomaticBranchPlacement>
+                            automaticBranch = buf.readBoolean()
+                                    ? Optional.of(new ResearchTechTreePresentation
+                                            .AutomaticBranchPlacement(
+                                                    buf.readVarInt(),
+                                                    buf.readVarInt(),
+                                                    buf.readVarInt(),
+                                                    buf.readVarInt()))
+                                    : Optional.empty();
+                    members.add(new WireTechMember(
+                            nodeOrdinal,
+                            rank,
+                            siblingOrder,
+                            bandId,
+                            origin,
+                            rating,
+                            automaticBranch));
+                }
+                remainingMembers -= memberCount;
+                lanes.add(new WireTechLane(
+                        laneId,
+                        laneTitle,
+                        laneTranslationKey,
+                        laneIconOrdinal,
+                        order,
+                        members));
+            }
+            domains.add(new WireTechDomain(
+                    domain,
+                    domainTitle,
+                    domainTranslationKey,
+                    domainIconOrdinal,
+                    lanes));
+        }
+        return new WireTechTree(
+                treeId,
+                title,
+                translationKey,
+                iconOrdinal,
+                maxNodesPerLayer,
+                tiers,
+                bands,
+                domains);
+    }
+
+    private static void writeTechTree(FriendlyByteBuf buf, WireTechTree tree) {
+        writeId(buf, tree.treeId());
+        buf.writeUtf(tree.title(), ResearchTechTreeDefinition.MAX_TITLE_LENGTH);
+        writeOptionalTranslationKey(buf, tree.translationKey());
+        buf.writeVarInt(tree.iconOrdinal() + 1);
+        buf.writeVarInt(tree.maxNodesPerLayer());
+        buf.writeVarInt(tree.tiers().size());
+        tree.tiers().forEach(tier -> {
+            buf.writeByte(tier.tier().ordinal());
+            buf.writeUtf(tier.title(), ResearchTechTreeDefinition.MAX_TITLE_LENGTH);
+            writeOptionalTranslationKey(buf, tier.translationKey());
+        });
+        buf.writeVarInt(tree.bands().size());
+        tree.bands().forEach(band -> {
+            writeId(buf, band.id());
+            buf.writeUtf(band.title(), ResearchTechTreeDefinition.MAX_TITLE_LENGTH);
+            writeOptionalTranslationKey(buf, band.translationKey());
+            buf.writeBoolean(band.color().isPresent());
+            band.color().ifPresent(buf::writeInt);
+            buf.writeBoolean(band.icon().isPresent());
+            band.icon().ifPresent(value -> writeId(buf, value));
+        });
+        buf.writeVarInt(tree.domains().size());
+        tree.domains().forEach(domain -> {
+            buf.writeByte(domain.domain().ordinal());
+            buf.writeUtf(domain.title(), ResearchTechTreeDefinition.MAX_TITLE_LENGTH);
+            writeOptionalTranslationKey(buf, domain.translationKey());
+            buf.writeVarInt(domain.iconOrdinal() + 1);
+            buf.writeVarInt(domain.lanes().size());
+            domain.lanes().forEach(lane -> {
+                writeId(buf, lane.id());
+                buf.writeUtf(lane.title(), ResearchTechTreeDefinition.MAX_TITLE_LENGTH);
+                writeOptionalTranslationKey(buf, lane.translationKey());
+                buf.writeVarInt(lane.iconOrdinal() + 1);
+                buf.writeVarInt(lane.order());
+                buf.writeVarInt(lane.members().size());
+                lane.members().forEach(member -> {
+                    buf.writeVarInt(member.nodeOrdinal());
+                    buf.writeVarInt(member.rank());
+                    buf.writeVarLong(member.siblingOrder());
+                    buf.writeBoolean(member.bandId().isPresent());
+                    member.bandId().ifPresent(value -> writeId(buf, value));
+                    buf.writeByte(member.origin().ordinal());
+                    buf.writeBoolean(member.rating().isPresent());
+                    member.rating().ifPresent(rating -> {
+                        buf.writeByte(rating.combat());
+                        buf.writeByte(rating.utility());
+                        buf.writeByte(rating.appeal());
+                    });
+                    buf.writeBoolean(member.automaticBranch().isPresent());
+                    member.automaticBranch().ifPresent(branch -> {
+                        buf.writeVarInt(branch.branchIndex());
+                        buf.writeVarInt(branch.rankIndex());
+                        buf.writeVarInt(branch.familyStartIndex());
+                        buf.writeVarInt(branch.transitionEndIndex());
+                    });
+                });
+            });
+        });
+    }
+
+    private static Optional<String> readOptionalTranslationKey(FriendlyByteBuf buf) {
+        return buf.readBoolean()
+                ? Optional.of(buf.readUtf(BlueprintSyncLimits.MAX_TRANSLATION_KEY_LENGTH))
+                : Optional.empty();
+    }
+
+    private static void writeOptionalTranslationKey(
+            FriendlyByteBuf buf,
+            Optional<String> translationKey) {
+        buf.writeBoolean(translationKey.isPresent());
+        translationKey.ifPresent(value ->
+                buf.writeUtf(value, BlueprintSyncLimits.MAX_TRANSLATION_KEY_LENGTH));
+    }
+
+    private static Tier readTier(FriendlyByteBuf buf) {
+        int ordinal = buf.readUnsignedByte();
+        if (ordinal >= Tier.values().length) {
+            throw new IllegalArgumentException("Invalid synchronized Research Tech Tree tier");
+        }
+        return Tier.values()[ordinal];
+    }
+
+    private static Domain readDomain(FriendlyByteBuf buf) {
+        int ordinal = buf.readUnsignedByte();
+        if (ordinal >= Domain.values().length) {
+            throw new IllegalArgumentException("Invalid synchronized Research Tech Tree domain");
+        }
+        return Domain.values()[ordinal];
+    }
+
+    private static PlacementOrigin readPlacementOrigin(FriendlyByteBuf buf) {
+        int ordinal = buf.readUnsignedByte();
+        if (ordinal >= PlacementOrigin.values().length) {
+            throw new IllegalArgumentException(
+                    "Invalid synchronized Research Tech Tree placement origin");
+        }
+        return PlacementOrigin.values()[ordinal];
     }
 
     private static int estimatedNodeBytes(ResearchTreeGraph.Node node) {
@@ -377,6 +655,44 @@ public final class SyncResearchTreePacket {
         return bytes + group.translationKey()
                 .map(BlueprintSyncLimits::encodedUtfBytes)
                 .orElse(0);
+    }
+
+    private static int estimatedTechTreeBytes(WireTechTree tree) {
+        int bytes = TECH_TREE_FIXED_RESERVE
+                + BlueprintSyncLimits.encodedUtfBytes(tree.treeId().toString())
+                + BlueprintSyncLimits.encodedUtfBytes(tree.title())
+                + tree.translationKey().map(BlueprintSyncLimits::encodedUtfBytes).orElse(0);
+        for (WireTechTier tier : tree.tiers()) {
+            bytes += 8 + BlueprintSyncLimits.encodedUtfBytes(tier.title())
+                    + tier.translationKey().map(BlueprintSyncLimits::encodedUtfBytes).orElse(0);
+        }
+        for (WireTechBand band : tree.bands()) {
+            bytes += 14
+                    + BlueprintSyncLimits.encodedUtfBytes(band.id().toString())
+                    + BlueprintSyncLimits.encodedUtfBytes(band.title())
+                    + band.translationKey()
+                            .map(BlueprintSyncLimits::encodedUtfBytes).orElse(0)
+                    + band.icon()
+                            .map(value -> BlueprintSyncLimits.encodedUtfBytes(value.toString()))
+                            .orElse(0);
+        }
+        for (WireTechDomain domain : tree.domains()) {
+            bytes += TECH_DOMAIN_FIXED_RESERVE
+                    + BlueprintSyncLimits.encodedUtfBytes(domain.title())
+                    + domain.translationKey().map(BlueprintSyncLimits::encodedUtfBytes).orElse(0);
+            for (WireTechLane lane : domain.lanes()) {
+                bytes += TECH_LANE_FIXED_RESERVE
+                        + BlueprintSyncLimits.encodedUtfBytes(lane.id().toString())
+                        + BlueprintSyncLimits.encodedUtfBytes(lane.title())
+                        + lane.translationKey().map(BlueprintSyncLimits::encodedUtfBytes).orElse(0)
+                        + lane.members().stream().mapToInt(member -> TECH_MEMBER_RESERVE
+                                + member.bandId()
+                                        .map(value -> BlueprintSyncLimits.encodedUtfBytes(
+                                                value.toString()))
+                                        .orElse(0)).sum();
+            }
+        }
+        return bytes;
     }
 
     private static ResourceLocation readId(FriendlyByteBuf buf) {
@@ -420,13 +736,16 @@ public final class SyncResearchTreePacket {
             int totalNodes,
             int totalEdges,
             int totalGroups,
-            int totalMembers) {
+            int totalMembers,
+            int totalTechTrees) {
         if (totalNodes < 0 || totalNodes > ResearchTreeGraph.MAX_NODES
                 || totalEdges < 0 || totalEdges > ResearchTreeGraph.MAX_EDGES
                 || totalGroups < 0 || totalGroups > ResearchTreePresentation.MAX_GROUPS
-                || totalMembers != totalNodes
+                || totalMembers < 0 || totalMembers > totalNodes
+                || totalTechTrees < 0 || totalTechTrees > 1
+                || (totalNodes == 0 && totalTechTrees != 0)
                 || totalGroups > totalMembers
-                || (totalNodes == 0) != (totalGroups == 0)) {
+                || (totalGroups == 0) != (totalMembers == 0)) {
             throw new IllegalArgumentException("Invalid Research tree synchronization totals");
         }
     }
@@ -435,10 +754,11 @@ public final class SyncResearchTreePacket {
         private final List<ResearchTreeGraph.Node> nodes = new ArrayList<>();
         private final List<WireEdge> edges = new ArrayList<>();
         private final List<WireGroup> groups = new ArrayList<>();
+        private final List<WireTechTree> techTrees = new ArrayList<>();
         private int estimatedBytes = HEADER_RESERVE;
 
         private boolean empty() {
-            return nodes.isEmpty() && edges.isEmpty() && groups.isEmpty();
+            return nodes.isEmpty() && edges.isEmpty() && groups.isEmpty() && techTrees.isEmpty();
         }
     }
 
@@ -470,6 +790,7 @@ public final class SyncResearchTreePacket {
             int iconOrdinal,
             int order,
             ResearchTreePresentation.Kind kind,
+            boolean includedInOverview,
             List<WireMember> members) {
         private static final Comparator<WireMember> MEMBER_ORDER = Comparator
                 .comparingInt(WireMember::rank)
@@ -534,6 +855,7 @@ public final class SyncResearchTreePacket {
                     iconOrdinal,
                     group.order(),
                     group.kind(),
+                    group.includedInOverview(),
                     members);
         }
 
@@ -547,6 +869,7 @@ public final class SyncResearchTreePacket {
                             : Optional.of(nodes.get(iconOrdinal).blueprintId()),
                     order,
                     kind,
+                    includedInOverview,
                     members.stream()
                             .map(member -> new ResearchTreePresentation.Member(
                                     nodes.get(member.nodeOrdinal()).blueprintId(),
@@ -570,6 +893,360 @@ public final class SyncResearchTreePacket {
         }
     }
 
+    private record WireTechTier(
+            Tier tier,
+            String title,
+            Optional<String> translationKey) {
+        private WireTechTier {
+            if (tier == null || title == null || translationKey == null
+                    || !WireGroup.validTitle(title)
+                    || translationKey.filter(value -> !WireGroup.validTranslationKey(value)).isPresent()) {
+                throw new IllegalArgumentException("Invalid synchronized Research Tech Tree tier");
+            }
+        }
+    }
+
+    private record WireTechBand(
+            ResourceLocation id,
+            String title,
+            Optional<String> translationKey,
+            Optional<Integer> color,
+            Optional<ResourceLocation> icon) {
+        private WireTechBand {
+            color = color == null ? Optional.empty() : color;
+            icon = icon == null ? Optional.empty() : icon;
+            if (id == null || title == null || translationKey == null
+                    || id.toString().length() > BlueprintSyncLimits.MAX_RESOURCE_ID_LENGTH
+                    || !WireGroup.validTitle(title)
+                    || translationKey.filter(value ->
+                            !WireGroup.validTranslationKey(value)).isPresent()
+                    || color.filter(value -> value < 0 || value > 0xFFFFFF).isPresent()
+                    || icon.filter(value -> value.toString().length()
+                            > BlueprintSyncLimits.MAX_RESOURCE_ID_LENGTH).isPresent()) {
+                throw new IllegalArgumentException(
+                        "Invalid synchronized Research Tech Tree progression band");
+            }
+        }
+    }
+
+    private record WireTechMember(
+            int nodeOrdinal,
+            int rank,
+            long siblingOrder,
+            Optional<ResourceLocation> bandId,
+            PlacementOrigin origin,
+            Optional<WeaponRating> rating,
+            Optional<ResearchTechTreePresentation.AutomaticBranchPlacement>
+                    automaticBranch) {
+        private WireTechMember {
+            bandId = bandId == null ? Optional.empty() : bandId;
+            rating = rating == null ? Optional.empty() : rating;
+            automaticBranch = automaticBranch == null
+                    ? Optional.empty() : automaticBranch;
+            if (nodeOrdinal < 0 || nodeOrdinal >= ResearchTreeGraph.MAX_NODES
+                    || origin == null
+                    || rank < 0 || rank > ResearchTechTreeContract.MAX_PROGRESSION_RANK
+                    || siblingOrder < 0
+                    || origin != PlacementOrigin.AUTOMATIC && automaticBranch.isPresent()
+                    || bandId.stream().anyMatch(value ->
+                            value.toString().length() > BlueprintSyncLimits.MAX_RESOURCE_ID_LENGTH)) {
+                throw new IllegalArgumentException("Invalid synchronized Research Tech Tree member");
+            }
+        }
+    }
+
+    private record WireTechLane(
+            ResourceLocation id,
+            String title,
+            Optional<String> translationKey,
+            int iconOrdinal,
+            int order,
+            List<WireTechMember> members) {
+        private static final Comparator<WireTechMember> MEMBER_ORDER = Comparator
+                .comparingInt(WireTechMember::rank)
+                .thenComparingLong(WireTechMember::siblingOrder)
+                .thenComparingInt(WireTechMember::nodeOrdinal);
+
+        private WireTechLane {
+            if (id == null || title == null || translationKey == null || members == null
+                    || members.stream().anyMatch(java.util.Objects::isNull)) {
+                throw new IllegalArgumentException("Synchronized Research Tech Tree lane fields cannot be null");
+            }
+            members = List.copyOf(members);
+            if (id.toString().length() > BlueprintSyncLimits.MAX_RESOURCE_ID_LENGTH
+                    || !WireGroup.validTitle(title)
+                    || translationKey.filter(value -> !WireGroup.validTranslationKey(value)).isPresent()
+                    || iconOrdinal < -1 || iconOrdinal >= ResearchTreeGraph.MAX_NODES
+                    || order < 0 || order > ResearchTechTreeDefinition.MAX_ORDER
+                    || members.isEmpty() || members.size() > ResearchTreeGraph.MAX_NODES
+                    || !members.equals(members.stream().sorted(MEMBER_ORDER).toList())) {
+                throw new IllegalArgumentException("Invalid synchronized Research Tech Tree lane");
+            }
+            Set<Integer> memberOrdinals = new LinkedHashSet<>();
+            for (WireTechMember member : members) {
+                if (!memberOrdinals.add(member.nodeOrdinal())) {
+                    throw new IllegalArgumentException(
+                            "Synchronized Research Tech Tree lane has a duplicate member");
+                }
+            }
+            if (iconOrdinal >= 0 && !memberOrdinals.contains(iconOrdinal)) {
+                throw new IllegalArgumentException(
+                        "Synchronized Research Tech Tree lane icon is not a lane member");
+            }
+        }
+
+        private static WireTechLane from(
+                ResearchTechTreePresentation.LaneView lane,
+                Map<ResourceLocation, Integer> ordinals) {
+            return new WireTechLane(
+                    lane.id(),
+                    lane.title(),
+                    lane.translationKey(),
+                    lane.iconNodeId().map(id -> ordinalFor(ordinals, id)).orElse(-1),
+                    lane.order(),
+                    lane.members().stream()
+                            .map(member -> new WireTechMember(
+                                    ordinalFor(ordinals, member.nodeId()),
+                                    member.rank(),
+                                    member.siblingOrder(),
+                                    member.bandId(),
+                                    member.origin(),
+                                    member.rating(),
+                                    member.automaticBranch()))
+                            .toList());
+        }
+
+        private ResearchTechTreePresentation.LaneView resolve(
+                List<ResearchTreeGraph.Node> nodes) {
+            return new ResearchTechTreePresentation.LaneView(
+                    id,
+                    title,
+                    translationKey,
+                    iconOrdinal < 0
+                            ? Optional.empty()
+                            : Optional.of(nodes.get(iconOrdinal).blueprintId()),
+                    order,
+                    members.stream()
+                            .map(member -> new ResearchTechTreePresentation.Member(
+                                    nodes.get(member.nodeOrdinal()).blueprintId(),
+                                    member.rank(),
+                                    member.siblingOrder(),
+                                    member.bandId(),
+                                    member.origin(),
+                                    member.rating(),
+                                    member.automaticBranch()))
+                            .toList());
+        }
+    }
+
+    private record WireTechDomain(
+            Domain domain,
+            String title,
+            Optional<String> translationKey,
+            int iconOrdinal,
+            List<WireTechLane> lanes) {
+        private WireTechDomain {
+            if (domain == null || title == null || translationKey == null || lanes == null
+                    || lanes.stream().anyMatch(java.util.Objects::isNull)) {
+                throw new IllegalArgumentException("Synchronized Research Tech Tree domain fields cannot be null");
+            }
+            lanes = List.copyOf(lanes);
+            if (!WireGroup.validTitle(title)
+                    || translationKey.filter(value -> !WireGroup.validTranslationKey(value)).isPresent()
+                    || iconOrdinal < -1 || iconOrdinal >= ResearchTreeGraph.MAX_NODES
+                    || lanes.isEmpty()
+                    || lanes.size() > ResearchTechTreeDefinition.MAX_LANES_PER_DOMAIN
+                    || !lanes.equals(lanes.stream().sorted(Comparator
+                            .comparingInt(WireTechLane::order)
+                            .thenComparing(value -> value.id().toString())).toList())) {
+                throw new IllegalArgumentException("Invalid synchronized Research Tech Tree domain");
+            }
+            Set<ResourceLocation> laneIds = new LinkedHashSet<>();
+            Set<Integer> memberOrdinals = new LinkedHashSet<>();
+            for (WireTechLane lane : lanes) {
+                if (!laneIds.add(lane.id())) {
+                    throw new IllegalArgumentException(
+                            "Synchronized Research Tech Tree domain has a duplicate lane");
+                }
+                for (WireTechMember member : lane.members()) {
+                    if (!memberOrdinals.add(member.nodeOrdinal())) {
+                        throw new IllegalArgumentException(
+                                "Synchronized Research Tech Tree domain has a duplicate member");
+                    }
+                    if (domain != Domain.WEAPONS
+                            && (member.rating().isPresent()
+                                    || member.origin() == PlacementOrigin.AUTOMATIC)) {
+                        throw new IllegalArgumentException(
+                                "Synchronized automatic placement or rating is outside Weapons");
+                    }
+                }
+            }
+            if (iconOrdinal >= 0 && !memberOrdinals.contains(iconOrdinal)) {
+                throw new IllegalArgumentException(
+                        "Synchronized Research Tech Tree domain icon is not a domain member");
+            }
+        }
+
+        private static WireTechDomain from(
+                ResearchTechTreePresentation.DomainView domain,
+                Map<ResourceLocation, Integer> ordinals) {
+            return new WireTechDomain(
+                    domain.domain(),
+                    domain.title(),
+                    domain.translationKey(),
+                    domain.iconNodeId().map(id -> ordinalFor(ordinals, id)).orElse(-1),
+                    domain.lanes().stream().map(lane -> WireTechLane.from(lane, ordinals)).toList());
+        }
+
+        private ResearchTechTreePresentation.DomainView resolve(
+                List<ResearchTreeGraph.Node> nodes) {
+            return new ResearchTechTreePresentation.DomainView(
+                    domain,
+                    title,
+                    translationKey,
+                    iconOrdinal < 0
+                            ? Optional.empty()
+                            : Optional.of(nodes.get(iconOrdinal).blueprintId()),
+                    lanes.stream().map(lane -> lane.resolve(nodes)).toList());
+        }
+    }
+
+    private record WireTechTree(
+            ResourceLocation treeId,
+            String title,
+            Optional<String> translationKey,
+            int iconOrdinal,
+            int maxNodesPerLayer,
+            List<WireTechTier> tiers,
+            List<WireTechBand> bands,
+            List<WireTechDomain> domains) {
+        private WireTechTree {
+            if (treeId == null || title == null || translationKey == null
+                    || tiers == null || bands == null || domains == null
+                    || tiers.stream().anyMatch(java.util.Objects::isNull)
+                    || bands.stream().anyMatch(java.util.Objects::isNull)
+                    || domains.stream().anyMatch(java.util.Objects::isNull)) {
+                throw new IllegalArgumentException("Synchronized Research Tech Tree fields cannot be null");
+            }
+            tiers = List.copyOf(tiers);
+            bands = List.copyOf(bands);
+            domains = List.copyOf(domains);
+            if (treeId.toString().length() > BlueprintSyncLimits.MAX_RESOURCE_ID_LENGTH
+                    || !WireGroup.validTitle(title)
+                    || translationKey.filter(value -> !WireGroup.validTranslationKey(value)).isPresent()
+                    || iconOrdinal < -1 || iconOrdinal >= ResearchTreeGraph.MAX_NODES
+                    || maxNodesPerLayer
+                            < ResearchTechTreeDefinition.LayoutDefinition.MIN_NODES_PER_LAYER
+                    || maxNodesPerLayer
+                            > ResearchTechTreeDefinition.LayoutDefinition.MAX_NODES_PER_LAYER
+                    || !tiers.isEmpty() && !tiers.stream().map(WireTechTier::tier)
+                            .toList().equals(List.of(Tier.values()))
+                    || bands.size() > ResearchTechTreeDefinition.MAX_PRESENTATION_BANDS
+                    || bands.stream().map(WireTechBand::id).distinct().count()
+                            != bands.size()
+                    || domains.isEmpty() || domains.size() > Domain.values().length
+                    || !domains.equals(domains.stream()
+                            .sorted(Comparator.comparingInt(value -> value.domain().ordinal()))
+                            .toList())) {
+                throw new IllegalArgumentException("Invalid synchronized Research Tech Tree");
+            }
+            Set<Domain> domainIds = new LinkedHashSet<>();
+            Set<Integer> memberOrdinals = new LinkedHashSet<>();
+            for (WireTechDomain domain : domains) {
+                if (!domainIds.add(domain.domain())) {
+                    throw new IllegalArgumentException(
+                            "Synchronized Research Tech Tree has a duplicate domain");
+                }
+                for (WireTechLane lane : domain.lanes()) {
+                    for (WireTechMember member : lane.members()) {
+                        if (!memberOrdinals.add(member.nodeOrdinal())) {
+                            throw new IllegalArgumentException(
+                                    "Synchronized Research Tech Tree has a duplicate member");
+                        }
+                    }
+                }
+            }
+            if (iconOrdinal >= 0 && !memberOrdinals.contains(iconOrdinal)) {
+                throw new IllegalArgumentException(
+                        "Synchronized Research Tech Tree icon is not a tree member");
+            }
+        }
+
+        private static WireTechTree from(
+                ResearchTechTreePresentation presentation,
+                Map<ResourceLocation, Integer> ordinals) {
+            if (!presentation.available()) {
+                throw new IllegalArgumentException("Cannot synchronize an empty Research Tech Tree");
+            }
+            return new WireTechTree(
+                    presentation.treeId().orElseThrow(),
+                    presentation.title(),
+                    presentation.translationKey(),
+                    presentation.iconNodeId().map(id -> ordinalFor(ordinals, id)).orElse(-1),
+                    presentation.maxNodesPerLayer(),
+                    presentation.tiers().stream()
+                            .map(tier -> new WireTechTier(
+                                    tier.tier(), tier.title(), tier.translationKey()))
+                            .toList(),
+                    presentation.bands().stream()
+                            .map(band -> new WireTechBand(
+                                    band.id(),
+                                    band.title(),
+                                    band.translationKey(),
+                                    band.color(),
+                                    band.icon()))
+                            .toList(),
+                    presentation.domains().stream()
+                            .map(domain -> WireTechDomain.from(domain, ordinals))
+                            .toList());
+        }
+
+        private void validateOrdinals(int totalNodes) {
+            if (iconOrdinal >= totalNodes) {
+                throw new IllegalArgumentException(
+                        "Research Tech Tree icon ordinal is outside the node table");
+            }
+            for (WireTechDomain domain : domains) {
+                if (domain.iconOrdinal() >= totalNodes) {
+                    throw new IllegalArgumentException(
+                            "Research Tech Tree domain icon ordinal is outside the node table");
+                }
+                for (WireTechLane lane : domain.lanes()) {
+                    if (lane.iconOrdinal() >= totalNodes
+                            || lane.members().stream()
+                                    .anyMatch(member -> member.nodeOrdinal() >= totalNodes)) {
+                        throw new IllegalArgumentException(
+                                "Research Tech Tree lane ordinal is outside the node table");
+                    }
+                }
+            }
+        }
+
+        private ResearchTechTreePresentation resolve(List<ResearchTreeGraph.Node> nodes) {
+            return new ResearchTechTreePresentation(
+                    Optional.of(treeId),
+                    title,
+                    translationKey,
+                    iconOrdinal < 0
+                            ? Optional.empty()
+                            : Optional.of(nodes.get(iconOrdinal).blueprintId()),
+                    tiers.stream()
+                            .map(tier -> new ResearchTechTreePresentation.TierLabel(
+                                    tier.tier(), tier.title(), tier.translationKey()))
+                            .toList(),
+                    bands.stream()
+                            .map(band -> new ResearchTechTreePresentation.BandLabel(
+                                    band.id(),
+                                    band.title(),
+                                    band.translationKey(),
+                                    band.color(),
+                                    band.icon()))
+                            .toList(),
+                    maxNodesPerLayer,
+                    domains.stream().map(domain -> domain.resolve(nodes)).toList());
+        }
+    }
+
     static final class ClientAccumulator {
         private boolean initialized;
         private boolean completed;
@@ -579,6 +1256,7 @@ public final class SyncResearchTreePacket {
         private int totalEdges;
         private int totalGroups;
         private int totalMembers;
+        private int totalTechTrees;
         private final Map<Integer, SyncResearchTreePacket> chunks = new TreeMap<>();
 
         synchronized Optional<ResearchTreePublication> accept(SyncResearchTreePacket packet) {
@@ -594,6 +1272,7 @@ public final class SyncResearchTreePacket {
                 totalEdges = packet.totalEdges;
                 totalGroups = packet.totalGroups;
                 totalMembers = packet.totalMembers;
+                totalTechTrees = packet.totalTechTrees;
                 chunks.clear();
             }
             if (completed) {
@@ -603,14 +1282,16 @@ public final class SyncResearchTreePacket {
                     || totalNodes != packet.totalNodes
                     || totalEdges != packet.totalEdges
                     || totalGroups != packet.totalGroups
-                    || totalMembers != packet.totalMembers) {
+                    || totalMembers != packet.totalMembers
+                    || totalTechTrees != packet.totalTechTrees) {
                 throw new IllegalArgumentException("Inconsistent Research tree synchronization chunks");
             }
             SyncResearchTreePacket existing = chunks.putIfAbsent(packet.chunkIndex, packet);
             if (existing != null
                     && (!existing.nodes.equals(packet.nodes)
                     || !existing.edges.equals(packet.edges)
-                    || !existing.groups.equals(packet.groups))) {
+                    || !existing.groups.equals(packet.groups)
+                    || !existing.techTrees.equals(packet.techTrees))) {
                 chunks.clear();
                 throw new IllegalArgumentException("Conflicting duplicate Research tree synchronization chunk");
             }
@@ -622,8 +1303,12 @@ public final class SyncResearchTreePacket {
                     .flatMap(chunk -> chunk.groups.stream())
                     .mapToLong(group -> group.members().size())
                     .sum();
+            long techTreeCount = chunks.values().stream()
+                    .mapToLong(chunk -> chunk.techTrees.size())
+                    .sum();
             if (nodeCount > totalNodes || edgeCount > totalEdges
-                    || groupCount > totalGroups || memberCount > totalMembers) {
+                    || groupCount > totalGroups || memberCount > totalMembers
+                    || techTreeCount > totalTechTrees) {
                 chunks.clear();
                 throw new IllegalArgumentException(
                         "Research tree synchronization exceeds its declared totals");
@@ -632,7 +1317,8 @@ public final class SyncResearchTreePacket {
                 return Optional.empty();
             }
             if (nodeCount != totalNodes || edgeCount != totalEdges
-                    || groupCount != totalGroups || memberCount != totalMembers) {
+                    || groupCount != totalGroups || memberCount != totalMembers
+                    || techTreeCount != totalTechTrees) {
                 chunks.clear();
                 throw new IllegalArgumentException("Completed Research tree synchronization has incorrect totals");
             }
@@ -659,11 +1345,18 @@ public final class SyncResearchTreePacket {
                     .flatMap(chunk -> chunk.groups.stream())
                     .sorted(Comparator.comparingInt(WireGroup::order))
                     .toList();
+            List<WireTechTree> wireTechTrees = chunks.values().stream()
+                    .flatMap(chunk -> chunk.techTrees.stream())
+                    .toList();
             chunks.clear();
             ResearchTreeGraph graph = new ResearchTreeGraph(nodes, edges);
             ResearchTreePresentation presentation = new ResearchTreePresentation(
                     wireGroups.stream().map(group -> group.resolve(nodes)).toList());
-            ResearchTreePublication publication = new ResearchTreePublication(graph, presentation);
+            ResearchTechTreePresentation techTree = wireTechTrees.isEmpty()
+                    ? ResearchTechTreePresentation.EMPTY
+                    : wireTechTrees.get(0).resolve(nodes);
+            ResearchTreePublication publication = new ResearchTreePublication(
+                    graph, presentation, techTree);
             completed = true;
             return Optional.of(publication);
         }
@@ -677,6 +1370,7 @@ public final class SyncResearchTreePacket {
             totalEdges = 0;
             totalGroups = 0;
             totalMembers = 0;
+            totalTechTrees = 0;
             chunks.clear();
         }
     }

@@ -51,6 +51,19 @@ class ResearchTreeNodeIndexTest {
                 layout(List.of(positioned(0, "test:a", 8, 8))));
         assertTrue(index.visible(500, 500, 600, 600).isEmpty());
         assertTrue(index.visible(10, 10, 9, 9).isEmpty());
+        assertThrows(IllegalArgumentException.class, () -> index.at(8, 8, -1));
+    }
+
+    @Test
+    void paddedHitTargetsResolveToTheNearestPublishedNode() {
+        ResearchTreeNodeIndex index = ResearchTreeNodeIndex.create(layout(List.of(
+                positioned(0, "test:left", 8, 8),
+                positioned(1, "test:right", 40, 8))));
+
+        assertTrue(index.at(3, 20).isEmpty());
+        assertEquals(id("test:left"), index.at(3, 20, 6).orElseThrow().blueprintId());
+        assertEquals(id("test:left"), index.at(36, 20, 6).orElseThrow().blueprintId());
+        assertEquals(id("test:right"), index.at(37, 20, 6).orElseThrow().blueprintId());
     }
 
     @Test
@@ -84,6 +97,18 @@ class ResearchTreeNodeIndexTest {
                 index.at(320, 320).orElseThrow().blueprintId());
         assertEquals(ResearchTreeGraph.MAX_NODES,
                 index.visible(0, 0, layout.width(), layout.height()).size());
+    }
+
+    @Test
+    void extremeFitPaddingFallsBackToPopulatedBuckets() {
+        ResearchTreeNodeIndex index = ResearchTreeNodeIndex.create(layout(List.of(
+                positioned(0, "test:left", 8, 8),
+                positioned(1, "test:right", 96, 96))));
+
+        assertEquals(id("test:left"), assertTimeout(
+                Duration.ofSeconds(1),
+                () -> index.at(20, 20, Double.MAX_VALUE))
+                .orElseThrow().blueprintId());
     }
 
     private static List<ResourceLocation> ids(

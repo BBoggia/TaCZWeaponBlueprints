@@ -9,6 +9,7 @@
     "GunSmithTableMenuMixin"
     ],
   "client": [
+    "EmiScreenBaseMixin",
     "GunSmithTableScreenMixin",
     "ICreativeModeTabsAccessor",
     "IAbstractContainerScreenAccessor"

@@ -10,7 +10,7 @@ import net.minecraft.commands.CommandSourceStack;
 class RootCommandTest {
 
     @Test
-    void registersAllPhaseSixLootDiagnostics() {
+    void registersAllOperatorCommandFamilies() {
         CommandDispatcher<CommandSourceStack> dispatcher = new CommandDispatcher<>();
         RootCommand.register(dispatcher);
 
@@ -30,5 +30,37 @@ class RootCommandTest {
         assertNotNull(progression);
         assertNotNull(progression.getChild("inspect"));
         assertNotNull(progression.getChild("reset"));
+        var points = progression.getChild("points");
+        assertNotNull(points);
+        var give = points.getChild("give");
+        assertNotNull(give);
+        var targets = give.getChild("targets");
+        assertNotNull(targets);
+        assertNotNull(targets.getChild("amount"));
+
+        var research = root.getChild("research");
+        assertNotNull(research);
+        assertNotNull(research.getChild("status"));
+        assertNotNull(research.getChild("inspect"));
+        assertNotNull(research.getChild("export"));
+        var setup = research.getChild("setup");
+        assertNotNull(setup);
+        assertNotNull(setup.getChild("assess"));
+        assertNotNull(setup.getChild("preview"));
+        assertNotNull(setup.getChild("apply"));
+        assertNotNull(setup.getChild("export"));
+        var preset = setup.getChild("apply").getChild("preset");
+        assertNotNull(preset);
+        assertNotNull(preset.getChild("confirm"));
+        var awards = research.getChild("awards");
+        assertNotNull(awards);
+        assertNotNull(awards.getChild("status"));
+        assertNotNull(awards.getChild("inspect"));
+        assertNotNull(awards.getChild("sources"));
+        var trigger = awards.getChild("trigger");
+        assertNotNull(trigger);
+        var awardTargets = trigger.getChild("targets");
+        assertNotNull(awardTargets);
+        assertNotNull(awardTargets.getChild("source"));
     }
 }

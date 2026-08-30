@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
+import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 
 /** Pure invariant-preserving operations behind the permission-gated commands. */
 public final class PlayerProgressionAdminService {
@@ -40,20 +41,45 @@ public final class PlayerProgressionAdminService {
             }
             case DISCOVERED -> data.replaceProgression(learned, learned, points);
             case POINTS -> data.setResearchPoints(0);
+            case AWARDS -> {
+                data.clearResearchPointAwardLedger();
+                yield true;
+            }
             case ALL -> {
                 boolean replaced = data.replaceProgression(List.of(), List.of(), 0);
                 if (replaced) {
                     data.replaceRecipes(List.of());
+                    data.clearResearchPointAwardLedger();
                 }
                 yield replaced;
             }
         };
     }
 
+    /** Adds operator-granted RP without bypassing configured or persisted bounds. */
+    public static boolean giveResearchPoints(
+            IPlayerRecipeData data,
+            int amount,
+            int pointCap) {
+        if (data == null
+                || amount <= 0
+                || pointCap < 0
+                || pointCap > PlayerProgressionLimits.MAX_RESEARCH_POINTS) {
+            return false;
+        }
+        return ResearchPointTransactionService.credit(
+                data,
+                amount,
+                pointCap,
+                ResearchPointTransactionService.OverflowPolicy.REQUIRE_FULL)
+                .successful();
+    }
+
     public enum ResetState {
         LEARNED,
         DISCOVERED,
         POINTS,
+        AWARDS,
         ALL;
 
         public String serializedName() {

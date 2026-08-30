@@ -6,10 +6,15 @@
   "icon": "tacz:m16a4",
   "order": 40,
   "ranks": [
+    [],
     ["tacz:m16a4"],
-    ["tacz:m4a1", "tacz:type_81", "tacz:aug", "tacz:hk_g3"],
-    ["tacz:m16a1", "tacz:ak47", "tacz:qbz_95", "tacz:g36k", "tacz:scar_l", "tacz:fn_fal", "tacz:sks_tactical"],
-    ["tacz:hk416d", "tacz:qbz_191", "tacz:mk14"],
-    ["tacz:spr15hb", "tacz:scar_h"]
+    ["tacz:m4a1", "tacz:type_81"],
+    ["tacz:aug", "tacz:hk_g3", "tacz:m16a1", "tacz:ak47"],
+    ["tacz:qbz_95", "tacz:g36k", "tacz:scar_l", "tacz:sks_tactical"],
+    ["tacz:fn_fal", "tacz:hk416d"],
+    ["tacz:qbz_191"],
+    ["tacz:mk14"],
+    ["tacz:spr15hb"],
+    ["tacz:scar_h"]
   ]
 }

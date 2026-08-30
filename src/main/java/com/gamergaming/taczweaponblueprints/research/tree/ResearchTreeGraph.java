@@ -84,6 +84,65 @@ public final class ResearchTreeGraph {
                 : prerequisitesById.getOrDefault(blueprintId, List.of());
     }
 
+    /**
+     * Derives one ordinal-local view without changing stable source ordinals or
+     * manufacturing edges. Prerequisite counts are reduced to the truthful
+     * edges retained by the view.
+     */
+    public ResearchTreeGraph inducedSubgraph(Set<ResourceLocation> includedNodeIds) {
+        if (includedNodeIds == null || includedNodeIds.stream().anyMatch(Objects::isNull)) {
+            throw new IllegalArgumentException(
+                    "research tree induced-subgraph IDs cannot be null");
+        }
+        if (!nodesById.keySet().containsAll(includedNodeIds)) {
+            throw new IllegalArgumentException(
+                    "research tree induced subgraph references an unknown node");
+        }
+        if (includedNodeIds.isEmpty()) {
+            return EMPTY;
+        }
+        if (includedNodeIds.size() == nodes.size()) {
+            return this;
+        }
+
+        Map<ResourceLocation, Integer> prerequisiteCounts = new LinkedHashMap<>();
+        includedNodeIds.forEach(id -> prerequisiteCounts.put(id, 0));
+        List<Edge> retainedEdges = new ArrayList<>();
+        for (Edge edge : edges) {
+            if (includedNodeIds.contains(edge.prerequisiteId())
+                    && includedNodeIds.contains(edge.dependentId())) {
+                retainedEdges.add(edge);
+                prerequisiteCounts.compute(
+                        edge.dependentId(),
+                        (ignored, count) -> count == null ? 1 : count + 1);
+            }
+        }
+
+        List<Node> retainedNodes = new ArrayList<>(includedNodeIds.size());
+        for (Node node : nodes) {
+            if (!includedNodeIds.contains(node.blueprintId())) {
+                continue;
+            }
+            retainedNodes.add(new Node(
+                    retainedNodes.size(),
+                    node.sourceOrdinal(),
+                    node.blueprintId(),
+                    node.nameKey(),
+                    node.itemType(),
+                    node.displaySlotId(),
+                    node.visibility(),
+                    node.learned(),
+                    node.discovered(),
+                    node.policyEligible(),
+                    node.pointCost(),
+                    node.ingredientTypeCount(),
+                    prerequisiteCounts.get(node.blueprintId()),
+                    0,
+                    node.availability()));
+        }
+        return new ResearchTreeGraph(retainedNodes, retainedEdges);
+    }
+
     /** Opaque per-publication key for a node whose real blueprint ID is not disclosed. */
     public static ResourceLocation redactedNodeId(int ordinal) {
         return redactedNodeId(ordinal, 0);
@@ -133,6 +192,7 @@ public final class ResearchTreeGraph {
             Node left = nodes.get(index);
             Node right = other.nodes.get(index);
             if (!left.blueprintId().equals(right.blueprintId())
+                    || left.sourceOrdinal() != right.sourceOrdinal()
                     || !left.itemType().equals(right.itemType())
                     || left.hiddenPrerequisiteCount() != right.hiddenPrerequisiteCount()) {
                 return false;
@@ -146,13 +206,16 @@ public final class ResearchTreeGraph {
             throw new IllegalArgumentException("research tree exceeds its node or edge limit");
         }
         Map<ResourceLocation, Node> byId = new LinkedHashMap<>();
+        Set<Integer> sourceOrdinals = new HashSet<>();
         for (int index = 0; index < nodes.size(); index++) {
             Node node = nodes.get(index);
             if (node.ordinal() != index) {
                 throw new IllegalArgumentException("research tree node ordinals must be contiguous");
             }
-            if (byId.put(node.blueprintId(), node) != null) {
-                throw new IllegalArgumentException("research tree contains a duplicate blueprint ID");
+            if (byId.put(node.blueprintId(), node) != null
+                    || !sourceOrdinals.add(node.sourceOrdinal())) {
+                throw new IllegalArgumentException(
+                        "research tree contains a duplicate blueprint ID or source ordinal");
             }
         }
 
@@ -231,6 +294,7 @@ public final class ResearchTreeGraph {
 
     public record Node(
             int ordinal,
+            int sourceOrdinal,
             ResourceLocation blueprintId,
             String nameKey,
             String itemType,
@@ -244,8 +308,43 @@ public final class ResearchTreeGraph {
             int prerequisiteCount,
             int hiddenPrerequisiteCount,
             Availability availability) {
+        /** Full-publication nodes use their table ordinal as their stable source ordinal. */
+        public Node(
+                int ordinal,
+                ResourceLocation blueprintId,
+                String nameKey,
+                String itemType,
+                ResourceLocation displaySlotId,
+                JournalVisibility visibility,
+                boolean learned,
+                boolean discovered,
+                boolean policyEligible,
+                int pointCost,
+                int ingredientTypeCount,
+                int prerequisiteCount,
+                int hiddenPrerequisiteCount,
+                Availability availability) {
+            this(
+                    ordinal,
+                    ordinal,
+                    blueprintId,
+                    nameKey,
+                    itemType,
+                    displaySlotId,
+                    visibility,
+                    learned,
+                    discovered,
+                    policyEligible,
+                    pointCost,
+                    ingredientTypeCount,
+                    prerequisiteCount,
+                    hiddenPrerequisiteCount,
+                    availability);
+        }
+
         public Node {
             if (ordinal < 0 || ordinal >= MAX_NODES
+                    || sourceOrdinal < 0 || sourceOrdinal >= MAX_NODES
                     || blueprintId == null
                     || displaySlotId == null
                     || visibility == null
@@ -271,7 +370,7 @@ public final class ResearchTreeGraph {
                 throw new IllegalArgumentException("invalid research tree node state");
             }
             if (!visibility.revealsIdentity()) {
-                if (!isRedactedNodeId(blueprintId, ordinal)
+                if (!isRedactedNodeId(blueprintId, sourceOrdinal)
                         || !itemType.equals(REDACTED_ITEM_TYPE)
                         || !displaySlotId.equals(REDACTED_DISPLAY_SLOT)
                         || availability != Availability.REDACTED

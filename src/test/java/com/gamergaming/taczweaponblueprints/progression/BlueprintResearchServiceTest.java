@@ -6,14 +6,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import com.gamergaming.taczweaponblueprints.capabilities.BlueprintLearningMutation;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintResearchService.ResearchInput;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintResearchService.Status;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.AutomaticPlacementMode;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPrerequisiteOverlay;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPrerequisitePlan;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCost;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchIngredient;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchPolicy;
@@ -28,6 +33,7 @@ import net.minecraft.world.item.Items;
 
 class BlueprintResearchServiceTest {
     private static final ResourceLocation BLUEPRINT = id("test:rifle");
+    private static final ResourceLocation RECIPE = id("test:gun/rifle");
     private static final ResourceLocation PROFILE = id("test:profile");
 
     @BeforeAll
@@ -82,11 +88,85 @@ class BlueprintResearchServiceTest {
 
         assertTrue(result.successful());
         assertEquals(7, result.spentPoints());
-        assertEquals(3, result.newBalance());
+        assertEquals(3, result.balanceAfterCost());
         assertEquals(1, input.stacks.get(0).getCount());
         assertEquals(1, input.stacks.get(1).getCount());
         assertEquals(List.of(BLUEPRINT), input.outputs);
         assertFalse(data.hasBlueprint(BLUEPRINT.toString()));
+    }
+
+    @Test
+    void directResearchLearnsCanonicalKnowledgeWithoutCreatingOrCheckingOutput() {
+        PlayerRecipeData data = data(10, true);
+        TestInput input = input(
+                new ItemStack(Items.PAPER, 4),
+                new ItemStack(Items.IRON_INGOT, 3));
+        input.acceptOutput = false;
+        BlueprintResearchCost cost = new BlueprintResearchCost(7, List.of(
+                ingredient(3, "minecraft:paper"),
+                ingredient(2, "minecraft:iron_ingot")));
+
+        BlueprintResearchService.Result result = directResearch(
+                data, input, policy(data, cost), false);
+
+        assertTrue(result.successful());
+        assertEquals(TreeResearchResultMode.DIRECT_LEARN, result.resultMode());
+        assertEquals(7, result.spentPoints());
+        assertEquals(3, result.balanceAfterCost());
+        assertTrue(result.learnedChanged());
+        assertFalse(result.discoveredChanged(),
+                "an already discovered blueprint must not replay discovery");
+        assertTrue(result.legacyRecipeChanged());
+        assertTrue(data.hasBlueprint(BLUEPRINT.toString()));
+        assertTrue(data.hasDiscoveredBlueprint(BLUEPRINT.toString()));
+        assertTrue(data.hasRecipe(RECIPE.toString()));
+        assertEquals(1, input.stacks.get(0).getCount());
+        assertEquals(1, input.stacks.get(1).getCount());
+        assertTrue(input.outputs.isEmpty());
+        assertEquals(0, input.createdOutputs);
+    }
+
+    @Test
+    void directResearchCapacityPreflightRejectsBeforeAnyEconomicMutation() {
+        RejectingLearningData data = new RejectingLearningData(true, false);
+        data.setResearchPoints(5);
+        data.discoverBlueprint(BLUEPRINT.toString());
+        TestInput input = input(new ItemStack(Items.PAPER, 2));
+
+        BlueprintResearchService.Result result = directResearch(
+                data,
+                input,
+                policy(data, new BlueprintResearchCost(
+                        3, List.of(ingredient(1, "minecraft:paper")))),
+                false);
+
+        assertEquals(Status.PROGRESSION_CAPACITY_EXHAUSTED, result.status());
+        assertEquals(5, data.getResearchPoints());
+        assertEquals(2, input.stacks.get(0).getCount());
+        assertFalse(data.hasBlueprint(BLUEPRINT.toString()));
+        assertTrue(input.outputs.isEmpty());
+    }
+
+    @Test
+    void directResearchRestoresPointsAndInventoryWhenPreparedCommitRejects() {
+        RejectingLearningData data = new RejectingLearningData(false, true);
+        data.setResearchPoints(5);
+        data.discoverBlueprint(BLUEPRINT.toString());
+        TestInput input = input(new ItemStack(Items.PAPER, 2));
+
+        BlueprintResearchService.Result result = directResearch(
+                data,
+                input,
+                policy(data, new BlueprintResearchCost(
+                        3, List.of(ingredient(1, "minecraft:paper")))),
+                false);
+
+        assertEquals(Status.PROGRESSION_CAPACITY_EXHAUSTED, result.status());
+        assertEquals(5, data.getResearchPoints());
+        assertEquals(2, input.stacks.get(0).getCount());
+        assertFalse(data.hasBlueprint(BLUEPRINT.toString()));
+        assertFalse(data.hasRecipe(RECIPE.toString()));
+        assertTrue(input.outputs.isEmpty());
     }
 
     @Test
@@ -180,6 +260,69 @@ class BlueprintResearchServiceTest {
     }
 
     @Test
+    void restorationFailureIsReportedWithoutClaimingMaterialsWereRestored() {
+        PlayerRecipeData data = data(5, true);
+        TestInput input = input(new ItemStack(Items.PAPER, 2));
+        input.failConsumption = true;
+        input.failRestore = true;
+
+        BlueprintResearchService.Result result = research(
+                data,
+                input,
+                policy(data, new BlueprintResearchCost(
+                        3, List.of(ingredient(1, "minecraft:paper")))),
+                false);
+
+        assertEquals(Status.ROLLBACK_FAILED, result.status());
+        assertEquals(5, data.getResearchPoints(), "RP restoration remains independent");
+        assertEquals(1, input.stacks.get(0).getCount(),
+                "the test double proves the failed inventory restoration is observable");
+    }
+
+    @Test
+    void pointRestorationExceptionIsContainedAndReported() {
+        ThrowingPointRestoreData data = new ThrowingPointRestoreData();
+        data.setResearchPoints(5);
+        data.discoverBlueprint(BLUEPRINT.toString());
+        TestInput input = input(new ItemStack(Items.PAPER, 2));
+        input.failConsumption = true;
+
+        BlueprintResearchService.Result result = research(
+                data,
+                input,
+                policy(data, new BlueprintResearchCost(
+                        3, List.of(ingredient(1, "minecraft:paper")))),
+                false);
+
+        assertEquals(Status.ROLLBACK_FAILED, result.status());
+        assertEquals(2, data.getResearchPoints(),
+                "a failed RP restore must not be represented as success");
+        assertEquals(2, input.stacks.get(0).getCount(),
+                "inventory restoration still completes independently");
+    }
+
+    @Test
+    void outputDeliveryRequiresVerifiedInventoryInsertionOrDrop() {
+        ItemStack inserted = new ItemStack(Items.PAPER);
+        assertTrue(BlueprintResearchService.deliverOutput(
+                inserted,
+                stack -> stack.shrink(1),
+                stack -> {
+                    throw new AssertionError("drop fallback must not run after insertion");
+                }));
+
+        ItemStack dropped = new ItemStack(Items.PAPER);
+        assertTrue(BlueprintResearchService.deliverOutput(
+                dropped, stack -> { }, stack -> true));
+
+        ItemStack rejected = new ItemStack(Items.PAPER);
+        assertFalse(BlueprintResearchService.deliverOutput(
+                rejected, stack -> { }, stack -> false));
+        assertFalse(BlueprintResearchService.deliverOutput(
+                new ItemStack(Items.PAPER, 2), stack -> { }, stack -> true));
+    }
+
+    @Test
     void policyFailuresAreTypedAndAtomic() {
         assertPolicyFailure(Status.POLICY_UNAVAILABLE, data -> null);
         assertPolicyFailure(Status.CONTENT_UNAVAILABLE,
@@ -199,10 +342,80 @@ class BlueprintResearchServiceTest {
         BlueprintResearchService.Result alreadyLearned = research(
                 learned,
                 input,
-                policy(learned, new BlueprintResearchCost(0, List.of())),
+                policy(
+                        learned,
+                        new BlueprintResearchCost(0, List.of()),
+                        true, false, true, true, false, false),
                 false);
         assertEquals(Status.ALREADY_LEARNED, alreadyLearned.status());
         assertTrue(input.outputs.isEmpty());
+    }
+
+    @Test
+    void connectedAutomaticPrerequisiteIsEnforcedByTheAtomicResearchTransaction() {
+        ResourceLocation required = id("test:auto_anchor");
+        AutomaticWeaponPrerequisitePlan plan = new AutomaticWeaponPrerequisitePlan(
+                PROFILE,
+                id("test:tree"),
+                AutomaticPlacementMode.CONNECTED,
+                5L,
+                7L,
+                1,
+                Map.of(BLUEPRINT, List.of(required)),
+                Map.of());
+        PlayerRecipeData data = data(5, true);
+        BlueprintResearchPolicy base = policy(
+                data, new BlueprintResearchCost(0, List.of()));
+        BlueprintResearchPolicy hiddenAnchor = AutomaticWeaponPrerequisiteOverlay.apply(
+                base,
+                plan,
+                data,
+                ignored -> false,
+                false);
+        assertTrue(hiddenAnchor.prerequisites().isEmpty(),
+                "an unselectable generated anchor must fail open");
+        BlueprintResearchPolicy missingAnchor = AutomaticWeaponPrerequisiteOverlay.apply(
+                base,
+                plan,
+                data,
+                ignored -> false,
+                true,
+                ignored -> false);
+        assertTrue(missingAnchor.prerequisites().isEmpty(),
+                "an unknown generated anchor must fail open");
+
+        BlueprintResearchPolicy authored = policy(
+                data,
+                new BlueprintResearchCost(0, List.of()),
+                true, false, true, true, false, false);
+        BlueprintResearchPolicy authoredResult = AutomaticWeaponPrerequisiteOverlay.apply(
+                authored,
+                plan,
+                data,
+                ignored -> false);
+        assertEquals(List.of(id("test:required")), authoredResult.prerequisites(),
+                "authored prerequisites must outrank generated prerequisites");
+
+        BlueprintResearchPolicy locked = AutomaticWeaponPrerequisiteOverlay.apply(
+                base,
+                plan,
+                data,
+                ignored -> false);
+
+        BlueprintResearchService.Result rejected = research(
+                data, input(ItemStack.EMPTY), locked, false);
+        assertEquals(Status.PREREQUISITES_REQUIRED, rejected.status());
+        assertEquals(5, data.getResearchPoints());
+
+        data.addBlueprint(required.toString());
+        BlueprintResearchPolicy unlocked = AutomaticWeaponPrerequisiteOverlay.apply(
+                policy(data, new BlueprintResearchCost(0, List.of())),
+                plan,
+                data,
+                ignored -> false);
+        BlueprintResearchService.Result accepted = research(
+                data, input(ItemStack.EMPTY), unlocked, false);
+        assertTrue(accepted.successful());
     }
 
     private static void assertAtomicFailure(
@@ -235,6 +448,23 @@ class BlueprintResearchServiceTest {
             BlueprintResearchPolicy policy,
             boolean creative) {
         return BlueprintResearchService.research(BLUEPRINT, data, ignored -> policy, input, creative);
+    }
+
+    private static BlueprintResearchService.Result directResearch(
+            PlayerRecipeData data,
+            ResearchInput input,
+            BlueprintResearchPolicy policy,
+            boolean creative) {
+        return BlueprintResearchService.research(
+                BLUEPRINT,
+                data,
+                ignored -> policy,
+                ignored -> new BlueprintLearningService.LearningTarget(
+                        BLUEPRINT, RECIPE),
+                input,
+                creative,
+                true,
+                TreeResearchResultMode.DIRECT_LEARN);
     }
 
     private static PlayerRecipeData data(int points, boolean discovered) {
@@ -318,6 +548,8 @@ class BlueprintResearchServiceTest {
         private boolean acceptOutput = true;
         private boolean deliverOutput = true;
         private boolean failConsumption;
+        private boolean failRestore;
+        private int createdOutputs;
 
         private TestInput(List<ItemStack> stacks) {
             this.stacks = stacks;
@@ -345,12 +577,16 @@ class BlueprintResearchServiceTest {
 
         @Override
         public void restore(List<ItemStack> snapshot) {
+            if (failRestore) {
+                throw new IllegalStateException("simulated restoration failure");
+            }
             stacks.clear();
             snapshot.forEach(stack -> stacks.add(stack.copy()));
         }
 
         @Override
         public ItemStack createOutput(ResourceLocation blueprintId) {
+            createdOutputs++;
             return new ItemStack(Items.PAPER);
         }
 
@@ -360,6 +596,53 @@ class BlueprintResearchServiceTest {
                 outputs.add(BLUEPRINT);
             }
             return deliverOutput;
+        }
+    }
+
+    private static final class RejectingLearningData extends PlayerRecipeData {
+        private final boolean rejectPreflight;
+        private final boolean rejectCommit;
+
+        private RejectingLearningData(
+                boolean rejectPreflight,
+                boolean rejectCommit) {
+            this.rejectPreflight = rejectPreflight;
+            this.rejectCommit = rejectCommit;
+        }
+
+        @Override
+        public synchronized BlueprintLearningMutation.Result applyBlueprintLearning(
+                BlueprintLearningMutation.Request request) {
+            if ((rejectPreflight
+                            && request.operation()
+                                    == BlueprintLearningMutation.Operation.PREFLIGHT)
+                    || (rejectCommit
+                            && request.operation()
+                                    == BlueprintLearningMutation.Operation.COMMIT)) {
+                return BlueprintLearningMutation.Result.unchanged(
+                        BlueprintLearningMutation.Status.CAPACITY_REACHED,
+                        request.operation());
+            }
+            return super.applyBlueprintLearning(request);
+        }
+    }
+
+    private static final class ThrowingPointRestoreData extends PlayerRecipeData {
+        private boolean restoring;
+
+        @Override
+        public boolean spendResearchPoints(int amount) {
+            boolean spent = super.spendResearchPoints(amount);
+            restoring |= spent && amount > 0;
+            return spent;
+        }
+
+        @Override
+        public boolean setResearchPoints(int points) {
+            if (restoring) {
+                throw new IllegalStateException("simulated RP restoration failure");
+            }
+            return super.setResearchPoints(points);
         }
     }
 }

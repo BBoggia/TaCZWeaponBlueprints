@@ -6,7 +6,10 @@
   "icon": "tacz:m320",
   "order": 70,
   "ranks": [
+    [],
     ["tacz:m320"],
+    [],
+    [],
     ["tacz:rpg7"]
   ]
 }

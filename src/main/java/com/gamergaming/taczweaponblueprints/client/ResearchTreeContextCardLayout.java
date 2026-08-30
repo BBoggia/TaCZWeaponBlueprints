@@ -129,10 +129,15 @@ public final class ResearchTreeContextCardLayout {
                 card.y() + 5,
                 RETURN_ACTION_SIZE,
                 RETURN_ACTION_SIZE);
+        ResearchTreeScreenLayout.Rect trackAction = new ResearchTreeScreenLayout.Rect(
+                returnAction.x() - RETURN_ACTION_SIZE - 2,
+                returnAction.y(),
+                RETURN_ACTION_SIZE,
+                RETURN_ACTION_SIZE);
         ResearchTreeScreenLayout.Rect name = new ResearchTreeScreenLayout.Rect(
                 icon.right() + 5,
                 card.y() + CARD_PADDING,
-                Math.max(1, returnAction.x() - icon.right() - 9),
+                Math.max(1, trackAction.x() - icon.right() - 9),
                 10);
         ResearchTreeScreenLayout.Rect status = new ResearchTreeScreenLayout.Rect(
                 card.x() + CARD_PADDING, card.y() + 28, card.width() - CARD_PADDING * 2, 10);
@@ -173,7 +178,7 @@ public final class ResearchTreeContextCardLayout {
                         10)
                 : null;
         return new Layout(
-                card, icon, name, status, summary, balance, returnAction,
+                card, icon, name, status, summary, balance, trackAction, returnAction,
                 ingredientSlots, readiness, action, best.placement(), columns);
     }
 
@@ -273,6 +278,7 @@ public final class ResearchTreeContextCardLayout {
             ResearchTreeScreenLayout.Rect status,
             ResearchTreeScreenLayout.Rect summary,
             ResearchTreeScreenLayout.Rect balance,
+            ResearchTreeScreenLayout.Rect trackAction,
             ResearchTreeScreenLayout.Rect returnAction,
             List<ResearchTreeScreenLayout.Rect> ingredients,
             ResearchTreeScreenLayout.Rect readiness,
@@ -282,12 +288,15 @@ public final class ResearchTreeContextCardLayout {
         public Layout {
             ingredients = ingredients == null ? List.of() : List.copyOf(ingredients);
             if (card == null || icon == null || name == null || status == null || summary == null
-                    || returnAction == null
+                    || trackAction == null || returnAction == null
                     || ingredients.stream().anyMatch(java.util.Objects::isNull)
                     || placement == null || columns < 1 || columns > 2
                     || !card.contains(icon) || !card.contains(name)
                     || !card.contains(status) || !card.contains(summary)
-                    || !card.contains(returnAction) || returnAction.overlaps(icon)
+                    || !card.contains(trackAction) || !card.contains(returnAction)
+                    || trackAction.overlaps(returnAction) || trackAction.overlaps(icon)
+                    || returnAction.overlaps(icon)
+                    || trackAction.overlaps(name)
                     || returnAction.overlaps(name)
                     || (balance != null && !card.contains(balance))
                     || ingredients.stream().anyMatch(slot -> !card.contains(slot))

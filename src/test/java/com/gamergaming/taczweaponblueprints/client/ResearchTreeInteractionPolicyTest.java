@@ -2,6 +2,7 @@ package com.gamergaming.taczweaponblueprints.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -49,7 +50,7 @@ class ResearchTreeInteractionPolicyTest {
                 ResearchTreeInteractionPolicy.route(
                         false, false, ResearchTreeInteractionPolicy.KeyIntent.RIGHT));
         assertEquals(
-                ResearchTreeInteractionPolicy.KeyboardTarget.DEFAULT,
+                ResearchTreeInteractionPolicy.KeyboardTarget.TREE_SELECTION,
                 ResearchTreeInteractionPolicy.route(
                         false, true, ResearchTreeInteractionPolicy.KeyIntent.ENTER));
     }
@@ -120,6 +121,44 @@ class ResearchTreeInteractionPolicyTest {
                 ResearchTreeInteractionPolicy.PointerTarget.CONTEXT_CARD));
         assertTrue(ResearchTreeInteractionPolicy.allowsGraphHover(
                 ResearchTreeInteractionPolicy.PointerTarget.GRAPH_BACKGROUND));
+    }
+
+    @Test
+    void contextCardOwnsInputEvenWhenItOverlapsAGraphNode() {
+        ResearchTreeInteractionPolicy.PointerTarget target =
+                ResearchTreeInteractionPolicy.route(
+                        new ResearchTreeInteractionPolicy.PointerLayers(
+                                false,
+                                true,
+                                false,
+                                false,
+                                false,
+                                true,
+                                true));
+
+        assertEquals(ResearchTreeInteractionPolicy.PointerTarget.CONTEXT_CARD, target);
+        assertFalse(ResearchTreeInteractionPolicy.allowsGraphHover(target));
+        assertEquals(
+                ResearchTreeInteractionPolicy.ScrollTarget.BLOCKED,
+                ResearchTreeInteractionPolicy.scrollTarget(target, false));
+    }
+
+    @Test
+    void contextCardSuppressesOnlyRailLabelsThatOverlapIt() {
+        ResearchTreeScreenLayout.Rect label =
+                new ResearchTreeScreenLayout.Rect(30, 40, 140, 18);
+
+        assertFalse(ResearchTreeInteractionPolicy.railLabelVisible(
+                true,
+                label,
+                new ResearchTreeScreenLayout.Rect(92, 20, 224, 155)));
+        assertTrue(ResearchTreeInteractionPolicy.railLabelVisible(
+                true,
+                label,
+                new ResearchTreeScreenLayout.Rect(180, 20, 224, 155)));
+        assertFalse(ResearchTreeInteractionPolicy.railLabelVisible(false, label, null));
+        assertThrows(IllegalArgumentException.class, () ->
+                ResearchTreeInteractionPolicy.railLabelVisible(true, null, null));
     }
 
     private static ResearchTreeGraph.Node node(

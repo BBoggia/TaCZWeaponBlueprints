@@ -51,6 +51,24 @@ public final class ResearchTreeDetailLayout {
         return Optional.empty();
     }
 
+    /** Header hover owns only pixels not already assigned to a compact action. */
+    public static boolean compactDetailsTooltipAt(
+            ResearchTreeScreenLayout.Layout layout,
+            double x,
+            double y) {
+        if (layout == null || layout.mode() != ResearchTreeScreenLayout.ViewMode.COMPACT) {
+            return false;
+        }
+        ResearchTreeScreenLayout.Rect details = layout.details();
+        ResearchTreeScreenLayout.Rect header = new ResearchTreeScreenLayout.Rect(
+                details.x(), details.y(), details.width(), 28);
+        return header.contains(x, y)
+                && primaryAction(layout).filter(rect -> rect.contains(x, y)).isEmpty()
+                && compact(details).stream()
+                        .map(RelationSlot::bounds)
+                        .noneMatch(rect -> rect.contains(x, y));
+    }
+
     public static Optional<RelationSlot> slotAt(
             List<RelationSlot> slots,
             double x,

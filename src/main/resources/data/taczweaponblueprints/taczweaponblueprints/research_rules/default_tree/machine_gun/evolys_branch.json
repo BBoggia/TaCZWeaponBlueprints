@@ -4,6 +4,7 @@
   "priority": 100,
   "target": { "blueprints": ["tacz:minigun"] },
   "visibility": "full",
+  "tree_enabled": true,
   "research_cost": { "points": 12, "ingredients": [{ "items": ["minecraft:paper"], "count": 6 }, { "items": ["minecraft:gold_ingot"], "count": 2 }] },
-  "prerequisites": ["tacz:fn_evolys"]
+  "prerequisites": ["tacz:fn_evolys", "tacz:rpg7"]
 }

@@ -5,19 +5,32 @@ import java.util.Set;
 
 import net.minecraft.resources.ResourceLocation;
 
-/** One disclosure-safe graph and the presentation metadata derived for it. */
+/**
+ * One disclosure-safe authoritative graph plus view-specific presentation
+ * metadata. Legacy group membership is intentionally allowed to be a subset
+ * of the graph; Tech Tree domains own the remaining published kinds.
+ */
 public record ResearchTreePublication(
         ResearchTreeGraph graph,
-        ResearchTreePresentation presentation) {
+        ResearchTreePresentation presentation,
+        ResearchTechTreePresentation techTree) {
     public static final ResearchTreePublication EMPTY = new ResearchTreePublication(
             ResearchTreeGraph.EMPTY,
-            ResearchTreePresentation.EMPTY);
+            ResearchTreePresentation.EMPTY,
+            ResearchTechTreePresentation.EMPTY);
+
+    public ResearchTreePublication(
+            ResearchTreeGraph graph,
+            ResearchTreePresentation presentation) {
+        this(graph, presentation, ResearchTechTreePresentation.EMPTY);
+    }
 
     public ResearchTreePublication {
-        if (graph == null || presentation == null) {
+        if (graph == null || presentation == null || techTree == null) {
             throw new IllegalArgumentException("research publication fields cannot be null");
         }
         validate(graph, presentation);
+        techTree.validateAgainst(graph);
     }
 
     private static void validate(
@@ -50,25 +63,53 @@ public record ResearchTreePublication(
                 }
             });
         }
-        if (!graphNodeIds.equals(presentationNodeIds)) {
+        if (!graphNodeIds.containsAll(presentationNodeIds)) {
             throw new IllegalArgumentException(
-                    "research presentation must assign every public graph node exactly once");
+                    "research presentation references a node outside the authoritative graph");
         }
         for (ResearchTreeGraph.Edge edge : graph.edges()) {
-            int prerequisiteRank = presentation.membership(edge.prerequisiteId())
-                    .orElseThrow()
-                    .rank();
-            int dependentRank = presentation.membership(edge.dependentId())
-                    .orElseThrow()
-                    .rank();
+            var prerequisite = presentation.membership(edge.prerequisiteId());
+            var dependent = presentation.membership(edge.dependentId());
+            if (prerequisite.isEmpty() || dependent.isEmpty()) {
+                continue;
+            }
+            int prerequisiteRank = prerequisite.orElseThrow().rank();
+            int dependentRank = dependent.orElseThrow().rank();
             if (prerequisiteRank >= dependentRank) {
                 throw new IllegalArgumentException(
                         "research presentation ranks contradict a prerequisite edge");
             }
         }
-        if (graph.nodes().isEmpty() != presentation.groups().isEmpty()) {
-            throw new IllegalArgumentException("empty research graph and presentation do not match");
+    }
+
+    /** Public node IDs owned by the legacy Branches and All Weapons views. */
+    public Set<ResourceLocation> legacyNodeIds() {
+        LinkedHashSet<ResourceLocation> ids = new LinkedHashSet<>();
+        presentation.groups().forEach(group -> group.members().forEach(member ->
+                ids.add(member.nodeId())));
+        return Set.copyOf(ids);
+    }
+
+    /** Weapon-scoped graph used by legacy layout and projection code. */
+    public ResearchTreeGraph legacyGraph() {
+        return graph.inducedSubgraph(legacyNodeIds());
+    }
+
+    /**
+     * Normalizes a complete publication for compatibility code that only knows
+     * the legacy group model. The authoritative publication remains unchanged.
+     */
+    public ResearchTreePublication legacyView() {
+        if (legacyNodeIds().size() == graph.nodes().size()) {
+            return this;
         }
+        ResearchTreeGraph legacyGraph = legacyGraph();
+        return legacyGraph.nodes().isEmpty()
+                ? EMPTY
+                : new ResearchTreePublication(
+                        legacyGraph,
+                        presentation,
+                        ResearchTechTreePresentation.EMPTY);
     }
 
     /** True when player-state changes can reuse group projection layouts. */

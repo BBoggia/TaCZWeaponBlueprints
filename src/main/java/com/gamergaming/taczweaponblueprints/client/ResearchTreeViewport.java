@@ -2,8 +2,8 @@ package com.gamergaming.taczweaponblueprints.client;
 
 /** Pure pan/zoom transform for the Research Bench tree canvas. */
 public final class ResearchTreeViewport {
-    /** Small enough for the packaged 54-node tree to fit in the bench viewport. */
-    public static final double MIN_SCALE = 0.25D;
+    /** Manual overview floor for large add-on trees; Fit may still frame farther out. */
+    public static final double MIN_SCALE = 0.15D;
     public static final double MAX_SCALE = 1.5D;
     public static final double SCALE_STEP = 0.25D;
     private static final double MIN_FIT_SCALE = 1.0D / 1_000_000.0D;
@@ -141,27 +141,96 @@ public final class ResearchTreeViewport {
         applyTargetImmediatelyWhenStatic();
     }
 
+    /**
+     * Moves only as far as necessary to expose a canvas rectangle inside the
+     * unobscured viewport. Rapid keyboard moves use the destination camera so
+     * they form one coherent transition instead of fighting unfinished motion.
+     */
+    public boolean reveal(
+            double x,
+            double y,
+            double width,
+            double height,
+            double screenPadding) {
+        validateFocusBounds(x, y, width, height, false);
+        if (!Double.isFinite(screenPadding) || screenPadding < 0.0D) {
+            throw new IllegalArgumentException("Research Tree reveal padding is invalid");
+        }
+        double horizontalPadding = Math.min(
+                screenPadding,
+                Math.max(0.0D, (availableWidth() - 1.0D) / 2.0D));
+        double verticalPadding = Math.min(
+                screenPadding,
+                Math.max(0.0D, (availableHeight() - 1.0D) / 2.0D));
+        double safeLeft = safeInsets.left() + horizontalPadding;
+        double safeTop = safeInsets.top() + verticalPadding;
+        double safeRight = viewportWidth - safeInsets.right() - horizontalPadding;
+        double safeBottom = viewportHeight - safeInsets.bottom() - verticalPadding;
+        double previousPanX = targetPanX;
+        double previousPanY = targetPanY;
+        targetPanX = revealAxis(
+                targetPanX, x, x + width, safeLeft, safeRight, targetScale);
+        targetPanY = revealAxis(
+                targetPanY, y, y + height, safeTop, safeBottom, targetScale);
+        clampTarget();
+        boolean changed = Math.abs(targetPanX - previousPanX) > PAN_SNAP_DISTANCE
+                || Math.abs(targetPanY - previousPanY) > PAN_SNAP_DISTANCE;
+        applyTargetImmediatelyWhenStatic();
+        return changed;
+    }
+
     public void fit() {
+        fitWithMinimumScale(0, 0, canvasWidth, canvasHeight, 0.0D, false);
+    }
+
+    /** Fits the complete canvas while retaining a usable lower zoom bound. */
+    public void fitReadable(double minimumScale) {
+        fitWithMinimumScale(0, 0, canvasWidth, canvasHeight, minimumScale, false);
+    }
+
+    /** Fits a canvas region while retaining a usable lower zoom bound. */
+    public void fitReadable(
+            double x,
+            double y,
+            double width,
+            double height,
+            double minimumScale) {
+        fitWithMinimumScale(x, y, width, height, minimumScale, true);
+    }
+
+    private void fitWithMinimumScale(
+            double x,
+            double y,
+            double width,
+            double height,
+            double minimumScale,
+            boolean region) {
+        if (!Double.isFinite(minimumScale) || minimumScale < 0.0D
+                || minimumScale > 1.0D) {
+            throw new IllegalArgumentException("Research Tree readable fit scale is invalid");
+        }
         if (canvasWidth <= 0 || canvasHeight <= 0) {
+            if (region) {
+                throw new IllegalArgumentException(
+                        "cannot fit a Research Tree region without a canvas");
+            }
             scale = 1.0D;
             panX = 0.0D;
             panY = 0.0D;
             syncTargetToCurrent();
             return;
         }
+        validateFocusBounds(x, y, width, height, region);
         targetScale = clampFitScale(Math.min(
                 1.0D,
-                Math.min(availableWidth() / (double) canvasWidth,
-                        availableHeight() / (double) canvasHeight)));
-        focus(0, 0, canvasWidth, canvasHeight);
+                Math.min(availableWidth() / width,
+                        availableHeight() / height)));
+        targetScale = Math.max(targetScale, minimumScale);
+        focus(x, y, width, height);
     }
 
     public void fit(double x, double y, double width, double height) {
-        validateFocusBounds(x, y, width, height, true);
-        targetScale = clampFitScale(Math.min(
-                1.0D,
-                Math.min(availableWidth() / width, availableHeight() / height)));
-        focus(x, y, width, height);
+        fitWithMinimumScale(x, y, width, height, 0.0D, true);
     }
 
     /** Advances a bounded fullscreen camera transition by one nominal render frame. */
@@ -255,6 +324,30 @@ public final class ResearchTreeViewport {
         double minimum = -startInset / scale;
         double maximum = canvasSize - (viewportSize - endInset) / scale;
         return Math.max(minimum, Math.min(value, maximum));
+    }
+
+    private static double revealAxis(
+            double pan,
+            double contentStart,
+            double contentEnd,
+            double screenStart,
+            double screenEnd,
+            double scale) {
+        double visibleStart = pan + screenStart / scale;
+        double visibleEnd = pan + screenEnd / scale;
+        double contentSize = contentEnd - contentStart;
+        double visibleSize = visibleEnd - visibleStart;
+        if (contentSize > visibleSize) {
+            return contentStart + contentSize / 2.0D
+                    - (screenStart + screenEnd) / (2.0D * scale);
+        }
+        if (contentStart < visibleStart) {
+            return contentStart - screenStart / scale;
+        }
+        if (contentEnd > visibleEnd) {
+            return contentEnd - screenEnd / scale;
+        }
+        return pan;
     }
 
     private int availableWidth() {

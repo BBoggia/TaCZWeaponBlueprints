@@ -26,6 +26,7 @@ class ResearchTreeGroupDefinitionTest {
                   "translation_key": "gui.test.groups.pistols",
                   "icon": "test:starter",
                   "order": 20,
+                  "include_in_overview": false,
                   "ranks": [
                     ["test:starter"],
                     ["test:left", "test:right"]
@@ -36,6 +37,7 @@ class ResearchTreeGroupDefinitionTest {
         assertEquals("Pistols", group.title());
         assertEquals(Optional.of("gui.test.groups.pistols"), group.translationKey());
         assertEquals(20, group.order());
+        assertEquals(Optional.of(false), group.includeInOverview());
         assertEquals(2, group.ranks().size());
         assertEquals(List.of(id("test:starter"), id("test:left"), id("test:right")), group.members());
     }
@@ -48,6 +50,9 @@ class ResearchTreeGroupDefinitionTest {
                 "\"gui.test.groups.pistols\"",
                 "\"gui.test.groups bad\""));
         assertDecodeFails(validJson().replace("\"order\": 10", "\"order\": -1"));
+        assertDecodeFails(validJson().replace(
+                "\"order\": 10,",
+                "\"order\": 10, \"include_in_overview\": \"yes\","));
         assertDecodeFails(validJson().replace("\"format\": 1", "\"format\": 2"));
         assertDecodeFails(validJson().replace(
                 "[\"test:starter\"],\n    [\"test:advanced\"]",
@@ -60,6 +65,30 @@ class ResearchTreeGroupDefinitionTest {
         assertDecodeFails(validJson().replace(
                 "\"icon\": \"test:starter\"",
                 "\"icon\": \"test:not_a_member\""));
+    }
+
+    @Test
+    void acceptsSparseGlobalRankAlignmentButRejectsTrailingEmptyRanks() {
+        ResearchTreeGroupDefinition offset = decode(groupJson(
+                "test:starter",
+                "[], [\"test:starter\"], [\"test:advanced\"]"));
+
+        assertEquals(List.of(), offset.ranks().get(0));
+        assertEquals(List.of(id("test:starter")), offset.ranks().get(1));
+        ResearchTreeGroupDefinition sparse = decode(groupJson(
+                "test:starter",
+                "[\"test:starter\"], [], [\"test:advanced\"]"));
+        assertTrue(sparse.ranks().get(1).isEmpty());
+        assertDecodeFails(groupJson(
+                "test:starter",
+                "[\"test:starter\"], []"));
+    }
+
+    @Test
+    void legacyDefinitionsUseTheStableOverviewDefault() {
+        ResearchTreeGroupDefinition group = decode(validJson());
+
+        assertTrue(group.includeInOverview().isEmpty());
     }
 
     @Test

@@ -1,7 +1,6 @@
 package com.gamergaming.taczweaponblueprints.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.util.List;
@@ -14,6 +13,9 @@ import com.gamergaming.taczweaponblueprints.journal.BlueprintJournalSnapshot;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePresentation;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePublication;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Tier;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreePresentation;
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
 
 import net.minecraft.resources.ResourceLocation;
@@ -42,31 +44,31 @@ class ClientResearchStateTest {
     }
 
     @Test
-    void unchangedTreesAndStateOnlyTreesReuseTheExistingLayout() {
+    void unchangedTreesAndStateOnlyTreesPublishWithoutDerivedLayoutState() {
         BlueprintJournalSnapshot firstJournal = journal(4);
         ResearchTreeGraph firstGraph = graph(ResearchTreeGraph.Availability.AVAILABLE);
-        ResearchTreePublication firstTree = publication(firstGraph);
+        ResearchTreePublication firstTree = publicationWithTechTree(firstGraph);
         ClientResearchState.acceptJournal(1L, firstJournal, false);
         ClientResearchState.acceptTree(1L, firstTree);
-        var originalLayout = ClientResearchState.publication().layout();
         var originalPresentation = ClientResearchState.publication().presentation();
+        var originalTechTree = ClientResearchState.publication().techTree();
 
         BlueprintJournalSnapshot pointOnlyJournal = journal(9);
         ClientResearchState.acceptJournal(2L, pointOnlyJournal, true);
         assertEquals(pointOnlyJournal, ClientResearchState.publication().journal());
-        assertSame(originalLayout, ClientResearchState.publication().layout());
         assertSame(originalPresentation, ClientResearchState.publication().presentation());
+        assertSame(originalTechTree, ClientResearchState.publication().techTree());
 
         ResearchTreeGraph stateOnlyGraph = graph(ResearchTreeGraph.Availability.COST_ABOVE_CAP);
         ClientResearchState.acceptJournal(3L, journal(10), false);
-        ClientResearchState.acceptTree(3L, publication(stateOnlyGraph));
+        ClientResearchState.acceptTree(3L, publicationWithTechTree(stateOnlyGraph));
         assertEquals(stateOnlyGraph, ClientResearchState.publication().graph());
-        assertSame(originalLayout, ClientResearchState.publication().layout());
         assertEquals(originalPresentation, ClientResearchState.publication().presentation());
+        assertEquals(originalTechTree, ClientResearchState.publication().techTree());
     }
 
     @Test
-    void presentationOnlyRankChangesInvalidateTheGlobalLayout() {
+    void presentationOnlyRankChangesPublishTheNewTopologyAtomically() {
         ResearchTreeGraph graph = new ResearchTreeGraph(
                 List.of(
                         node(0, "test:a"),
@@ -79,7 +81,6 @@ class ClientResearchStateTest {
                         new ResearchTreePresentation.Member(id("test:b"), 0, 1)));
         ClientResearchState.acceptJournal(1L, journal(1), false);
         ClientResearchState.acceptTree(1L, first);
-        var firstLayout = ClientResearchState.publication().layout();
 
         ResearchTreePublication reranked = publication(
                 graph,
@@ -89,9 +90,24 @@ class ClientResearchStateTest {
         ClientResearchState.acceptJournal(2L, journal(1), false);
         ClientResearchState.acceptTree(2L, reranked);
 
-        assertNotSame(firstLayout, ClientResearchState.publication().layout());
-        assertEquals(1, ClientResearchState.publication().layout()
-                .position(id("test:b")).orElseThrow().tier());
+        assertEquals(1, ClientResearchState.publication().presentation()
+                .membership(id("test:b")).orElseThrow().rank());
+    }
+
+    @Test
+    void compatibilityTreeLayoutIsDerivedLazilyFromTheSharedKernel() {
+        ResearchTreePublication tree = publication(
+                graph(ResearchTreeGraph.Availability.AVAILABLE));
+        ClientResearchState.acceptJournal(1L, journal(1), false);
+        ClientResearchState.acceptTree(1L, tree);
+
+        var compatibilityLayout = ClientResearchTree.layout();
+
+        assertEquals(tree.graph().nodes().size(), compatibilityLayout.nodes().size());
+        assertEquals(tree.graph().nodes().get(0).blueprintId(),
+                compatibilityLayout.nodes().get(0).blueprintId());
+        assertEquals(List.of(), compatibilityLayout.categoryLanes());
+        assertEquals(List.of(), compatibilityLayout.groupRegions());
     }
 
     @Test
@@ -227,6 +243,34 @@ class ClientResearchStateTest {
                         ResearchTreePresentation.Kind.AUTHORED,
                         members)));
         return new ResearchTreePublication(graph, presentation);
+    }
+
+    private static ResearchTreePublication publicationWithTechTree(ResearchTreeGraph graph) {
+        ResearchTreePublication base = publication(graph);
+        ResourceLocation nodeId = graph.nodes().get(0).blueprintId();
+        ResearchTechTreePresentation techTree = new ResearchTechTreePresentation(
+                Optional.of(id("test:tech_tree")),
+                "Tech Tree",
+                Optional.empty(),
+                Optional.of(nodeId),
+                List.of(Tier.values()).stream()
+                        .map(tier -> new ResearchTechTreePresentation.TierLabel(
+                                tier, tier.name(), Optional.empty()))
+                        .toList(),
+                List.of(new ResearchTechTreePresentation.DomainView(
+                        Domain.WEAPONS,
+                        "Weapons",
+                        Optional.empty(),
+                        Optional.of(nodeId),
+                        List.of(new ResearchTechTreePresentation.LaneView(
+                                id("test:general"),
+                                "General",
+                                Optional.empty(),
+                                Optional.of(nodeId),
+                                0,
+                                List.of(new ResearchTechTreePresentation.Member(
+                                        nodeId, Tier.STARTER, 0, Optional.empty())))))));
+        return new ResearchTreePublication(graph, base.presentation(), techTree);
     }
 
     private static ResearchTreeGraph.Node node(int ordinal, String value) {

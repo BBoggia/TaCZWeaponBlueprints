@@ -18,10 +18,20 @@ final class BlueprintResearchIngredientValidator {
         }
         for (var entry : snapshot.profiles().entrySet()) {
             validateCost("research profile " + entry.getKey(), entry.getValue().researchCost(), itemExists);
+            validateCost(
+                    "reverse-engineering profile " + entry.getKey(),
+                    entry.getValue().reverseEngineering().cost(),
+                    itemExists);
         }
         for (var entry : snapshot.rules().entrySet()) {
             entry.getValue().researchCost().ifPresent(cost ->
                     validateCost("research rule " + entry.getKey(), cost, itemExists));
+            entry.getValue().reverseEngineering()
+                    .flatMap(BlueprintReverseEngineeringOverride::cost)
+                    .ifPresent(cost -> validateCost(
+                            "reverse-engineering rule " + entry.getKey(),
+                            cost,
+                            itemExists));
         }
     }
 
@@ -34,8 +44,16 @@ final class BlueprintResearchIngredientValidator {
         LinkedHashSet<ResourceLocation> unresolved = new LinkedHashSet<>();
         snapshot.profiles().values().forEach(profile ->
                 collectUnresolvedTags(profile.researchCost(), tagExists, unresolved));
+        snapshot.profiles().values().forEach(profile ->
+                collectUnresolvedTags(
+                        profile.reverseEngineering().cost(),
+                        tagExists,
+                        unresolved));
         snapshot.rules().values().forEach(rule -> rule.researchCost().ifPresent(cost ->
                 collectUnresolvedTags(cost, tagExists, unresolved)));
+        snapshot.rules().values().forEach(rule -> rule.reverseEngineering()
+                .flatMap(BlueprintReverseEngineeringOverride::cost)
+                .ifPresent(cost -> collectUnresolvedTags(cost, tagExists, unresolved)));
         return Set.copyOf(unresolved);
     }
 

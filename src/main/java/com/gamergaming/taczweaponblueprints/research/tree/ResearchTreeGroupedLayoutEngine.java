@@ -7,7 +7,11 @@ import java.util.Map;
 
 import net.minecraft.resources.ResourceLocation;
 
-/** Deterministic bottom-to-top layout for branch and grouped atlas projections. */
+/**
+ * Legacy grouped layout retained for source compatibility and historical fixtures.
+ * Runtime Branches projections use {@link ResearchTreeBranchLayoutComposer}.
+ */
+@Deprecated(forRemoval = false)
 public final class ResearchTreeGroupedLayoutEngine {
     public static final int PADDING = 16;
     public static final int REGION_PADDING = 12;
@@ -25,6 +29,7 @@ public final class ResearchTreeGroupedLayoutEngine {
         if (publication == null) {
             throw new IllegalArgumentException("research publication cannot be null");
         }
+        publication = publication.legacyView();
         return layout(publication.graph(), publication.presentation().groups());
     }
 

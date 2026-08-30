@@ -19,6 +19,7 @@ public record BlueprintResearchRule(
         int priority,
         BlueprintResearchTarget target,
         Optional<JournalVisibility> visibility,
+        Optional<Boolean> treeEnabled,
         Optional<Boolean> researchEnabled,
         Optional<Boolean> recyclingEnabled,
         Optional<Boolean> allowUnlearnedRecycling,
@@ -26,7 +27,8 @@ public record BlueprintResearchRule(
         Optional<BlueprintResearchCost> researchCost,
         Optional<Boolean> requiresDiscovery,
         Optional<List<ResourceLocation>> prerequisites,
-        Optional<Boolean> creativeBypassesCost) {
+        Optional<Boolean> creativeBypassesCost,
+        Optional<BlueprintReverseEngineeringOverride> reverseEngineering) {
     public static final int CURRENT_FORMAT = 1;
     public static final int MAX_ABSOLUTE_PRIORITY = 1_000_000;
     public static final int MAX_PREREQUISITES = 64;
@@ -49,6 +51,8 @@ public record BlueprintResearchRule(
                     BlueprintResearchTarget.CODEC.fieldOf("target").forGetter(BlueprintResearchRule::target),
                     new StrictOptionalFieldCodec<>("visibility", JournalVisibility.CODEC)
                             .forGetter(BlueprintResearchRule::visibility),
+                    new StrictOptionalFieldCodec<>("tree_enabled", Codec.BOOL)
+                            .forGetter(BlueprintResearchRule::treeEnabled),
                     new StrictOptionalFieldCodec<>("research_enabled", Codec.BOOL)
                             .forGetter(BlueprintResearchRule::researchEnabled),
                     new StrictOptionalFieldCodec<>("recycling_enabled", Codec.BOOL)
@@ -66,7 +70,11 @@ public record BlueprintResearchRule(
                             BlueprintResearchCodecs.RESOURCE_LOCATION.listOf())
                             .forGetter(BlueprintResearchRule::prerequisites),
                     new StrictOptionalFieldCodec<>("creative_bypasses_cost", Codec.BOOL)
-                            .forGetter(BlueprintResearchRule::creativeBypassesCost))
+                            .forGetter(BlueprintResearchRule::creativeBypassesCost),
+                    new StrictOptionalFieldCodec<>(
+                            "reverse_engineering",
+                            BlueprintReverseEngineeringOverride.CODEC)
+                            .forGetter(BlueprintResearchRule::reverseEngineering))
                     .apply(instance, BlueprintResearchRule::new));
 
     public static final Codec<BlueprintResearchRule> CODEC = StrictRecordCodec.wrap(
@@ -77,6 +85,7 @@ public record BlueprintResearchRule(
             "priority",
             "target",
             "visibility",
+            "tree_enabled",
             "research_enabled",
             "recycling_enabled",
             "allow_unlearned_recycling",
@@ -84,7 +93,75 @@ public record BlueprintResearchRule(
             "research_cost",
             "requires_discovery",
             "prerequisites",
-            "creative_bypasses_cost");
+            "creative_bypasses_cost",
+            "reverse_engineering");
+
+    /** Backwards-compatible constructor for rules authored before reverse engineering. */
+    public BlueprintResearchRule(
+            int format,
+            ResourceLocation profile,
+            int priority,
+            BlueprintResearchTarget target,
+            Optional<JournalVisibility> visibility,
+            Optional<Boolean> treeEnabled,
+            Optional<Boolean> researchEnabled,
+            Optional<Boolean> recyclingEnabled,
+            Optional<Boolean> allowUnlearnedRecycling,
+            Optional<Integer> recyclingValue,
+            Optional<BlueprintResearchCost> researchCost,
+            Optional<Boolean> requiresDiscovery,
+            Optional<List<ResourceLocation>> prerequisites,
+            Optional<Boolean> creativeBypassesCost) {
+        this(
+                format,
+                profile,
+                priority,
+                target,
+                visibility,
+                treeEnabled,
+                researchEnabled,
+                recyclingEnabled,
+                allowUnlearnedRecycling,
+                recyclingValue,
+                researchCost,
+                requiresDiscovery,
+                prerequisites,
+                creativeBypassesCost,
+                Optional.empty());
+    }
+
+    /** Backwards-compatible constructor for rules authored before tree controls. */
+    public BlueprintResearchRule(
+            int format,
+            ResourceLocation profile,
+            int priority,
+            BlueprintResearchTarget target,
+            Optional<JournalVisibility> visibility,
+            Optional<Boolean> researchEnabled,
+            Optional<Boolean> recyclingEnabled,
+            Optional<Boolean> allowUnlearnedRecycling,
+            Optional<Integer> recyclingValue,
+            Optional<BlueprintResearchCost> researchCost,
+            Optional<Boolean> requiresDiscovery,
+            Optional<List<ResourceLocation>> prerequisites,
+            Optional<Boolean> creativeBypassesCost) {
+        this(
+                format,
+                profile,
+                priority,
+                target,
+                visibility,
+                Optional.empty(),
+                researchEnabled,
+                recyclingEnabled,
+                allowUnlearnedRecycling,
+                recyclingValue,
+                researchCost,
+                requiresDiscovery,
+                prerequisites,
+                creativeBypassesCost,
+                Optional.empty());
+    }
 
     public BlueprintResearchRule {
         if (format != CURRENT_FORMAT) {
@@ -100,6 +177,7 @@ public record BlueprintResearchRule(
             throw new IllegalArgumentException("research-rule priority is outside the supported range");
         }
         visibility = optional(visibility);
+        treeEnabled = optional(treeEnabled);
         researchEnabled = optional(researchEnabled);
         recyclingEnabled = optional(recyclingEnabled);
         allowUnlearnedRecycling = optional(allowUnlearnedRecycling);
@@ -110,6 +188,7 @@ public record BlueprintResearchRule(
                 ? Optional.empty()
                 : prerequisites.map(values -> List.copyOf(new LinkedHashSet<>(values)));
         creativeBypassesCost = optional(creativeBypassesCost);
+        reverseEngineering = optional(reverseEngineering);
     }
 
     private static DataResult<Integer> validateFormat(int value) {
@@ -143,6 +222,7 @@ public record BlueprintResearchRule(
     void validateForSnapshot() {
         target.validateForSnapshot();
         researchCost.ifPresent(BlueprintResearchCost::validateForSnapshot);
+        reverseEngineering.ifPresent(BlueprintReverseEngineeringOverride::validateForSnapshot);
         if (prerequisites.map(List::size).orElse(0) > MAX_PREREQUISITES) {
             throw new IllegalArgumentException(
                     "research rule cannot contain more than " + MAX_PREREQUISITES + " prerequisites");

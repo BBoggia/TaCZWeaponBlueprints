@@ -38,7 +38,10 @@ class ResearchTreeContextCardLayoutTest {
         assertEquals(2, layout.columns());
         assertEquals(6, layout.ingredients().size());
         assertTrue(layout.card().contains(layout.action()));
+        assertTrue(layout.card().contains(layout.trackAction()));
         assertTrue(layout.card().contains(layout.returnAction()));
+        assertFalse(layout.trackAction().overlaps(layout.returnAction()));
+        assertFalse(layout.trackAction().overlaps(layout.name()));
         assertFalse(layout.returnAction().overlaps(layout.icon()));
         assertFalse(layout.returnAction().overlaps(layout.name()));
         for (int first = 0; first < layout.ingredients().size(); first++) {
@@ -58,6 +61,7 @@ class ResearchTreeContextCardLayoutTest {
                 List.of(), 0, false);
 
         assertFalse(layout.exactPreview());
+        assertTrue(layout.card().contains(layout.trackAction()));
         assertTrue(layout.ingredients().isEmpty());
         assertEquals(null, layout.action());
         assertEquals(null, layout.balance());
@@ -95,8 +99,17 @@ class ResearchTreeContextCardLayoutTest {
         ResearchTreeFullscreenLayout.Layout fullscreen = ResearchTreeFullscreenLayout.forScreen(
                 ResearchTreeScreenLayout.MIN_FULLSCREEN_WIDTH,
                 ResearchTreeScreenLayout.MIN_FULLSCREEN_HEIGHT);
+        ResearchTreeScreenLayout.Rect firstRailEntry =
+                ResearchTreeFullscreenRailLayout.forLayout(fullscreen).entries().get(0);
+        ResearchTreeScreenLayout.Rect expandedRailLabel =
+                new ResearchTreeScreenLayout.Rect(
+                        firstRailEntry.right() + 4,
+                        firstRailEntry.y() + 1,
+                        140,
+                        firstRailEntry.height() - 2);
         List<ResearchTreeScreenLayout.Rect> overlays = List.of(
                 fullscreen.rail(),
+                expandedRailLabel,
                 fullscreen.searchField(),
                 fullscreen.close(),
                 fullscreen.coachmark());
@@ -111,6 +124,7 @@ class ResearchTreeContextCardLayoutTest {
                 ResearchTreeScreenLayout.MIN_FULLSCREEN_HEIGHT));
         assertTrue(overlays.stream().noneMatch(layout.card()::overlaps));
         assertTrue(layout.card().contains(layout.returnAction()));
+        assertTrue(layout.card().contains(layout.trackAction()));
         assertTrue(layout.card().contains(layout.action()));
     }
 

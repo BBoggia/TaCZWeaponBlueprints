@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
+import com.gamergaming.taczweaponblueprints.resource.PublicationRevision;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.Codec;
@@ -59,7 +60,8 @@ public final class BlueprintLootDataManager extends SimplePreparableReloadListen
     @Override
     protected void apply(BlueprintLootSnapshot prepared, ResourceManager resourceManager, ProfilerFiller profiler) {
         Publication previous = publication;
-        Publication applied = new Publication(prepared, previous.revision() + 1L);
+        Publication applied = new Publication(
+                prepared, PublicationRevision.next(previous.revision()));
         publication = applied;
         TaCZWeaponBlueprints.LOGGER.info(
                 "Applied blueprint loot snapshot revision {}: {} tags, {} pools, {} rules, "

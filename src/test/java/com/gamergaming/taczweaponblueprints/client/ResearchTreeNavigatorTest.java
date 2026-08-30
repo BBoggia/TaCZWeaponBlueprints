@@ -48,6 +48,56 @@ class ResearchTreeNavigatorTest {
         assertTrue(ResearchTreeNavigator.move(null, null, null, null).isEmpty());
     }
 
+    @Test
+    void horizontalMovementFallsBackToTheNearestDirectionalNodeAcrossTiers() {
+        ResearchTreeGraph graph = new ResearchTreeGraph(
+                List.of(
+                        node(0, "test:left", 0),
+                        node(1, "test:right", 1)),
+                List.of(edge("test:left", "test:right")));
+        ResearchTreeLayout layout = new ResearchTreeLayout(
+                300,
+                200,
+                2,
+                List.of(
+                        new ResearchTreeLayout.PositionedNode(
+                                0, id("test:left"), 0, 0, 0, 20, 120),
+                        new ResearchTreeLayout.PositionedNode(
+                                1, id("test:right"), 0, 1, 0, 220, 20)));
+
+        assertEquals(
+                id("test:right"),
+                move(graph, layout, "test:left", ResearchTreeNavigator.Direction.RIGHT));
+        assertEquals(
+                id("test:left"),
+                move(graph, layout, "test:right", ResearchTreeNavigator.Direction.LEFT));
+    }
+
+    @Test
+    void crossTierFallbackUsesSpatialDistanceInsteadOfAThinDirectionalSliver() {
+        ResearchTreeGraph graph = new ResearchTreeGraph(
+                List.of(
+                        node(0, "test:current", 0),
+                        node(1, "test:almost_vertical", 0),
+                        node(2, "test:nearby_right", 0)),
+                List.of());
+        ResearchTreeLayout layout = new ResearchTreeLayout(
+                400,
+                400,
+                3,
+                List.of(
+                        new ResearchTreeLayout.PositionedNode(
+                                0, id("test:current"), 0, 0, 0, 100, 300),
+                        new ResearchTreeLayout.PositionedNode(
+                                1, id("test:almost_vertical"), 1, 2, 0, 105, 20),
+                        new ResearchTreeLayout.PositionedNode(
+                                2, id("test:nearby_right"), 2, 1, 0, 200, 200)));
+
+        assertEquals(
+                id("test:nearby_right"),
+                move(graph, layout, "test:current", ResearchTreeNavigator.Direction.RIGHT));
+    }
+
     private static ResourceLocation move(
             ResearchTreeGraph graph,
             ResearchTreeLayout layout,

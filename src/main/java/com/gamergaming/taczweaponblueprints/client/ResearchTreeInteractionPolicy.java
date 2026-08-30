@@ -23,7 +23,12 @@ public final class ResearchTreeInteractionPolicy {
             }
             return KeyboardTarget.SEARCH_FIELD;
         }
-        return intent.isArrow() ? KeyboardTarget.TREE : KeyboardTarget.DEFAULT;
+        if (intent.isArrow()) {
+            return KeyboardTarget.TREE;
+        }
+        return intent == KeyIntent.ENTER
+                ? KeyboardTarget.TREE_SELECTION
+                : KeyboardTarget.DEFAULT;
     }
 
     public static boolean allowsServerSelection(ResearchTreeGraph.Node node) {
@@ -75,6 +80,20 @@ public final class ResearchTreeInteractionPolicy {
                 || pointerTarget == PointerTarget.GRAPH_BACKGROUND;
     }
 
+    /**
+     * Keeps a revealed rail label and the frontmost context card from claiming
+     * the same pixels. Rendering and pointer routing must use this same answer.
+     */
+    public static boolean railLabelVisible(
+            boolean requested,
+            ResearchTreeScreenLayout.Rect label,
+            ResearchTreeScreenLayout.Rect contextCard) {
+        if (label == null) {
+            throw new IllegalArgumentException("Research Tree rail label bounds cannot be null");
+        }
+        return requested && (contextCard == null || !label.overlaps(contextCard));
+    }
+
     public enum KeyIntent {
         UP,
         DOWN,
@@ -93,6 +112,7 @@ public final class ResearchTreeInteractionPolicy {
         SEARCH_SELECTION,
         SEARCH_FIELD,
         TREE,
+        TREE_SELECTION,
         DEFAULT
     }
 

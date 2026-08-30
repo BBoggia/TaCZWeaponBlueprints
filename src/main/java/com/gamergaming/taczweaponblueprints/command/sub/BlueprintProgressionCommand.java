@@ -4,8 +4,13 @@ import java.util.Collection;
 import java.util.List;
 
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
+import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.progression.PlayerProgressionAdminService;
+import com.gamergaming.taczweaponblueprints.progression.ResearchPointAwardReconciliationScheduler;
+import com.gamergaming.taczweaponblueprints.progression.ResearchPointPresentationService;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.gamergaming.taczweaponblueprints.progression.PlayerProgressionAdminService.ResetState;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -22,7 +27,8 @@ import net.minecraft.server.level.ServerPlayer;
 
 /** Explicit operator recovery tools for durable blueprint progression. */
 public final class BlueprintProgressionCommand {
-    private static final List<String> RESET_STATES = List.of("learned", "discovered", "points", "all");
+    private static final List<String> RESET_STATES =
+            List.of("learned", "discovered", "points", "awards", "all");
 
     private BlueprintProgressionCommand() {
     }
@@ -36,7 +42,16 @@ public final class BlueprintProgressionCommand {
                         .then(Commands.argument("targets", EntityArgument.players())
                                 .then(Commands.argument("state", StringArgumentType.word())
                                         .suggests(BlueprintProgressionCommand::suggestStates)
-                                        .executes(BlueprintProgressionCommand::reset))));
+                                        .executes(BlueprintProgressionCommand::reset))))
+                .then(Commands.literal("points")
+                        .then(Commands.literal("give")
+                                .then(Commands.argument("targets", EntityArgument.players())
+                                        .then(Commands.argument(
+                                                "amount",
+                                                IntegerArgumentType.integer(
+                                                        1,
+                                                        PlayerProgressionLimits.MAX_RESEARCH_POINTS))
+                                                .executes(BlueprintProgressionCommand::givePoints)))));
     }
 
     private static int inspect(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
@@ -77,6 +92,11 @@ public final class BlueprintProgressionCommand {
             if (updated) {
                 changed++;
                 NetworkHandler.syncPlayerRecipeData(player);
+                ResearchPointPresentationService.syncHelp(player);
+                // Replace any queued retroactive work captured from the old
+                // progression or ledger state. A points reset also wakes
+                // legitimately unclaimed require-full awards immediately.
+                ResearchPointAwardReconciliationScheduler.schedule(player);
             }
         }
 
@@ -85,6 +105,51 @@ public final class BlueprintProgressionCommand {
                 "commands.taczweaponblueprints.progression.reset.success",
                 state.serializedName(),
                 result), true);
+        return changed;
+    }
+
+    private static int givePoints(
+            CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        Collection<ServerPlayer> players = EntityArgument.getPlayers(context, "targets");
+        int amount = IntegerArgumentType.getInteger(context, "amount");
+        int pointCap = ModConfigs.BLUEPRINT.progressionSnapshot().pointCap();
+        int changed = 0;
+        int capped = 0;
+        int unavailable = 0;
+        for (ServerPlayer player : players) {
+            var data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve();
+            if (data.isEmpty()) {
+                unavailable++;
+                continue;
+            }
+            if (!PlayerProgressionAdminService.giveResearchPoints(
+                    data.orElseThrow(), amount, pointCap)) {
+                capped++;
+                continue;
+            }
+            changed++;
+            NetworkHandler.syncPlayerPointBalance(player);
+        }
+
+        int granted = changed;
+        if (granted > 0) {
+            context.getSource().sendSuccess(() -> Component.translatable(
+                    "commands.taczweaponblueprints.progression.points.give.success",
+                    amount,
+                    granted), true);
+        }
+        if (capped > 0) {
+            context.getSource().sendFailure(Component.translatable(
+                    "commands.taczweaponblueprints.progression.points.give.capped",
+                    capped,
+                    amount,
+                    pointCap));
+        }
+        if (unavailable > 0) {
+            context.getSource().sendFailure(Component.translatable(
+                    "commands.taczweaponblueprints.progression.points.give.unavailable",
+                    unavailable));
+        }
         return changed;
     }
 

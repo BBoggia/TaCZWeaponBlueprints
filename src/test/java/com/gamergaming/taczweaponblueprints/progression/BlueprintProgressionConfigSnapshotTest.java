@@ -46,6 +46,7 @@ class BlueprintProgressionConfigSnapshotTest {
         assertTrue(snapshot.discoveryTrackingEnabled());
         assertTrue(snapshot.journalEnabled());
         assertTrue(snapshot.researchEnabled());
+        assertEquals(TreeResearchResultMode.DIRECT_LEARN, snapshot.treeResearchResultMode());
         assertEquals(JournalVisibility.FULL, snapshot.maximumUndiscoveredVisibility());
         assertEquals(DuplicateBlueprintPolicy.MANUAL_RECYCLING, snapshot.duplicatePolicy());
         assertFalse(snapshot.allowUnlearnedRecycling());
@@ -59,6 +60,12 @@ class BlueprintProgressionConfigSnapshotTest {
         assertNotSame(snapshot, updated);
         assertFalse(updated.researchEnabled());
         assertTrue(snapshot.researchEnabled());
+
+        config.treeResearchResultMode.accept(TreeResearchResultMode.CREATE_BLUEPRINT);
+        config.onSyncServer();
+        assertEquals(
+                TreeResearchResultMode.CREATE_BLUEPRINT,
+                config.progressionSnapshot().treeResearchResultMode());
     }
 
     @Test

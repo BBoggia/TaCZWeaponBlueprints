@@ -40,6 +40,9 @@ public final class BlueprintSyncLimits {
         validateText("name translation key", data.getNameKey(), MAX_TRANSLATION_KEY_LENGTH);
         validateText("tooltip translation key", data.getTooltipKey(), MAX_TRANSLATION_KEY_LENGTH);
         validateText("item type", data.getItemType(), MAX_ITEM_TYPE_LENGTH);
+        if (data.getKind() == null) {
+            throw new IllegalArgumentException("Blueprint kind cannot be null");
+        }
         validateResourceId("recipe ID", data.getRecipeId());
         validateResourceId("display slot ID", data.getDisplaySlotKey());
         if (encodedBlueprintEntryBytes(blueprintId, data) + CHUNK_HEADER_RESERVE > MAX_CHUNK_BYTES) {
@@ -53,7 +56,8 @@ public final class BlueprintSyncLimits {
                 + encodedUtfBytes(data.getTooltipKey())
                 + encodedUtfBytes(data.getRecipeId().toString())
                 + encodedUtfBytes(data.getItemType())
-                + encodedUtfBytes(data.getDisplaySlotKey().toString());
+                + encodedUtfBytes(data.getDisplaySlotKey().toString())
+                + 1;
     }
 
     static int encodedUtfBytes(String value) {

@@ -7,7 +7,7 @@ import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePresentati
 
 import net.minecraft.resources.ResourceLocation;
 
-/** Client-local Branches/All Weapons selection with publication-safe fallback. */
+/** Client-local browse intent plus legacy branch selection with publication-safe fallback. */
 public final class ResearchTreeNavigationState {
     private ResearchTreePresentationContract.BrowseView browseView =
             ResearchTreePresentationContract.DEFAULT_BROWSE_VIEW;
@@ -54,12 +54,16 @@ public final class ResearchTreeNavigationState {
     public ResearchTreePresentationContract.GroupSelectionAction selectGroup(
             ResourceLocation groupId,
             ResearchTreePresentation presentation) {
-        if (groupId == null || presentation == null
-                || presentation.group(groupId).isEmpty()) {
+        if (groupId == null || presentation == null) {
             throw new IllegalArgumentException("unknown Research Tree navigation group");
         }
+        ResearchTreePresentation.Group group = presentation.group(groupId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "unknown Research Tree navigation group"));
         selectedGroupId = groupId;
-        return ResearchTreePresentationContract.groupSelectionAction(browseView);
+        return ResearchTreePresentationContract.groupSelectionAction(
+                browseView,
+                group.includedInOverview());
     }
 
     public Optional<ResourceLocation> nextGroup(

@@ -3,7 +3,7 @@ package com.gamergaming.taczweaponblueprints.client;
 /** Pure responsive geometry for the dismissible three-step first-visit guide. */
 public final class ResearchTreeGuidanceLayout {
     private static final int PANEL_WIDTH = 210;
-    private static final int PANEL_HEIGHT = 64;
+    private static final int PANEL_HEIGHT = 88;
 
     private ResearchTreeGuidanceLayout() {
     }
@@ -15,7 +15,7 @@ public final class ResearchTreeGuidanceLayout {
         ResearchTreeScreenLayout.Rect canvas = layout.canvas();
         int width = Math.min(PANEL_WIDTH, canvas.width() - 8);
         int height = Math.min(PANEL_HEIGHT, canvas.height());
-        if (width < 120 || height < 60) {
+        if (width < 120 || height < 84) {
             throw new IllegalArgumentException("Research Tree canvas cannot fit first-visit guidance");
         }
         ResearchTreeScreenLayout.Rect panel = new ResearchTreeScreenLayout.Rect(
@@ -38,11 +38,12 @@ public final class ResearchTreeGuidanceLayout {
         }
         ResearchTreeScreenLayout.Rect panel = layout.coachmark();
         int dismissWidth = Math.min(54, Math.max(36, panel.width() / 4));
+        int dismissHeight = Math.min(18, panel.height() - 6);
         ResearchTreeScreenLayout.Rect dismiss = new ResearchTreeScreenLayout.Rect(
                 panel.right() - dismissWidth - 3,
-                panel.y() + 3,
+                panel.bottom() - dismissHeight - 3,
                 dismissWidth,
-                panel.height() - 6);
+                dismissHeight);
         return new Guide(panel, dismiss);
     }
 

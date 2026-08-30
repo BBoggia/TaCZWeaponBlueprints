@@ -17,6 +17,9 @@ import net.minecraftforge.fml.common.Mod;
         value = Dist.CLIENT,
         bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class ClientConnectionEvents {
+    private static final ResearchTreeGuidancePreference ONBOARDING_PREFERENCE =
+            ResearchTreeGuidancePreference.client();
+
     private ClientConnectionEvents() {
     }
 
@@ -24,6 +27,8 @@ public final class ClientConnectionEvents {
     public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
         ClientBlueprintJournal.clear();
         ClientResearchTree.clear();
+        ClientResearchPlannerState.clear();
+        ClientResearchPointPresentationState.clear();
         SyncPlayerProgressionPacket.clearClientState();
         SyncBlueprintJournalPacket.clearClientState();
         SyncResearchTreePacket.clearClientState();
@@ -34,6 +39,20 @@ public final class ClientConnectionEvents {
         if (event.phase != TickEvent.Phase.END) {
             return;
         }
+        net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
+        ClientResearchState.Publication publication = ClientResearchState.publication();
+        boolean hasPublishedResearch = publication.generation() != Long.MIN_VALUE
+                && (!publication.journal().entries().isEmpty()
+                        || !publication.graph().nodes().isEmpty());
+        if (minecraft.player != null
+                && hasPublishedResearch
+                && ONBOARDING_PREFERENCE.claimOnboardingHint()) {
+            minecraft.player.displayClientMessage(
+                    net.minecraft.network.chat.Component.translatable(
+                            "message.taczweaponblueprints.onboarding.journal_hint",
+                            BlueprintJournalKeyMappings.OPEN_JOURNAL.getTranslatedKeyMessage()),
+                    false);
+        }
         boolean openRequested = false;
         while (BlueprintJournalKeyMappings.OPEN_JOURNAL.consumeClick()) {
             openRequested = true;
@@ -41,7 +60,6 @@ public final class ClientConnectionEvents {
         if (!openRequested) {
             return;
         }
-        net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
         if (minecraft.player != null && minecraft.level != null && minecraft.screen == null) {
             minecraft.setScreen(new BlueprintJournalScreen());
         }

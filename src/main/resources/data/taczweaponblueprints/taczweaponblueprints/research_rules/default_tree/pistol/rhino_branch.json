@@ -4,6 +4,7 @@
   "priority": 100,
   "target": { "blueprints": ["tacz:taurus500"] },
   "visibility": "full",
+  "tree_enabled": true,
   "research_cost": { "points": 12, "ingredients": [{ "items": ["minecraft:paper"], "count": 6 }, { "items": ["minecraft:gold_ingot"], "count": 2 }] },
-  "prerequisites": ["tacz:rhino357"]
+  "prerequisites": ["tacz:rhino357", "tacz:timeless50"]
 }

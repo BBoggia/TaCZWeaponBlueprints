@@ -16,6 +16,20 @@ final class RecipeSyncFilter {
             Set<String> learnedBlueprints,
             Map<ResourceLocation, BlueprintData> activeBlueprints,
             Map<ResourceLocation, ResourceLocation> recipeToBlueprint) {
+        return activeLearnedRecipes(
+                learnedRecipes,
+                learnedBlueprints,
+                activeBlueprints,
+                recipeToBlueprint,
+                Set.of());
+    }
+
+    static Set<String> activeLearnedRecipes(
+            Set<String> learnedRecipes,
+            Set<String> learnedBlueprints,
+            Map<ResourceLocation, BlueprintData> activeBlueprints,
+            Map<ResourceLocation, ResourceLocation> recipeToBlueprint,
+            Set<String> progressionExemptRecipes) {
         Map<ResourceLocation, BlueprintData> activeByBlueprint = new java.util.HashMap<>();
         if (activeBlueprints != null) {
             activeBlueprints.forEach((blueprintId, data) -> {
@@ -41,6 +55,15 @@ final class RecipeSyncFilter {
                     .map(activeByBlueprint::get)
                     .filter(java.util.Objects::nonNull)
                     .map(data -> data.getRecipeId().toString())
+                    .forEach(synchronizedRecipes::add);
+        }
+        if (progressionExemptRecipes != null) {
+            progressionExemptRecipes.stream()
+                    .map(ResourceLocation::tryParse)
+                    .filter(java.util.Objects::nonNull)
+                    .filter(recipeId -> recipeToBlueprint != null
+                            && recipeToBlueprint.containsKey(recipeId))
+                    .map(ResourceLocation::toString)
                     .forEach(synchronizedRecipes::add);
         }
         return Set.copyOf(synchronizedRecipes);

@@ -8,6 +8,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import java.util.Set;
 
+import com.gamergaming.taczweaponblueprints.capabilities.ResearchPointAwardLedger.ClaimKey;
+import com.gamergaming.taczweaponblueprints.capabilities.ResearchPointAwardLedger.Mutation;
+
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
@@ -47,6 +50,10 @@ class PlayerRecipeDataTest {
         original.addBlueprint("tacz:ak47");
         original.discoverBlueprint("tacz:m4a1");
         assertTrue(original.setResearchPoints(125));
+        ClaimKey claim = ClaimKey.targeted(
+                new net.minecraft.resources.ResourceLocation("test:first_discovery"),
+                new net.minecraft.resources.ResourceLocation("tacz:ak47"));
+        assertTrue(original.applyResearchPointTransaction(0, 1000, Mutation.claim(claim)));
 
         CompoundTag serialized = original.serializeNBT();
         assertEquals(PlayerProgressionLimits.DATA_VERSION, serialized.getInt("DataVersion"));
@@ -60,6 +67,7 @@ class PlayerRecipeDataTest {
                         .map(Tag::getAsString)
                         .toList());
         assertEquals(125, serialized.getInt("ResearchPoints"));
+        assertTrue(serialized.contains("ResearchPointAwards", Tag.TAG_COMPOUND));
 
         PlayerRecipeData restored = new PlayerRecipeData();
         restored.deserializeNBT(serialized);
@@ -67,6 +75,8 @@ class PlayerRecipeDataTest {
         assertEquals(original.getLearnedBlueprints(), restored.getLearnedBlueprints());
         assertEquals(original.getDiscoveredBlueprints(), restored.getDiscoveredBlueprints());
         assertEquals(original.getResearchPoints(), restored.getResearchPoints());
+        assertEquals(original.getResearchPointAwardLedger().claims(),
+                restored.getResearchPointAwardLedger().claims());
     }
 
     @Test
@@ -122,6 +132,24 @@ class PlayerRecipeDataTest {
         assertEquals(Set.of("tacz:ak47"), restored.getDiscoveredBlueprints());
         assertEquals(0, restored.getResearchPoints());
         assertEquals(PlayerProgressionLimits.DATA_VERSION, restored.serializeNBT().getInt("DataVersion"));
+    }
+
+    @Test
+    void migratesVersionOneWithAnEmptyAwardLedgerWithoutTrustingFutureState() {
+        CompoundTag versionOne = new CompoundTag();
+        versionOne.putInt("DataVersion", 1);
+        versionOne.putInt("ResearchPoints", 37);
+        ResearchPointAwardLedger unexpectedLedger = new ResearchPointAwardLedger();
+        assertTrue(unexpectedLedger.apply(Mutation.claim(
+                ClaimKey.once(new net.minecraft.resources.ResourceLocation("test:unexpected")))));
+        versionOne.put("ResearchPointAwards", unexpectedLedger.serializeNBT());
+
+        PlayerRecipeData restored = new PlayerRecipeData();
+        restored.deserializeNBT(versionOne);
+
+        assertEquals(37, restored.getResearchPoints());
+        assertTrue(restored.getResearchPointAwardLedger().isEmpty());
+        assertEquals(2, restored.serializeNBT().getInt("DataVersion"));
     }
 
     @Test
@@ -194,6 +222,14 @@ class PlayerRecipeDataTest {
         assertEquals(Set.of("test:new"), data.getLearnedBlueprints());
         assertEquals(Set.of("test:new", "test:history"), data.getDiscoveredBlueprints());
         assertEquals(25, data.getResearchPoints());
+
+        ClaimKey preserved = ClaimKey.once(
+                new net.minecraft.resources.ResourceLocation("test:preserved_claim"));
+        assertTrue(data.applyResearchPointTransaction(0, 100, Mutation.claim(preserved)));
+        assertTrue(data.replaceProgression(List.of(), List.of(), 5));
+        assertTrue(data.spendResearchPoints(2));
+        assertTrue(data.getResearchPointAwardLedger().hasClaim(preserved));
+        assertEquals(3, data.getResearchPoints());
     }
 
     @Test

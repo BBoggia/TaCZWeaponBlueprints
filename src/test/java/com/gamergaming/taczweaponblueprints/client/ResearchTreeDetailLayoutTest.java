@@ -100,4 +100,20 @@ class ResearchTreeDetailLayoutTest {
         assertThrows(IllegalArgumentException.class, () ->
                 ResearchTreeDetailLayout.primaryAction(null));
     }
+
+    @Test
+    void compactDetailsTooltipNeverOwnsActionOrRelationshipPixels() {
+        ResearchTreeScreenLayout.Layout layout = ResearchTreeScreenLayout.compact();
+        assertTrue(ResearchTreeDetailLayout.compactDetailsTooltipAt(layout, 20, 190));
+
+        ResearchTreeScreenLayout.Rect action =
+                ResearchTreeDetailLayout.primaryAction(layout).orElseThrow();
+        assertFalse(ResearchTreeDetailLayout.compactDetailsTooltipAt(
+                layout, action.x(), action.y()));
+        for (ResearchTreeDetailLayout.RelationSlot slot
+                : ResearchTreeDetailLayout.compact(layout.details())) {
+            assertFalse(ResearchTreeDetailLayout.compactDetailsTooltipAt(
+                    layout, slot.bounds().x(), slot.bounds().y()));
+        }
+    }
 }

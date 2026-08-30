@@ -21,6 +21,11 @@ import net.minecraft.resources.ResourceLocation;
 public final class ResearchTreeLayout {
     public static final int NODE_WIDTH = 24;
     public static final int NODE_HEIGHT = 24;
+    /** Shared geometry contract used by composers and the client canvas. */
+    public static final int PORTAL_SIZE = 9;
+    public static final int PORTAL_GAP = 2;
+    public static final int PORTAL_NODE_GAP = 5;
+    public static final int PORTAL_BANK_SIDE_PADDING = 2;
     public static final int MAX_DIMENSION = 1_000_000;
     public static final ResearchTreeLayout EMPTY =
             new ResearchTreeLayout(0, 0, 0, List.of(), List.of(), List.of(), List.of());
@@ -32,9 +37,12 @@ public final class ResearchTreeLayout {
     private final List<HiddenAnchor> hiddenAnchors;
     private final List<CategoryLane> categoryLanes;
     private final List<GroupRegion> groupRegions;
+    private final List<EdgeRouteHint> edgeRouteHints;
     private final Map<ResourceLocation, PositionedNode> positionsById;
     private final Map<Integer, List<PositionedNode>> nodesByTier;
+    private final List<TierBounds> tierBounds;
     private final Map<ResourceLocation, HiddenAnchor> hiddenAnchorsById;
+    private final Map<RouteKey, EdgeRouteHint> edgeRouteHintsByEdge;
 
     public ResearchTreeLayout(int width, int height, int tierCount, List<PositionedNode> nodes) {
         this(width, height, tierCount, nodes, List.of(), List.of(), List.of());
@@ -67,10 +75,23 @@ public final class ResearchTreeLayout {
             List<HiddenAnchor> hiddenAnchors,
             List<CategoryLane> categoryLanes,
             List<GroupRegion> groupRegions) {
+        this(width, height, tierCount, nodes, hiddenAnchors, categoryLanes, groupRegions, List.of());
+    }
+
+    public ResearchTreeLayout(
+            int width,
+            int height,
+            int tierCount,
+            List<PositionedNode> nodes,
+            List<HiddenAnchor> hiddenAnchors,
+            List<CategoryLane> categoryLanes,
+            List<GroupRegion> groupRegions,
+            List<EdgeRouteHint> edgeRouteHints) {
         if ((nodes != null && nodes.stream().anyMatch(Objects::isNull))
                 || (hiddenAnchors != null && hiddenAnchors.stream().anyMatch(Objects::isNull))
                 || (categoryLanes != null && categoryLanes.stream().anyMatch(Objects::isNull))
-                || (groupRegions != null && groupRegions.stream().anyMatch(Objects::isNull))) {
+                || (groupRegions != null && groupRegions.stream().anyMatch(Objects::isNull))
+                || (edgeRouteHints != null && edgeRouteHints.stream().anyMatch(Objects::isNull))) {
             throw new IllegalArgumentException("research tree layout cannot contain null entries");
         }
         this.width = width;
@@ -80,6 +101,7 @@ public final class ResearchTreeLayout {
         this.hiddenAnchors = hiddenAnchors == null ? List.of() : List.copyOf(hiddenAnchors);
         this.categoryLanes = categoryLanes == null ? List.of() : List.copyOf(categoryLanes);
         this.groupRegions = groupRegions == null ? List.of() : List.copyOf(groupRegions);
+        this.edgeRouteHints = edgeRouteHints == null ? List.of() : List.copyOf(edgeRouteHints);
         validate();
 
         Map<ResourceLocation, PositionedNode> positionIndex = new LinkedHashMap<>();
@@ -90,13 +112,29 @@ public final class ResearchTreeLayout {
         }
         tierIndex.replaceAll((ignored, tierNodes) -> tierNodes.stream()
                 .sorted(Comparator.comparingInt(PositionedNode::orderInTier)).toList());
+        List<TierBounds> nextTierBounds = tierIndex.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(entry -> new TierBounds(
+                        entry.getKey(),
+                        entry.getValue().stream().mapToInt(PositionedNode::y).min().orElseThrow(),
+                        entry.getValue().stream()
+                                .mapToInt(node -> node.y() + NODE_HEIGHT)
+                                .max()
+                                .orElseThrow()))
+                .toList();
         Map<ResourceLocation, HiddenAnchor> anchorIndex = new LinkedHashMap<>();
         for (HiddenAnchor anchor : this.hiddenAnchors) {
             anchorIndex.put(anchor.dependentId(), anchor);
         }
+        Map<RouteKey, EdgeRouteHint> routeHintIndex = new LinkedHashMap<>();
+        for (EdgeRouteHint hint : this.edgeRouteHints) {
+            routeHintIndex.put(new RouteKey(hint.prerequisiteId(), hint.dependentId()), hint);
+        }
         positionsById = Map.copyOf(positionIndex);
         nodesByTier = Map.copyOf(tierIndex);
+        tierBounds = nextTierBounds;
         hiddenAnchorsById = Map.copyOf(anchorIndex);
+        edgeRouteHintsByEdge = Map.copyOf(routeHintIndex);
     }
 
     public int width() {
@@ -129,6 +167,11 @@ public final class ResearchTreeLayout {
         return groupRegions;
     }
 
+    /** Layout-only corridors for authored edges that cross one or more ranks. */
+    public List<EdgeRouteHint> edgeRouteHints() {
+        return edgeRouteHints;
+    }
+
     public Optional<PositionedNode> position(ResourceLocation blueprintId) {
         return blueprintId == null ? Optional.empty() : Optional.ofNullable(positionsById.get(blueprintId));
     }
@@ -137,10 +180,25 @@ public final class ResearchTreeLayout {
         return tier < 0 || tier >= tierCount ? List.of() : nodesByTier.getOrDefault(tier, List.of());
     }
 
+    /** Precomputed vertical extents for each populated tier. */
+    public List<TierBounds> tierBounds() {
+        return tierBounds;
+    }
+
     public Optional<HiddenAnchor> hiddenAnchor(ResourceLocation dependentId) {
         return dependentId == null
                 ? Optional.empty()
                 : Optional.ofNullable(hiddenAnchorsById.get(dependentId));
+    }
+
+    public Optional<EdgeRouteHint> edgeRouteHint(
+            ResourceLocation prerequisiteId,
+            ResourceLocation dependentId) {
+        if (prerequisiteId == null || dependentId == null) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(edgeRouteHintsByEdge.get(
+                new RouteKey(prerequisiteId, dependentId)));
     }
 
     private void validate() {
@@ -150,13 +208,14 @@ public final class ResearchTreeLayout {
                 || nodes.size() > ResearchTreeGraph.MAX_NODES
                 || hiddenAnchors.size() > ResearchTreeGraph.MAX_NODES
                 || categoryLanes.size() > ResearchTreeGraph.MAX_NODES
-                || groupRegions.size() > ResearchTreeGraph.MAX_NODES) {
+                || groupRegions.size() > ResearchTreeGraph.MAX_NODES
+                || edgeRouteHints.size() > ResearchTreeGraph.MAX_EDGES) {
             throw new IllegalArgumentException("research tree layout bounds are invalid");
         }
         if (nodes.isEmpty()) {
             if (width != 0 || height != 0 || tierCount != 0
                     || !hiddenAnchors.isEmpty() || !categoryLanes.isEmpty()
-                    || !groupRegions.isEmpty()) {
+                    || !groupRegions.isEmpty() || !edgeRouteHints.isEmpty()) {
                 throw new IllegalArgumentException("empty research tree layout must have empty bounds");
             }
             return;
@@ -203,7 +262,11 @@ public final class ResearchTreeLayout {
                             spatialBucketKey(bucketX, bucketY), List.of())) {
                         if (checkedOrdinals.add(other.nodeOrdinal())
                                 && nodesOverlap(node, other)) {
-                            throw new IllegalArgumentException("research tree layout nodes overlap");
+                            throw new IllegalArgumentException(
+                                    "research tree layout nodes overlap: "
+                                            + describePosition(other)
+                                            + " and "
+                                            + describePosition(node));
                         }
                     }
                 }
@@ -277,6 +340,29 @@ public final class ResearchTreeLayout {
                 }
             }
         }
+
+
+        Set<RouteKey> routeKeys = new HashSet<>();
+        Map<ResourceLocation, PositionedNode> positionedById = nodes.stream().collect(
+                java.util.stream.Collectors.toMap(PositionedNode::blueprintId, node -> node));
+        for (EdgeRouteHint hint : edgeRouteHints) {
+            PositionedNode prerequisite = positionedById.get(hint.prerequisiteId());
+            PositionedNode dependent = positionedById.get(hint.dependentId());
+            RouteKey routeKey = new RouteKey(hint.prerequisiteId(), hint.dependentId());
+            if (prerequisite == null || dependent == null || !routeKeys.add(routeKey)
+                    || prerequisite.y() <= dependent.y()) {
+                throw new IllegalArgumentException("invalid research edge route hint");
+            }
+            int previousY = prerequisite.centerY();
+            for (RouteWaypoint waypoint : hint.waypoints()) {
+                if (waypoint.x() >= width || waypoint.y() >= height
+                        || waypoint.y() >= previousY
+                        || waypoint.y() <= dependent.centerY()) {
+                    throw new IllegalArgumentException("invalid research edge route waypoint");
+                }
+                previousY = waypoint.y();
+            }
+        }
     }
 
     private static long spatialBucketKey(int x, int y) {
@@ -290,19 +376,29 @@ public final class ResearchTreeLayout {
                 && left.y() + NODE_HEIGHT > right.y();
     }
 
+    private static String describePosition(PositionedNode node) {
+        return node.blueprintId()
+                + " at (" + node.x() + ", " + node.y() + ")"
+                + " tier=" + node.tier()
+                + " order=" + node.orderInTier()
+                + " component=" + node.component();
+    }
+
     @Override
     public boolean equals(Object value) {
         return this == value || value instanceof ResearchTreeLayout other
                 && width == other.width && height == other.height && tierCount == other.tierCount
                 && nodes.equals(other.nodes) && hiddenAnchors.equals(other.hiddenAnchors)
                 && categoryLanes.equals(other.categoryLanes)
-                && groupRegions.equals(other.groupRegions);
+                && groupRegions.equals(other.groupRegions)
+                && edgeRouteHints.equals(other.edgeRouteHints);
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(
-                width, height, tierCount, nodes, hiddenAnchors, categoryLanes, groupRegions);
+                width, height, tierCount, nodes, hiddenAnchors, categoryLanes, groupRegions,
+                edgeRouteHints);
     }
 
     @Override
@@ -311,7 +407,8 @@ public final class ResearchTreeLayout {
                 + ", tierCount=" + tierCount + ", nodes=" + nodes
                 + ", hiddenAnchors=" + hiddenAnchors
                 + ", categoryLanes=" + categoryLanes
-                + ", groupRegions=" + groupRegions + "]";
+                + ", groupRegions=" + groupRegions
+                + ", edgeRouteHints=" + edgeRouteHints + "]";
     }
 
     public record PositionedNode(
@@ -340,6 +437,50 @@ public final class ResearchTreeLayout {
         public int centerY() {
             return y + NODE_HEIGHT / 2;
         }
+    }
+
+    public record TierBounds(int tier, int minimumY, int maximumBottom) {
+        public TierBounds {
+            if (tier < 0 || tier >= ResearchTreeGraph.MAX_NODES
+                    || minimumY < 0 || maximumBottom <= minimumY
+                    || maximumBottom > MAX_DIMENSION) {
+                throw new IllegalArgumentException("invalid research tier bounds");
+            }
+        }
+
+        public int centerY() {
+            return minimumY + (maximumBottom - minimumY) / 2;
+        }
+    }
+
+    public record EdgeRouteHint(
+            ResourceLocation prerequisiteId,
+            ResourceLocation dependentId,
+            List<RouteWaypoint> waypoints) {
+        public EdgeRouteHint {
+            if (prerequisiteId == null || dependentId == null
+                    || prerequisiteId.equals(dependentId)
+                    || waypoints == null || waypoints.isEmpty()
+                    || waypoints.size() >= com.gamergaming.taczweaponblueprints.resource.research
+                            .BlueprintResearchSnapshot.MAX_PREREQUISITE_DEPTH
+                    || waypoints.stream().anyMatch(Objects::isNull)) {
+                throw new IllegalArgumentException("invalid research edge route hint");
+            }
+            waypoints = List.copyOf(waypoints);
+        }
+    }
+
+    public record RouteWaypoint(int rank, int x, int y) {
+        public RouteWaypoint {
+            if (rank < 0
+                    || rank >= ResearchTreeGraph.MAX_NODES
+                    || x < 0 || y < 0) {
+                throw new IllegalArgumentException("invalid research edge route waypoint");
+            }
+        }
+    }
+
+    private record RouteKey(ResourceLocation prerequisiteId, ResourceLocation dependentId) {
     }
 
     /** Anonymous layout-only gateway; it never carries a hidden blueprint identity. */

@@ -101,4 +101,23 @@ class ResearchTreeFullscreenOverlayStateTest {
         assertEquals(ResearchTreeFullscreenOverlayState.RailState.VISIBLE, state.railState());
         assertFalse(state.canAutoCollapse(false, false));
     }
+
+    @Test
+    void immutableSnapshotCapturesEveryOverlayInputForWidgetInvalidation() {
+        ResearchTreeFullscreenOverlayState state = new ResearchTreeFullscreenOverlayState();
+        ResearchTreeFullscreenOverlayState.Snapshot initial = state.snapshot();
+
+        state.markRailUsed();
+        state.openSearch(true);
+        state.pinNode(NODE);
+        state.setGuidanceVisible(true);
+        ResearchTreeFullscreenOverlayState.Snapshot changed = state.snapshot();
+
+        assertFalse(initial.equals(changed));
+        assertEquals(ResearchTreeFullscreenOverlayState.SearchState.FOCUSED,
+                changed.searchState());
+        assertEquals(NODE, changed.pinnedNodeId().orElseThrow());
+        assertTrue(changed.guidanceVisible());
+        assertTrue(changed.railUsed());
+    }
 }

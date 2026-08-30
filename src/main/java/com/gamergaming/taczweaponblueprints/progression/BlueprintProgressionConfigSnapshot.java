@@ -21,11 +21,13 @@ public record BlueprintProgressionConfigSnapshot(
         boolean allowUnlearnedRecycling,
         int pointCap,
         boolean creativeBypassesResearchCost,
-        ResourceLocation activeProfileId) {
+        ResourceLocation activeProfileId,
+        TreeResearchResultMode treeResearchResultMode) {
     public static final int DEFAULT_POINT_CAP = 1_000_000;
 
     public BlueprintProgressionConfigSnapshot {
-        if (maximumUndiscoveredVisibility == null || duplicatePolicy == null || activeProfileId == null) {
+        if (maximumUndiscoveredVisibility == null || duplicatePolicy == null
+                || activeProfileId == null || treeResearchResultMode == null) {
             throw new IllegalArgumentException("progression configuration contains null required state");
         }
         if (pointCap < 0 || pointCap > PlayerProgressionLimits.MAX_RESEARCH_POINTS) {
@@ -34,6 +36,35 @@ public record BlueprintProgressionConfigSnapshot(
         if (activeProfileId.toString().length() > PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH) {
             throw new IllegalArgumentException("active research profile ID is oversized");
         }
+    }
+
+    /**
+     * Source-compatible constructor for policy-focused callers that do not
+     * customize the Research Tree result. New snapshots use direct learning.
+     */
+    public BlueprintProgressionConfigSnapshot(
+            boolean blueprintsEnabled,
+            boolean discoveryTrackingEnabled,
+            boolean journalEnabled,
+            JournalVisibility maximumUndiscoveredVisibility,
+            boolean researchEnabled,
+            DuplicateBlueprintPolicy duplicatePolicy,
+            boolean allowUnlearnedRecycling,
+            int pointCap,
+            boolean creativeBypassesResearchCost,
+            ResourceLocation activeProfileId) {
+        this(
+                blueprintsEnabled,
+                discoveryTrackingEnabled,
+                journalEnabled,
+                maximumUndiscoveredVisibility,
+                researchEnabled,
+                duplicatePolicy,
+                allowUnlearnedRecycling,
+                pointCap,
+                creativeBypassesResearchCost,
+                activeProfileId,
+                TreeResearchResultMode.DIRECT_LEARN);
     }
 
     public static BlueprintProgressionConfigSnapshot from(BlueprintConfig config) {
@@ -48,13 +79,14 @@ public record BlueprintProgressionConfigSnapshot(
                 config.enableBlueprints.get(),
                 config.enableDiscoveryTracking.get(),
                 config.enableJournal.get(),
-                config.maximumUndiscoveredVisibility.get(),
+                config.balanceSettings().maximumUndiscoveredVisibility(),
                 config.enableResearch.get(),
                 config.duplicateBlueprintPolicy.get(),
                 config.allowUnlearnedRecycling.get(),
                 config.researchPointCap.get(),
                 config.creativeBypassesResearchCost.get(),
-                profileId);
+                profileId,
+                config.treeResearchResultMode.get());
     }
 
     public BlueprintResearchPolicy apply(BlueprintResearchPolicy policy) {

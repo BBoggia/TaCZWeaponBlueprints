@@ -1,0 +1,22 @@
+{
+  "format": 1,
+  "award_group": "taczweaponblueprints:research_data",
+  "priority": 100,
+  "trigger": {
+    "type": "inventory_turn_in",
+    "target": {
+      "ids": ["taczweaponblueprints:research_note"]
+    }
+  },
+  "reward": {
+    "points": 1,
+    "overflow": "require_full"
+  },
+  "repeat": {
+    "type": "unlimited"
+  },
+  "presentation": {
+    "visibility": "public",
+    "name": "research_points.taczweaponblueprints.research_note"
+  }
+}

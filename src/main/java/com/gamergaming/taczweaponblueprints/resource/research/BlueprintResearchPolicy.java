@@ -1,6 +1,7 @@
 package com.gamergaming.taczweaponblueprints.resource.research;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Optional;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
@@ -19,6 +20,7 @@ public record BlueprintResearchPolicy(
         int pointCap,
         boolean prerequisitesSatisfied,
         boolean journalEnabled,
+        boolean treeEnabled,
         JournalVisibility visibility,
         boolean researchEnabled,
         boolean recyclingEnabled,
@@ -30,6 +32,56 @@ public record BlueprintResearchPolicy(
         boolean creativeBypassesCost,
         Optional<ResourceLocation> ruleId,
         BlueprintResearchTarget.MatchSpecificity specificity) {
+
+    /** Backwards-compatible constructor for callers predating tree inclusion. */
+    public BlueprintResearchPolicy(
+            ResourceLocation blueprintId,
+            ResourceLocation profileId,
+            boolean available,
+            boolean blocked,
+            boolean playerDataAvailable,
+            boolean learned,
+            boolean discovered,
+            int researchPoints,
+            int pointCap,
+            boolean prerequisitesSatisfied,
+            boolean journalEnabled,
+            JournalVisibility visibility,
+            boolean researchEnabled,
+            boolean recyclingEnabled,
+            boolean allowUnlearnedRecycling,
+            int recyclingValue,
+            BlueprintResearchCost researchCost,
+            boolean requiresDiscovery,
+            List<ResourceLocation> prerequisites,
+            boolean creativeBypassesCost,
+            Optional<ResourceLocation> ruleId,
+            BlueprintResearchTarget.MatchSpecificity specificity) {
+        this(
+                blueprintId,
+                profileId,
+                available,
+                blocked,
+                playerDataAvailable,
+                learned,
+                discovered,
+                researchPoints,
+                pointCap,
+                prerequisitesSatisfied,
+                journalEnabled,
+                true,
+                visibility,
+                researchEnabled,
+                recyclingEnabled,
+                allowUnlearnedRecycling,
+                recyclingValue,
+                researchCost,
+                requiresDiscovery,
+                prerequisites,
+                creativeBypassesCost,
+                ruleId,
+                specificity);
+    }
 
     public BlueprintResearchPolicy {
         if (blueprintId == null || profileId == null || visibility == null
@@ -93,6 +145,7 @@ public record BlueprintResearchPolicy(
                 effectivePointCap,
                 prerequisitesSatisfied,
                 effectiveJournalEnabled,
+                treeEnabled,
                 effectiveVisibility,
                 effectiveResearchEnabled,
                 effectiveRecyclingEnabled,
@@ -102,6 +155,49 @@ public record BlueprintResearchPolicy(
                 requiresDiscovery,
                 prerequisites,
                 effectiveCreativeBypassesCost,
+                ruleId,
+                specificity);
+    }
+
+    /**
+     * Adds one lower-precedence runtime prerequisite while retaining every
+     * authored policy field. Callers must suppress this overlay whenever the
+     * authored definition already owns prerequisite behavior.
+     */
+    public BlueprintResearchPolicy withAdditionalPrerequisite(
+            ResourceLocation prerequisite,
+            boolean prerequisiteSatisfied) {
+        if (prerequisite == null || prerequisite.equals(blueprintId)) {
+            throw new IllegalArgumentException(
+                    "additional research prerequisite is invalid");
+        }
+        if (prerequisites.contains(prerequisite)) {
+            return this;
+        }
+        List<ResourceLocation> updated = new ArrayList<>(prerequisites);
+        updated.add(prerequisite);
+        return new BlueprintResearchPolicy(
+                blueprintId,
+                profileId,
+                available,
+                blocked,
+                playerDataAvailable,
+                learned,
+                discovered,
+                researchPoints,
+                pointCap,
+                prerequisitesSatisfied && prerequisiteSatisfied,
+                journalEnabled,
+                treeEnabled,
+                visibility,
+                researchEnabled,
+                recyclingEnabled,
+                allowUnlearnedRecycling,
+                recyclingValue,
+                researchCost,
+                requiresDiscovery,
+                updated,
+                creativeBypassesCost,
                 ruleId,
                 specificity);
     }

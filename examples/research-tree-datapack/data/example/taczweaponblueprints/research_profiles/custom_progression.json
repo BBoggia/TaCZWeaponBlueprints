@@ -1,6 +1,7 @@
 {
-  "format": 1,
+  "format": 2,
   "journal_enabled": true,
+  "tree_enabled": false,
   "visibility": "silhouette",
   "research_enabled": true,
   "recycling_enabled": true,
@@ -14,5 +15,25 @@
     ]
   },
   "requires_discovery": false,
-  "creative_bypasses_cost": false
+  "creative_bypasses_cost": false,
+  "domain_policies": {
+    "weapons": {"tree_enabled": true, "research_enabled": true},
+    "attachments": {"tree_enabled": false, "research_enabled": false},
+    "ammo": {"tree_enabled": false, "research_enabled": false}
+  },
+  "tech_tree": "example:dynamic_weapons",
+  "entry_point_candidates": ["example_guns:starter_pistol"],
+  "reverse_engineering": {
+    "enabled": true,
+    "cost": {
+      "points": 2,
+      "ingredients": [
+        { "items": ["minecraft:paper"], "count": 1 }
+      ]
+    },
+    "allow_known": false,
+    "allow_modified": true,
+    "physical_blueprint_learning": "bypass_tree_prerequisites",
+    "output_recyclable": false
+  }
 }

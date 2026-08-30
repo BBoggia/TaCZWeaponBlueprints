@@ -64,24 +64,34 @@ public final class ResearchTreeNavigator {
             ResearchTreeLayout layout,
             ResearchTreeLayout.PositionedNode current,
             Direction direction) {
-        return layout.nodes().stream()
+        List<ResearchTreeLayout.PositionedNode> directional = layout.nodes().stream()
                 .filter(candidate -> !candidate.blueprintId().equals(current.blueprintId()))
                 .filter(candidate -> switch (direction) {
-                    case LEFT -> candidate.centerX() < current.centerX()
-                            && candidate.tier() == current.tier();
-                    case RIGHT -> candidate.centerX() > current.centerX()
-                            && candidate.tier() == current.tier();
+                    case LEFT -> candidate.centerX() < current.centerX();
+                    case RIGHT -> candidate.centerX() > current.centerX();
                     case UP -> candidate.centerY() < current.centerY();
                     case DOWN -> candidate.centerY() > current.centerY();
                 })
                 .toList();
+        if (direction != Direction.LEFT && direction != Direction.RIGHT) {
+            return directional;
+        }
+        List<ResearchTreeLayout.PositionedNode> sameTier = directional.stream()
+                .filter(candidate -> candidate.tier() == current.tier())
+                .toList();
+        return sameTier.isEmpty() ? directional : sameTier;
     }
 
     private static Comparator<ResearchTreeLayout.PositionedNode> candidateComparator(
             ResearchTreeLayout.PositionedNode current,
             Direction direction) {
         return Comparator
-                .comparingInt((ResearchTreeLayout.PositionedNode candidate) ->
+                .comparingLong((ResearchTreeLayout.PositionedNode candidate) -> {
+                    long deltaX = (long) candidate.centerX() - current.centerX();
+                    long deltaY = (long) candidate.centerY() - current.centerY();
+                    return deltaX * deltaX + deltaY * deltaY;
+                })
+                .thenComparingInt(candidate ->
                         direction == Direction.LEFT || direction == Direction.RIGHT
                                 ? Math.abs(candidate.centerX() - current.centerX())
                                 : Math.abs(candidate.centerY() - current.centerY()))

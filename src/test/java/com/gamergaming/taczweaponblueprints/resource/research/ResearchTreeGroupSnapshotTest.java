@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
+import com.gamergaming.taczweaponblueprints.item.BlueprintKind;
 import org.junit.jupiter.api.Test;
 
 import net.minecraft.resources.ResourceLocation;
@@ -108,12 +109,17 @@ class ResearchTreeGroupSnapshotTest {
         Map<ResourceLocation, BlueprintData> catalog = new LinkedHashMap<>();
         catalog.put(id("test:present"), data(id("test:present")));
         catalog.put(id("test:fallback"), data(id("test:fallback")));
+        catalog.put(id("test:scope"), data(
+                id("test:scope"), BlueprintKind.ATTACHMENT, "scope"));
+        catalog.put(id("test:ammo"), data(
+                id("test:ammo"), BlueprintKind.AMMO, "ammo"));
 
         BlueprintResearchDiagnostics.GroupAudit audit = BlueprintResearchDiagnostics.auditGroups(
                 snapshot,
                 catalog,
                 PROFILE);
         assertEquals(1, audit.authoredGroupCount());
+        assertEquals(2, audit.catalogSize());
         assertEquals(2, audit.authoredMemberCount());
         assertEquals(1, audit.groupedCatalogCount());
         assertEquals(List.of(id("test:fallback")), audit.fallbackBlueprintIds());
@@ -121,10 +127,13 @@ class ResearchTreeGroupSnapshotTest {
         assertTrue(audit.hasProblems());
 
         String exported = BlueprintResearchCatalogExporter.export(snapshot, catalog, PROFILE);
-        assertTrue(exported.contains("\"format\": 2"));
+        assertTrue(exported.contains("\"format\": 12"));
         assertTrue(exported.contains("\"research_group\": \"test:pistols\""));
         assertTrue(exported.contains("\"research_rank\": 0"));
         assertTrue(exported.contains("\"presentation_source\": \"automatic_fallback\""));
+        assertTrue(exported.contains("\"presentation_source\": \"tech_tree_only\""));
+        assertTrue(exported.contains("\"include_in_overview\": true"));
+        assertTrue(exported.contains("\"research_group_included_in_overview\": false"));
         assertTrue(exported.contains("\"missing_members\""));
 
         assertFalse(BlueprintResearchDiagnostics.auditGroups(
@@ -192,14 +201,22 @@ class ResearchTreeGroupSnapshotTest {
     }
 
     private static BlueprintData data(ResourceLocation id) {
+        return data(id, BlueprintKind.GUN, "gun");
+    }
+
+    private static BlueprintData data(
+            ResourceLocation id,
+            BlueprintKind kind,
+            String itemType) {
         return new BlueprintData(
                 id.toString(),
                 "item." + id.getNamespace() + "." + id.getPath(),
                 "tooltip." + id.getNamespace() + "." + id.getPath(),
                 id,
                 null,
-                "gun",
-                null);
+                itemType,
+                null,
+                kind);
     }
 
     private static ResourceLocation id(String value) {

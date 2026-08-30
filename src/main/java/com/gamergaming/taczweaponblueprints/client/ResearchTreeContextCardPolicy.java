@@ -2,7 +2,7 @@ package com.gamergaming.taczweaponblueprints.client;
 
 import java.util.Optional;
 
-import com.gamergaming.taczweaponblueprints.menu.ResearchBenchPreview;
+import com.gamergaming.taczweaponblueprints.menu.ResearchSelectionPreview;
 
 import net.minecraft.resources.ResourceLocation;
 
@@ -18,7 +18,7 @@ public final class ResearchTreeContextCardPolicy {
     public static boolean hasMatchingAuthoritativePreview(
             ResourceLocation pinnedNodeId,
             Optional<ResourceLocation> authoritativeSelection,
-            ResearchBenchPreview preview) {
+            ResearchSelectionPreview preview) {
         if (authoritativeSelection == null || preview == null) {
             throw new IllegalArgumentException("invalid Research Tree context card authority state");
         }

@@ -1,0 +1,33 @@
+{
+  "format": 1,
+  "profile": "taczweaponblueprints:duplicate_recovery",
+  "priority": 100,
+  "target": {
+    "blueprints": [
+      "tacz:laser_nightstick",
+      "tacz:light_extended_mag_1",
+      "tacz:bayonet_6h3",
+      "tacz:bayonet_m9",
+      "tacz:sight_acro_pistol",
+      "tacz:sight_deltapoint_pistol",
+      "tacz:sight_fastfire_pistol",
+      "tacz:sight_pk06_pistol",
+      "tacz:sight_rmr_dot",
+      "tacz:sight_sro_dot",
+      "tacz:oem_stock_light",
+      "tacz:stock_m4ss"
+    ]
+  },
+  "visibility": "full",
+  "tree_enabled": true,
+  "research_enabled": true,
+  "requires_discovery": false,
+  "research_cost": {
+    "points": 2,
+    "ingredients": [
+      { "items": ["minecraft:paper"], "count": 1 },
+      { "items": ["minecraft:iron_ingot"], "count": 1 }
+    ]
+  },
+  "prerequisites": ["tacz:grip_rk6"]
+}

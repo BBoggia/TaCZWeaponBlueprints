@@ -63,4 +63,49 @@ class ResearchTreeGuidancePreferenceTest {
                 stored.getProperty("research_tree_guidance_dismissed")));
         assertTrue("kept".equals(stored.getProperty("future_setting")));
     }
+
+    @Test
+    void railPinChoicePersistsWithoutChangingGuidanceDismissal() {
+        ResearchTreeGuidancePreference first =
+                new ResearchTreeGuidancePreference(temporaryDirectory);
+
+        first.setRailPinned(true);
+        assertTrue(first.railPinned());
+        assertTrue(first.shouldShow());
+
+        ResearchTreeGuidancePreference restored =
+                new ResearchTreeGuidancePreference(temporaryDirectory);
+        assertTrue(restored.railPinned());
+        assertTrue(restored.shouldShow());
+        restored.dismiss();
+        restored.setRailPinned(false);
+
+        ResearchTreeGuidancePreference finalState =
+                new ResearchTreeGuidancePreference(temporaryDirectory);
+        assertFalse(finalState.railPinned());
+        assertFalse(finalState.shouldShow());
+    }
+
+    @Test
+    void onboardingHintAndDismissalAreIndependentAndPersistent() {
+        ResearchTreeGuidancePreference first =
+                new ResearchTreeGuidancePreference(temporaryDirectory);
+
+        assertTrue(first.shouldShowOnboarding());
+        assertTrue(first.claimOnboardingHint());
+        assertFalse(first.claimOnboardingHint());
+        assertTrue(first.shouldShowOnboarding());
+
+        ResearchTreeGuidancePreference restored =
+                new ResearchTreeGuidancePreference(temporaryDirectory);
+        assertFalse(restored.claimOnboardingHint());
+        assertTrue(restored.shouldShowOnboarding());
+        restored.dismissOnboarding();
+
+        ResearchTreeGuidancePreference dismissed =
+                new ResearchTreeGuidancePreference(temporaryDirectory);
+        assertFalse(dismissed.shouldShowOnboarding());
+        assertFalse(dismissed.claimOnboardingHint());
+        assertTrue(dismissed.shouldShow());
+    }
 }

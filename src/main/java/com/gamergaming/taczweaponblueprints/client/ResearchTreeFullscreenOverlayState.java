@@ -33,6 +33,15 @@ public final class ResearchTreeFullscreenOverlayState {
         return railUsed;
     }
 
+    public Snapshot snapshot() {
+        return new Snapshot(
+                railState,
+                searchState,
+                Optional.ofNullable(pinnedNodeId),
+                guidanceVisible,
+                railUsed);
+    }
+
     public void markRailUsed() {
         railUsed = true;
         revealRail();
@@ -146,5 +155,18 @@ public final class ResearchTreeFullscreenOverlayState {
         CLOSED_CARD,
         EXIT_FULLSCREEN,
         DEFAULT
+    }
+
+    public record Snapshot(
+            RailState railState,
+            SearchState searchState,
+            Optional<ResourceLocation> pinnedNodeId,
+            boolean guidanceVisible,
+            boolean railUsed) {
+        public Snapshot {
+            if (railState == null || searchState == null || pinnedNodeId == null) {
+                throw new IllegalArgumentException("invalid Research Tree overlay snapshot");
+            }
+        }
     }
 }

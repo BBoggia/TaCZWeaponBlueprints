@@ -10,9 +10,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
-import com.gamergaming.taczweaponblueprints.init.ModConfigs;
-import com.gamergaming.taczweaponblueprints.journal.BlueprintJournalBuilder;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionSyncScheduler;
+import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionAccess;
+import com.gamergaming.taczweaponblueprints.progression.ResearchPointPresentationService.Feedback;
+import com.gamergaming.taczweaponblueprints.progression.ResearchPointPresentationService.HelpSnapshot;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePublication;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchDataManager;
@@ -25,7 +26,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public class NetworkHandler {
-    public static final String PROTOCOL_VERSION = "15";
+    public static final String PROTOCOL_VERSION = "36";
     // A random per-server seed prevents a partial chunk set from an earlier
     // connection being mistaken for a new sync after reconnecting.
     private static final AtomicLong SYNC_SEQUENCE =
@@ -72,10 +73,61 @@ public class NetworkHandler {
                 SyncResearchBenchPreviewPacket::handle,
                 Optional.of(NetworkDirection.PLAY_TO_CLIENT));
 
+        INSTANCE.registerMessage(id++, ResearchBenchActionResultPacket.class,
+                ResearchBenchActionResultPacket::toBytes,
+                ResearchBenchActionResultPacket::new,
+                ResearchBenchActionResultPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+
         INSTANCE.registerMessage(id++, SyncResearchTreePacket.class,
                 SyncResearchTreePacket::toBytes, SyncResearchTreePacket::new,
                 SyncResearchTreePacket::handle,
                 Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+
+        INSTANCE.registerMessage(id++, ResearchPointFeedbackPacket.class,
+                ResearchPointFeedbackPacket::toBytes, ResearchPointFeedbackPacket::new,
+                ResearchPointFeedbackPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+
+        INSTANCE.registerMessage(id++, SyncResearchPointHelpPacket.class,
+                SyncResearchPointHelpPacket::toBytes, SyncResearchPointHelpPacket::new,
+                SyncResearchPointHelpPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+
+        // Phase 1 workstation split: append-only IDs keep the live packet table stable.
+        INSTANCE.registerMessage(id++, BlueprintRecyclerActionPacket.class,
+                BlueprintRecyclerActionPacket::toBytes, BlueprintRecyclerActionPacket::new,
+                BlueprintRecyclerActionPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_SERVER));
+
+        INSTANCE.registerMessage(id++, SyncBlueprintRecyclerPreviewPacket.class,
+                SyncBlueprintRecyclerPreviewPacket::toBytes,
+                SyncBlueprintRecyclerPreviewPacket::new,
+                SyncBlueprintRecyclerPreviewPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+
+        INSTANCE.registerMessage(id++, BlueprintRecyclerActionResultPacket.class,
+                BlueprintRecyclerActionResultPacket::toBytes,
+                BlueprintRecyclerActionResultPacket::new,
+                BlueprintRecyclerActionResultPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+
+        // Appended in the preset-sync correction; existing discriminators remain stable.
+        INSTANCE.registerMessage(id++, SyncBalancePresetPacket.class,
+                SyncBalancePresetPacket::toBytes,
+                SyncBalancePresetPacket::new,
+                SyncBalancePresetPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+    }
+
+    public static void syncBalancePreset(
+            ServerPlayer player,
+            com.gamergaming.taczweaponblueprints.progression.BlueprintBalancePreset preset) {
+        if (player != null && preset != null) {
+            INSTANCE.send(
+                    PacketDistributor.PLAYER.with(() -> player),
+                    new SyncBalancePresetPacket(preset));
+        }
     }
 
     public static void syncPlayerRecipeData(ServerPlayer player) {
@@ -85,7 +137,11 @@ public class NetworkHandler {
                     recipeData.getLearnedRecipes(),
                     recipeData.getLearnedBlueprints(),
                     BlueprintDataManager.SERVER.getBlueprintDataMap(),
-                    BlueprintDataManager.SERVER.getRecipeToBlueprintMap());
+                    BlueprintDataManager.SERVER.getRecipeToBlueprintMap(),
+                    BlueprintProgressionAccess.exemptRecipeIds(
+                            com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT
+                                    .accessSnapshot(),
+                            BlueprintDataManager.SERVER.getBlueprintDataMap()));
             SyncPlayerRecipeDataPacket.split(activeRecipes, SYNC_SEQUENCE.incrementAndGet())
                     .forEach(packet -> INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), packet));
             sendPlayerProgressionData(player, recipeData, true, false);
@@ -99,6 +155,11 @@ public class NetworkHandler {
 
     /** Synchronizes a point-only change without rebuilding or transferring an unchanged tree. */
     public static void syncPlayerPointBalance(ServerPlayer player) {
+        // A queued complete publication already contains the current balance.
+        // Let it win so this narrow path cannot publish around an older tree.
+        if (BlueprintProgressionSyncScheduler.hasPendingFullSync(player)) {
+            return;
+        }
         player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
                 .ifPresent(recipeData -> sendPlayerProgressionData(player, recipeData, false, true));
     }
@@ -106,7 +167,7 @@ public class NetworkHandler {
     public static void syncJournalData(ServerPlayer player) {
         player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
                 .ifPresent(recipeData -> sendJournalData(player, recipeData, false, false));
-        refreshOpenResearchBench(player);
+        refreshOpenWorkstation(player);
     }
 
     public static void syncBlueprintData(ServerPlayer player) {
@@ -124,10 +185,55 @@ public class NetworkHandler {
     public static void sendResearchBenchPreview(
             ServerPlayer player,
             int containerId,
-            com.gamergaming.taczweaponblueprints.menu.ResearchBenchPreview preview) {
+            com.gamergaming.taczweaponblueprints.menu.ResearchSelectionPreview preview) {
         INSTANCE.send(
                 PacketDistributor.PLAYER.with(() -> player),
                 new SyncResearchBenchPreviewPacket(containerId, preview));
+    }
+
+    public static void sendResearchBenchActionResult(
+            ServerPlayer player,
+            int containerId,
+            int requestId,
+            com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu.ActionResult result) {
+        INSTANCE.send(
+                PacketDistributor.PLAYER.with(() -> player),
+                new ResearchBenchActionResultPacket(containerId, requestId, result));
+    }
+
+    public static void sendResearchPointFeedback(ServerPlayer player, Feedback feedback) {
+        if (player != null && feedback != null && feedback.present()) {
+            INSTANCE.send(
+                    PacketDistributor.PLAYER.with(() -> player),
+                    new ResearchPointFeedbackPacket(feedback));
+        }
+    }
+
+    public static void sendResearchPointHelp(ServerPlayer player, HelpSnapshot snapshot) {
+        if (player != null && snapshot != null) {
+            INSTANCE.send(
+                    PacketDistributor.PLAYER.with(() -> player),
+                    new SyncResearchPointHelpPacket(snapshot));
+        }
+    }
+
+    public static void sendBlueprintRecyclerPreview(
+            ServerPlayer player,
+            int containerId,
+            com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerPreview preview) {
+        INSTANCE.send(
+                PacketDistributor.PLAYER.with(() -> player),
+                new SyncBlueprintRecyclerPreviewPacket(containerId, preview));
+    }
+
+    public static void sendBlueprintRecyclerActionResult(
+            ServerPlayer player,
+            int containerId,
+            int requestId,
+            com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerActionContract.ActionResult result) {
+        INSTANCE.send(
+                PacketDistributor.PLAYER.with(() -> player),
+                new BlueprintRecyclerActionResultPacket(containerId, requestId, result));
     }
 
     public static void clearPlayerSyncState(ServerPlayer player) {
@@ -146,7 +252,9 @@ public class NetworkHandler {
             IPlayerRecipeData recipeData,
             boolean forceTree,
             boolean treeKnownUnchanged) {
-        BlueprintProgressionSyncScheduler.clear(player);
+        if (!treeKnownUnchanged) {
+            BlueprintProgressionSyncScheduler.clear(player);
+        }
         SyncPlayerProgressionPacket.split(
                         recipeData.getLearnedBlueprints(),
                         recipeData.getDiscoveredBlueprints(),
@@ -154,7 +262,7 @@ public class NetworkHandler {
                         SYNC_SEQUENCE.incrementAndGet())
                 .forEach(packet -> INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), packet));
         sendJournalData(player, recipeData, forceTree, treeKnownUnchanged);
-        refreshOpenResearchBench(player);
+        refreshOpenWorkstation(player);
     }
 
     private static void sendJournalData(
@@ -162,17 +270,14 @@ public class NetworkHandler {
             IPlayerRecipeData recipeData,
             boolean forceTree,
             boolean treeKnownUnchanged) {
-        var snapshot = BlueprintJournalBuilder.build(
-                BlueprintDataManager.SERVER.getBlueprintDataMap(),
-                BlueprintResearchDataManager.INSTANCE.snapshot(),
-                BlueprintResearchDataManager.INSTANCE.progressionConfig(),
-                recipeData,
-                ModConfigs.BLUEPRINT::isItemBlacklisted);
+        var playerPublication =
+                BlueprintResearchDataManager.INSTANCE.playerPublicationFor(recipeData);
+        var snapshot = playerPublication.journal();
         var previousTree = LAST_SENT_RESEARCH_TREES.get(player.getUUID());
         boolean reuseKnownTree = treeKnownUnchanged && previousTree != null && !forceTree;
         var tree = reuseKnownTree
                 ? previousTree
-                : BlueprintResearchDataManager.INSTANCE.treePublicationFor(recipeData);
+                : playerPublication.tree();
         boolean sendTree = !reuseKnownTree && (forceTree || !tree.equals(previousTree));
         long generation = SYNC_SEQUENCE.incrementAndGet();
         SyncBlueprintJournalPacket.split(snapshot, generation, !sendTree)
@@ -184,8 +289,11 @@ public class NetworkHandler {
         }
     }
 
-    private static void refreshOpenResearchBench(ServerPlayer player) {
+    private static void refreshOpenWorkstation(ServerPlayer player) {
         if (player.containerMenu instanceof com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu menu) {
+            menu.refreshAuthoritativePreview(player);
+        } else if (player.containerMenu
+                instanceof com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerMenu menu) {
             menu.refreshAuthoritativePreview(player);
         }
     }

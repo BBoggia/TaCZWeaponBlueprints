@@ -9,7 +9,11 @@ import java.util.Map;
 
 import net.minecraft.resources.ResourceLocation;
 
-/** Deterministic, category-laned bottom-to-top layout for a research DAG. */
+/**
+ * Legacy category-laned layout retained for source compatibility and historical fixtures.
+ * Runtime Research Bench projections use the shared skeleton composers.
+ */
+@Deprecated(forRemoval = false)
 public final class ResearchTreeLayoutEngine {
     public static final int HORIZONTAL_GAP = 24;
     public static final int ROW_GAP = 16;
@@ -38,6 +42,7 @@ public final class ResearchTreeLayoutEngine {
         if (publication == null) {
             throw new IllegalArgumentException("research publication cannot be null");
         }
+        publication = publication.legacyView();
         return layout(publication.graph(), publication.presentation());
     }
 

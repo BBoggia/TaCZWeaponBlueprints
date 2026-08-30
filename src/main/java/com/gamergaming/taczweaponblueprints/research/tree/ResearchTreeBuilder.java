@@ -16,6 +16,9 @@ import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchP
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchSnapshot;
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph.Availability;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponPlacementCandidateSnapshot;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPrerequisiteOverlay;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPrerequisitePlan;
 
 import net.minecraft.resources.ResourceLocation;
 
@@ -39,6 +42,61 @@ public final class ResearchTreeBuilder {
             BlueprintProgressionConfigSnapshot config,
             IPlayerRecipeData playerData,
             Predicate<String> blockedPredicate) {
+        return buildPublication(
+                catalog,
+                researchSnapshot,
+                config,
+                playerData,
+                blockedPredicate,
+                null,
+                null);
+    }
+
+    public static ResearchTreePublication buildPublication(
+            Map<ResourceLocation, BlueprintData> catalog,
+            BlueprintResearchSnapshot researchSnapshot,
+            BlueprintProgressionConfigSnapshot config,
+            IPlayerRecipeData playerData,
+            Predicate<String> blockedPredicate,
+            AutomaticWeaponPlacementCandidateSnapshot automaticCandidates) {
+        return buildPublication(
+                catalog,
+                researchSnapshot,
+                config,
+                playerData,
+                blockedPredicate,
+                automaticCandidates,
+                null);
+    }
+
+    public static ResearchTreePublication buildPublication(
+            Map<ResourceLocation, BlueprintData> catalog,
+            BlueprintResearchSnapshot researchSnapshot,
+            BlueprintProgressionConfigSnapshot config,
+            IPlayerRecipeData playerData,
+            Predicate<String> blockedPredicate,
+            AutomaticWeaponPlacementCandidateSnapshot automaticCandidates,
+            AutomaticWeaponPrerequisitePlan automaticPrerequisites) {
+        return buildPublication(
+                catalog,
+                researchSnapshot,
+                config,
+                playerData,
+                blockedPredicate,
+                ignored -> false,
+                automaticCandidates,
+                automaticPrerequisites);
+    }
+
+    public static ResearchTreePublication buildPublication(
+            Map<ResourceLocation, BlueprintData> catalog,
+            BlueprintResearchSnapshot researchSnapshot,
+            BlueprintProgressionConfigSnapshot config,
+            IPlayerRecipeData playerData,
+            Predicate<String> blockedPredicate,
+            Predicate<ResourceLocation> progressionExemptPredicate,
+            AutomaticWeaponPlacementCandidateSnapshot automaticCandidates,
+            AutomaticWeaponPrerequisitePlan automaticPrerequisites) {
         if (catalog == null || researchSnapshot == null || config == null || playerData == null
                 || !config.blueprintsEnabled() || !config.journalEnabled()) {
             return ResearchTreePublication.EMPTY;
@@ -48,19 +106,35 @@ public final class ResearchTreeBuilder {
         }
 
         Predicate<String> blocked = blockedPredicate == null ? ignored -> false : blockedPredicate;
+        Predicate<ResourceLocation> exempt = progressionExemptPredicate == null
+                ? ignored -> false
+                : progressionExemptPredicate;
         List<Map.Entry<ResourceLocation, BlueprintData>> sortedCatalog = new ArrayList<>(catalog.entrySet());
         sortedCatalog.sort(Map.Entry.comparingByKey(Comparator.comparing(ResourceLocation::toString)));
 
         Map<ResourceLocation, Candidate> candidates = new LinkedHashMap<>();
         for (Map.Entry<ResourceLocation, BlueprintData> entry : sortedCatalog) {
+            if (exempt.test(entry.getKey())) {
+                continue;
+            }
             BlueprintResearchPolicy policy = config.apply(BlueprintResearchPolicyResolver.resolve(
                     researchSnapshot,
                     catalog,
                     config.activeProfileId(),
                     entry.getKey(),
                     playerData,
-                    blocked));
+                    blocked,
+                    exempt));
+            policy = AutomaticWeaponPrerequisiteOverlay.apply(
+                    policy,
+                    automaticPrerequisites,
+                    playerData,
+                    blocked,
+                    config.maximumUndiscoveredVisibility().allowsServerSelection(),
+                    catalog::containsKey,
+                    exempt);
             if (!policy.journalEnabled()
+                    || !policy.treeEnabled()
                     || policy.blocked()
                     || !policy.visibility().appearsInTree()) {
                 continue;
@@ -131,12 +205,65 @@ public final class ResearchTreeBuilder {
                     availability));
         }
         ResearchTreeGraph graph = new ResearchTreeGraph(nodes, edges);
+        Map<ResourceLocation, ResourceLocation> legacyPublicIds = new LinkedHashMap<>();
+        for (Map.Entry<ResourceLocation, Candidate> entry : candidates.entrySet()) {
+            if (ResearchTechTreeContract.includesKind(
+                    ResearchTechTreeContract.BrowseIntent.BRANCHES,
+                    entry.getValue().data().getKind())) {
+                legacyPublicIds.put(entry.getKey(), publicIds.get(entry.getKey()));
+            }
+        }
+        ResearchTreeGraph legacyGraph = graph.inducedSubgraph(
+                Set.copyOf(legacyPublicIds.values()));
         ResearchTreePresentation presentation = ResearchTreePresentationBuilder.build(
-                graph,
+                legacyGraph,
                 researchSnapshot,
                 config.activeProfileId(),
-                publicIds);
-        return new ResearchTreePublication(graph, presentation);
+                legacyPublicIds);
+        ResearchTechTreePresentation techTree;
+        try {
+            if (automaticCandidates == null) {
+                techTree = ResearchTechTreePresentationBuilder.build(
+                        graph,
+                        researchSnapshot,
+                        config.activeProfileId(),
+                        catalog,
+                        publicIds,
+                        null);
+            } else {
+                try {
+                    techTree = ResearchTechTreePresentationBuilder.build(
+                            graph,
+                            researchSnapshot,
+                            config.activeProfileId(),
+                            catalog,
+                            publicIds,
+                            automaticCandidates,
+                            automaticPrerequisites);
+                } catch (IllegalArgumentException | IllegalStateException automaticException) {
+                    com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.LOGGER.warn(
+                            "Automatic placements could not be applied safely to the current public Research Tech Tree; "
+                                    + "publishing the complete legacy-fallback presentation instead",
+                            automaticException);
+                    techTree = ResearchTechTreePresentationBuilder.build(
+                            graph,
+                            researchSnapshot,
+                            config.activeProfileId(),
+                            catalog,
+                            publicIds,
+                            null);
+                }
+            }
+        } catch (IllegalArgumentException exception) {
+            // Tech Tree data is an optional presentation overlay. A catalog-specific
+            // selector conflict must not take the established Branches and All Weapons
+            // publication down with it.
+            com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.LOGGER.warn(
+                    "Could not publish the selected Research Tech Tree; hiding that view",
+                    exception);
+            techTree = ResearchTechTreePresentation.EMPTY;
+        }
+        return new ResearchTreePublication(graph, presentation, techTree);
     }
 
     private static Availability availability(BlueprintResearchPolicy policy) {

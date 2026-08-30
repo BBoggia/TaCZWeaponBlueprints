@@ -13,8 +13,14 @@ import java.util.Set;
 
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
+import com.gamergaming.taczweaponblueprints.item.BlueprintKind;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.network.BlueprintSyncLimits;
+import com.gamergaming.taczweaponblueprints.progression.BlueprintLearningService;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponEvidenceManager;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponPlacementCandidateManager;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchDataManager;
+import com.gamergaming.taczweaponblueprints.resource.research.ResearchTechTreeCatalogValidator;
 import com.tacz.guns.api.item.IAmmo;
 import com.tacz.guns.api.item.IAttachment;
 import com.tacz.guns.api.item.IGun;
@@ -73,7 +79,30 @@ public class BlueprintDataManager {
         }
 
         try {
-            rebuildCatalog(assetsManager);
+            CatalogRebuild rebuild = rebuildCatalog(assetsManager);
+            CatalogSnapshot rebuilt = rebuild.snapshot();
+            BlueprintResearchDataManager.Publication research =
+                    BlueprintResearchDataManager.INSTANCE.publication();
+            ResearchTechTreeCatalogValidator.validate(
+                    research.snapshot(), rebuilt.blueprints());
+            catalogSnapshot = rebuilt;
+            rebuild.diagnostics().log(rebuilt.blueprints().size());
+            AutomaticWeaponEvidenceManager.INSTANCE.rebuild(
+                    assetsManager,
+                    rebuilt.blueprints(),
+                    rebuilt.revision());
+            if (research.revision() > 0L) {
+                AutomaticWeaponPlacementCandidateManager.INSTANCE.rebuild(
+                        research.snapshot(),
+                        research.revision(),
+                        rebuilt.blueprints(),
+                        rebuilt.revision(),
+                        AutomaticWeaponEvidenceManager.INSTANCE.snapshotForCatalogRevision(
+                                rebuilt.revision()));
+            } else {
+                AutomaticWeaponPlacementCandidateManager.INSTANCE.invalidateForRevisions(
+                        rebuilt.revision(), research.revision());
+            }
             return true;
         } catch (RuntimeException exception) {
             TaCZWeaponBlueprints.LOGGER.error(
@@ -84,7 +113,7 @@ public class BlueprintDataManager {
         }
     }
 
-    private void rebuildCatalog(CommonAssetsManager assetsManager) {
+    private CatalogRebuild rebuildCatalog(CommonAssetsManager assetsManager) {
         List<GunSmithTableRecipe> recipes = new ArrayList<>(
                 assetsManager.recipeManager.getAllRecipesFor(ModRecipe.GUN_SMITH_TABLE_CRAFTING.get()));
         recipes.sort(Comparator.comparing(recipe -> recipe.getId().toString()));
@@ -128,10 +157,11 @@ public class BlueprintDataManager {
         }
 
         BlueprintSyncLimits.validateCatalog(rebuiltCatalog);
-        catalogSnapshot = new CatalogSnapshot(
+        CatalogSnapshot rebuilt = new CatalogSnapshot(
                 immutableCatalog(rebuiltCatalog),
-                immutableAliases(recipeToBlueprint));
-        diagnostics.log(catalogSnapshot.blueprints().size());
+                immutableAliases(recipeToBlueprint),
+                PublicationRevision.next(catalogSnapshot.revision()));
+        return new CatalogRebuild(rebuilt, diagnostics);
     }
 
     private BlueprintResolution resolveBlueprint(GunSmithTableRecipe recipe, CommonAssetsManager assetsManager) {
@@ -233,7 +263,8 @@ public class BlueprintDataManager {
                 recipe.getId(),
                 recipe,
                 normalizedItemType,
-                displaySlotKey);
+                displaySlotKey,
+                kind);
         return BlueprintResolution.success(new BlueprintCandidate(itemId, data, kind));
     }
 
@@ -252,7 +283,11 @@ public class BlueprintDataManager {
 
     public void setBlueprintDataMap(Map<ResourceLocation, BlueprintData> blueprintDataMap) {
         if (blueprintDataMap == null || blueprintDataMap.isEmpty()) {
-            this.catalogSnapshot = CatalogSnapshot.EMPTY;
+            this.catalogSnapshot = new CatalogSnapshot(
+                    Map.of(),
+                    Map.of(),
+                    PublicationRevision.next(catalogSnapshot.revision()));
+            invalidateServerEvidenceAfterDirectCatalogReplacement();
             return;
         }
         BlueprintSyncLimits.validateCatalog(blueprintDataMap);
@@ -260,7 +295,18 @@ public class BlueprintDataManager {
         blueprintDataMap.forEach((blueprintId, data) -> canonicalRecipes.put(data.getRecipeId(), blueprintId));
         this.catalogSnapshot = new CatalogSnapshot(
                 immutableCatalog(blueprintDataMap),
-                immutableAliases(canonicalRecipes));
+                immutableAliases(canonicalRecipes),
+                PublicationRevision.next(catalogSnapshot.revision()));
+        invalidateServerEvidenceAfterDirectCatalogReplacement();
+    }
+
+    private void invalidateServerEvidenceAfterDirectCatalogReplacement() {
+        if (this == SERVER) {
+            AutomaticWeaponEvidenceManager.INSTANCE.invalidateForCatalogRevision(
+                    catalogSnapshot.revision());
+            AutomaticWeaponPlacementCandidateManager.INSTANCE.invalidateForRevisions(
+                    catalogSnapshot.revision(), BlueprintResearchDataManager.INSTANCE.revision());
+        }
     }
 
     /**
@@ -292,6 +338,16 @@ public class BlueprintDataManager {
         return catalogSnapshot.recipeToBlueprint();
     }
 
+    public long catalogRevision() {
+        return catalogSnapshot.revision();
+    }
+
+    /** Returns the immutable catalog and its revision from one volatile read. */
+    public CatalogPublication catalogPublication() {
+        CatalogSnapshot current = catalogSnapshot;
+        return new CatalogPublication(current.blueprints(), current.revision());
+    }
+
     public ResourceLocation getBlueprintIdForRecipe(ResourceLocation recipeId) {
         return recipeId == null ? null : catalogSnapshot.recipeToBlueprint().get(recipeId);
     }
@@ -303,27 +359,7 @@ public class BlueprintDataManager {
     }
 
     public int migrateLegacyUnlocks(IPlayerRecipeData recipeData) {
-        if (recipeData == null) {
-            return 0;
-        }
-        int migrated = 0;
-        for (String learnedRecipe : Set.copyOf(recipeData.getLearnedRecipes())) {
-            ResourceLocation recipeId = ResourceLocation.tryParse(learnedRecipe);
-            ResourceLocation blueprintId = getBlueprintIdForRecipe(recipeId);
-            if (blueprintId != null && recipeData.addBlueprint(blueprintId.toString())) {
-                migrated++;
-            }
-        }
-        // Keep the legacy recipe list usable by older releases if the world is
-        // rolled back after this capability schema has been saved.
-        for (String learnedBlueprint : recipeData.getLearnedBlueprints()) {
-            recipeData.discoverBlueprint(learnedBlueprint);
-            BlueprintData data = getBlueprintData(learnedBlueprint);
-            if (data != null) {
-                recipeData.addRecipe(data.getRecipeId().toString());
-            }
-        }
-        return migrated;
+        return BlueprintLearningService.migrateLegacyUnlocks(this, recipeData);
     }
 
     public Collection<BlueprintData> getRifleBlueprints() {
@@ -399,14 +435,35 @@ public class BlueprintDataManager {
 
     private record CatalogSnapshot(
             Map<ResourceLocation, BlueprintData> blueprints,
-            Map<ResourceLocation, ResourceLocation> recipeToBlueprint) {
-        private static final CatalogSnapshot EMPTY = new CatalogSnapshot(Map.of(), Map.of());
+            Map<ResourceLocation, ResourceLocation> recipeToBlueprint,
+            long revision) {
+        private static final CatalogSnapshot EMPTY = new CatalogSnapshot(Map.of(), Map.of(), 0L);
+
+        private CatalogSnapshot {
+            if (blueprints == null || recipeToBlueprint == null || revision < 0) {
+                throw new IllegalArgumentException("Blueprint catalog snapshot is invalid");
+            }
+        }
     }
 
-    private enum BlueprintKind {
-        GUN,
-        AMMO,
-        ATTACHMENT
+    private record CatalogRebuild(
+            CatalogSnapshot snapshot,
+            CatalogDiagnostics diagnostics) {
+        private CatalogRebuild {
+            if (snapshot == null || diagnostics == null) {
+                throw new IllegalArgumentException("Blueprint catalog rebuild is invalid");
+            }
+        }
+    }
+
+    public record CatalogPublication(
+            Map<ResourceLocation, BlueprintData> blueprints,
+            long revision) {
+        public CatalogPublication {
+            if (blueprints == null || revision < 0L) {
+                throw new IllegalArgumentException("Blueprint catalog publication is invalid");
+            }
+        }
     }
 
     private enum SkipReason {

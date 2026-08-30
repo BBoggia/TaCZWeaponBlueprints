@@ -2,8 +2,9 @@
   "format": 1,
   "profile": "taczweaponblueprints:duplicate_recovery",
   "priority": 100,
-  "target": { "blueprints": ["tacz:m1911", "tacz:cz75", "tacz:p320", "tacz:hk_mk23"] },
+  "target": { "blueprints": ["tacz:m1911", "tacz:cz75", "tacz:hk_mk23"] },
   "visibility": "full",
+  "tree_enabled": true,
   "research_cost": { "points": 8, "ingredients": [{ "items": ["minecraft:paper"], "count": 4 }, { "items": ["minecraft:iron_ingot"], "count": 3 }] },
   "prerequisites": ["tacz:glock_17"]
 }

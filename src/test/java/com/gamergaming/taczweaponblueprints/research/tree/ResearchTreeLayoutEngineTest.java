@@ -48,6 +48,22 @@ class ResearchTreeLayoutEngineTest {
                 layout.tier(0).stream().map(ResearchTreeLayout.PositionedNode::blueprintId).toList());
         assertEquals(List.of(id("test:b"), id("test:c")),
                 layout.tier(1).stream().map(ResearchTreeLayout.PositionedNode::blueprintId).toList());
+        assertEquals(List.of(0, 1, 2),
+                layout.tierBounds().stream().map(ResearchTreeLayout.TierBounds::tier).toList());
+        layout.tierBounds().forEach(bounds -> {
+            assertEquals(
+                    layout.tier(bounds.tier()).stream()
+                            .mapToInt(ResearchTreeLayout.PositionedNode::y)
+                            .min()
+                            .orElseThrow(),
+                    bounds.minimumY());
+            assertEquals(
+                    layout.tier(bounds.tier()).stream()
+                            .mapToInt(node -> node.y() + ResearchTreeLayout.NODE_HEIGHT)
+                            .max()
+                            .orElseThrow(),
+                    bounds.maximumBottom());
+        });
         assertTrue(layout.hiddenAnchors().isEmpty());
         assertNoOverlap(layout);
     }
@@ -189,6 +205,8 @@ class ResearchTreeLayoutEngineTest {
         assertEquals(0, layout.position(id("test:b")).orElseThrow().tier());
         assertEquals(2, layout.position(id("test:c")).orElseThrow().tier());
         assertTrue(layout.tier(1).isEmpty());
+        assertEquals(List.of(0, 2),
+                layout.tierBounds().stream().map(ResearchTreeLayout.TierBounds::tier).toList());
         assertTrue(layout.position(id("test:b")).orElseThrow().x()
                 < layout.position(id("test:a")).orElseThrow().x());
         assertTrue(layout.position(id("test:c")).orElseThrow().y()

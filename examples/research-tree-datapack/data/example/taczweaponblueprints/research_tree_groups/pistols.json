@@ -5,6 +5,7 @@
   "translation_key": "gui.example_guns.research_group.pistols",
   "icon": "example_guns:starter_pistol",
   "order": 10,
+  "include_in_overview": true,
   "ranks": [
     ["example_guns:starter_pistol"],
     ["example_guns:advanced_pistol"]

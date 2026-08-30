@@ -27,6 +27,7 @@ public record ResearchTreeGroupDefinition(
         Optional<String> translationKey,
         ResourceLocation icon,
         int order,
+        Optional<Boolean> includeInOverview,
         List<List<ResourceLocation>> ranks) {
     public static final int CURRENT_FORMAT = 1;
     public static final int MAX_TITLE_LENGTH = 80;
@@ -72,6 +73,8 @@ public record ResearchTreeGroupDefinition(
                     BlueprintResearchCodecs.RESOURCE_LOCATION.fieldOf("icon")
                             .forGetter(RawDefinition::icon),
                     ORDER_CODEC.fieldOf("order").forGetter(RawDefinition::order),
+                    new StrictOptionalFieldCodec<>("include_in_overview", Codec.BOOL)
+                            .forGetter(RawDefinition::includeInOverview),
                     RANKS_CODEC.fieldOf("ranks")
                             .forGetter(RawDefinition::ranks))
                     .apply(instance, RawDefinition::new));
@@ -87,7 +90,20 @@ public record ResearchTreeGroupDefinition(
             "translation_key",
             "icon",
             "order",
+            "include_in_overview",
             "ranks");
+
+    /** Backwards-compatible programmatic constructor using the kind default. */
+    public ResearchTreeGroupDefinition(
+            int format,
+            ResourceLocation profile,
+            String title,
+            Optional<String> translationKey,
+            ResourceLocation icon,
+            int order,
+            List<List<ResourceLocation>> ranks) {
+        this(format, profile, title, translationKey, icon, order, Optional.empty(), ranks);
+    }
 
     public ResearchTreeGroupDefinition {
         if (format != CURRENT_FORMAT) {
@@ -97,6 +113,7 @@ public record ResearchTreeGroupDefinition(
             throw new IllegalArgumentException("research-tree group fields cannot be null");
         }
         translationKey = translationKey == null ? Optional.empty() : translationKey;
+        includeInOverview = includeInOverview == null ? Optional.empty() : includeInOverview;
         validateRankContainerBounds(ranks);
         ranks = ranks.stream().map(rank -> rank == null ? null : List.copyOf(rank)).toList();
         validateProgrammatic(profile, title, translationKey, icon, order, ranks);
@@ -184,13 +201,11 @@ public record ResearchTreeGroupDefinition(
                 decodedRank.add(member.orElseThrow());
                 memberCount++;
             }
-            if (decodedRank.isEmpty()) {
-                return DataResult.error(() -> "research-tree group ranks cannot be empty");
-            }
             decodedRanks.add(List.copyOf(decodedRank));
         }
-        if (decodedRanks.isEmpty()) {
-            return DataResult.error(() -> "research-tree group must contain at least one rank");
+        if (!validRankShape(decodedRanks)) {
+            return DataResult.error(() -> "research-tree group may use empty alignment ranks, "
+                    + "but its final rank must contain a member");
         }
         return DataResult.success(Pair.of(List.copyOf(decodedRanks), ops.empty()));
     }
@@ -210,6 +225,7 @@ public record ResearchTreeGroupDefinition(
                     raw.translationKey(),
                     raw.icon(),
                     raw.order(),
+                    raw.includeInOverview(),
                     raw.ranks()));
         } catch (IllegalArgumentException exception) {
             return DataResult.error(exception::getMessage);
@@ -226,6 +242,7 @@ public record ResearchTreeGroupDefinition(
                     definition.translationKey(),
                     definition.icon(),
                     definition.order(),
+                    definition.includeInOverview(),
                     definition.ranks()));
         } catch (IllegalArgumentException exception) {
             return DataResult.error(exception::getMessage);
@@ -274,13 +291,13 @@ public record ResearchTreeGroupDefinition(
     private static void validateRankContainerBounds(List<List<ResourceLocation>> ranks) {
         if (ranks == null || ranks.isEmpty() || ranks.size() > MAX_RANKS) {
             throw new IllegalArgumentException(
-                    "research-tree group must contain between 1 and " + MAX_RANKS + " non-empty ranks");
+                    "research-tree group must contain between 1 and " + MAX_RANKS + " ranks");
         }
         long memberCount = 0;
         for (List<ResourceLocation> rank : ranks) {
-            if (rank == null || rank.isEmpty()) {
+            if (rank == null) {
                 throw new IllegalArgumentException(
-                        "research-tree group must contain between 1 and " + MAX_RANKS + " non-empty ranks");
+                        "research-tree group ranks cannot be null");
             }
             memberCount += rank.size();
             if (memberCount > MAX_MEMBERS) {
@@ -288,6 +305,24 @@ public record ResearchTreeGroupDefinition(
                         "research-tree group cannot contain more than " + MAX_MEMBERS + " members");
             }
         }
+        if (!validRankShape(ranks)) {
+            throw new IllegalArgumentException(
+                    "research-tree group may use empty alignment ranks but must end with a member");
+        }
+    }
+
+    /**
+     * Empty ranks are global-depth alignment bands for dependencies that enter
+     * or leave another group. A trailing empty rank is rejected because it adds
+     * no semantic placement information.
+     */
+    private static boolean validRankShape(List<List<ResourceLocation>> ranks) {
+        for (List<ResourceLocation> rank : ranks) {
+            if (rank == null) {
+                return false;
+            }
+        }
+        return !ranks.isEmpty() && !ranks.get(ranks.size() - 1).isEmpty();
     }
 
     private static boolean validTitle(String value) {
@@ -313,6 +348,7 @@ public record ResearchTreeGroupDefinition(
             Optional<String> translationKey,
             ResourceLocation icon,
             int order,
+            Optional<Boolean> includeInOverview,
             List<List<ResourceLocation>> ranks) {
     }
 }

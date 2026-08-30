@@ -1,0 +1,55 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_blueprint": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "taczweaponblueprints:blueprint"
+            ]
+          }
+        ]
+      }
+    },
+    "has_research_bench": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "taczweaponblueprints:research_bench"
+            ]
+          }
+        ]
+      }
+    },
+    "has_research_data": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "taczweaponblueprints:research_note",
+              "taczweaponblueprints:research_report",
+              "taczweaponblueprints:research_dossier"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_blueprint",
+      "has_research_bench",
+      "has_research_data"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "taczweaponblueprints:blueprint_recycler"
+    ]
+  }
+}

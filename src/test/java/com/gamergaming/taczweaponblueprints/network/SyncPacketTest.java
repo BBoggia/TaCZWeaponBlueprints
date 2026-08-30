@@ -13,6 +13,7 @@ import java.util.stream.IntStream;
 
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
+import com.gamergaming.taczweaponblueprints.progression.BlueprintBalancePreset;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import io.netty.buffer.Unpooled;
 import net.minecraft.network.FriendlyByteBuf;
@@ -20,6 +21,29 @@ import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Test;
 
 class SyncPacketTest {
+
+    @Test
+    void balancePresetPacketRoundTripsAndRejectsUnknownOrdinals() {
+        FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            new SyncBalancePresetPacket(BlueprintBalancePreset.SCARCE).toBytes(buffer);
+            assertEquals(
+                    BlueprintBalancePreset.SCARCE,
+                    new SyncBalancePresetPacket(buffer).preset());
+        } finally {
+            buffer.release();
+        }
+
+        FriendlyByteBuf invalid = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            invalid.writeVarInt(BlueprintBalancePreset.values().length);
+            assertThrows(
+                    IllegalArgumentException.class,
+                    () -> new SyncBalancePresetPacket(invalid));
+        } finally {
+            invalid.release();
+        }
+    }
 
     @Test
     void learnedRecipePacketWritesAStableSortedSnapshot() {
@@ -338,6 +362,21 @@ class SyncPacketTest {
                         Set.of(blueprintId.toString()),
                         Map.of(blueprintId, canonical),
                         Map.of(canonicalRecipe, blueprintId)));
+    }
+
+    @Test
+    void progressionExemptRecipesArePublishedWithoutInventingLearnedBlueprints() {
+        ResourceLocation blueprintId = new ResourceLocation("test", "exempt_rifle");
+        BlueprintData blueprint = blueprint(blueprintId);
+
+        assertEquals(
+                Set.of(blueprint.getRecipeId().toString()),
+                RecipeSyncFilter.activeLearnedRecipes(
+                        Set.of(),
+                        Set.of(),
+                        Map.of(blueprintId, blueprint),
+                        Map.of(blueprint.getRecipeId(), blueprintId),
+                        Set.of(blueprint.getRecipeId().toString())));
     }
 
     private static BlueprintData blueprint(ResourceLocation blueprintId) {

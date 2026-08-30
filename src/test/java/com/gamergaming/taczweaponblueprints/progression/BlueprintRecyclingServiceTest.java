@@ -13,6 +13,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerRecipeData;
+import com.gamergaming.taczweaponblueprints.capabilities.ResearchPointAwardLedger.ClaimKey;
+import com.gamergaming.taczweaponblueprints.capabilities.ResearchPointAwardLedger.Mutation;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintRecyclingService.RecyclingInput;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintRecyclingService.Status;
@@ -41,6 +43,8 @@ class BlueprintRecyclingServiceTest {
     @Test
     void consumesExactlyOneDuplicateAndCreditsTheCompleteAward() {
         PlayerRecipeData data = learnedData(8);
+        ClaimKey existingClaim = ClaimKey.once(id("test:existing_claim"));
+        assertTrue(data.applyResearchPointTransaction(0, 10, Mutation.claim(existingClaim)));
         TestInput input = blueprintInput(BLUEPRINT, 2);
 
         BlueprintRecyclingService.Result result = recycle(input, data, policy(data, true, true, false, 2, 10));
@@ -54,6 +58,7 @@ class BlueprintRecyclingServiceTest {
         assertEquals(10, data.getResearchPoints());
         assertTrue(data.hasBlueprint(BLUEPRINT.toString()));
         assertTrue(data.hasDiscoveredBlueprint(BLUEPRINT.toString()));
+        assertTrue(data.getResearchPointAwardLedger().hasClaim(existingClaim));
     }
 
     @Test
@@ -216,10 +221,14 @@ class BlueprintRecyclingServiceTest {
         BlueprintRecyclingService.Result failure = new BlueprintRecyclingService.Result(
                 Status.BLOCKED, Optional.of(BLUEPRINT), 0, 0);
 
-        assertEquals(SyncKind.FULL, BlueprintRecyclingService.requiredSync(success, 1));
-        assertEquals(SyncKind.FULL, BlueprintRecyclingService.requiredSync(failure, 1));
-        assertEquals(SyncKind.POINTS, BlueprintRecyclingService.requiredSync(success, 0));
-        assertEquals(SyncKind.NONE, BlueprintRecyclingService.requiredSync(failure, 0));
+        assertEquals(SyncKind.KNOWLEDGE, BlueprintRecyclingService.requiredSync(
+                success, new BlueprintLearningService.MigrationResult(1, 0)));
+        assertEquals(SyncKind.KNOWLEDGE, BlueprintRecyclingService.requiredSync(
+                failure, new BlueprintLearningService.MigrationResult(0, 1)));
+        assertEquals(SyncKind.POINTS, BlueprintRecyclingService.requiredSync(
+                success, new BlueprintLearningService.MigrationResult(0, 0)));
+        assertEquals(SyncKind.NONE, BlueprintRecyclingService.requiredSync(
+                failure, null));
     }
 
     private static void assertFailure(

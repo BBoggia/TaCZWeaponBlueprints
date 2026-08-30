@@ -4,15 +4,23 @@ import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayout;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePresentation;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePublication;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeUnifiedLayoutEngine;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreePresentation;
 
-/** Atomic client publication of one validated graph and its derived layout. */
+/** Compatibility facade that derives shared-kernel geometry lazily from atomic client data. */
 public final class ClientResearchTree {
     private ClientResearchTree() {
     }
 
     public static Publication publication() {
         ClientResearchState.Publication state = ClientResearchState.publication();
-        return new Publication(state.graph(), state.presentation(), state.layout());
+        ResearchTreePublication tree = new ResearchTreePublication(
+                state.graph(), state.presentation(), state.techTree());
+        return new Publication(
+                state.graph(),
+                state.presentation(),
+                state.techTree(),
+                ResearchTreeUnifiedLayoutEngine.layout(tree));
     }
 
     public static ResearchTreeGraph graph() {
@@ -20,11 +28,17 @@ public final class ClientResearchTree {
     }
 
     public static ResearchTreeLayout layout() {
-        return ClientResearchState.publication().layout();
+        ClientResearchState.Publication state = ClientResearchState.publication();
+        return ResearchTreeUnifiedLayoutEngine.layout(new ResearchTreePublication(
+                state.graph(), state.presentation()));
     }
 
     public static ResearchTreePresentation presentation() {
         return ClientResearchState.publication().presentation();
+    }
+
+    public static ResearchTechTreePresentation techTree() {
+        return ClientResearchState.publication().techTree();
     }
 
     public static void publish(ResearchTreePublication publication) {
@@ -41,17 +55,24 @@ public final class ClientResearchTree {
     public record Publication(
             ResearchTreeGraph graph,
             ResearchTreePresentation presentation,
+            ResearchTechTreePresentation techTree,
             ResearchTreeLayout layout) {
         public Publication {
-            if (graph == null || presentation == null || layout == null
-                    || graph.nodes().size() != layout.nodes().size()) {
+            if (graph == null || presentation == null || techTree == null || layout == null) {
                 throw new IllegalArgumentException("invalid client research tree publication");
             }
-            new ResearchTreePublication(graph, presentation);
-            for (int ordinal = 0; ordinal < graph.nodes().size(); ordinal++) {
-                if (!graph.nodes().get(ordinal).blueprintId()
+            ResearchTreePublication authoritative = new ResearchTreePublication(
+                    graph, presentation, techTree);
+            ResearchTreeGraph legacyGraph = authoritative.legacyGraph();
+            if (legacyGraph.nodes().size() != layout.nodes().size()) {
+                throw new IllegalArgumentException(
+                        "client legacy research graph and layout sizes do not match");
+            }
+            for (int ordinal = 0; ordinal < legacyGraph.nodes().size(); ordinal++) {
+                if (!legacyGraph.nodes().get(ordinal).blueprintId()
                         .equals(layout.nodes().get(ordinal).blueprintId())) {
-                    throw new IllegalArgumentException("client research graph and layout do not match");
+                    throw new IllegalArgumentException(
+                            "client legacy research graph and layout do not match");
                 }
             }
         }

@@ -43,3 +43,4 @@ forge*changelog.txt
 /**/.DS_Store
 
 /run-data
+/docs/development

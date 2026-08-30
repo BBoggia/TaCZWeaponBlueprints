@@ -108,6 +108,178 @@ class ResearchTreeEdgeIndexTest {
     }
 
     @Test
+    void unifiedLayoutSharesForkAndMergeTrunksWhileBranchesKeepDistinctPorts() {
+        ResearchTreeGraph graph = new ResearchTreeGraph(
+                List.of(
+                        node(0, "test:root", 0),
+                        node(1, "test:left", 1),
+                        node(2, "test:right", 1),
+                        node(3, "test:merge", 2)),
+                List.of(
+                        edge("test:root", "test:left"),
+                        edge("test:root", "test:right"),
+                        edge("test:left", "test:merge"),
+                        edge("test:right", "test:merge")));
+        ResearchTreeLayout unified = new ResearchTreeLayout(
+                180,
+                192,
+                3,
+                List.of(
+                        positioned(0, "test:root", 0, 0, 78, 148),
+                        positioned(1, "test:left", 1, 0, 20, 84),
+                        positioned(2, "test:right", 1, 1, 136, 84),
+                        positioned(3, "test:merge", 2, 0, 78, 20)));
+
+        List<ResearchTreeEdgeIndex.PositionedEdge> routes = ResearchTreeEdgeIndex
+                .create(graph, unified)
+                .visible(0, 0, unified.width(), unified.height());
+
+        Set<Integer> forkStarts = new HashSet<>();
+        Set<Integer> mergeEnds = new HashSet<>();
+        routes.stream()
+                .filter(route -> route.edge().prerequisiteId().equals(id("test:root")))
+                .forEach(route -> forkStarts.add(route.startX()));
+        routes.stream()
+                .filter(route -> route.edge().dependentId().equals(id("test:merge")))
+                .forEach(route -> mergeEnds.add(route.endX()));
+        assertEquals(Set.of(unified.position(id("test:root")).orElseThrow().centerX()), forkStarts);
+        assertEquals(Set.of(unified.position(id("test:merge")).orElseThrow().centerX()), mergeEnds);
+    }
+
+    @Test
+    void unifiedLongEdgeMovesItsTrackAroundIntermediateNodeCards() {
+        ResearchTreeGraph graph = new ResearchTreeGraph(
+                List.of(
+                        node(0, "test:root", 0),
+                        node(1, "test:blocker", 0),
+                        node(2, "test:target", 1)),
+                List.of(edge("test:root", "test:target")));
+        ResearchTreeLayout layout = new ResearchTreeLayout(
+                180,
+                192,
+                3,
+                List.of(
+                        positioned(0, "test:root", 0, 0, 78, 148),
+                        positioned(1, "test:blocker", 1, 0, 78, 84),
+                        positioned(2, "test:target", 2, 0, 78, 20)));
+
+        ResearchTreeEdgeIndex.PositionedEdge route = ResearchTreeEdgeIndex
+                .create(graph, layout)
+                .visible(0, 0, layout.width(), layout.height())
+                .get(0);
+        ResearchTreeLayout.PositionedNode blocker =
+                layout.position(id("test:blocker")).orElseThrow();
+
+        assertTrue(route.trackX() != blocker.centerX());
+        assertSegmentAvoidsNode(
+                route.trackX(), route.sourceExitY(),
+                route.trackX(), route.targetApproachY(), blocker);
+    }
+
+    @Test
+    void explicitBranchRoutingDoesNotUseItsVisualFrameAsAnEdgeTrack() {
+        ResearchTreeGraph graph = new ResearchTreeGraph(
+                List.of(node(0, "test:source", 0), node(1, "test:target", 1)),
+                List.of(edge("test:source", "test:target")));
+        ResearchTreeLayout layout = new ResearchTreeLayout(
+                180,
+                180,
+                2,
+                List.of(
+                        positioned(0, "test:source", 0, 0, 28, 132),
+                        positioned(1, "test:target", 1, 0, 92, 44)),
+                List.of(),
+                List.of(),
+                List.of(new ResearchTreeLayout.GroupRegion(
+                        id("test:group"), 10, 10, 160, 160)));
+
+        ResearchTreeEdgeIndex.PositionedEdge route = ResearchTreeEdgeIndex.create(
+                        graph, layout, ResearchTreeEdgeIndex.RoutingProfile.LOCAL_BRANCH)
+                .visible(0, 0, layout.width(), layout.height())
+                .get(0);
+
+        assertTrue(route.trackX() != 13 && route.trackX() != 167);
+        assertTrue(route.minimumX() > 10);
+        assertTrue(route.maximumX() < 170);
+    }
+
+    @Test
+    void skippedRankHintProducesAReusableOrthogonalPolyline() {
+        ResearchTreeGraph graph = new ResearchTreeGraph(
+                List.of(node(0, "test:source", 0), node(1, "test:target", 1)),
+                List.of(edge("test:source", "test:target")));
+        ResearchTreeLayout layout = new ResearchTreeLayout(
+                180,
+                220,
+                2,
+                List.of(
+                        positioned(0, "test:source", 0, 0, 24, 172),
+                        positioned(1, "test:target", 1, 0, 112, 20)),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(new ResearchTreeLayout.EdgeRouteHint(
+                        id("test:source"),
+                        id("test:target"),
+                        List.of(new ResearchTreeLayout.RouteWaypoint(1, 84, 108)))));
+
+        ResearchTreeEdgeIndex.PositionedEdge route = ResearchTreeEdgeIndex.create(
+                        graph, layout, ResearchTreeEdgeIndex.RoutingProfile.LOCAL_BRANCH)
+                .visible(0, 0, layout.width(), layout.height())
+                .get(0);
+
+        assertTrue(route.points().contains(new ResearchTreeEdgeIndex.RoutePoint(84, 90)));
+        for (int index = 1; index < route.points().size(); index++) {
+            ResearchTreeEdgeIndex.RoutePoint previous = route.points().get(index - 1);
+            ResearchTreeEdgeIndex.RoutePoint next = route.points().get(index);
+            assertTrue(previous.x() == next.x() || previous.y() == next.y());
+        }
+    }
+
+    @Test
+    void skippedRankHintFallsBackWhenItsFinalAtlasRouteCrossesAnotherNode() {
+        ResearchTreeGraph graph = new ResearchTreeGraph(
+                List.of(
+                        node(0, "test:source", 0),
+                        node(1, "test:target", 1),
+                        node(2, "test:obstacle", 0)),
+                List.of(edge("test:source", "test:target")));
+        ResearchTreeLayout.PositionedNode obstacle =
+                positioned(2, "test:obstacle", 1, 1, 76, 96);
+        ResearchTreeLayout layout = new ResearchTreeLayout(
+                180,
+                220,
+                2,
+                List.of(
+                        positioned(0, "test:source", 0, 0, 24, 172),
+                        positioned(1, "test:target", 1, 0, 112, 20),
+                        obstacle),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(new ResearchTreeLayout.EdgeRouteHint(
+                        id("test:source"),
+                        id("test:target"),
+                        List.of(new ResearchTreeLayout.RouteWaypoint(1, 84, 126)))));
+
+        ResearchTreeEdgeIndex.PositionedEdge route = ResearchTreeEdgeIndex.create(
+                        graph,
+                        layout,
+                        ResearchTreeEdgeIndex.RoutingProfile.UNIFIED_OVERVIEW)
+                .visible(0, 0, layout.width(), layout.height())
+                .get(0);
+
+        assertTrue(!route.points().contains(new ResearchTreeEdgeIndex.RoutePoint(84, 108)),
+                "the colliding authored turn must be discarded");
+        for (int index = 1; index < route.points().size(); index++) {
+            ResearchTreeEdgeIndex.RoutePoint previous = route.points().get(index - 1);
+            ResearchTreeEdgeIndex.RoutePoint next = route.points().get(index);
+            assertSegmentAvoidsNode(
+                    previous.x(), previous.y(), next.x(), next.y(), obstacle);
+        }
+    }
+
+    @Test
     void laneGutterRoutingAvoidsNodesInWrappedRows() {
         List<ResearchTreeGraph.Node> nodes = new java.util.ArrayList<>();
         for (int ordinal = 0; ordinal < 13; ordinal++) {
@@ -199,6 +371,49 @@ class ResearchTreeEdgeIndexTest {
         });
     }
 
+    @Test
+    void maximumUnifiedFanOutKeepsSharedRoutingBounded() {
+        List<ResearchTreeGraph.Node> nodes = new java.util.ArrayList<>();
+        List<ResearchTreeGraph.Edge> edges = new java.util.ArrayList<>();
+        List<ResearchTreeLayout.PositionedNode> positions = new java.util.ArrayList<>();
+        int leafCount = ResearchTreeGraph.MAX_NODES - 1;
+        int width = 40 + (leafCount - 1) * 48 + ResearchTreeLayout.NODE_WIDTH;
+        nodes.add(node(0, "test:unified_root", 0));
+        positions.add(positioned(
+                0,
+                "test:unified_root",
+                0,
+                0,
+                width / 2 - ResearchTreeLayout.NODE_WIDTH / 2,
+                108));
+        for (int ordinal = 1; ordinal < ResearchTreeGraph.MAX_NODES; ordinal++) {
+            String value = "test:unified_leaf_" + ordinal;
+            nodes.add(node(ordinal, value, 1));
+            edges.add(edge("test:unified_root", value));
+            positions.add(positioned(
+                    ordinal,
+                    value,
+                    1,
+                    ordinal - 1,
+                    20 + (ordinal - 1) * 48,
+                    20));
+        }
+        ResearchTreeGraph graph = new ResearchTreeGraph(nodes, edges);
+        ResearchTreeLayout layout = new ResearchTreeLayout(
+                width, 152, 2, positions);
+
+        assertTimeout(Duration.ofSeconds(3), () -> {
+            List<ResearchTreeEdgeIndex.PositionedEdge> routes =
+                    ResearchTreeEdgeIndex.create(graph, layout)
+                            .visible(0, 0, layout.width(), layout.height());
+            assertEquals(leafCount, routes.size());
+            assertEquals(1L, routes.stream()
+                    .map(ResearchTreeEdgeIndex.PositionedEdge::startX)
+                    .distinct()
+                    .count());
+        });
+    }
+
     private static void assertSegmentAvoidsNode(
             int startX,
             int startY,
@@ -243,6 +458,17 @@ class ResearchTreeEdgeIndexTest {
                 prerequisites == 0
                         ? ResearchTreeGraph.Availability.AVAILABLE
                         : ResearchTreeGraph.Availability.PREREQUISITES_REQUIRED);
+    }
+
+    private static ResearchTreeLayout.PositionedNode positioned(
+            int ordinal,
+            String raw,
+            int tier,
+            int order,
+            int x,
+            int y) {
+        return new ResearchTreeLayout.PositionedNode(
+                ordinal, id(raw), 0, tier, order, x, y);
     }
 
     private static ResearchTreeGraph.Node redactedNode(

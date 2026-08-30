@@ -6,6 +6,7 @@ import java.util.Locale;
 import java.util.Optional;
 
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
+import com.gamergaming.taczweaponblueprints.item.BlueprintKind;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -17,6 +18,7 @@ public record BlueprintCatalogSelector(
         List<String> itemTypes,
         List<String> pathPrefixes,
         List<ResourceLocation> exclude,
+        List<BlueprintKind> blueprintKinds,
         float weight) {
     public static final int MAX_TERMS = 256;
     public static final int MAX_TERM_LENGTH = 256;
@@ -43,6 +45,8 @@ public record BlueprintCatalogSelector(
                     strictList("item_types", NON_BLANK_STRING).forGetter(BlueprintCatalogSelector::itemTypes),
                     strictList("path_prefixes", PATH_PREFIX_STRING).forGetter(BlueprintCatalogSelector::pathPrefixes),
                     strictList("exclude", BOUNDED_RESOURCE_LOCATION).forGetter(BlueprintCatalogSelector::exclude),
+                    strictList("blueprint_kinds", BlueprintKind.CODEC)
+                            .forGetter(BlueprintCatalogSelector::blueprintKinds),
                     new StrictOptionalFieldCodec<>("weight", WEIGHT_CODEC)
                             .xmap(
                                     value -> value.orElse(1.0f),
@@ -55,9 +59,17 @@ public record BlueprintCatalogSelector(
                     strictList("namespaces", NAMESPACE_STRING).forGetter(BlueprintCatalogSelector::namespaces),
                     strictList("item_types", NON_BLANK_STRING).forGetter(BlueprintCatalogSelector::itemTypes),
                     strictList("path_prefixes", PATH_PREFIX_STRING).forGetter(BlueprintCatalogSelector::pathPrefixes),
-                    strictList("exclude", BOUNDED_RESOURCE_LOCATION).forGetter(BlueprintCatalogSelector::exclude))
-                    .apply(instance, (namespaces, itemTypes, pathPrefixes, exclude) ->
-                            new BlueprintCatalogSelector(namespaces, itemTypes, pathPrefixes, exclude, 1.0F)));
+                    strictList("exclude", BOUNDED_RESOURCE_LOCATION).forGetter(BlueprintCatalogSelector::exclude),
+                    strictList("blueprint_kinds", BlueprintKind.CODEC)
+                            .forGetter(BlueprintCatalogSelector::blueprintKinds))
+                    .apply(instance, (namespaces, itemTypes, pathPrefixes, exclude, blueprintKinds) ->
+                            new BlueprintCatalogSelector(
+                                    namespaces,
+                                    itemTypes,
+                                    pathPrefixes,
+                                    exclude,
+                                    blueprintKinds,
+                                    1.0F)));
 
     public static final Codec<BlueprintCatalogSelector> CODEC = StrictRecordCodec.wrap(
             "blueprint catalog selector",
@@ -66,6 +78,7 @@ public record BlueprintCatalogSelector(
             "item_types",
             "path_prefixes",
             "exclude",
+            "blueprint_kinds",
             "weight");
 
     public static final Codec<BlueprintCatalogSelector> RESEARCH_CODEC = StrictRecordCodec.wrap(
@@ -76,7 +89,18 @@ public record BlueprintCatalogSelector(
             "namespaces",
             "item_types",
             "path_prefixes",
-            "exclude");
+            "exclude",
+            "blueprint_kinds");
+
+    /** Backwards-compatible constructor for selectors authored before coarse kinds. */
+    public BlueprintCatalogSelector(
+            List<String> namespaces,
+            List<String> itemTypes,
+            List<String> pathPrefixes,
+            List<ResourceLocation> exclude,
+            float weight) {
+        this(namespaces, itemTypes, pathPrefixes, exclude, List.of(), weight);
+    }
 
     public BlueprintCatalogSelector {
         namespaces = normalizeStrings(namespaces);
@@ -86,6 +110,12 @@ public record BlueprintCatalogSelector(
             throw new IllegalArgumentException("catalog selector exclusions cannot be null");
         }
         exclude = exclude == null ? List.of() : List.copyOf(new LinkedHashSet<>(exclude));
+        if (blueprintKinds != null && blueprintKinds.stream().anyMatch(java.util.Objects::isNull)) {
+            throw new IllegalArgumentException("catalog selector blueprint kinds cannot be null");
+        }
+        blueprintKinds = blueprintKinds == null
+                ? List.of()
+                : List.copyOf(new LinkedHashSet<>(blueprintKinds));
         if (!Float.isFinite(weight) || weight <= 0.0f) {
             throw new IllegalArgumentException("selector weight must be finite and greater than zero");
         }
@@ -104,6 +134,9 @@ public record BlueprintCatalogSelector(
                 return false;
             }
         }
+        if (!blueprintKinds.isEmpty() && !blueprintKinds.contains(data.getKind())) {
+            return false;
+        }
         return pathPrefixes.isEmpty()
                 || pathPrefixes.stream().anyMatch(prefix -> blueprintId.getPath().startsWith(prefix));
     }
@@ -115,7 +148,8 @@ public record BlueprintCatalogSelector(
                 || !Float.isFinite(narrowed) || narrowed <= 0.0f) {
             throw new IllegalArgumentException("catalog selector weight overflow or underflow");
         }
-        return new BlueprintCatalogSelector(namespaces, itemTypes, pathPrefixes, exclude, narrowed);
+        return new BlueprintCatalogSelector(
+                namespaces, itemTypes, pathPrefixes, exclude, blueprintKinds, narrowed);
     }
 
     public void validateForUse() {
@@ -142,7 +176,7 @@ public record BlueprintCatalogSelector(
     }
 
     public int termCount() {
-        return termCount(namespaces, itemTypes, pathPrefixes, exclude);
+        return termCount(namespaces, itemTypes, pathPrefixes, exclude) + blueprintKinds.size();
     }
 
     private static List<String> normalizeStrings(List<String> values) {
@@ -200,7 +234,7 @@ public record BlueprintCatalogSelector(
                 selector.namespaces(),
                 selector.itemTypes(),
                 selector.pathPrefixes(),
-                selector.exclude()) <= MAX_TERMS
+                selector.exclude()) + selector.blueprintKinds().size() <= MAX_TERMS
                 ? DataResult.success(selector)
                 : DataResult.error(() -> "catalog selector cannot contain more than " + MAX_TERMS + " terms");
     }

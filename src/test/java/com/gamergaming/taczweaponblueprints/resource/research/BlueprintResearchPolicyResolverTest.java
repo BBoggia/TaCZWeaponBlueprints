@@ -10,6 +10,7 @@ import java.util.Optional;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain;
 import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintCatalogSelector;
 import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintLootTag;
 import org.junit.jupiter.api.AfterEach;
@@ -72,6 +73,70 @@ class BlueprintResearchPolicyResolverTest {
         assertEquals(id("test:tag"), tagged.ruleId().orElseThrow());
         assertEquals(BlueprintResearchTarget.MatchSpecificity.TAG, tagged.specificity());
         assertEquals(3, tagged.recyclingValue());
+    }
+
+    @Test
+    void formatTwoDomainPolicyIsTheFinalNonOverridableTreeAndResearchGate() {
+        ResourceLocation weaponId = id("test:weapon");
+        ResourceLocation attachmentId = id("test:attachment");
+        ResourceLocation ammoId = id("test:ammo");
+        BlueprintResearchRule attachmentRule = new BlueprintResearchRule(
+                1,
+                profileId(),
+                100,
+                target(List.of(attachmentId), List.of(), null),
+                Optional.empty(),
+                Optional.of(true),
+                Optional.of(true),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty());
+        BlueprintResearchSnapshot snapshot = BlueprintResearchSnapshot.create(
+                Map.of(),
+                Map.of(profileId(), formatTwoProfile(false, false)),
+                Map.of(id("test:attachment_rule"), attachmentRule));
+        Map<ResourceLocation, BlueprintData> catalog = new java.util.LinkedHashMap<>();
+        catalog.putAll(catalog(weaponId, "rifle"));
+        catalog.putAll(catalog(attachmentId, "scope"));
+        catalog.putAll(catalog(ammoId, "ammo"));
+
+        BlueprintResearchPolicyDefinition weapon = BlueprintResearchPolicyResolver.definitionFor(
+                snapshot, catalog, profileId(), weaponId);
+        BlueprintResearchPolicyDefinition attachment = BlueprintResearchPolicyResolver.definitionFor(
+                snapshot, catalog, profileId(), attachmentId);
+        BlueprintResearchPolicyDefinition ammo = BlueprintResearchPolicyResolver.definitionFor(
+                snapshot, catalog, profileId(), ammoId);
+
+        assertTrue(weapon.treeEnabled());
+        assertTrue(weapon.researchEnabled());
+        assertFalse(attachment.treeEnabled());
+        assertFalse(attachment.researchEnabled());
+        assertEquals(id("test:attachment_rule"), attachment.ruleId().orElseThrow());
+        assertFalse(ammo.treeEnabled());
+        assertFalse(ammo.researchEnabled());
+        assertTrue(attachment.recyclingEnabled());
+        assertEquals(
+                BlueprintReverseEngineeringPolicy.DEFAULT,
+                attachment.reverseEngineering());
+    }
+
+    @Test
+    void formatTwoCanOptAttachmentAndAmmoResearchBackIn() {
+        ResourceLocation attachmentId = id("test:attachment");
+        ResourceLocation ammoId = id("test:ammo");
+        BlueprintResearchSnapshot snapshot = BlueprintResearchSnapshot.create(
+                Map.of(),
+                Map.of(profileId(), formatTwoProfile(true, true)),
+                Map.of());
+
+        assertTrue(BlueprintResearchPolicyResolver.definitionFor(
+                snapshot, catalog(attachmentId, "scope"), profileId(), attachmentId).treeEnabled());
+        assertTrue(BlueprintResearchPolicyResolver.definitionFor(
+                snapshot, catalog(ammoId, "ammo"), profileId(), ammoId).researchEnabled());
     }
 
     @Test
@@ -173,6 +238,41 @@ class BlueprintResearchPolicyResolverTest {
         BlueprintResearchPolicy unavailable = resolve(snapshot, Map.of(), advanced, data);
         assertFalse(unavailable.researchable());
         assertFalse(unavailable.recyclable());
+    }
+
+    @Test
+    void liveExemptionSatisfiesPrerequisitesWithoutWritingLearnedKnowledge() {
+        ResourceLocation advanced = id("test:advanced");
+        ResourceLocation basic = id("test:basic");
+        BlueprintResearchRule rule = rule(
+                "advanced",
+                0,
+                target(List.of(advanced), List.of(), null),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.of(List.of(basic)));
+        BlueprintResearchSnapshot snapshot = BlueprintResearchSnapshot.create(
+                Map.of(),
+                Map.of(profileId(), profile(false)),
+                Map.of(id("test:advanced_rule"), rule));
+        Map<ResourceLocation, BlueprintData> catalog = new java.util.LinkedHashMap<>();
+        catalog.putAll(catalog(advanced, "rifle"));
+        catalog.putAll(catalog(basic, "pistol"));
+        PlayerRecipeData data = new PlayerRecipeData();
+
+        BlueprintResearchPolicy policy = BlueprintResearchPolicyResolver.resolve(
+                snapshot,
+                catalog,
+                profileId(),
+                advanced,
+                data,
+                ignored -> false,
+                basic::equals);
+
+        assertTrue(policy.prerequisitesSatisfied());
+        assertTrue(policy.researchable());
+        assertFalse(data.hasBlueprint(basic.toString()));
     }
 
     @Test
@@ -317,6 +417,33 @@ class BlueprintResearchPolicyResolverTest {
                 new BlueprintResearchCost(8, List.of()),
                 requiresDiscovery,
                 false);
+    }
+
+    private static BlueprintResearchProfile formatTwoProfile(
+            boolean attachmentsEnabled,
+            boolean ammoEnabled) {
+        return new BlueprintResearchProfile(
+                2,
+                true,
+                JournalVisibility.SILHOUETTE,
+                true,
+                true,
+                false,
+                1,
+                new BlueprintResearchCost(8, List.of()),
+                false,
+                false,
+                true,
+                Map.of(
+                        Domain.WEAPONS, BlueprintResearchProfile.DomainPolicy.ENABLED,
+                        Domain.ATTACHMENTS, new BlueprintResearchProfile.DomainPolicy(
+                                attachmentsEnabled, attachmentsEnabled),
+                        Domain.AMMO, new BlueprintResearchProfile.DomainPolicy(
+                                ammoEnabled, ammoEnabled)),
+                List.of(),
+                Map.of(),
+                Optional.empty(),
+                BlueprintReverseEngineeringPolicy.DEFAULT);
     }
 
     private static BlueprintResearchRule rule(

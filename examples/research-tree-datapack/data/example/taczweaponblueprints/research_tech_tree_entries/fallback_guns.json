@@ -1,0 +1,14 @@
+{
+  "format": 1,
+  "tree": "example:dynamic_weapons",
+  "entries": [
+    {
+      "target": {"selector": {"blueprint_kinds": ["gun"]}},
+      "domain": "weapons",
+      "lane": "example:weapons/general",
+      "tier": "basic",
+      "order": 900000,
+      "fallback": true
+    }
+  ]
+}

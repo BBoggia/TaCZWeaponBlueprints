@@ -2,6 +2,7 @@ package com.gamergaming.taczweaponblueprints.init;
 
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.block.ResearchBenchBlock;
+import com.gamergaming.taczweaponblueprints.block.BlueprintRecyclerBlock;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.Block;
@@ -23,6 +24,15 @@ public final class ModBlocks {
                     .strength(2.5F)
                     .noOcclusion()
                     .sound(SoundType.WOOD)));
+
+    public static final RegistryObject<Block> BLUEPRINT_RECYCLER = BLOCKS.register(
+            "blueprint_recycler",
+            () -> new BlueprintRecyclerBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL)
+                    .strength(3.5F)
+                    .requiresCorrectToolForDrops()
+                    .noOcclusion()
+                    .sound(SoundType.METAL)));
 
     private ModBlocks() {
     }

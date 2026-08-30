@@ -50,6 +50,11 @@ class ResearchTreeCameraStoreTest {
                         ResearchTreeScreenLayout.ViewMode.FULLSCREEN,
                         ResearchTreePresentationContract.BrowseView.ALL_WEAPONS,
                         Optional.of(new ResourceLocation("test:first"))));
+        assertThrows(IllegalArgumentException.class, () ->
+                new ResearchTreeCameraStore.Key(
+                        ResearchTreeScreenLayout.ViewMode.FULLSCREEN,
+                        ResearchTreePresentationContract.BrowseView.TECH_TREE,
+                        Optional.empty()));
     }
 
     @Test
@@ -68,6 +73,33 @@ class ResearchTreeCameraStoreTest {
 
         assertEquals(target, viewport.snapshot());
         assertFalse(viewport.isAnimating());
+    }
+
+    @Test
+    void repeatedViewRoundTripsPreserveBothCameraSnapshots() {
+        ResearchTreeCameraStore store = new ResearchTreeCameraStore();
+        ResearchTreeViewport viewport = viewport();
+        ResearchTreeCameraStore.Key branch = key(
+                ResearchTreePresentationContract.BrowseView.BRANCHES, "test:first");
+        ResearchTreeCameraStore.Key overview = key(
+                ResearchTreePresentationContract.BrowseView.ALL_WEAPONS, null);
+
+        viewport.zoomAt(1.0D, 35, 25);
+        ResearchTreeViewport.Snapshot branchSnapshot = viewport.snapshot();
+        store.save(branch, viewport);
+
+        viewport.fit();
+        viewport.zoomAt(-1.0D, 80, 55);
+        ResearchTreeViewport.Snapshot overviewSnapshot = viewport.snapshot();
+        store.save(overview, viewport);
+
+        assertTrue(store.restore(branch, viewport));
+        assertEquals(branchSnapshot, viewport.snapshot());
+        assertTrue(store.restore(overview, viewport));
+        assertEquals(overviewSnapshot, viewport.snapshot());
+        assertTrue(store.restore(branch, viewport));
+        assertEquals(branchSnapshot, viewport.snapshot());
+        assertEquals(2, store.size());
     }
 
     private static ResearchTreeViewport viewport() {

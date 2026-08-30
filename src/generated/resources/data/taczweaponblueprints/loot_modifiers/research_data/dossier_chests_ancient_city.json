@@ -1,0 +1,14 @@
+{
+  "type": "taczweaponblueprints:research_data",
+  "chance": 0.05,
+  "conditions": [
+    {
+      "condition": "forge:loot_table_id",
+      "loot_table_id": "minecraft:chests/ancient_city"
+    }
+  ],
+  "item": {
+    "Count": 1,
+    "id": "taczweaponblueprints:research_dossier"
+  }
+}

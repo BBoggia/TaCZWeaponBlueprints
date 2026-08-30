@@ -1,0 +1,33 @@
+{
+  "format": 1,
+  "profile": "taczweaponblueprints:duplicate_recovery",
+  "priority": 100,
+  "target": {
+    "blueprints": [
+      "tacz:ammo_mod_he",
+      "tacz:grip_vertical_ranger",
+      "tacz:laser_peq6",
+      "tacz:extended_mag_3",
+      "tacz:sniper_extended_mag_3",
+      "tacz:muzzle_choke_sg",
+      "tacz:deagle_golden_long_barrel",
+      "tacz:scope_standard_8x",
+      "tacz:sight_uh1",
+      "tacz:scope_mk5hd",
+      "tacz:stock_heavy_spas_12",
+      "tacz:stock_tactical_ar"
+    ]
+  },
+  "visibility": "full",
+  "tree_enabled": true,
+  "research_enabled": true,
+  "requires_discovery": false,
+  "research_cost": {
+    "points": 12,
+    "ingredients": [
+      { "items": ["minecraft:paper"], "count": 6 },
+      { "items": ["minecraft:gold_ingot"], "count": 2 }
+    ]
+  },
+  "prerequisites": ["tacz:scope_elcan_4x"]
+}

@@ -1,14 +1,55 @@
 package com.gamergaming.taczweaponblueprints.resource.research;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.JsonOps;
 import org.junit.jupiter.api.Test;
 
 class BlueprintResearchCodecTest {
+    @Test
+    void formatOneRetainsImplicitAllDomainBehavior() {
+        BlueprintResearchProfile profile = decode(
+                BlueprintResearchProfile.CODEC,
+                validProfileJson());
+
+        assertTrue(profile.domainPolicies().isEmpty());
+        for (Domain domain : Domain.values()) {
+            assertEquals(BlueprintResearchProfile.DomainPolicy.ENABLED, profile.domainPolicy(domain));
+        }
+    }
+
+    @Test
+    void formatTwoRequiresExplicitStrictPoliciesForEveryDomain() {
+        BlueprintResearchProfile profile = decode(
+                BlueprintResearchProfile.CODEC,
+                formatTwoProfileJson());
+
+        assertTrue(profile.domainPolicy(Domain.WEAPONS).treeEnabled());
+        assertTrue(profile.domainPolicy(Domain.WEAPONS).researchEnabled());
+        assertFalse(profile.domainPolicy(Domain.ATTACHMENTS).treeEnabled());
+        assertFalse(profile.domainPolicy(Domain.ATTACHMENTS).researchEnabled());
+        assertFalse(profile.domainPolicy(Domain.AMMO).treeEnabled());
+        assertFalse(profile.domainPolicy(Domain.AMMO).researchEnabled());
+
+        assertDecodeFails(
+                BlueprintResearchProfile.DomainPolicy.CODEC,
+                "{\"tree_enabled\": true, \"research_enabled\": true, \"unknown\": true}");
+        assertDecodeFails(
+                BlueprintResearchProfile.CODEC,
+                formatTwoProfileJson().replace("\"ammo\":", "\"unknown\":"));
+        assertDecodeFails(
+                BlueprintResearchProfile.CODEC,
+                validProfileJson().replace("\"format\": 1", "\"format\": 2"));
+        assertDecodeFails(
+                BlueprintResearchProfile.CODEC,
+                formatTwoProfileJson().replace("\"format\": 2", "\"format\": 1"));
+    }
+
     @Test
     void decodesStrictVersionedProfileAndRule() {
         BlueprintResearchProfile profile = decode(
@@ -165,6 +206,51 @@ class BlueprintResearchCodecTest {
                         """);
     }
 
+    @Test
+    void reverseEngineeringPolicyIsStrictBoundedAndBackwardsCompatible() {
+        BlueprintResearchProfile legacy = decode(
+                BlueprintResearchProfile.CODEC,
+                validProfileJson());
+        assertEquals(BlueprintReverseEngineeringPolicy.DEFAULT, legacy.reverseEngineering());
+
+        BlueprintResearchProfile profile = decode(
+                BlueprintResearchProfile.CODEC,
+                validProfileJson().replace(
+                        "\"creative_bypasses_cost\": false",
+                        """
+                        "creative_bypasses_cost": false,
+                        "reverse_engineering": {
+                          "input_count": 16,
+                          "cost": {"points": 3},
+                          "allow_known": true,
+                          "physical_blueprint_learning": "require_tree_prerequisites",
+                          "output_recyclable": false
+                        }
+                        """));
+        assertEquals(16, profile.reverseEngineering().inputCount().orElseThrow());
+        assertEquals(3, profile.reverseEngineering().cost().points());
+        assertEquals(
+                com.gamergaming.taczweaponblueprints.progression.PhysicalBlueprintLearningMode
+                        .REQUIRE_TREE_PREREQUISITES,
+                profile.reverseEngineering().physicalBlueprintLearningMode());
+
+        assertDecodeFails(
+                BlueprintResearchProfile.CODEC,
+                validProfileJson().replace(
+                        "\"creative_bypasses_cost\": false",
+                        "\"creative_bypasses_cost\": false, \"reverse_engineering\": {\"input_count\": 65}"));
+        assertDecodeFails(
+                BlueprintResearchRule.CODEC,
+                """
+                        {
+                          "format": 1,
+                          "profile": "test:profile",
+                          "target": {"blueprints": ["test:item"]},
+                          "reverse_engineering": {"enabled": true, "unknown": 1}
+                        }
+                        """);
+    }
+
     private static String validProfileJson() {
         return """
                 {
@@ -178,6 +264,37 @@ class BlueprintResearchCodecTest {
                   "research_cost": {"points": 8},
                   "requires_discovery": false,
                   "creative_bypasses_cost": false
+                }
+                """;
+    }
+
+    private static String formatTwoProfileJson() {
+        return """
+                {
+                  "format": 2,
+                  "journal_enabled": true,
+                  "visibility": "silhouette",
+                  "research_enabled": true,
+                  "recycling_enabled": true,
+                  "allow_unlearned_recycling": false,
+                  "recycling_value": 1,
+                  "research_cost": {"points": 8},
+                  "requires_discovery": false,
+                  "creative_bypasses_cost": false,
+                  "domain_policies": {
+                    "weapons": {
+                      "tree_enabled": true,
+                      "research_enabled": true
+                    },
+                    "attachments": {
+                      "tree_enabled": false,
+                      "research_enabled": false
+                    },
+                    "ammo": {
+                      "tree_enabled": false,
+                      "research_enabled": false
+                    }
+                  }
                 }
                 """;
     }

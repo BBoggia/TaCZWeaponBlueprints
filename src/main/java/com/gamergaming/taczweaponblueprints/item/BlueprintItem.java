@@ -8,12 +8,11 @@ import java.util.Optional;
 import java.util.function.Consumer;
 
 import com.gamergaming.taczweaponblueprints.client.ClientRendererRegistry;
-import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
 import com.gamergaming.taczweaponblueprints.init.ModItems;
-import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintDiscoveryService;
+import com.gamergaming.taczweaponblueprints.progression.BlueprintLearningService;
+import com.gamergaming.taczweaponblueprints.progression.BlueprintLearningService.Status;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.gamergaming.taczweaponblueprints.util.ItemNameFilterHelper;
 
@@ -77,6 +76,33 @@ public class BlueprintItem extends Item {
         CompoundTag tag = blueprint.getOrCreateTag();
         tag.putString("bpId", bpId);
         return blueprint;
+    }
+
+    public static ItemStack createBlueprint(String bpId, BlueprintProvenance provenance) {
+        if (provenance == null) {
+            throw new IllegalArgumentException("blueprint provenance cannot be null");
+        }
+        ItemStack blueprint = createBlueprint(bpId);
+        blueprint.getOrCreateTag().put(BlueprintProvenance.TAG_KEY, provenance.toTag());
+        return blueprint;
+    }
+
+    public static Optional<BlueprintProvenance> getProvenance(ItemStack stack) {
+        if (getBlueprintId(stack).isEmpty()) {
+            return Optional.empty();
+        }
+        return BlueprintProvenance.fromTag(stack.getTag());
+    }
+
+    /**
+     * Legacy stacks remain recyclable. A present but malformed provenance tag
+     * fails closed so NBT damage cannot turn protected output into RP.
+     */
+    public static boolean provenanceAllowsRecycling(ItemStack stack) {
+        if (getBlueprintId(stack).isEmpty()) {
+            return false;
+        }
+        return BlueprintProvenance.allowsRecycling(stack.getTag());
     }
 
     @Override
@@ -160,52 +186,75 @@ public class BlueprintItem extends Item {
         ItemStack stack = player.getItemInHand(hand);
 
         if (!world.isClientSide) {
-            String bpId = getBpId(stack);
-            handleBlueprintUse(player, stack, bpId);
+            handleBlueprintUse(player, stack);
         }
 
         return InteractionResultHolder.sidedSuccess(stack, world.isClientSide);
     }
 
-    private void handleBlueprintUse(Player player, ItemStack stack, String bpId) {
-        BlueprintData data = BlueprintDataManager.SERVER.getBlueprintData(bpId);
-        if (data == null) {
-            player.displayClientMessage(Component.translatable("message.taczweaponblueprints.blueprint.invalid_blueprint"), true);
+    private void handleBlueprintUse(Player player, ItemStack stack) {
+        Optional<ResourceLocation> blueprintId = getBlueprintId(stack);
+        if (blueprintId.isEmpty()) {
+            player.displayClientMessage(
+                    Component.translatable(
+                            "message.taczweaponblueprints.blueprint.invalid_blueprint"),
+                    true);
             return;
         }
-
-        Optional<IPlayerRecipeData> recipeData = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve();
-        if (recipeData.isEmpty()) {
+        if (!(player instanceof ServerPlayer serverPlayer)) {
             player.displayClientMessage(
-                    Component.translatable("message.taczweaponblueprints.blueprint.data_unavailable"),
+                    Component.translatable(
+                            "message.taczweaponblueprints.blueprint.data_unavailable"),
                     true);
             return;
         }
 
-        BlueprintDataManager.SERVER.migrateLegacyUnlocks(recipeData.get());
-        if (recipeData.get().hasBlueprint(bpId)) {
-            player.displayClientMessage(Component.translatable("message.taczweaponblueprints.blueprint.already_known"), true);
+        BlueprintLearningService.Result result =
+                BlueprintLearningService.learnPhysicalBlueprint(
+                        serverPlayer,
+                        blueprintId.orElseThrow(),
+                        stack);
+        if (!result.successful()) {
+            player.displayClientMessage(feedback(result.status()), true);
             return;
         }
-        if (!recipeData.get().addBlueprint(bpId)) {
-            player.displayClientMessage(Component.translatable("message.taczweaponblueprints.blueprint.progression_full"), true);
-            return;
-        }
-        // Retain the canonical recipe list for downgrade compatibility. New code
-        // uses the blueprint output ID as the durable progression identity.
-        recipeData.get().addRecipe(data.getRecipeId().toString());
 
-        if (!player.getAbilities().instabuild) {
-            stack.shrink(1);
-        }
+        BlueprintData data = BlueprintDataManager.SERVER.getBlueprintData(
+                blueprintId.orElseThrow().toString());
         player.displayClientMessage(
-                Component.translatable(
-                        "message.taczweaponblueprints.blueprint.unlocked",
-                        Component.translatable(data.getNameKey())),
+                data == null
+                        ? Component.translatable(
+                                "message.taczweaponblueprints.blueprint.unlocked_generic")
+                        : Component.translatable(
+                                "message.taczweaponblueprints.blueprint.unlocked",
+                                Component.translatable(data.getNameKey())),
                 true);
+    }
 
-        if (player instanceof ServerPlayer serverPlayer) {
-            NetworkHandler.syncPlayerRecipeData(serverPlayer);
-        }
+    private static Component feedback(Status status) {
+        String key = switch (status) {
+            case INVALID_INPUT, CONTENT_UNAVAILABLE, INVALID_IDENTITY ->
+                    "message.taczweaponblueprints.blueprint.invalid_blueprint";
+            case PLAYER_DATA_UNAVAILABLE, POLICY_UNAVAILABLE ->
+                    "message.taczweaponblueprints.blueprint.data_unavailable";
+            case POLICY_MISMATCH, STALE_POLICY, TRANSACTION_FAILED ->
+                    "message.taczweaponblueprints.blueprint.transaction_failed";
+            case BLUEPRINTS_DISABLED ->
+                    "message.taczweaponblueprints.blueprint.system_disabled";
+            case BLOCKED -> "message.taczweaponblueprints.blueprint.blocked";
+            case PROGRESSION_EXEMPT ->
+                    "message.taczweaponblueprints.blueprint.progression_exempt";
+            case ALREADY_LEARNED ->
+                    "message.taczweaponblueprints.blueprint.already_known";
+            case PHYSICAL_BLUEPRINT_LEARNING_DISABLED ->
+                    "message.taczweaponblueprints.blueprint.learning_disabled";
+            case PREREQUISITES_REQUIRED ->
+                    "message.taczweaponblueprints.blueprint.prerequisites_required";
+            case PROGRESSION_CAPACITY_EXHAUSTED ->
+                    "message.taczweaponblueprints.blueprint.progression_full";
+            case SUCCESS -> throw new IllegalArgumentException(
+                    "successful learning does not have failure feedback");
+        };
+        return Component.translatable(key);
     }
 }

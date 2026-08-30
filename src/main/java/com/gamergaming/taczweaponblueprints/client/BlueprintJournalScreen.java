@@ -15,6 +15,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -26,6 +27,8 @@ public final class BlueprintJournalScreen extends Screen {
     private static final int CONTROL_HEIGHT = 20;
     private static final int PANEL_PADDING = 10;
     private static final int WIDE_THRESHOLD = 520;
+    private static final ResearchTreeGuidancePreference ONBOARDING_PREFERENCE =
+            ResearchTreeGuidancePreference.client();
 
     private BlueprintJournalSnapshot snapshot = BlueprintJournalSnapshot.EMPTY;
     private BlueprintJournalQuery.Result result;
@@ -41,6 +44,8 @@ public final class BlueprintJournalScreen extends Screen {
     private Button previousButton;
     private Button nextButton;
     private Button backButton;
+    private Button guideButton;
+    private Button onboardingDismissButton;
     private BlueprintJournalQuery.StatusFilter status = BlueprintJournalQuery.StatusFilter.ALL;
     private BlueprintJournalQuery.SortOrder sort = BlueprintJournalQuery.SortOrder.CATALOG;
     private List<String> categories = List.of();
@@ -49,6 +54,8 @@ public final class BlueprintJournalScreen extends Screen {
     private boolean historyView;
     private BlueprintJournalEntry selectedEntry;
     private BlueprintJournalSnapshot.HistoryEntry selectedHistory;
+    private boolean onboardingView;
+    private boolean onboardingInitialized;
 
     private int panelX;
     private int panelY;
@@ -69,6 +76,10 @@ public final class BlueprintJournalScreen extends Screen {
         String previousCategory = selectedCategory();
         categories = BlueprintJournalQuery.categories(snapshot.entries());
         categoryIndex = categories.indexOf(previousCategory);
+        if (!onboardingInitialized) {
+            onboardingView = ONBOARDING_PREFERENCE.shouldShowOnboarding();
+            onboardingInitialized = true;
+        }
         calculateLayout();
         buildControls(previousSearch);
         refreshRows();
@@ -131,6 +142,16 @@ public final class BlueprintJournalScreen extends Screen {
         backButton = addRenderableWidget(Button.builder(
                 Component.translatable("gui.taczweaponblueprints.journal.back"), ignored -> closeCompactDetails())
                 .bounds(left, panelBottom - 28, Math.min(100, listWidth), CONTROL_HEIGHT).build());
+        guideButton = addRenderableWidget(Button.builder(Component.literal("?"), ignored -> toggleOnboarding())
+                .bounds(panelX + panelWidth - PANEL_PADDING - 20, panelY + 5, 20, 20)
+                .build());
+        guideButton.setTooltip(Tooltip.create(Component.translatable(
+                "gui.taczweaponblueprints.journal.onboarding.help")));
+        onboardingDismissButton = addRenderableWidget(Button.builder(
+                Component.translatable("gui.taczweaponblueprints.journal.onboarding.got_it"),
+                ignored -> dismissOnboarding())
+                .bounds(panelX + panelWidth / 2 - 50, panelBottom - 31, 100, CONTROL_HEIGHT)
+                .build());
         updateControlState();
     }
 
@@ -141,18 +162,22 @@ public final class BlueprintJournalScreen extends Screen {
         viewButton.active = historyView || !snapshot.unavailableHistory().isEmpty();
         viewButton.setMessage(viewLabel());
         boolean compactDetails = compactDetailsOpen();
-        searchBox.visible = !compactDetails;
-        statusButton.visible = !compactDetails;
-        categoryButton.visible = !compactDetails;
-        sortButton.visible = !compactDetails;
-        viewButton.visible = !compactDetails;
-        previousButton.visible = !compactDetails;
-        nextButton.visible = !compactDetails;
-        backButton.visible = compactDetails;
-        backButton.active = compactDetails;
+        boolean browseVisible = !onboardingView && !compactDetails;
+        searchBox.visible = browseVisible;
+        statusButton.visible = browseVisible;
+        categoryButton.visible = browseVisible;
+        sortButton.visible = browseVisible;
+        viewButton.visible = browseVisible;
+        previousButton.visible = browseVisible;
+        nextButton.visible = browseVisible;
+        backButton.visible = !onboardingView && compactDetails;
+        backButton.active = !onboardingView && compactDetails;
+        guideButton.visible = true;
+        onboardingDismissButton.visible = onboardingView;
+        onboardingDismissButton.active = onboardingView;
         for (AbstractWidget row : rowWidgets) {
-            row.visible = !compactDetails;
-            row.active = !compactDetails;
+            row.visible = browseVisible;
+            row.active = browseVisible;
         }
     }
 
@@ -288,12 +313,16 @@ public final class BlueprintJournalScreen extends Screen {
         graphics.fill(panelX, panelY, panelX + panelWidth, panelBottom, 0xE510151C);
         graphics.renderOutline(panelX, panelY, panelWidth, panelBottom - panelY, 0xFF6B7C8F);
         renderHeader(graphics);
-        if (!compactDetailsOpen()) {
-            renderListBackground(graphics);
+        if (onboardingView) {
+            renderOnboarding(graphics);
+        } else {
+            if (!compactDetailsOpen()) {
+                renderListBackground(graphics);
+            }
+            renderDetails(graphics);
         }
-        renderDetails(graphics);
         super.render(graphics, mouseX, mouseY, partialTick);
-        if (!compactDetailsOpen()) {
+        if (!onboardingView && !compactDetailsOpen()) {
             renderRowIcons(graphics);
             renderPagerLabel(graphics);
         }
@@ -302,10 +331,19 @@ public final class BlueprintJournalScreen extends Screen {
     private void renderHeader(GuiGraphics graphics) {
         int left = panelX + PANEL_PADDING;
         graphics.drawString(font, title, left, panelY + 10, 0xFFFFFFFF);
+        if (onboardingView) {
+            return;
+        }
         Component points = Component.translatable(
                 "gui.taczweaponblueprints.journal.points",
                 snapshot.researchPoints(), snapshot.pointCap());
-        graphics.drawString(font, points, left + listWidth - font.width(points), panelY + 10, 0xFFE4C56A);
+        int pointsRight = guideButton == null ? left + listWidth : guideButton.getX() - 4;
+        if (left + font.width(title) + 6 > pointsRight - font.width(points)) {
+            points = Component.translatable(
+                    "gui.taczweaponblueprints.journal.points.compact",
+                    snapshot.researchPoints(), snapshot.pointCap());
+        }
+        graphics.drawString(font, points, pointsRight - font.width(points), panelY + 10, 0xFFE4C56A);
 
         int total = snapshot.completionTotal();
         int learned = snapshot.learnedCount();
@@ -316,6 +354,75 @@ public final class BlueprintJournalScreen extends Screen {
         Component completion = Component.translatable(
                 "gui.taczweaponblueprints.journal.completion", learned, total);
         graphics.drawCenteredString(font, completion, left + listWidth / 2, barY, 0xFFFFFFFF);
+    }
+
+    private void renderOnboarding(GuiGraphics graphics) {
+        int x = panelX + PANEL_PADDING;
+        int y = panelY + 39;
+        int contentWidth = panelWidth - PANEL_PADDING * 2;
+        int contentBottom = panelBottom - 38;
+        graphics.fill(x, y, x + contentWidth, contentBottom, 0xC0202730);
+        graphics.enableScissor(x + 1, y + 1, x + contentWidth - 1, contentBottom - 1);
+
+        int textX = x + 10;
+        int textWidth = contentWidth - 20;
+        int line = y + 9;
+        Component heading = Component.translatable(
+                "gui.taczweaponblueprints.journal.onboarding.title");
+        graphics.drawString(font, heading, textX, line, 0xFFE4C56A);
+        line += font.lineHeight + 5;
+        Component intro = Component.translatable(
+                "gui.taczweaponblueprints.journal.onboarding.intro");
+        graphics.drawWordWrap(font, intro, textX, line, textWidth, 0xFFCCCCCC);
+        line += Math.max(1, font.split(intro, textWidth).size()) * font.lineHeight + 5;
+
+        BlueprintOnboardingPlan plan = BlueprintOnboardingPlan.from(
+                snapshot, ClientResearchPointPresentationState.help());
+        for (BlueprintOnboardingPlan.Step step : plan.steps()) {
+            Component label = Component.translatable(
+                    "gui.taczweaponblueprints.journal.onboarding.step." + step.key());
+            Component rendered = Component.literal(onboardingPrefix(step.state()) + " ").append(label);
+            int color = onboardingColor(step.state());
+            graphics.drawWordWrap(font, rendered, textX, line, textWidth, color);
+            line += Math.max(1, font.split(rendered, textWidth).size()) * font.lineHeight + 2;
+        }
+
+        if (!plan.earningHelp().isEmpty() && line + font.lineHeight * 2 < contentBottom) {
+            line += 3;
+            graphics.drawString(font, Component.translatable(
+                    "gui.taczweaponblueprints.journal.onboarding.earning_title"),
+                    textX, line, 0xFFE4C56A);
+            line += font.lineHeight + 3;
+            for (var help : plan.earningHelp()) {
+                Component earning = Component.translatable(
+                        "gui.taczweaponblueprints.journal.onboarding.earning",
+                        Component.translatable(help.nameKey()), help.points());
+                graphics.drawWordWrap(font, earning, textX + 6, line, textWidth - 6, 0xFFCCCCCC);
+                line += Math.max(1, font.split(earning, textWidth - 6).size()) * font.lineHeight + 3;
+                if (line >= contentBottom) {
+                    break;
+                }
+            }
+        }
+        graphics.disableScissor();
+    }
+
+    private static String onboardingPrefix(BlueprintOnboardingPlan.State state) {
+        return switch (state) {
+            case COMPLETE -> "[x]";
+            case CURRENT -> "->";
+            case LATER -> "[ ]";
+            case OPTIONAL -> "[+]";
+        };
+    }
+
+    private static int onboardingColor(BlueprintOnboardingPlan.State state) {
+        return switch (state) {
+            case COMPLETE -> 0xFF65D58A;
+            case CURRENT -> 0xFFE4C56A;
+            case LATER -> 0xFFAAAAAA;
+            case OPTIONAL -> 0xFF63C5DA;
+        };
     }
 
     private void renderListBackground(GuiGraphics graphics) {
@@ -577,6 +684,9 @@ public final class BlueprintJournalScreen extends Screen {
 
     @Override
     public Component getNarrationMessage() {
+        if (onboardingView) {
+            return onboardingNarration();
+        }
         if (selectedEntry != null) {
             Component narration = Component.translatable(
                     "gui.taczweaponblueprints.journal.detail.narration",
@@ -609,6 +719,22 @@ public final class BlueprintJournalScreen extends Screen {
         return super.getNarrationMessage();
     }
 
+    private Component onboardingNarration() {
+        BlueprintOnboardingPlan plan = BlueprintOnboardingPlan.from(
+                snapshot, ClientResearchPointPresentationState.help());
+        var narration = Component.translatable(
+                "gui.taczweaponblueprints.journal.onboarding.narration");
+        for (BlueprintOnboardingPlan.Step step : plan.steps()) {
+            narration.append(Component.literal(" ")).append(Component.translatable(
+                    "gui.taczweaponblueprints.journal.onboarding.step.narration",
+                    Component.translatable("gui.taczweaponblueprints.journal.onboarding.state."
+                            + step.state().name().toLowerCase(Locale.ROOT)),
+                    Component.translatable("gui.taczweaponblueprints.journal.onboarding.step."
+                            + step.key())));
+        }
+        return narration;
+    }
+
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
         if (!compactDetailsOpen()
@@ -625,6 +751,12 @@ public final class BlueprintJournalScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == 256 && onboardingView) {
+            onboardingView = false;
+            updateControlState();
+            setInitialFocus(searchBox);
+            return true;
+        }
         if (keyCode == 256 && compactDetailsOpen()) {
             closeCompactDetails();
             return true;
@@ -641,6 +773,21 @@ public final class BlueprintJournalScreen extends Screen {
         selectedHistory = null;
         updateControlState();
         setInitialFocus(searchBox);
+    }
+
+    private void toggleOnboarding() {
+        onboardingView = !onboardingView;
+        updateControlState();
+        setInitialFocus(onboardingView ? onboardingDismissButton : searchBox);
+        triggerImmediateNarration(true);
+    }
+
+    private void dismissOnboarding() {
+        ONBOARDING_PREFERENCE.dismissOnboarding();
+        onboardingView = false;
+        updateControlState();
+        setInitialFocus(searchBox);
+        triggerImmediateNarration(true);
     }
 
     @Override

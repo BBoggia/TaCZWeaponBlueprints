@@ -85,6 +85,8 @@ final class ResearchTreePresentationBuilder {
                             Optional.empty(),
                             Optional.of(members.get(0).nodeId()),
                             ResearchTreePresentation.Kind.ITEM_TYPE_FALLBACK,
+                            ResearchTreePresentation.Kind.ITEM_TYPE_FALLBACK
+                                    .includedInOverviewByDefault(),
                             members));
                     usedGroupIds.add(groupId);
                 });
@@ -98,6 +100,7 @@ final class ResearchTreePresentationBuilder {
                     Optional.of(ResearchTreePresentation.UNDISCLOSED_TRANSLATION_KEY),
                     Optional.empty(),
                     ResearchTreePresentation.Kind.UNDISCLOSED,
+                    ResearchTreePresentation.Kind.UNDISCLOSED.includedInOverviewByDefault(),
                     depthMembers(undisclosed, depths)));
         }
 
@@ -113,6 +116,7 @@ final class ResearchTreePresentationBuilder {
                     draft.iconNodeId(),
                     order,
                     draft.kind(),
+                    draft.includedInOverview(),
                     draft.members()));
         }
         return new ResearchTreePresentation(published);
@@ -171,6 +175,7 @@ final class ResearchTreePresentationBuilder {
                     draft.translationKey(),
                     draft.iconNodeId(),
                     draft.kind(),
+                    draft.includedInOverview(),
                     members));
         }
         return normalized;
@@ -274,12 +279,20 @@ final class ResearchTreePresentationBuilder {
         Optional<ResourceLocation> icon = Optional.ofNullable(iconPublicId)
                 .filter(candidate -> members.stream().anyMatch(member -> member.nodeId().equals(candidate)))
                 .filter(candidate -> graph.node(candidate).orElseThrow().visibility().revealsIcon());
+        if (icon.isEmpty() && iconPublicId == null) {
+            icon = visibleMembers.stream()
+                    .map(AuthoredMember::publicId)
+                    .filter(candidate -> graph.node(candidate).orElseThrow().visibility().revealsIcon())
+                    .findFirst();
+        }
         return new DraftGroup(
                 binding.groupId(),
                 definition.title(),
                 definition.translationKey(),
                 icon,
                 ResearchTreePresentation.Kind.AUTHORED,
+                definition.includeInOverview().orElseGet(
+                        ResearchTreePresentation.Kind.AUTHORED::includedInOverviewByDefault),
                 members);
     }
 
@@ -386,6 +399,7 @@ final class ResearchTreePresentationBuilder {
             Optional<String> translationKey,
             Optional<ResourceLocation> iconNodeId,
             ResearchTreePresentation.Kind kind,
+            boolean includedInOverview,
             List<ResearchTreePresentation.Member> members) {
     }
 

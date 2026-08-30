@@ -18,6 +18,9 @@ public class ModLootModifier {
     public static final RegistryObject<Codec<DynamicBlueprintLootModifier>> DYNAMIC_BLUEPRINTS_MODIFIER =
         LOOT_MODIFIER_SERIALIZERS.register("dynamic_blueprints", DynamicBlueprintLootModifier.CODEC);
 
+    public static final RegistryObject<Codec<ResearchDataLootModifier>> RESEARCH_DATA_MODIFIER =
+        LOOT_MODIFIER_SERIALIZERS.register("research_data", ResearchDataLootModifier.CODEC);
+
     public static void register(IEventBus eventBus) {
         LOOT_MODIFIER_SERIALIZERS.register(eventBus);
     }

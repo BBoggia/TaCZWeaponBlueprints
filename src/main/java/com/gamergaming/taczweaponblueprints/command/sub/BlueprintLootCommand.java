@@ -54,6 +54,7 @@ public final class BlueprintLootCommand {
         BlueprintLootDiagnostics.Summary summary = BlueprintLootDiagnostics.summarize(
                 snapshot,
                 BlueprintDataManager.SERVER.getBlueprintDataMap().size());
+        var balance = ModConfigs.BLUEPRINT.balanceSettings();
 
         context.getSource().sendSuccess(() -> Component.translatable(
                 "commands.taczweaponblueprints.loot.status",
@@ -68,9 +69,10 @@ public final class BlueprintLootCommand {
         context.getSource().sendSuccess(() -> Component.translatable(
                 "commands.taczweaponblueprints.loot.config",
                 ModConfigs.BLUEPRINT.enableBlueprints.get(),
-                ModConfigs.BLUEPRINT.blueprintSpawnChance.get(),
-                ModConfigs.BLUEPRINT.minBlueprints.get(),
-                ModConfigs.BLUEPRINT.maxBlueprints.get(),
+                balance.preset().serializedName(),
+                balance.lootChance(),
+                balance.minimumLootRolls(),
+                balance.maximumLootRolls(),
                 blacklistSize()), false);
         context.getSource().sendSuccess(() -> Component.translatable(
                 "commands.taczweaponblueprints.loot.mode",

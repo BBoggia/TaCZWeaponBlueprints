@@ -1,0 +1,9 @@
+{
+  "format": 2,
+  "tree": "example:dynamic_weapons",
+  "mode": "connected",
+  "review_handling": "place_connected",
+  "foundation_count": 2,
+  "max_prerequisites": 2,
+  "merge_interval": 4
+}

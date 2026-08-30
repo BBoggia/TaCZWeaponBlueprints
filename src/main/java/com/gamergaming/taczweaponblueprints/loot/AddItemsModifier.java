@@ -8,7 +8,6 @@ import java.util.function.Supplier;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 
-import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintLootDataManager;
@@ -74,12 +73,14 @@ public class AddItemsModifier extends LootModifier {
         if (BlueprintLootDataManager.INSTANCE.ownsLootDistribution(context.getQueriedLootTableId())) {
             return generatedLoot;
         }
-        if (!ModConfigs.BLUEPRINT.enableBlueprints.get()) {
+        BlueprintLootPolicyResolver.RuntimeDefaults defaults =
+                BlueprintLootRuntimeConfig.capture();
+        if (!defaults.blueprintsEnabled()) {
             return generatedLoot;
         }
 
         RandomSource random = context.getRandom();
-        float poolChance = BlueprintLootSelector.sanitizeProbability(ModConfigs.BLUEPRINT.blueprintSpawnChance.get());
+        float poolChance = BlueprintLootSelector.sanitizeProbability(defaults.chance());
         if (random.nextFloat() >= poolChance) {
             return generatedLoot;
         }
@@ -94,7 +95,7 @@ public class AddItemsModifier extends LootModifier {
         List<BlueprintLootSelector.WeightedEntry<ItemStack>> availableItems = BlueprintLootSelector.filterEligible(
                 candidates,
                 blueprintId -> BlueprintDataManager.SERVER.getBlueprintData(blueprintId.toString()) != null
-                        && !ModConfigs.BLUEPRINT.isItemBlacklisted(blueprintId.toString()));
+                        && !defaults.excluded().test(blueprintId));
         if (availableItems.isEmpty()) {
             return generatedLoot;
         }
@@ -108,8 +109,8 @@ public class AddItemsModifier extends LootModifier {
         }
 
         BlueprintLootSelector.RollRange rollRange = BlueprintLootSelector.sanitizeRollRange(
-                ModConfigs.BLUEPRINT.minBlueprints.get(),
-                ModConfigs.BLUEPRINT.maxBlueprints.get());
+                defaults.minRolls(),
+                defaults.maxRolls());
         int rolls = rollRange.min();
         if (rollRange.max() > rollRange.min()) {
             rolls += random.nextInt(rollRange.max() - rollRange.min() + 1);

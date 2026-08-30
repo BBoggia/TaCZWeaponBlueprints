@@ -8,6 +8,7 @@ public final class ResearchTreeFullscreenLayout {
     public static final int SCREEN_PADDING = 4;
     public static final int RAIL_WIDTH = 24;
     public static final int EDGE_REVEAL_WIDTH = 4;
+    public static final int EDGE_REVEAL_HIT_WIDTH = 12;
     public static final int CONTROL_SIZE = 20;
     public static final int OVERLAY_GAP = 4;
     public static final int COACHMARK_HEIGHT = 24;
@@ -28,6 +29,8 @@ public final class ResearchTreeFullscreenLayout {
                 0, 0, screenWidth, screenHeight);
         ResearchTreeScreenLayout.Rect edgeReveal = new ResearchTreeScreenLayout.Rect(
                 0, 0, EDGE_REVEAL_WIDTH, screenHeight);
+        ResearchTreeScreenLayout.Rect edgeRevealHitTarget = new ResearchTreeScreenLayout.Rect(
+                0, 0, EDGE_REVEAL_HIT_WIDTH, screenHeight);
         ResearchTreeScreenLayout.Rect rail = new ResearchTreeScreenLayout.Rect(
                 SCREEN_PADDING,
                 SCREEN_PADDING,
@@ -79,6 +82,7 @@ public final class ResearchTreeFullscreenLayout {
                 screenHeight,
                 canvas,
                 edgeReveal,
+                edgeRevealHitTarget,
                 rail,
                 searchButton,
                 searchField,
@@ -92,6 +96,7 @@ public final class ResearchTreeFullscreenLayout {
             int screenHeight,
             ResearchTreeScreenLayout.Rect canvas,
             ResearchTreeScreenLayout.Rect edgeReveal,
+            ResearchTreeScreenLayout.Rect edgeRevealHitTarget,
             ResearchTreeScreenLayout.Rect rail,
             ResearchTreeScreenLayout.Rect searchButton,
             ResearchTreeScreenLayout.Rect searchField,
@@ -100,7 +105,8 @@ public final class ResearchTreeFullscreenLayout {
             ResearchTreeScreenLayout.Rect safeFocus) {
         public Layout {
             if (screenWidth <= 0 || screenHeight <= 0
-                    || canvas == null || edgeReveal == null || rail == null
+                    || canvas == null || edgeReveal == null || edgeRevealHitTarget == null
+                    || rail == null
                     || searchButton == null || searchField == null || close == null
                     || coachmark == null || safeFocus == null) {
                 throw new IllegalArgumentException("invalid fullscreen Research Tree layout");
@@ -110,12 +116,14 @@ public final class ResearchTreeFullscreenLayout {
                 throw new IllegalArgumentException("fullscreen Research Tree canvas is not edge-to-edge");
             }
             for (ResearchTreeScreenLayout.Rect overlay : java.util.List.of(
-                    edgeReveal, rail, searchButton, searchField, close, coachmark, safeFocus)) {
+                    edgeReveal, edgeRevealHitTarget, rail, searchButton,
+                    searchField, close, coachmark, safeFocus)) {
                 if (!overlay.inside(screenWidth, screenHeight)) {
                     throw new IllegalArgumentException("fullscreen Research Tree overlay is offscreen");
                 }
             }
-            if (!rail.contains(searchButton)
+            if (!edgeRevealHitTarget.contains(edgeReveal)
+                    || !rail.contains(searchButton)
                     || rail.overlaps(searchField)
                     || rail.overlaps(close)
                     || searchField.overlaps(close)

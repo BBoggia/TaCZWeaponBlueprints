@@ -14,6 +14,11 @@ import org.junit.jupiter.api.Test;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePresentation;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePublication;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.PlacementOrigin;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Tier;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.WeaponRating;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreePresentation;
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
 import com.gamergaming.taczweaponblueprints.resource.research.ResearchTreeGroupDefinition;
 
@@ -25,7 +30,11 @@ class SyncResearchTreePacketTest {
     @Test
     void chunksRoundTripAndAccumulateAtomicallyOutOfOrder() {
         ResearchTreeGraph graph = largeGraph();
-        ResearchTreePublication publication = publication(graph);
+        ResearchTreePublication base = publication(graph);
+        ResearchTreePublication publication = new ResearchTreePublication(
+                graph,
+                base.presentation(),
+                largeTechTree(graph.nodes()));
         List<SyncResearchTreePacket> packets = SyncResearchTreePacket.split(publication, 55L);
         assertTrue(packets.size() > 1);
 
@@ -66,6 +75,121 @@ class SyncResearchTreePacketTest {
     }
 
     @Test
+    void techTreeMetadataRoundTripsAtomicallyWithItsMatchingGraph() {
+        ResearchTreeGraph graph = branchingGraph();
+        ResearchTreePublication base = publication(graph);
+        ResearchTreePublication expected = new ResearchTreePublication(
+                graph,
+                base.presentation(),
+                techTree(graph.nodes()));
+        List<SyncResearchTreePacket> packets = SyncResearchTreePacket.split(expected, 91L);
+        SyncResearchTreePacket.ClientAccumulator accumulator =
+                new SyncResearchTreePacket.ClientAccumulator();
+        Optional<ResearchTreePublication> completed = Optional.empty();
+
+        for (int index = packets.size() - 1; index >= 0; index--) {
+            FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+            try {
+                packets.get(index).toBytes(buffer);
+                assertTrue(buffer.readableBytes() <= BlueprintSyncLimits.MAX_CHUNK_BYTES);
+                completed = accumulator.accept(new SyncResearchTreePacket(buffer));
+            } finally {
+                buffer.release();
+            }
+        }
+
+        ResearchTreePublication decoded = completed.orElseThrow();
+        assertEquals(expected, decoded);
+        assertEquals(id("test:tech_tree"), decoded.techTree().treeId().orElseThrow());
+        assertEquals(28, decoded.techTree().maxNodesPerLayer());
+        assertEquals(4, decoded.techTree().memberCount());
+        assertEquals(Optional.of(new WeaponRating(25, 50, 75)),
+                decoded.techTree().domains().get(0).lanes().get(0).members().get(0).rating());
+        assertEquals(123,
+                decoded.techTree().domains().get(0).lanes().get(0).members().get(0).rank());
+        assertEquals(Optional.of(id("test:custom_band")),
+                decoded.techTree().domains().get(0).lanes().get(0).members().get(0).bandId());
+        assertEquals(Optional.of(0x336699), decoded.techTree().bands().get(0).color());
+        assertEquals(Optional.of(id("test:a")),
+                decoded.techTree().bands().get(0).icon());
+        assertEquals(4_000_000_000L,
+                decoded.techTree().domains().get(0).lanes().get(0).members().get(0).siblingOrder());
+        assertEquals(PlacementOrigin.AUTOMATIC,
+                decoded.techTree().domains().get(0).lanes().get(0).members().get(0).origin());
+        assertEquals(Optional.of(new ResearchTechTreePresentation.AutomaticBranchPlacement(
+                        2, 7, 3, 9)),
+                decoded.techTree().domains().get(0).lanes().get(0).members().get(0)
+                        .automaticBranch());
+    }
+
+    @Test
+    void mixedKindGraphRoundTripsWithWeaponOnlyLegacyMembership() {
+        ResearchTreeGraph graph = branchingGraph();
+        ResearchTreePresentation weaponPresentation = new ResearchTreePresentation(List.of(
+                new ResearchTreePresentation.Group(
+                        id("test:weapons"),
+                        "Weapons",
+                        Optional.empty(),
+                        Optional.of(id("test:a")),
+                        0,
+                        ResearchTreePresentation.Kind.AUTHORED,
+                        List.of(
+                                new ResearchTreePresentation.Member(id("test:a"), 0, 0),
+                                new ResearchTreePresentation.Member(id("test:b"), 1, 0)))));
+        ResearchTreePublication expected = new ResearchTreePublication(
+                graph,
+                weaponPresentation,
+                techTree(graph.nodes()));
+        SyncResearchTreePacket.ClientAccumulator accumulator =
+                new SyncResearchTreePacket.ClientAccumulator();
+        Optional<ResearchTreePublication> completed = Optional.empty();
+
+        for (SyncResearchTreePacket packet : SyncResearchTreePacket.split(expected, 92L)) {
+            FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+            try {
+                packet.toBytes(buffer);
+                completed = accumulator.accept(new SyncResearchTreePacket(buffer));
+            } finally {
+                buffer.release();
+            }
+        }
+
+        ResearchTreePublication decoded = completed.orElseThrow();
+        assertEquals(expected, decoded);
+        assertEquals(4, decoded.graph().nodes().size());
+        assertEquals(List.of(id("test:a"), id("test:b")), decoded.legacyGraph().nodes().stream()
+                .map(ResearchTreeGraph.Node::blueprintId)
+                .toList());
+        assertEquals(4, decoded.techTree().memberCount());
+    }
+
+    @Test
+    void splitRejectsAProjectedNodeInsteadOfDroppingItsSourceOrdinal() {
+        ResourceLocation publicId = id("test:projected");
+        ResearchTreeGraph.Node projected = new ResearchTreeGraph.Node(
+                0,
+                2,
+                publicId,
+                "name.projected",
+                "rifle",
+                id("test:slot/projected"),
+                JournalVisibility.FULL,
+                false,
+                false,
+                true,
+                8,
+                0,
+                0,
+                0,
+                ResearchTreeGraph.Availability.AVAILABLE);
+        ResearchTreePublication projection = publication(
+                new ResearchTreeGraph(List.of(projected), List.of()));
+
+        assertThrows(IllegalArgumentException.class, () ->
+                SyncResearchTreePacket.split(projection, 10L));
+    }
+
+    @Test
     void groupMetadataRanksIconsAndKindsRoundTripWithTheMatchingGraph() {
         ResearchTreeGraph graph = branchingGraph();
         ResearchTreePresentation presentation = new ResearchTreePresentation(List.of(
@@ -76,6 +200,7 @@ class SyncResearchTreePacketTest {
                         Optional.of(id("test:a")),
                         0,
                         ResearchTreePresentation.Kind.AUTHORED,
+                        false,
                         List.of(
                                 new ResearchTreePresentation.Member(id("test:a"), 0, 0),
                                 new ResearchTreePresentation.Member(id("test:b"), 1, 0))),
@@ -111,6 +236,8 @@ class SyncResearchTreePacketTest {
         assertEquals(Optional.of(id("test:a")),
                 decoded.presentation().groups().get(0).iconNodeId());
         assertEquals(1, decoded.presentation().groups().get(0).members().get(1).rank());
+        assertFalse(decoded.presentation().groups().get(0).includedInOverview());
+        assertTrue(decoded.presentation().groups().get(1).includedInOverview());
     }
 
     @Test
@@ -293,11 +420,43 @@ class SyncResearchTreePacketTest {
             disclosureMismatch.writeVarInt(0);
             disclosureMismatch.writeVarInt(0);
             disclosureMismatch.writeVarInt(0);
+            disclosureMismatch.writeVarInt(0);
             SyncResearchTreePacket decoded = new SyncResearchTreePacket(disclosureMismatch);
             assertThrows(IllegalArgumentException.class,
                     () -> new SyncResearchTreePacket.ClientAccumulator().accept(decoded));
         } finally {
             disclosureMismatch.release();
+        }
+    }
+
+    @Test
+    void decoderRejectsAnOversizedNestedTechTreeBeforeAllocation() {
+        FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            buffer.writeLong(71L);
+            buffer.writeVarInt(0);
+            buffer.writeVarInt(1);
+            buffer.writeVarInt(1);
+            buffer.writeVarInt(0);
+            buffer.writeVarInt(1);
+            buffer.writeVarInt(1);
+            buffer.writeVarInt(1);
+            buffer.writeVarInt(1);
+            writeNode(buffer, node(0, "test:a", "name.a", 0));
+            buffer.writeVarInt(0);
+            buffer.writeVarInt(1);
+            writeWireGroup(buffer, 1);
+            buffer.writeVarInt(1);
+            buffer.writeUtf("test:tech_tree", BlueprintSyncLimits.MAX_RESOURCE_ID_LENGTH);
+            buffer.writeUtf("Tech Tree", 80);
+            buffer.writeBoolean(false);
+            buffer.writeVarInt(1);
+            buffer.writeVarInt(Tier.values().length + 1);
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> new SyncResearchTreePacket(buffer));
+        } finally {
+            buffer.release();
         }
     }
 
@@ -363,6 +522,7 @@ class SyncResearchTreePacketTest {
         buffer.writeVarInt(totalEdges);
         buffer.writeVarInt(totalNodes == 0 ? 0 : 1);
         buffer.writeVarInt(totalNodes);
+        buffer.writeVarInt(0);
     }
 
     private static SyncResearchTreePacket decodedPacket(
@@ -382,6 +542,7 @@ class SyncResearchTreePacketTest {
             buffer.writeVarInt(totalEdges);
             buffer.writeVarInt(totalNodes == 0 ? 0 : 1);
             buffer.writeVarInt(totalNodes);
+            buffer.writeVarInt(0);
             buffer.writeVarInt(nodes.size());
             for (ResearchTreeGraph.Node node : nodes) {
                 writeNode(buffer, node);
@@ -397,6 +558,7 @@ class SyncResearchTreePacketTest {
                 buffer.writeVarInt(1);
                 writeWireGroup(buffer, totalNodes);
             }
+            buffer.writeVarInt(0);
             return new SyncResearchTreePacket(buffer);
         } finally {
             buffer.release();
@@ -427,6 +589,7 @@ class SyncResearchTreePacketTest {
         buffer.writeVarInt(iconOrdinal + 1);
         buffer.writeVarInt(0);
         buffer.writeByte(kindOrdinal);
+        buffer.writeBoolean(true);
     }
 
     private static void writeNode(FriendlyByteBuf buffer, ResearchTreeGraph.Node node) {
@@ -454,6 +617,7 @@ class SyncResearchTreePacketTest {
         buffer.writeVarInt(1);
         buffer.writeVarInt(0);
         buffer.writeByte(ResearchTreePresentation.Kind.AUTHORED.ordinal());
+        buffer.writeBoolean(true);
         buffer.writeVarInt(memberCount);
         for (int ordinal = 0; ordinal < memberCount; ordinal++) {
             buffer.writeVarInt(ordinal);
@@ -498,6 +662,89 @@ class SyncResearchTreePacketTest {
                     members(graph, anonymous)));
         }
         return new ResearchTreePublication(graph, new ResearchTreePresentation(groups));
+    }
+
+    private static ResearchTechTreePresentation techTree(List<ResearchTreeGraph.Node> nodes) {
+        ResourceLocation a = nodes.get(0).blueprintId();
+        ResourceLocation customBand = id("test:custom_band");
+        return new ResearchTechTreePresentation(
+                Optional.of(id("test:tech_tree")),
+                "Tech Tree",
+                Optional.of("tree.test.tech_tree"),
+                Optional.of(a),
+                List.of(),
+                List.of(new ResearchTechTreePresentation.BandLabel(
+                        customBand,
+                        "Custom Band",
+                        Optional.of("tree.band.test.custom"),
+                        Optional.of(0x336699),
+                        Optional.of(a))),
+                28,
+                List.of(new ResearchTechTreePresentation.DomainView(
+                        Domain.WEAPONS,
+                        "Weapons",
+                        Optional.of("domain.test.weapons"),
+                        Optional.of(a),
+                        List.of(new ResearchTechTreePresentation.LaneView(
+                                id("test:general"),
+                                "General",
+                                Optional.empty(),
+                                Optional.of(a),
+                                0,
+                                List.of(
+                                        new ResearchTechTreePresentation.Member(
+                                                a,
+                                                123,
+                                                4_000_000_000L,
+                                                Optional.of(customBand),
+                                                PlacementOrigin.AUTOMATIC,
+                                                Optional.of(new WeaponRating(25, 50, 75)),
+                                                Optional.of(new ResearchTechTreePresentation
+                                                        .AutomaticBranchPlacement(
+                                                                2, 7, 3, 9))),
+                                        new ResearchTechTreePresentation.Member(
+                                                nodes.get(1).blueprintId(), 124, 0,
+                                                Optional.of(customBand), PlacementOrigin.EXACT,
+                                                Optional.empty()),
+                                        new ResearchTechTreePresentation.Member(
+                                                nodes.get(2).blueprintId(), 124, 1,
+                                                Optional.of(customBand), PlacementOrigin.EXACT,
+                                                Optional.empty()),
+                                        new ResearchTechTreePresentation.Member(
+                                                nodes.get(3).blueprintId(), 125, 0,
+                                                Optional.of(customBand), PlacementOrigin.EXACT,
+                                                Optional.empty())))))));
+    }
+
+    private static ResearchTechTreePresentation largeTechTree(List<ResearchTreeGraph.Node> nodes) {
+        ResourceLocation first = nodes.get(0).blueprintId();
+        return new ResearchTechTreePresentation(
+                Optional.of(id("test:large_tech_tree")),
+                "Large Tech Tree",
+                Optional.empty(),
+                Optional.of(first),
+                List.of(Tier.values()).stream()
+                        .map(tier -> new ResearchTechTreePresentation.TierLabel(
+                                tier, tier.name(), Optional.empty()))
+                        .toList(),
+                List.of(new ResearchTechTreePresentation.DomainView(
+                        Domain.WEAPONS,
+                        "Weapons",
+                        Optional.empty(),
+                        Optional.of(first),
+                        List.of(new ResearchTechTreePresentation.LaneView(
+                                id("test:all_weapons"),
+                                "All Weapons",
+                                Optional.empty(),
+                                Optional.of(first),
+                                0,
+                                nodes.stream()
+                                        .map(node -> new ResearchTechTreePresentation.Member(
+                                                node.blueprintId(),
+                                                Tier.STARTER,
+                                                node.ordinal(),
+                                                Optional.empty()))
+                                        .toList())))));
     }
 
     private static List<ResearchTreePresentation.Member> members(

@@ -11,6 +11,7 @@ import java.util.function.Supplier;
 
 import com.gamergaming.taczweaponblueprints.client.ClientBlueprintCatalog;
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
+import com.gamergaming.taczweaponblueprints.item.BlueprintKind;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 
 import net.minecraft.network.FriendlyByteBuf;
@@ -66,9 +67,10 @@ public class SyncBlueprintDataPacket {
             ResourceLocation recipeId = buf.readResourceLocation();
             String itemType = buf.readUtf(BlueprintSyncLimits.MAX_ITEM_TYPE_LENGTH);
             ResourceLocation displaySlotKey = buf.readResourceLocation();
+            BlueprintKind kind = buf.readEnum(BlueprintKind.class);
 
             BlueprintData data = new BlueprintData(
-                    bpId.toString(), nameKey, tooltipKey, recipeId, null, itemType, displaySlotKey);
+                    bpId.toString(), nameKey, tooltipKey, recipeId, null, itemType, displaySlotKey, kind);
             BlueprintSyncLimits.validateEntry(bpId, data);
             if (decodedBlueprints.put(bpId, data) != null) {
                 throw new IllegalArgumentException("Duplicate blueprint ID in synchronized catalog: " + bpId);
@@ -125,6 +127,7 @@ public class SyncBlueprintDataPacket {
             buf.writeResourceLocation(data.getRecipeId());
             buf.writeUtf(data.getItemType(), BlueprintSyncLimits.MAX_ITEM_TYPE_LENGTH);
             buf.writeResourceLocation(data.getDisplaySlotKey());
+            buf.writeEnum(data.getKind());
         }
         if (buf.writerIndex() - start > BlueprintSyncLimits.MAX_CHUNK_BYTES) {
             throw new IllegalArgumentException("Blueprint synchronization chunk exceeds the byte budget");

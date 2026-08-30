@@ -17,7 +17,9 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerRecipeData;
+import com.gamergaming.taczweaponblueprints.client.ResearchTreeOverviewBuilder;
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
+import com.gamergaming.taczweaponblueprints.item.BlueprintKind;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionConfigSnapshot;
 import com.gamergaming.taczweaponblueprints.progression.DuplicateBlueprintPolicy;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCost;
@@ -32,6 +34,57 @@ import net.minecraft.resources.ResourceLocation;
 
 class ResearchTreePresentationBuilderTest {
     private static final ResourceLocation PROFILE = id("test:profile");
+
+    @Test
+    void authoritativeGraphAcceptsEveryKindWhileLegacyPresentationStaysWeaponOnly() {
+        Map<ResourceLocation, BlueprintData> catalog = new LinkedHashMap<>();
+        catalog.put(id("test:weapon"),
+                data("test:weapon", "rifle", BlueprintKind.GUN));
+        catalog.put(id("test:attachment"),
+                data("test:attachment", "scope", BlueprintKind.ATTACHMENT));
+        catalog.put(id("test:ammo"),
+                data("test:ammo", "ammo", BlueprintKind.AMMO));
+        catalog.put(id("test:hidden_attachment"),
+                data("test:hidden_attachment", "scope", BlueprintKind.ATTACHMENT));
+
+        Map<ResourceLocation, BlueprintResearchRule> rules = Map.of(
+                id("test:weapon_rule"),
+                rule("test:weapon", JournalVisibility.FULL, List.of()),
+                id("test:attachment_rule"),
+                rule("test:attachment", JournalVisibility.FULL, List.of()),
+                id("test:ammo_rule"),
+                rule("test:ammo", JournalVisibility.FULL, List.of()),
+                id("test:hidden_attachment_rule"),
+                rule("test:hidden_attachment", JournalVisibility.SILHOUETTE, List.of()));
+        Map<ResourceLocation, ResearchTreeGroupDefinition> groups = Map.of(
+                id("test:weapons"), group(
+                        "Weapons",
+                        id("test:weapon"),
+                        10,
+                        List.of(List.of(id("test:weapon")))));
+
+        ResearchTreePublication publication = ResearchTreeBuilder.buildPublication(
+                catalog,
+                snapshot(rules, groups),
+                config(),
+                new PlayerRecipeData(),
+                ignored -> false);
+
+        assertEquals(4, publication.graph().nodes().size());
+        assertTrue(publication.graph().node(id("test:attachment")).isPresent());
+        assertTrue(publication.graph().node(id("test:ammo")).isPresent());
+        assertTrue(publication.graph().nodes().stream().anyMatch(node ->
+                !node.visibility().revealsIdentity()));
+        assertEquals(List.of(id("test:weapon")), publication.presentation().groups().stream()
+                .flatMap(group -> group.members().stream())
+                .map(ResearchTreePresentation.Member::nodeId)
+                .toList());
+        assertTrue(publication.presentation().membership(id("test:attachment")).isEmpty());
+        assertTrue(publication.presentation().membership(id("test:ammo")).isEmpty());
+        assertEquals(List.of(id("test:weapon")), publication.legacyGraph().nodes().stream()
+                .map(ResearchTreeGraph.Node::blueprintId)
+                .toList());
+    }
 
     @Test
     void publishesOnlyMetadataAllowedByEachVisibilityTier() {
@@ -82,6 +135,7 @@ class ResearchTreePresentationBuilderTest {
         ResearchTreePresentation.Group authored = publication.presentation().groups().get(0);
         assertEquals("Mixed Branch", authored.title());
         assertEquals(ResearchTreePresentation.Kind.AUTHORED, authored.kind());
+        assertTrue(authored.includedInOverview());
         assertEquals(0, authored.order());
         assertTrue(authored.iconNodeId().isEmpty());
         assertEquals(List.of(0, 1), authored.members().stream()
@@ -96,11 +150,20 @@ class ResearchTreePresentationBuilderTest {
 
         ResearchTreePresentation.Group fallback = publication.presentation().groups().get(1);
         assertEquals(ResearchTreePresentation.Kind.ITEM_TYPE_FALLBACK, fallback.kind());
+        assertTrue(fallback.includedInOverview());
         assertEquals("Other: Launcher", fallback.title());
         assertEquals(Optional.of(id("test:addon")), fallback.iconNodeId());
 
+        ResearchTreeOverviewBuilder.Result overview =
+                ResearchTreeOverviewBuilder.build(publication);
+        assertTrue(overview.publication().graph().node(id("test:addon")).isPresent());
+        assertTrue(overview.publication().presentation().group(fallback.id()).isPresent());
+        assertTrue(overview.publication().presentation().groups().stream()
+                .noneMatch(group -> group.kind() == ResearchTreePresentation.Kind.UNDISCLOSED));
+
         ResearchTreePresentation.Group undisclosed = publication.presentation().groups().get(2);
         assertEquals(ResearchTreePresentation.Kind.UNDISCLOSED, undisclosed.kind());
+        assertFalse(undisclosed.includedInOverview());
         assertEquals(2, undisclosed.members().size());
         assertTrue(undisclosed.iconNodeId().isEmpty());
         assertTrue(undisclosed.members().stream().allMatch(member ->
@@ -162,6 +225,43 @@ class ResearchTreePresentationBuilderTest {
                 new PlayerRecipeData(),
                 ignored -> false);
         assertEquals(publication, repeated);
+    }
+
+    @Test
+    void authoredOverviewOverrideIsResolvedIntoPublishedMetadata() {
+        Map<ResourceLocation, BlueprintData> catalog = Map.of(
+                id("test:included"), data("test:included", "rifle"),
+                id("test:excluded"), data("test:excluded", "rifle"));
+        Map<ResourceLocation, BlueprintResearchRule> rules = Map.of(
+                id("test:included_rule"), rule(
+                        "test:included", JournalVisibility.FULL, List.of()),
+                id("test:excluded_rule"), rule(
+                        "test:excluded", JournalVisibility.FULL, List.of()));
+        Map<ResourceLocation, ResearchTreeGroupDefinition> groups = Map.of(
+                id("test:included_group"), group(
+                        "Included",
+                        id("test:included"),
+                        10,
+                        Optional.of(true),
+                        List.of(List.of(id("test:included")))),
+                id("test:excluded_group"), group(
+                        "Excluded",
+                        id("test:excluded"),
+                        20,
+                        Optional.of(false),
+                        List.of(List.of(id("test:excluded")))));
+
+        ResearchTreePresentation presentation = ResearchTreeBuilder.buildPublication(
+                catalog,
+                snapshot(rules, groups),
+                config(),
+                new PlayerRecipeData(),
+                ignored -> false).presentation();
+
+        assertTrue(presentation.group(id("test:included_group"))
+                .orElseThrow().includedInOverview());
+        assertFalse(presentation.group(id("test:excluded_group"))
+                .orElseThrow().includedInOverview());
     }
 
     @Test
@@ -268,13 +368,15 @@ class ResearchTreePresentationBuilderTest {
     }
 
     @Test
-    void publicationRejectsMissingOrMisclassifiedMembersAndIdentifyingAnonymousIcons() {
+    void publicationAllowsNonLegacyNodesButRejectsMisclassifiedMembersAndAnonymousIcons() {
         ResearchTreeGraph previewGraph = new ResearchTreeGraph(
                 List.of(node(0, id("test:preview"), JournalVisibility.PREVIEW)),
                 List.of());
-        assertThrows(IllegalArgumentException.class, () -> new ResearchTreePublication(
+        ResearchTreePublication mixedKindPublication = new ResearchTreePublication(
                 previewGraph,
-                ResearchTreePresentation.EMPTY));
+                ResearchTreePresentation.EMPTY);
+        assertEquals(previewGraph, mixedKindPublication.graph());
+        assertTrue(mixedKindPublication.legacyGraph().nodes().isEmpty());
 
         ResearchTreePresentation.Group wrongGroup = new ResearchTreePresentation.Group(
                 ResearchTreePresentation.PREFERRED_UNDISCLOSED_GROUP_ID,
@@ -531,6 +633,15 @@ class ResearchTreePresentationBuilderTest {
             ResourceLocation icon,
             int order,
             List<List<ResourceLocation>> ranks) {
+        return group(title, icon, order, Optional.empty(), ranks);
+    }
+
+    private static ResearchTreeGroupDefinition group(
+            String title,
+            ResourceLocation icon,
+            int order,
+            Optional<Boolean> includeInOverview,
+            List<List<ResourceLocation>> ranks) {
         return new ResearchTreeGroupDefinition(
                 1,
                 PROFILE,
@@ -538,6 +649,7 @@ class ResearchTreePresentationBuilderTest {
                 Optional.of("gui.test." + title.toLowerCase(java.util.Locale.ROOT).replace(' ', '_')),
                 icon,
                 order,
+                includeInOverview,
                 ranks);
     }
 
@@ -586,15 +698,32 @@ class ResearchTreePresentationBuilderTest {
     }
 
     private static BlueprintData data(String value, String itemType) {
+        return data(value, itemType, null);
+    }
+
+    private static BlueprintData data(
+            String value,
+            String itemType,
+            BlueprintKind kind) {
         ResourceLocation blueprintId = id(value);
-        return new BlueprintData(
-                value,
-                "name." + blueprintId.getPath(),
-                "tooltip." + blueprintId.getPath(),
-                id("test:recipe/" + blueprintId.getPath()),
-                null,
-                itemType,
-                id("test:slot/" + blueprintId.getPath()));
+        return kind == null
+                ? new BlueprintData(
+                        value,
+                        "name." + blueprintId.getPath(),
+                        "tooltip." + blueprintId.getPath(),
+                        id("test:recipe/" + blueprintId.getPath()),
+                        null,
+                        itemType,
+                        id("test:slot/" + blueprintId.getPath()))
+                : new BlueprintData(
+                        value,
+                        "name." + blueprintId.getPath(),
+                        "tooltip." + blueprintId.getPath(),
+                        id("test:recipe/" + blueprintId.getPath()),
+                        null,
+                        itemType,
+                        id("test:slot/" + blueprintId.getPath()),
+                        kind);
     }
 
     private static ResourceLocation id(String value) {

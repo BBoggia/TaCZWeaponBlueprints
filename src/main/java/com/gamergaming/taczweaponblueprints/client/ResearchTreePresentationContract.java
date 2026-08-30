@@ -1,6 +1,7 @@
 package com.gamergaming.taczweaponblueprints.client;
 
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePresentation;
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
 
 /** Semantic UI contract kept independent from colors, textures and widgets. */
@@ -8,6 +9,14 @@ public final class ResearchTreePresentationContract {
     public static final String UNDISCLOSED_CATEGORY_LANE = "undisclosed";
     public static final double MIN_COMPACT_CARD_SCALE = 0.10D;
     public static final double MIN_DETAILED_CARD_SCALE = 0.30D;
+    public static final double MIN_READABLE_OVERVIEW_FIT_SCALE = 0.25D;
+    /**
+     * Fullscreen graph content is deliberately translated behind ordinary GUI
+     * surfaces. Minecraft item rendering raises models within the current pose,
+     * so a generous negative offset is required instead of relying on call order.
+     */
+    public static final int FULLSCREEN_GRAPH_Z_OFFSET = -300;
+    public static final int FULLSCREEN_OVERLAY_Z_OFFSET = 0;
     public static final BrowseView DEFAULT_BROWSE_VIEW = BrowseView.BRANCHES;
     public static final ProgressionDirection PROGRESSION_DIRECTION =
             ProgressionDirection.BOTTOM_TO_TOP;
@@ -44,8 +53,139 @@ public final class ResearchTreePresentationContract {
         };
     }
 
+    /**
+     * Small player-facing state vocabulary used by the graph. AVAILABLE means
+     * that the node is worth inspecting; only a matching server preview may call
+     * the selected blueprint ready to research.
+     */
+    public static PlayerStateFamily playerStateFamily(
+            ResearchTreeGraph.Node node,
+            boolean canAffordPoints) {
+        if (node == null) {
+            throw new IllegalArgumentException("Research Tree node cannot be null");
+        }
+        return switch (node.availability()) {
+            case LEARNED -> PlayerStateFamily.LEARNED;
+            case PREVIEW -> PlayerStateFamily.AVAILABLE;
+            case AVAILABLE -> canAffordPoints
+                    ? PlayerStateFamily.AVAILABLE
+                    : PlayerStateFamily.LOCKED;
+            case DISCOVERY_REQUIRED, PREREQUISITES_REQUIRED,
+                    RESEARCH_DISABLED, COST_ABOVE_CAP -> PlayerStateFamily.LOCKED;
+            case REDACTED, CONTENT_UNAVAILABLE ->
+                    PlayerStateFamily.HIDDEN_OR_UNAVAILABLE;
+        };
+    }
+
+    /**
+     * The untouched graph teaches one stable glyph per major state family.
+     * Detailed causes remain available to hover and the selected context.
+     */
+    public static StatusSymbol graphStatusSymbol(
+            ResearchTreeGraph.Node node,
+            boolean canAffordPoints) {
+        return switch (playerStateFamily(node, canAffordPoints)) {
+            case LEARNED -> StatusSymbol.LEARNED;
+            case AVAILABLE -> StatusSymbol.AVAILABLE;
+            case LOCKED -> StatusSymbol.LOCKED;
+            case HIDDEN_OR_UNAVAILABLE -> StatusSymbol.UNKNOWN;
+        };
+    }
+
+    /** Minimum surface on which ordinary players need each kind of information. */
+    public static InformationSurface informationSurface(PlayerInformation information) {
+        if (information == null) {
+            throw new IllegalArgumentException("Research Tree information cannot be null");
+        }
+        return switch (information) {
+            case PUBLIC_IDENTITY, MAJOR_STATE, CONNECTIONS -> InformationSurface.GRAPH;
+            case NAME, ONE_LINE_STATUS -> InformationSurface.HOVER;
+            case EXACT_LOCK_REASON, POINT_COST, MATERIAL_REQUIREMENTS,
+                    DIRECT_REQUIREMENTS, IMMEDIATE_UNLOCKS, PRIMARY_ACTION ->
+                    InformationSurface.SELECTED_CARD;
+            case STATUS_LEGEND, ADVANCED_LAYOUT_CONTROLS ->
+                    InformationSurface.HELP_OR_SETTINGS;
+        };
+    }
+
     public static EscapeAction escapeAction(boolean fullscreen) {
         return fullscreen ? EscapeAction.EXIT_FULLSCREEN : EscapeAction.CLOSE_BENCH;
+    }
+
+    /** Compact rendering stays on the ordinary GUI layer. */
+    public static int graphZOffset(boolean fullscreen) {
+        return fullscreen ? FULLSCREEN_GRAPH_Z_OFFSET : FULLSCREEN_OVERLAY_Z_OFFSET;
+    }
+
+    /** Compatibility overload for callers that do not expose the optional Tech Tree view. */
+    public static FullscreenViewAction fullscreenViewAction(BrowseView currentView) {
+        return fullscreenViewAction(currentView, false);
+    }
+
+    /** The first fullscreen rail entry advances through every currently available browse view. */
+    public static FullscreenViewAction fullscreenViewAction(
+            BrowseView currentView,
+            boolean techTreeAvailable) {
+        if (currentView == null) {
+            throw new IllegalArgumentException("Research Tree browse view cannot be null");
+        }
+        return switch (currentView) {
+            case BRANCHES -> FullscreenViewAction.SHOW_ALL_WEAPONS;
+            case ALL_WEAPONS -> techTreeAvailable
+                    ? FullscreenViewAction.SHOW_TECH_TREE
+                    : FullscreenViewAction.SHOW_BRANCHES;
+            case TECH_TREE -> FullscreenViewAction.SHOW_BRANCHES;
+        };
+    }
+
+    /** Stable browse-cycle order with graceful fallback when no Tech Tree was published. */
+    public static BrowseView nextBrowseView(BrowseView currentView, boolean techTreeAvailable) {
+        return switch (fullscreenViewAction(currentView, techTreeAvailable)) {
+            case SHOW_BRANCHES -> BrowseView.BRANCHES;
+            case SHOW_ALL_WEAPONS -> BrowseView.ALL_WEAPONS;
+            case SHOW_TECH_TREE -> BrowseView.TECH_TREE;
+        };
+    }
+
+    /** Keeps a restored per-view camera authoritative across projection changes. */
+    public static CameraArrivalAction cameraArrivalAction(
+            boolean cameraRestored,
+            boolean preferredFocusVisible) {
+        if (cameraRestored) {
+            return preferredFocusVisible
+                    ? CameraArrivalAction.RETAIN_CAMERA_AND_FOCUS
+                    : CameraArrivalAction.RETAIN_CAMERA;
+        }
+        return preferredFocusVisible
+                ? CameraArrivalAction.FOCUS_PREFERRED
+                : CameraArrivalAction.FOCUS_FALLBACK;
+    }
+
+    /** Distinguishes an empty curated overview from an empty server publication. */
+    public static EmptyTreeState emptyTreeState(BrowseView view, boolean publicationEmpty) {
+        if (view == null) {
+            throw new IllegalArgumentException("Research Tree browse view cannot be null");
+        }
+        if (publicationEmpty) {
+            return EmptyTreeState.EMPTY_PUBLICATION;
+        }
+        return switch (view) {
+            case BRANCHES -> EmptyTreeState.EMPTY_PUBLICATION;
+            case ALL_WEAPONS -> EmptyTreeState.EMPTY_OVERVIEW;
+            case TECH_TREE -> EmptyTreeState.EMPTY_TECH_TREE;
+        };
+    }
+
+    /**
+     * Authored and generated identity-visible weapon groups form All Weapons by
+     * default. Undisclosed groups remain Branches-only so overview membership
+     * cannot become an identity side channel.
+     */
+    public static boolean includedInOverviewByDefault(ResearchTreePresentation.Kind kind) {
+        if (kind == null) {
+            throw new IllegalArgumentException("Research Tree group kind cannot be null");
+        }
+        return kind.includedInOverviewByDefault();
     }
 
     /**
@@ -53,10 +193,21 @@ public final class ResearchTreePresentationContract {
      * moves the camera in All Weapons. Both views retain one authoritative graph.
      */
     public static GroupSelectionAction groupSelectionAction(BrowseView view) {
+        return groupSelectionAction(view, true);
+    }
+
+    /** Excluded overview groups open their complete Branches projection. */
+    public static GroupSelectionAction groupSelectionAction(
+            BrowseView view,
+            boolean includedInOverview) {
         if (view == null) {
             throw new IllegalArgumentException("Research Tree browse view cannot be null");
         }
-        return view == BrowseView.BRANCHES
+        if (view == BrowseView.TECH_TREE) {
+            throw new IllegalArgumentException(
+                    "Tech Tree domain selection is not branch group selection");
+        }
+        return view == BrowseView.BRANCHES || !includedInOverview
                 ? GroupSelectionAction.SHOW_GROUP
                 : GroupSelectionAction.FOCUS_GROUP_REGION;
     }
@@ -162,12 +313,43 @@ public final class ResearchTreePresentationContract {
         PREVIEW,
         LEARNED,
         AVAILABLE,
+        LOCKED,
         POINTS_REQUIRED,
         DISCOVERY_REQUIRED,
         PREREQUISITES_REQUIRED,
         RESEARCH_DISABLED,
         COST_ABOVE_CAP,
         CONTENT_UNAVAILABLE
+    }
+
+    public enum PlayerStateFamily {
+        LEARNED,
+        AVAILABLE,
+        LOCKED,
+        HIDDEN_OR_UNAVAILABLE
+    }
+
+    public enum PlayerInformation {
+        PUBLIC_IDENTITY,
+        MAJOR_STATE,
+        CONNECTIONS,
+        NAME,
+        ONE_LINE_STATUS,
+        EXACT_LOCK_REASON,
+        POINT_COST,
+        MATERIAL_REQUIREMENTS,
+        DIRECT_REQUIREMENTS,
+        IMMEDIATE_UNLOCKS,
+        PRIMARY_ACTION,
+        STATUS_LEGEND,
+        ADVANCED_LAYOUT_CONTROLS
+    }
+
+    public enum InformationSurface {
+        GRAPH,
+        HOVER,
+        SELECTED_CARD,
+        HELP_OR_SETTINGS
     }
 
     public enum CardDetail {
@@ -202,7 +384,27 @@ public final class ResearchTreePresentationContract {
 
     public enum BrowseView {
         BRANCHES,
-        ALL_WEAPONS
+        ALL_WEAPONS,
+        TECH_TREE
+    }
+
+    public enum FullscreenViewAction {
+        SHOW_ALL_WEAPONS,
+        SHOW_BRANCHES,
+        SHOW_TECH_TREE
+    }
+
+    public enum CameraArrivalAction {
+        RETAIN_CAMERA,
+        RETAIN_CAMERA_AND_FOCUS,
+        FOCUS_PREFERRED,
+        FOCUS_FALLBACK
+    }
+
+    public enum EmptyTreeState {
+        EMPTY_PUBLICATION,
+        EMPTY_OVERVIEW,
+        EMPTY_TECH_TREE
     }
 
     public enum ProgressionDirection {

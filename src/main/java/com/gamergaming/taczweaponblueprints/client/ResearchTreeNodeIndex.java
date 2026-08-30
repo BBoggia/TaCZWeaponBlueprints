@@ -103,24 +103,64 @@ public final class ResearchTreeNodeIndex {
     }
 
     public Optional<ResearchTreeLayout.PositionedNode> at(double x, double y) {
+        return at(x, y, 0.0D);
+    }
+
+    /**
+     * Hit-tests with symmetric canvas-space padding. Overlapping expanded targets resolve to the
+     * nearest node center and then published ordinal, so semantic-zoom targets stay predictable.
+     */
+    public Optional<ResearchTreeLayout.PositionedNode> at(double x, double y, double padding) {
         validateFinite(x, y);
-        if (nodeCount == 0 || x < 0.0D || y < 0.0D || x >= width || y >= height) {
+        if (!Double.isFinite(padding) || padding < 0.0D) {
+            throw new IllegalArgumentException("Research Tree node hit padding is invalid");
+        }
+        if (nodeCount == 0 || x < -padding || y < -padding
+                || x >= width + padding || y >= height + padding) {
             return Optional.empty();
         }
-        int minimumBucketX = bucket(x - ResearchTreeLayout.NODE_WIDTH / 2.0D);
-        int maximumBucketX = bucket(x + ResearchTreeLayout.NODE_WIDTH / 2.0D);
-        int minimumBucketY = bucket(y - ResearchTreeLayout.NODE_HEIGHT / 2.0D);
-        int maximumBucketY = bucket(y + ResearchTreeLayout.NODE_HEIGHT / 2.0D);
-        ResearchTreeLayout.PositionedNode match = null;
-        for (int bucketY = minimumBucketY; bucketY <= maximumBucketY; bucketY++) {
-            for (int bucketX = minimumBucketX; bucketX <= maximumBucketX; bucketX++) {
-                for (ResearchTreeLayout.PositionedNode node
-                        : buckets.getOrDefault(key(bucketX, bucketY), List.of())) {
-                    if (x >= node.x() && x < node.x() + ResearchTreeLayout.NODE_WIDTH
-                            && y >= node.y() && y < node.y() + ResearchTreeLayout.NODE_HEIGHT
-                            && (match == null || node.nodeOrdinal() < match.nodeOrdinal())) {
-                        match = node;
+        int minimumBucketX = bucket(x - ResearchTreeLayout.NODE_WIDTH / 2.0D - padding);
+        int maximumBucketX = bucket(x + ResearchTreeLayout.NODE_WIDTH / 2.0D + padding);
+        int minimumBucketY = bucket(y - ResearchTreeLayout.NODE_HEIGHT / 2.0D - padding);
+        int maximumBucketY = bucket(y + ResearchTreeLayout.NODE_HEIGHT / 2.0D + padding);
+        long columns = (long) maximumBucketX - minimumBucketX + 1L;
+        long rows = (long) maximumBucketY - minimumBucketY + 1L;
+        long sparseThreshold = Math.max(1L, buckets.size() * 4L);
+        boolean sparseQuery = rows > 0L
+                && (columns > sparseThreshold / rows);
+        List<List<ResearchTreeLayout.PositionedNode>> candidateBuckets = new ArrayList<>();
+        if (sparseQuery) {
+            candidateBuckets.addAll(buckets.values());
+        } else {
+            for (int bucketY = minimumBucketY; bucketY <= maximumBucketY; bucketY++) {
+                for (int bucketX = minimumBucketX; bucketX <= maximumBucketX; bucketX++) {
+                    List<ResearchTreeLayout.PositionedNode> candidates = buckets.get(
+                            key(bucketX, bucketY));
+                    if (candidates != null) {
+                        candidateBuckets.add(candidates);
                     }
+                }
+            }
+        }
+        ResearchTreeLayout.PositionedNode match = null;
+        double matchDistance = Double.POSITIVE_INFINITY;
+        for (List<ResearchTreeLayout.PositionedNode> candidates : candidateBuckets) {
+            for (ResearchTreeLayout.PositionedNode node : candidates) {
+                if (x < node.x() - padding
+                        || x >= node.x() + ResearchTreeLayout.NODE_WIDTH + padding
+                        || y < node.y() - padding
+                        || y >= node.y() + ResearchTreeLayout.NODE_HEIGHT + padding) {
+                    continue;
+                }
+                double deltaX = x - node.centerX();
+                double deltaY = y - node.centerY();
+                double distance = deltaX * deltaX + deltaY * deltaY;
+                if (distance < matchDistance
+                        || distance == matchDistance
+                                && (match == null
+                                        || node.nodeOrdinal() < match.nodeOrdinal())) {
+                    match = node;
+                    matchDistance = distance;
                 }
             }
         }

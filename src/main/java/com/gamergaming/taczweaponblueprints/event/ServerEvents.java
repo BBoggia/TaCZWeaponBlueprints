@@ -4,8 +4,14 @@ import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintLootDataManager;
 import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintLootSnapshot;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchDataManager;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionSyncScheduler;
+import com.gamergaming.taczweaponblueprints.progression.ResearchPointAwardReconciliationScheduler;
+import com.gamergaming.taczweaponblueprints.progression.ResearchPointCombatTracker;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponEvidenceManager;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponPlacementCandidateManager;
+import com.gamergaming.taczweaponblueprints.resource.award.ResearchPointAwardBlueprintFacts;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraftforge.event.server.ServerStartingEvent;
@@ -25,6 +31,7 @@ public final class ServerEvents {
         TaCZWeaponBlueprints.LOGGER.info("Server starting, initializing BlueprintDataManager...");
         if (BlueprintDataManager.SERVER.initialize(server)) {
             TaCZWeaponBlueprints.LOGGER.info("BlueprintDataManager initialized.");
+            BlueprintResearchDataManager.INSTANCE.logActiveProfileAudit();
         } else {
             TaCZWeaponBlueprints.LOGGER.error("BlueprintDataManager initialization failed.");
         }
@@ -56,6 +63,11 @@ public final class ServerEvents {
     @SubscribeEvent
     public static void onServerStopped(ServerStoppedEvent event) {
         BlueprintProgressionSyncScheduler.clearAll();
+        ResearchPointAwardReconciliationScheduler.clearAll();
+        ResearchPointCombatTracker.clear();
+        ResearchPointAwardBlueprintFacts.clearCurrentPublication();
         NetworkHandler.clearServerSyncState();
+        AutomaticWeaponEvidenceManager.INSTANCE.clear();
+        AutomaticWeaponPlacementCandidateManager.INSTANCE.clear();
     }
 }

@@ -54,6 +54,66 @@ class ResearchTreeNavigationStateTest {
         assertTrue(state.selectedGroupId().isEmpty());
     }
 
+    @Test
+    void emptyResizeRevalidationClearsAPreviouslySelectedBranch() {
+        ResearchTreeNavigationState state = new ResearchTreeNavigationState();
+        ResearchTreePresentation presentation = presentation();
+        state.retain(presentation, id("test:a"));
+        state.selectGroup(id("test:second"), presentation);
+
+        state.retain(ResearchTreePresentation.EMPTY, id("test:b"));
+
+        assertEquals(ResearchTreePresentationContract.BrowseView.BRANCHES, state.browseView());
+        assertTrue(state.selectedGroupId().isEmpty());
+        ResearchTreeProjection emptyProjection = new ResearchTreeProjectionCache().projection(
+                state.browseView(), state.selectedGroupId().orElse(null));
+        assertTrue(emptyProjection.graph().nodes().isEmpty());
+    }
+
+    @Test
+    void viewRoundTripRetainsTheLastValidBranch() {
+        ResearchTreePresentation presentation = presentation();
+        ResearchTreeNavigationState state = new ResearchTreeNavigationState();
+        state.retain(presentation, id("test:a"));
+        state.selectGroup(id("test:second"), presentation);
+
+        state.setBrowseView(
+                ResearchTreePresentationContract.BrowseView.ALL_WEAPONS,
+                presentation);
+        assertEquals(id("test:second"), state.selectedGroupId().orElseThrow());
+
+        state.setBrowseView(
+                ResearchTreePresentationContract.BrowseView.BRANCHES,
+                presentation);
+        assertEquals(id("test:second"), state.selectedGroupId().orElseThrow());
+    }
+
+    @Test
+    void selectingAnOverviewExcludedGroupRequestsItsBranchProjection() {
+        ResearchTreePresentation base = presentation();
+        ResearchTreePresentation.Group first = base.groups().get(0);
+        ResearchTreePresentation.Group second = base.groups().get(1);
+        ResearchTreePresentation presentation = new ResearchTreePresentation(List.of(
+                first,
+                new ResearchTreePresentation.Group(
+                        second.id(),
+                        second.title(),
+                        second.translationKey(),
+                        second.iconNodeId(),
+                        second.order(),
+                        second.kind(),
+                        false,
+                        second.members())));
+        ResearchTreeNavigationState state = new ResearchTreeNavigationState();
+        state.setBrowseView(
+                ResearchTreePresentationContract.BrowseView.ALL_WEAPONS,
+                presentation);
+
+        assertEquals(
+                ResearchTreePresentationContract.GroupSelectionAction.SHOW_GROUP,
+                state.selectGroup(id("test:second"), presentation));
+    }
+
     private static ResearchTreePresentation presentation() {
         return new ResearchTreePresentation(List.of(
                 group("test:first", "First", "test:a", 0),

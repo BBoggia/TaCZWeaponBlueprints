@@ -1,6 +1,8 @@
 package com.gamergaming.taczweaponblueprints.client;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -30,7 +32,11 @@ class ResearchTreeFullscreenRailLayoutTest {
             assertTrue(fullscreen.rail().contains(rail.zoomOut()));
             assertTrue(fullscreen.rail().contains(rail.zoomIn()));
             assertTrue(fullscreen.rail().contains(rail.fit()));
-            assertFalse(rail.entries().get(rail.entries().size() - 1).overlaps(rail.zoomOut()));
+            assertTrue(fullscreen.rail().contains(rail.pin()));
+            assertTrue(fullscreen.rail().contains(rail.help()));
+            assertTrue(fullscreen.rail().contains(rail.recommendation()));
+            assertFalse(rail.entries().get(rail.entries().size() - 1)
+                    .overlaps(rail.recommendation()));
         }
     }
 
@@ -48,6 +54,36 @@ class ResearchTreeFullscreenRailLayoutTest {
             assertFalse(entry.overlaps(rail.zoomOut()));
             assertFalse(entry.overlaps(rail.zoomIn()));
             assertFalse(entry.overlaps(rail.fit()));
+            assertFalse(entry.overlaps(rail.pin()));
+            assertFalse(entry.overlaps(rail.help()));
+            assertFalse(entry.overlaps(rail.recommendation()));
         });
+    }
+
+    @Test
+    void viewActionRemainsPinnedWhileOnlyGroupsScroll() {
+        int visibleEntries = 5;
+        int groups = 12;
+        int maximumScroll = ResearchTreeFullscreenRailLayout.maximumGroupScroll(
+                visibleEntries, groups);
+
+        assertEquals(8, maximumScroll);
+        assertEquals(0, ResearchTreeFullscreenRailLayout.entryIndexForSlot(
+                0, visibleEntries, maximumScroll, groups));
+        assertEquals(9, ResearchTreeFullscreenRailLayout.entryIndexForSlot(
+                1, visibleEntries, maximumScroll, groups));
+        assertEquals(12, ResearchTreeFullscreenRailLayout.entryIndexForSlot(
+                4, visibleEntries, maximumScroll, groups));
+    }
+
+    @Test
+    void shortGroupListsLeaveUnusedSlotsWithoutMovingTheViewAction() {
+        assertEquals(0, ResearchTreeFullscreenRailLayout.maximumGroupScroll(5, 2));
+        assertEquals(0, ResearchTreeFullscreenRailLayout.entryIndexForSlot(0, 5, 0, 2));
+        assertEquals(1, ResearchTreeFullscreenRailLayout.entryIndexForSlot(1, 5, 0, 2));
+        assertEquals(2, ResearchTreeFullscreenRailLayout.entryIndexForSlot(2, 5, 0, 2));
+        assertEquals(-1, ResearchTreeFullscreenRailLayout.entryIndexForSlot(3, 5, 0, 2));
+        assertThrows(IllegalArgumentException.class, () ->
+                ResearchTreeFullscreenRailLayout.entryIndexForSlot(0, 5, 1, 2));
     }
 }

@@ -11,6 +11,8 @@ import com.gamergaming.taczweaponblueprints.api.BlueprintSpawnRate;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
 import com.gamergaming.taczweaponblueprints.loot.AddItemsModifier;
 import com.gamergaming.taczweaponblueprints.loot.DynamicBlueprintLootModifier;
+import com.gamergaming.taczweaponblueprints.loot.ResearchDataLootModifier;
+import com.gamergaming.taczweaponblueprints.init.ModItems;
 import com.gamergaming.taczweaponblueprints.resource.LootTableResourceLoader;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -30,6 +32,18 @@ public class ModGlobalLootModifiersProvider extends GlobalLootModifierProvider {
     private static final int LEGACY_MAX_ROLLS = 2;
     private static final float LEGACY_POOL_PROBABILITY = 0.2f;
 
+    private static final List<ResourceLocation> NOTE_LOOT_TABLES = List.of(
+            new ResourceLocation("minecraft:chests/abandoned_mineshaft"),
+            new ResourceLocation("minecraft:chests/simple_dungeon"),
+            new ResourceLocation("minecraft:chests/pillager_outpost"));
+    private static final List<ResourceLocation> REPORT_LOOT_TABLES = List.of(
+            new ResourceLocation("minecraft:chests/stronghold_library"),
+            new ResourceLocation("minecraft:chests/woodland_mansion"),
+            new ResourceLocation("minecraft:chests/bastion_treasure"));
+    private static final List<ResourceLocation> DOSSIER_LOOT_TABLES = List.of(
+            new ResourceLocation("minecraft:chests/ancient_city"),
+            new ResourceLocation("minecraft:chests/end_city_treasure"));
+
     public ModGlobalLootModifiersProvider(PackOutput output) {
         super(output, TaCZWeaponBlueprints.MODID);
         TaCZWeaponBlueprints.LOGGER.info("Creating global loot modifiers");
@@ -39,11 +53,17 @@ public class ModGlobalLootModifiersProvider extends GlobalLootModifierProvider {
     protected void start() {
         add("dynamic_blueprints", new DynamicBlueprintLootModifier(new LootItemCondition[0]));
 
+        addResearchData("note", ModItems.RESEARCH_NOTE.get().getDefaultInstance(), 0.12f, NOTE_LOOT_TABLES);
+        addResearchData("report", ModItems.RESEARCH_REPORT.get().getDefaultInstance(), 0.08f, REPORT_LOOT_TABLES);
+        addResearchData("dossier", ModItems.RESEARCH_DOSSIER.get().getDefaultInstance(), 0.05f, DOSSIER_LOOT_TABLES);
+
         Map<String, JsonObject> lootTableLists = LootTableResourceLoader.getAllLootTableLists();
         Map<String, JsonArray> spawnRates = LootTableResourceLoader.getAllLootTableSpawnRates();
         int generatedModifiers = 0;
 
-        for (Map.Entry<String, JsonObject> tierEntry : lootTableLists.entrySet()) {
+        for (Map.Entry<String, JsonObject> tierEntry : lootTableLists.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .toList()) {
             String tier = tierEntry.getKey();
             JsonArray tierSpawnRates = spawnRates.get(tier);
             if (tierSpawnRates == null) {
@@ -56,7 +76,9 @@ public class ModGlobalLootModifiersProvider extends GlobalLootModifierProvider {
                 continue;
             }
 
-            for (Map.Entry<String, JsonElement> namespaceEntry : tierEntry.getValue().entrySet()) {
+            for (Map.Entry<String, JsonElement> namespaceEntry : tierEntry.getValue().entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey())
+                    .toList()) {
                 String namespace = namespaceEntry.getKey();
                 if (!ModList.get().isLoaded(namespace)) {
                     TaCZWeaponBlueprints.LOGGER.debug(
@@ -66,11 +88,16 @@ public class ModGlobalLootModifiersProvider extends GlobalLootModifierProvider {
                     continue;
                 }
 
-                for (JsonElement element : namespaceEntry.getValue().getAsJsonArray()) {
-                    ResourceLocation lootTableId = ResourceLocation.tryParse(element.getAsString());
+                List<String> sortedLootTables = new ArrayList<>();
+                namespaceEntry.getValue().getAsJsonArray().forEach(
+                        element -> sortedLootTables.add(element.getAsString()));
+                sortedLootTables.sort(String::compareTo);
+                for (String lootTableValue : sortedLootTables) {
+                    ResourceLocation lootTableId = ResourceLocation.tryParse(lootTableValue);
                     if (lootTableId == null || !namespace.equals(lootTableId.getNamespace())) {
                         throw new IllegalStateException(
-                                "Invalid or incorrectly grouped loot table ID in tier " + tier + ": " + element);
+                                "Invalid or incorrectly grouped loot table ID in tier " + tier + ": "
+                                        + lootTableValue);
                     }
 
                     String modifierPath = namespace + "/" + tier + "_"
@@ -92,8 +119,26 @@ public class ModGlobalLootModifiersProvider extends GlobalLootModifierProvider {
         }
 
         TaCZWeaponBlueprints.LOGGER.info(
-                "Generated 1 dynamic and {} legacy blueprint global loot modifiers",
+                "Generated 1 dynamic, {} Research Data, and {} legacy blueprint global loot modifiers",
+                NOTE_LOOT_TABLES.size() + REPORT_LOOT_TABLES.size() + DOSSIER_LOOT_TABLES.size(),
                 generatedModifiers);
+    }
+
+    private void addResearchData(
+            String name,
+            ItemStack item,
+            float chance,
+            List<ResourceLocation> lootTables) {
+        for (ResourceLocation lootTable : lootTables) {
+            add(
+                    "research_data/" + name + "_" + lootTable.getPath().replace('/', '_'),
+                    new ResearchDataLootModifier(
+                            new LootItemCondition[]{
+                                new LootTableIdCondition.Builder(lootTable).build()
+                            },
+                            item,
+                            chance));
+        }
     }
 
     private static List<Pair<ItemStack, Float>> createBlueprintPool(JsonArray spawnRates) {

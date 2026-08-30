@@ -42,6 +42,14 @@ public final class ResearchTreeStatusGlyph {
                     ".#.#.#.",
                     "...#...",
                     "...#...")),
+            Map.entry(ResearchTreePresentationContract.StatusSymbol.LOCKED, glyph(
+                    "..###..",
+                    ".#...#.",
+                    ".#...#.",
+                    ".#####.",
+                    ".#.#.#.",
+                    ".#...#.",
+                    ".#####.")),
             Map.entry(ResearchTreePresentationContract.StatusSymbol.POINTS_REQUIRED, glyph(
                     ".####..",
                     ".#...#.",

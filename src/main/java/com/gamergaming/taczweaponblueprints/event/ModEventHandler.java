@@ -2,6 +2,9 @@ package com.gamergaming.taczweaponblueprints.event;
 
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
+import com.gamergaming.taczweaponblueprints.progression.ResearchPointAwardReconciliationScheduler;
+import com.gamergaming.taczweaponblueprints.progression.ResearchPointPresentationService;
+import com.gamergaming.taczweaponblueprints.progression.StartingBlueprintGrantService;
 
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.entity.player.PlayerEvent;
@@ -14,7 +17,10 @@ public class ModEventHandler {
     @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
+            StartingBlueprintGrantService.applyConfiguredGrants(serverPlayer);
             NetworkHandler.syncAllPlayerData(serverPlayer);
+            ResearchPointPresentationService.syncHelp(serverPlayer);
+            ResearchPointAwardReconciliationScheduler.schedule(serverPlayer);
         }
     }
 
@@ -22,6 +28,7 @@ public class ModEventHandler {
     public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
             NetworkHandler.syncPlayerRecipeData(serverPlayer);
+            ResearchPointPresentationService.syncHelp(serverPlayer);
         }
     }
 
@@ -29,6 +36,7 @@ public class ModEventHandler {
     public static void onPlayerChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
             NetworkHandler.syncPlayerRecipeData(serverPlayer);
+            ResearchPointPresentationService.syncHelp(serverPlayer);
         }
     }
 }

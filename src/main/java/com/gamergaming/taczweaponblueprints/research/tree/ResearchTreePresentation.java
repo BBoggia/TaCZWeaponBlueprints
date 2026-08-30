@@ -108,7 +108,28 @@ public final class ResearchTreePresentation {
             Optional<ResourceLocation> iconNodeId,
             int order,
             Kind kind,
+            boolean includedInOverview,
             List<Member> members) {
+        /** Uses the stable default for callers that do not author an override. */
+        public Group(
+                ResourceLocation id,
+                String title,
+                Optional<String> translationKey,
+                Optional<ResourceLocation> iconNodeId,
+                int order,
+                Kind kind,
+                List<Member> members) {
+            this(
+                    id,
+                    title,
+                    translationKey,
+                    iconNodeId,
+                    order,
+                    kind,
+                    kind != null && kind.includedInOverviewByDefault(),
+                    members);
+        }
+
         public Group {
             if (id == null || title == null || kind == null || members == null
                     || members.stream().anyMatch(Objects::isNull)) {
@@ -174,9 +195,19 @@ public final class ResearchTreePresentation {
     }
 
     public enum Kind {
-        AUTHORED,
-        ITEM_TYPE_FALLBACK,
-        UNDISCLOSED
+        AUTHORED(true),
+        ITEM_TYPE_FALLBACK(true),
+        UNDISCLOSED(false);
+
+        private final boolean includedInOverviewByDefault;
+
+        Kind(boolean includedInOverviewByDefault) {
+            this.includedInOverviewByDefault = includedInOverviewByDefault;
+        }
+
+        public boolean includedInOverviewByDefault() {
+            return includedInOverviewByDefault;
+        }
     }
 
     private static void validateId(ResourceLocation id, String field) {

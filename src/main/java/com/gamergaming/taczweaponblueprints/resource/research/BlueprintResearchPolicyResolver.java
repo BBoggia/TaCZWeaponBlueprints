@@ -15,6 +15,8 @@ import java.util.function.Predicate;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain;
 import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintLootTag;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchSnapshot.RuleBinding;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchTarget.MatchSpecificity;
@@ -35,25 +37,61 @@ public final class BlueprintResearchPolicyResolver {
             ResourceLocation blueprintId,
             IPlayerRecipeData playerData,
             Predicate<String> blockedPredicate) {
+        return resolve(
+                snapshot,
+                catalog,
+                profileId,
+                blueprintId,
+                playerData,
+                blockedPredicate,
+                ignored -> false);
+    }
+
+    public static BlueprintResearchPolicy resolve(
+            BlueprintResearchSnapshot snapshot,
+            Map<ResourceLocation, BlueprintData> catalog,
+            ResourceLocation profileId,
+            ResourceLocation blueprintId,
+            IPlayerRecipeData playerData,
+            Predicate<String> blockedPredicate,
+            Predicate<ResourceLocation> progressionExemptPredicate) {
         BlueprintResearchSnapshot stableSnapshot = snapshot == null ? BlueprintResearchSnapshot.EMPTY : snapshot;
         Map<ResourceLocation, BlueprintData> stableCatalog = catalog == null ? Map.of() : catalog;
         Predicate<String> stableBlocked = blockedPredicate == null ? ignored -> false : blockedPredicate;
+        Predicate<ResourceLocation> stableExempt = progressionExemptPredicate == null
+                ? ignored -> false
+                : progressionExemptPredicate;
         if (profileId == null || blueprintId == null) {
             throw new IllegalArgumentException("profile and blueprint IDs cannot be null");
         }
 
-        BlueprintResearchPolicyDefinition definition = definitionFor(
+        CacheState state = cacheState(stableSnapshot, stableCatalog, profileId);
+        BlueprintResearchPolicyDefinition rawDefinition = state.rawDefinitions().computeIfAbsent(
+                blueprintId,
+                id -> resolveRawDefinition(
+                        stableSnapshot,
+                        profileId,
+                        id,
+                        stableCatalog.get(id),
+                        state.compiledProfile()));
+        List<EntryPointResolution> runtimeEntryPoints = resolveEntryPoints(
                 stableSnapshot,
                 stableCatalog,
                 profileId,
-                blueprintId);
+                state.compiledProfile(),
+                id -> stableBlocked.test(id.toString()) || stableExempt.test(id));
+        BlueprintResearchPolicyDefinition definition = rebaseEntryPoints(
+                rawDefinition,
+                blueprintId,
+                runtimeEntryPoints);
         boolean playerDataAvailable = playerData != null;
         boolean learned = playerDataAvailable && playerData.hasBlueprint(blueprintId.toString());
         boolean discovered = playerDataAvailable && playerData.hasDiscoveredBlueprint(blueprintId.toString());
         int points = playerDataAvailable ? playerData.getResearchPoints() : 0;
         boolean prerequisitesSatisfied = playerDataAvailable
                 && definition.prerequisites().stream()
-                        .allMatch(id -> playerData.hasBlueprint(id.toString()));
+                        .allMatch(id -> playerData.hasBlueprint(id.toString())
+                                || stableExempt.test(id));
 
         JournalVisibility visibility = definition.visibility();
         if (learned) {
@@ -74,6 +112,7 @@ public final class BlueprintResearchPolicyResolver {
                 PlayerProgressionLimits.MAX_RESEARCH_POINTS,
                 prerequisitesSatisfied,
                 definition.journalEnabled(),
+                definition.treeEnabled(),
                 visibility,
                 definition.researchEnabled(),
                 definition.recyclingEnabled(),
@@ -93,14 +132,32 @@ public final class BlueprintResearchPolicyResolver {
             ResourceLocation profileId,
             ResourceLocation blueprintId) {
         CacheState state = cacheState(snapshot, catalog, profileId);
-        return state.definitions().computeIfAbsent(
+        BlueprintResearchPolicyDefinition rawDefinition = state.rawDefinitions().computeIfAbsent(
                 blueprintId,
-                id -> resolveDefinition(
+                id -> resolveRawDefinition(
                         snapshot,
                         profileId,
                         id,
                         catalog.get(id),
                         state.compiledProfile()));
+        return rebaseEntryPoints(rawDefinition, blueprintId, state.entryPoints());
+    }
+
+    /** Returns the same selector-resolved reverse policy used by server evaluation. */
+    public static BlueprintReverseEngineeringPolicy reverseEngineeringPolicyFor(
+            BlueprintResearchSnapshot snapshot,
+            Map<ResourceLocation, BlueprintData> catalog,
+            ResourceLocation profileId,
+            ResourceLocation blueprintId) {
+        if (profileId == null || blueprintId == null) {
+            return BlueprintReverseEngineeringPolicy.DISABLED;
+        }
+        BlueprintResearchSnapshot stableSnapshot = snapshot == null
+                ? BlueprintResearchSnapshot.EMPTY
+                : snapshot;
+        Map<ResourceLocation, BlueprintData> stableCatalog = catalog == null ? Map.of() : catalog;
+        return definitionFor(stableSnapshot, stableCatalog, profileId, blueprintId)
+                .reverseEngineering();
     }
 
     static void clearCache() {
@@ -135,11 +192,18 @@ public final class BlueprintResearchPolicyResolver {
             if (found != null) {
                 return found;
             }
+            CompiledProfile compiledProfile = CompiledProfile.compile(snapshot, profileId);
             CacheState created = new CacheState(
                     snapshot,
                     catalog,
                     profileId,
-                    CompiledProfile.compile(snapshot, profileId),
+                    compiledProfile,
+                    resolveEntryPoints(
+                            snapshot,
+                            catalog,
+                            profileId,
+                            compiledProfile,
+                            ignored -> false),
                     new ConcurrentHashMap<>());
             List<CacheState> updated = new ArrayList<>(Math.min(MAX_CACHE_STATES, caches.size() + 1));
             updated.add(created);
@@ -168,7 +232,7 @@ public final class BlueprintResearchPolicyResolver {
         return null;
     }
 
-    private static BlueprintResearchPolicyDefinition resolveDefinition(
+    private static BlueprintResearchPolicyDefinition resolveRawDefinition(
             BlueprintResearchSnapshot snapshot,
             ResourceLocation profileId,
             ResourceLocation blueprintId,
@@ -180,15 +244,20 @@ public final class BlueprintResearchPolicyResolver {
         }
         BlueprintResearchPolicyDefinition base = BlueprintResearchPolicyDefinition.fromProfile(profile);
         RuleSelection selection = compiledProfile.select(blueprintId, blueprintData);
-        if (selection.selectedRuleId().isEmpty()) {
-            return base;
-        }
-        ResourceLocation ruleId = selection.selectedRuleId().orElseThrow();
-        return base.apply(ruleId, snapshot.rules().get(ruleId), selection.specificity());
+        BlueprintResearchPolicyDefinition resolved = selection.selectedRuleId().isEmpty()
+                ? base
+                : base.apply(
+                        selection.selectedRuleId().orElseThrow(),
+                        snapshot.rules().get(selection.selectedRuleId().orElseThrow()),
+                        selection.specificity());
+        return blueprintData == null
+                ? resolved
+                : resolved.applyDomainPolicy(profile.domainPolicy(Domain.forKind(blueprintData.getKind())));
     }
 
     private static BlueprintResearchPolicyDefinition disabledDefinition() {
         return new BlueprintResearchPolicyDefinition(
+                false,
                 false,
                 JournalVisibility.HIDDEN,
                 false,
@@ -201,7 +270,208 @@ public final class BlueprintResearchPolicyResolver {
                 false,
                 Optional.empty(),
                 MatchSpecificity.NONE,
-                false);
+                false,
+                BlueprintReverseEngineeringPolicy.DISABLED);
+    }
+
+    public static EntryPointResolution entryPointResolution(
+            BlueprintResearchSnapshot snapshot,
+            Map<ResourceLocation, BlueprintData> catalog,
+            ResourceLocation profileId) {
+        return entryPointResolution(snapshot, catalog, profileId, ignored -> false);
+    }
+
+    public static EntryPointResolution entryPointResolution(
+            BlueprintResearchSnapshot snapshot,
+            Map<ResourceLocation, BlueprintData> catalog,
+            ResourceLocation profileId,
+            Predicate<String> blockedPredicate) {
+        Predicate<String> stableBlocked = blockedPredicate == null ? ignored -> false : blockedPredicate;
+        return resolveLegacyEntryPoint(
+                snapshot == null ? BlueprintResearchSnapshot.EMPTY : snapshot,
+                catalog == null ? Map.of() : catalog,
+                profileId,
+                CompiledProfile.compile(
+                        snapshot == null ? BlueprintResearchSnapshot.EMPTY : snapshot,
+                        profileId),
+                id -> stableBlocked.test(id.toString()));
+    }
+
+    /** Resolves the legacy weapon entry plus every configured Tech Tree domain entry. */
+    public static List<EntryPointResolution> entryPointResolutions(
+            BlueprintResearchSnapshot snapshot,
+            Map<ResourceLocation, BlueprintData> catalog,
+            ResourceLocation profileId) {
+        return entryPointResolutions(snapshot, catalog, profileId, ignored -> false);
+    }
+
+    /** Resolves the legacy weapon entry plus every configured Tech Tree domain entry. */
+    public static List<EntryPointResolution> entryPointResolutions(
+            BlueprintResearchSnapshot snapshot,
+            Map<ResourceLocation, BlueprintData> catalog,
+            ResourceLocation profileId,
+            Predicate<String> blockedPredicate) {
+        return entryPointResolutions(
+                snapshot,
+                catalog,
+                profileId,
+                blockedPredicate,
+                ignored -> false);
+    }
+
+    /** Resolves entry points after both hard blocks and live exemptions. */
+    public static List<EntryPointResolution> entryPointResolutions(
+            BlueprintResearchSnapshot snapshot,
+            Map<ResourceLocation, BlueprintData> catalog,
+            ResourceLocation profileId,
+            Predicate<String> blockedPredicate,
+            Predicate<ResourceLocation> progressionExemptPredicate) {
+        Predicate<String> stableBlocked = blockedPredicate == null ? ignored -> false : blockedPredicate;
+        Predicate<ResourceLocation> stableExempt = progressionExemptPredicate == null
+                ? ignored -> false
+                : progressionExemptPredicate;
+        BlueprintResearchSnapshot stableSnapshot = snapshot == null
+                ? BlueprintResearchSnapshot.EMPTY
+                : snapshot;
+        Map<ResourceLocation, BlueprintData> stableCatalog = catalog == null ? Map.of() : catalog;
+        return resolveEntryPoints(
+                stableSnapshot,
+                stableCatalog,
+                profileId,
+                CompiledProfile.compile(stableSnapshot, profileId),
+                id -> stableBlocked.test(id.toString()) || stableExempt.test(id));
+    }
+
+    private static List<EntryPointResolution> resolveEntryPoints(
+            BlueprintResearchSnapshot snapshot,
+            Map<ResourceLocation, BlueprintData> catalog,
+            ResourceLocation profileId,
+            CompiledProfile compiledProfile,
+            Predicate<ResourceLocation> blockedPredicate) {
+        BlueprintResearchProfile profile = profileId == null ? null : snapshot.profiles().get(profileId);
+        if (profile == null) {
+            return List.of();
+        }
+        List<EntryPointResolution> resolutions = new ArrayList<>();
+        if (!profile.entryPointCandidates().isEmpty()) {
+            resolutions.add(resolveEntryPointGroup(
+                    snapshot,
+                    catalog,
+                    profileId,
+                    compiledProfile,
+                    blockedPredicate,
+                    profile.entryPointCandidates()));
+        }
+        for (ResearchTechTreeContract.Domain domain : ResearchTechTreeContract.DOMAIN_ORDER) {
+            List<ResourceLocation> candidates = profile.techEntryPointCandidates()
+                    .getOrDefault(domain, List.of());
+            if (!candidates.isEmpty()) {
+                resolutions.add(resolveEntryPointGroup(
+                        snapshot,
+                        catalog,
+                        profileId,
+                        compiledProfile,
+                        blockedPredicate,
+                        candidates));
+            }
+        }
+        return List.copyOf(resolutions);
+    }
+
+    private static EntryPointResolution resolveLegacyEntryPoint(
+            BlueprintResearchSnapshot snapshot,
+            Map<ResourceLocation, BlueprintData> catalog,
+            ResourceLocation profileId,
+            CompiledProfile compiledProfile,
+            Predicate<ResourceLocation> blockedPredicate) {
+        BlueprintResearchProfile profile = profileId == null ? null : snapshot.profiles().get(profileId);
+        if (profile == null || profile.entryPointCandidates().isEmpty()) {
+            return EntryPointResolution.NONE;
+        }
+        return resolveEntryPointGroup(
+                snapshot,
+                catalog,
+                profileId,
+                compiledProfile,
+                blockedPredicate,
+                profile.entryPointCandidates());
+    }
+
+    private static EntryPointResolution resolveEntryPointGroup(
+            BlueprintResearchSnapshot snapshot,
+            Map<ResourceLocation, BlueprintData> catalog,
+            ResourceLocation profileId,
+            CompiledProfile compiledProfile,
+            Predicate<ResourceLocation> blockedPredicate,
+            List<ResourceLocation> candidates) {
+        ResourceLocation preferred = candidates.get(0);
+        Optional<ResourceLocation> resolved = candidates.stream()
+                .filter(id -> entryPointUsable(
+                        snapshot,
+                        catalog,
+                        profileId,
+                        id,
+                        compiledProfile,
+                        blockedPredicate))
+                .findFirst();
+        return new EntryPointResolution(Optional.of(preferred), resolved);
+    }
+
+    private static boolean entryPointUsable(
+            BlueprintResearchSnapshot snapshot,
+            Map<ResourceLocation, BlueprintData> catalog,
+            ResourceLocation profileId,
+            ResourceLocation candidate,
+            CompiledProfile compiledProfile,
+            Predicate<ResourceLocation> blockedPredicate) {
+        BlueprintData data = catalog.get(candidate);
+        if (data == null || blockedPredicate.test(candidate)) {
+            return false;
+        }
+        BlueprintResearchPolicyDefinition definition = resolveRawDefinition(
+                snapshot,
+                profileId,
+                candidate,
+                data,
+                compiledProfile);
+        return definition.journalEnabled()
+                && definition.treeEnabled()
+                && definition.researchEnabled()
+                && !definition.requiresDiscovery()
+                && definition.visibility().allowsServerSelection();
+    }
+
+    private static BlueprintResearchPolicyDefinition rebaseEntryPoint(
+            BlueprintResearchPolicyDefinition definition,
+            ResourceLocation blueprintId,
+            EntryPointResolution entryPoint) {
+        if (!entryPoint.usesFallback()) {
+            return definition;
+        }
+        ResourceLocation preferred = entryPoint.preferred().orElseThrow();
+        ResourceLocation resolved = entryPoint.resolved().orElseThrow();
+        if (blueprintId.equals(resolved)) {
+            return definition.withPrerequisites(List.of());
+        }
+        List<ResourceLocation> rebased = definition.prerequisites().stream()
+                .map(id -> id.equals(preferred) ? resolved : id)
+                .filter(id -> !id.equals(blueprintId))
+                .distinct()
+                .toList();
+        return rebased.equals(definition.prerequisites())
+                ? definition
+                : definition.withPrerequisites(rebased);
+    }
+
+    private static BlueprintResearchPolicyDefinition rebaseEntryPoints(
+            BlueprintResearchPolicyDefinition definition,
+            ResourceLocation blueprintId,
+            List<EntryPointResolution> entryPoints) {
+        BlueprintResearchPolicyDefinition rebased = definition;
+        for (EntryPointResolution entryPoint : entryPoints) {
+            rebased = rebaseEntryPoint(rebased, blueprintId, entryPoint);
+        }
+        return rebased;
     }
 
     private static final Comparator<RuleBinding> RULE_ORDER = Comparator
@@ -231,7 +501,27 @@ public final class BlueprintResearchPolicyResolver {
             Map<ResourceLocation, BlueprintData> catalog,
             ResourceLocation profileId,
             CompiledProfile compiledProfile,
-            ConcurrentMap<ResourceLocation, BlueprintResearchPolicyDefinition> definitions) {
+            List<EntryPointResolution> entryPoints,
+            ConcurrentMap<ResourceLocation, BlueprintResearchPolicyDefinition> rawDefinitions) {
+    }
+
+    public record EntryPointResolution(
+            Optional<ResourceLocation> preferred,
+            Optional<ResourceLocation> resolved) {
+        private static final EntryPointResolution NONE = new EntryPointResolution(Optional.empty(), Optional.empty());
+
+        public EntryPointResolution {
+            preferred = preferred == null ? Optional.empty() : preferred;
+            resolved = resolved == null ? Optional.empty() : resolved;
+        }
+
+        public boolean usesFallback() {
+            return preferred.isPresent() && resolved.isPresent() && !preferred.equals(resolved);
+        }
+
+        public boolean unavailable() {
+            return preferred.isPresent() && resolved.isEmpty();
+        }
     }
 
     private record CompiledProfile(

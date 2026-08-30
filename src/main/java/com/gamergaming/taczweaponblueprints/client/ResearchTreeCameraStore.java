@@ -45,6 +45,10 @@ public final class ResearchTreeCameraStore {
             if (mode == null || view == null) {
                 throw new IllegalArgumentException("Research Tree camera identity cannot be null");
             }
+            if (view == ResearchTreePresentationContract.BrowseView.TECH_TREE) {
+                throw new IllegalArgumentException(
+                        "Tech Tree cameras are isolated by domain in ResearchTechTreeViewState");
+            }
             groupId = groupId == null ? Optional.empty() : groupId;
             if (view == ResearchTreePresentationContract.BrowseView.ALL_WEAPONS
                     && groupId.isPresent()) {

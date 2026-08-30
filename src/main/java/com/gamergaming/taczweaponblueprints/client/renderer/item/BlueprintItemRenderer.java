@@ -39,6 +39,18 @@ import java.util.Optional;
 public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
 
     private static final ResourceLocation BLUEPRINT_TEXTURE = new ResourceLocation("taczweaponblueprints", "textures/item/blueprint_base.png");
+    private static final float OVERLAY_SCALE_FACTOR = 0.9F;
+    // TaCZ slot textures use an inverted screen-space Y axis, so positive Z
+    // rotation is the visually clockwise direction in inventory GUIs.
+    private static final float ICON_GUN_OVERLAY_ROTATION_DEGREES = 65.0F;
+    private static final float HELD_GUN_OVERLAY_ROTATION_DEGREES = -80.0F;
+    private static final float HELD_GUN_X_ADJUSTMENT = 0.06F;
+    private static final float HELD_GUN_Y_ADJUSTMENT = -0.16F;
+    // These preserve the established right-hand placement of the 1.2x base
+    // quad, but in pre-rotation coordinates. Only rotated gun overlays use
+    // them; every other layer retains the legacy placement path below.
+    private static final float FIRST_PERSON_RIGHT_GUN_X_OFFSET = -0.3F;
+    private static final float FIRST_PERSON_RIGHT_GUN_Y_OFFSET = 0.24F;
     private static final int MAX_REPORTED_MISSING_BLUEPRINTS = 256;
     private static final Map<String, Boolean> REPORTED_MISSING_BLUEPRINTS =
             Collections.synchronizedMap(new LinkedHashMap<>(MAX_REPORTED_MISSING_BLUEPRINTS + 1, 0.75f, true) {
@@ -83,6 +95,7 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
                     isGuiContext ? 1.3f : 1.2f,
                     displayContext,
                     isGuiContext,
+                    0.0F,
                     false);
             return;
         }
@@ -95,7 +108,10 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
         ResourceLocation overlayTexture;
 
         boolean flipOverlay = true;
-        boolean rotateOverlay = false;
+        boolean gunOverlay = itemCategory.equals("gun");
+        float overlayRotationDegrees = gunOverlay
+                ? gunOverlayRotationDegrees(displayContext)
+                : 0.0F;
 
         switch (itemCategory) {
             case "gun" -> {
@@ -165,6 +181,9 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
             default:
                 break;
         }
+        if (gunOverlay) {
+            overlayScale *= OVERLAY_SCALE_FACTOR;
+        }
 
         // Render the blueprint item in inventory, GUI, or on the ground
         if (isGuiContext) {
@@ -210,10 +229,10 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
 //            }
 
             // Render the base blueprint texture with larger size
-            renderTexturedQuad(poseStack, bufferSource, light, overlay, BLUEPRINT_TEXTURE, baseZLevel, xOffset, yOffset, baseScale, displayContext, true, false);
+            renderTexturedQuad(poseStack, bufferSource, light, overlay, BLUEPRINT_TEXTURE, baseZLevel, xOffset, yOffset, baseScale, displayContext, true, 0.0F, false);
 
             // Render overlay with dynamic scaling
-            renderTexturedQuad(poseStack, bufferSource, light, overlay, overlayTexture, overlayZLevel, xOffset, yOffset, overlayScale, displayContext, flipOverlay, rotateOverlay);
+            renderTexturedQuad(poseStack, bufferSource, light, overlay, overlayTexture, overlayZLevel, xOffset, yOffset, overlayScale, displayContext, flipOverlay, overlayRotationDegrees, false);
 
         } else { // Render the blueprint item in first-person view when holding
             int light = packedLight;
@@ -228,10 +247,6 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
             float overlayYOffset = 0.0f;
 
             flipOverlay = false;
-
-            if (itemCategory.equals("gun")) {
-                rotateOverlay = true;
-            }
 
             switch (data.getItemType()) {
                 case "pistol":
@@ -294,12 +309,28 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
 
             }
 
+            if (gunOverlay) {
+                // TaCZ gun slot textures need a held-only horizontal mirror.
+                // Fine-tune them in the blueprint's local plane without
+                // disturbing the legacy ammo and attachment placement.
+                overlayXOffset += HELD_GUN_X_ADJUSTMENT;
+                overlayYOffset += HELD_GUN_Y_ADJUSTMENT;
+            }
+
             // Render base blueprint texture
-            renderTexturedQuad(poseStack, bufferSource, light, overlay, BLUEPRINT_TEXTURE, baseZLevel, baseXOffset, baseYOffset, baseScale, displayContext, false, false);
+            renderTexturedQuad(poseStack, bufferSource, light, overlay, BLUEPRINT_TEXTURE, baseZLevel, baseXOffset, baseYOffset, baseScale, displayContext, false, 0.0F, false);
 
             // Render overlay at same Z-level
-            renderTexturedQuad(poseStack, bufferSource, light, overlay, overlayTexture, overlayZLevel, overlayXOffset, overlayYOffset, overlayScale, displayContext, flipOverlay, rotateOverlay);
+            renderTexturedQuad(poseStack, bufferSource, light, overlay, overlayTexture, overlayZLevel, overlayXOffset, overlayYOffset, overlayScale, displayContext, flipOverlay, overlayRotationDegrees, gunOverlay);
         }
+    }
+
+    private static float gunOverlayRotationDegrees(ItemDisplayContext displayContext) {
+        return switch (displayContext) {
+            case FIRST_PERSON_LEFT_HAND, FIRST_PERSON_RIGHT_HAND,
+                    THIRD_PERSON_LEFT_HAND, THIRD_PERSON_RIGHT_HAND -> HELD_GUN_OVERLAY_ROTATION_DEGREES;
+            default -> ICON_GUN_OVERLAY_ROTATION_DEGREES;
+        };
     }
 
     private static void reportMissingBlueprintOnce(String blueprintId) {
@@ -312,7 +343,7 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
         }
     }
 
-    private void renderTexturedQuad(PoseStack poseStack, MultiBufferSource bufferSource, int light, int overlay, ResourceLocation texture, float zLevel, float xOffset, float yOffset, float scale, ItemDisplayContext displayContext, boolean flipOverlay, boolean rotateOverlay) {
+    private void renderTexturedQuad(PoseStack poseStack, MultiBufferSource bufferSource, int light, int overlay, ResourceLocation texture, float zLevel, float xOffset, float yOffset, float scale, ItemDisplayContext displayContext, boolean flipOverlay, float rotationDegrees, boolean alignRotatedHeldOverlay) {
 
         boolean isGuiContext = (displayContext == ItemDisplayContext.GUI ||
                 displayContext == ItemDisplayContext.GROUND ||
@@ -330,16 +361,14 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
 
         poseStack.pushPose();
 
+        applyGunDisplayContextOffset(poseStack, displayContext, alignRotatedHeldOverlay);
         poseStack.translate(xOffset, yOffset, 0.0f);
 
         // Translate to the center of the quad
         poseStack.translate(0.5f, 0.5f, 0.0f);
 
-        if (rotateOverlay) {
-            // Rotate overlay texture 90 degrees
-            poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(-75F));
-            poseStack.translate(-0.05f, -0.335f, 0.0f);
-
+        if (rotationDegrees != 0.0F) {
+            poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(rotationDegrees));
         }
 
         // Apply scaling
@@ -348,10 +377,11 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
         // Translate back to the original position
         poseStack.translate(-0.5f, -0.5f, 0.0f);
 
-
-        if (displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND) {
-            // Translate slightly left and up
-            poseStack.translate(-0.25f, 0.2f, 0.0f);
+        if (displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND
+                && !alignRotatedHeldOverlay) {
+            // Preserve the original placement for the base, ammo, and
+            // attachments. Rotated gun overlays were aligned before rotation.
+            poseStack.translate(-0.25F, 0.2F, 0.0F);
         }
 
         Matrix4f matrix = poseStack.last().pose();
@@ -405,84 +435,17 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
         poseStack.popPose();
     }
 
-//    private void renderTexturedQuad(PoseStack poseStack, MultiBufferSource bufferSource, int light, int overlay, ResourceLocation texture, float zLevel, float xOffset, float yOffset, float scale, ItemDisplayContext displayContext, boolean flipOverlay) {
-//        boolean isGuiContext = (displayContext == ItemDisplayContext.GUI ||
-//                                displayContext == ItemDisplayContext.GROUND ||
-//                                displayContext == ItemDisplayContext.FIXED ||
-//                                displayContext == ItemDisplayContext.NONE);
-//
-//        RenderType renderType;
-//        if (isGuiContext) {
-//            renderType = RenderType.entityTranslucent(texture);
-//        } else {
-//            renderType = RenderType.entityCutout(texture);
-//        }
-//
-//        VertexConsumer vertexConsumer = bufferSource.getBuffer(renderType);
-//
-//        poseStack.pushPose();
-//
-//        poseStack.translate(xOffset, yOffset, 0.0f);
-//
-//        poseStack.scale(scale, scale, scale);
-//
-//        float deltaX = 0.5f * (1 - scale);
-//        float deltaY = 0.5f * (1 - scale);
-//        poseStack.translate(deltaX, deltaY, 0.0f);
-//
-//        if (displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND) {
-//            // Translate slightly left and up
-//            poseStack.translate(-0.25f, 0.2f, 0.0f);
-//        }
-//
-//        Matrix4f matrix = poseStack.last().pose();
-//        Matrix3f normalMatrix = poseStack.last().normal();
-//
-//        float minX = 0.0f;
-//        float minY = 0.0f;
-//        float maxX = 1.0f;
-//        float maxY = 1.0f;
-//
-//        float normalX = 0.0F;
-//        float normalY = 0.0F;
-//        float normalZ = -1.0F;
-//
-//        // Decide whether to flip horizontally based on flipOverlay
-//        float u1 = flipOverlay ? 0.0f : 1.0f;
-//        float u2 = flipOverlay ? 1.0f : 0.0f;
-//
-//        vertexConsumer.vertex(matrix, minX, minY, zLevel)
-//                .color(255, 255, 255, 255)
-//                .uv(u1, 1.0f)
-//                .overlayCoords(overlay)
-//                .uv2(light)
-//                .normal(normalMatrix, 0.0f, 0.0f, -1.0f)
-//                .endVertex();
-//
-//        vertexConsumer.vertex(matrix, maxX, minY, zLevel)
-//                .color(255, 255, 255, 255)
-//                .uv(u2, 1.0f)
-//                .overlayCoords(overlay)
-//                .uv2(light)
-//                .normal(normalMatrix, 0.0f, 0.0f, -1.0f)
-//                .endVertex();
-//
-//        vertexConsumer.vertex(matrix, maxX, maxY, zLevel)
-//                .color(255, 255, 255, 255)
-//                .uv(u2, 0.0f)
-//                .overlayCoords(overlay)
-//                .uv2(light)
-//                .normal(normalMatrix, 0.0f, 0.0f, -1.0f)
-//                .endVertex();
-//
-//        vertexConsumer.vertex(matrix, minX, maxY, zLevel)
-//                .color(255, 255, 255, 255)
-//                .uv(u1, 0.0f)
-//                .overlayCoords(overlay)
-//                .uv2(light)
-//                .normal(normalMatrix, 0.0f, 0.0f, -1.0f)
-//                .endVertex();
-//
-//        poseStack.popPose();
-//    }
+    private static void applyGunDisplayContextOffset(
+            PoseStack poseStack,
+            ItemDisplayContext displayContext,
+            boolean alignRotatedHeldOverlay) {
+        if (displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND
+                && alignRotatedHeldOverlay) {
+            poseStack.translate(
+                    FIRST_PERSON_RIGHT_GUN_X_OFFSET,
+                    FIRST_PERSON_RIGHT_GUN_Y_OFFSET,
+                    0.0F);
+        }
+    }
+
 }

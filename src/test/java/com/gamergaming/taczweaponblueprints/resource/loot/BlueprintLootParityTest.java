@@ -64,7 +64,10 @@ class BlueprintLootParityTest {
         globalIndex.getAsJsonArray("entries").forEach(element -> entries.add(element.getAsString()));
 
         assertTrue(entries.contains("taczweaponblueprints:dynamic_blueprints"));
-        assertEquals(486, entries.size());
+        assertTrue(entries.contains("taczweaponblueprints:research_data/note_chests_simple_dungeon"));
+        assertTrue(entries.contains("taczweaponblueprints:research_data/report_chests_stronghold_library"));
+        assertTrue(entries.contains("taczweaponblueprints:research_data/dossier_chests_end_city_treasure"));
+        assertEquals(494, entries.size());
     }
 
     private static List<BlueprintLootEntry> legacyPoolEntries(JsonArray legacyPool) {

@@ -1,0 +1,271 @@
+{
+  "format": 1,
+  "tree": "taczweaponblueprints:default",
+  "priority": 100,
+  "entries": [
+    {
+      "target": {
+        "blueprints": [
+          "tacz:45_70"
+        ]
+      },
+      "domain": "ammo",
+      "lane": "taczweaponblueprints:ammo/full_power",
+      "tier": "basic",
+      "order": 100
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:30_06"
+        ]
+      },
+      "domain": "ammo",
+      "lane": "taczweaponblueprints:ammo/full_power",
+      "tier": "established",
+      "order": 201
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:792x57"
+        ]
+      },
+      "domain": "ammo",
+      "lane": "taczweaponblueprints:ammo/full_power",
+      "tier": "advanced",
+      "order": 302
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:762x54"
+        ]
+      },
+      "domain": "ammo",
+      "lane": "taczweaponblueprints:ammo/full_power",
+      "tier": "advanced",
+      "order": 303
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:308"
+        ]
+      },
+      "domain": "ammo",
+      "lane": "taczweaponblueprints:ammo/full_power",
+      "tier": "elite",
+      "order": 404
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:68x51fury"
+        ]
+      },
+      "domain": "ammo",
+      "lane": "taczweaponblueprints:ammo/full_power",
+      "tier": "elite",
+      "order": 405
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:22wmr"
+        ]
+      },
+      "domain": "ammo",
+      "lane": "taczweaponblueprints:ammo/handgun",
+      "tier": "starter",
+      "order": 1
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:9mm"
+        ]
+      },
+      "domain": "ammo",
+      "lane": "taczweaponblueprints:ammo/handgun",
+      "tier": "starter",
+      "order": 0
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:45acp"
+        ]
+      },
+      "domain": "ammo",
+      "lane": "taczweaponblueprints:ammo/handgun",
+      "tier": "basic",
+      "order": 102
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:357mag"
+        ]
+      },
+      "domain": "ammo",
+      "lane": "taczweaponblueprints:ammo/handgun",
+      "tier": "established",
+      "order": 203
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:50ae"
+        ]
+      },
+      "domain": "ammo",
+      "lane": "taczweaponblueprints:ammo/handgun",
+      "tier": "advanced",
+      "order": 304
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:500mag"
+        ]
+      },
+      "domain": "ammo",
+      "lane": "taczweaponblueprints:ammo/handgun",
+      "tier": "elite",
+      "order": 405
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:545x39"
+        ]
+      },
+      "domain": "ammo",
+      "lane": "taczweaponblueprints:ammo/intermediate",
+      "tier": "basic",
+      "order": 100
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:556x45"
+        ]
+      },
+      "domain": "ammo",
+      "lane": "taczweaponblueprints:ammo/intermediate",
+      "tier": "established",
+      "order": 201
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:58x42"
+        ]
+      },
+      "domain": "ammo",
+      "lane": "taczweaponblueprints:ammo/intermediate",
+      "tier": "established",
+      "order": 202
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:762x39"
+        ]
+      },
+      "domain": "ammo",
+      "lane": "taczweaponblueprints:ammo/intermediate",
+      "tier": "advanced",
+      "order": 303
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:40mm"
+        ]
+      },
+      "domain": "ammo",
+      "lane": "taczweaponblueprints:ammo/ordnance",
+      "tier": "elite",
+      "order": 400
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:rpg_rocket"
+        ]
+      },
+      "domain": "ammo",
+      "lane": "taczweaponblueprints:ammo/ordnance",
+      "tier": "apex",
+      "order": 501
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:762x25"
+        ]
+      },
+      "domain": "ammo",
+      "lane": "taczweaponblueprints:ammo/pdw",
+      "tier": "starter",
+      "order": 2
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:46x30"
+        ]
+      },
+      "domain": "ammo",
+      "lane": "taczweaponblueprints:ammo/pdw",
+      "tier": "basic",
+      "order": 101
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:57x28"
+        ]
+      },
+      "domain": "ammo",
+      "lane": "taczweaponblueprints:ammo/pdw",
+      "tier": "established",
+      "order": 202
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:338"
+        ]
+      },
+      "domain": "ammo",
+      "lane": "taczweaponblueprints:ammo/precision",
+      "tier": "elite",
+      "order": 400
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:50bmg"
+        ]
+      },
+      "domain": "ammo",
+      "lane": "taczweaponblueprints:ammo/precision",
+      "tier": "apex",
+      "order": 501
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:12g"
+        ]
+      },
+      "domain": "ammo",
+      "lane": "taczweaponblueprints:ammo/shotgun",
+      "tier": "basic",
+      "order": 100
+    }
+  ]
+}

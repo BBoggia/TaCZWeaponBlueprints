@@ -3,6 +3,7 @@ package com.gamergaming.taczweaponblueprints.progression;
 import java.util.Optional;
 import java.util.function.Function;
 
+import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
@@ -39,25 +40,55 @@ public final class BlueprintRecyclingService {
         }
 
         IPlayerRecipeData playerData = resolvedData.orElseThrow();
-        int migrated = BlueprintDataManager.SERVER.migrateLegacyUnlocks(playerData);
+        BlueprintLearningService.MigrationResult migration =
+                BlueprintLearningService.migrateLegacyUnlocksDetailed(
+                        BlueprintDataManager.SERVER, playerData);
         Result result = recycle(
                 input,
                 playerData,
                 id -> BlueprintResearchDataManager.INSTANCE.policyFor(id, playerData));
-        switch (requiredSync(result, migrated)) {
-            case FULL -> NetworkHandler.syncPlayerProgressionData(player);
-            case POINTS -> NetworkHandler.syncPlayerPointBalance(player);
-            case NONE -> {
-            }
+        publishPostCommitBestEffort(player, requiredSync(result, migration));
+        if (result.successful()) {
+            NetworkHandler.sendResearchPointFeedback(
+                    player,
+                    new ResearchPointPresentationService.Feedback(
+                            result.awardedPoints(), 1, false, java.util.List.of()));
         }
         return result;
     }
 
-    static SyncKind requiredSync(Result result, int migrated) {
-        if (migrated > 0) {
-            // Migration changes learned nodes and prerequisite availability, so a
-            // point-only publication cannot safely reuse the previous tree.
-            return SyncKind.FULL;
+    private static void publishPostCommitBestEffort(
+            ServerPlayer player,
+            SyncKind syncKind) {
+        try {
+            switch (syncKind) {
+                case KNOWLEDGE -> NetworkHandler.syncPlayerRecipeData(player);
+                case POINTS -> NetworkHandler.syncPlayerPointBalance(player);
+                case NONE -> {
+                }
+            }
+        } catch (RuntimeException exception) {
+            TaCZWeaponBlueprints.LOGGER.error(
+                    "Blueprint recycling committed for {}, but immediate {} sync failed; scheduling a retry",
+                    player == null ? "unknown player" : player.getGameProfile().getName(),
+                    syncKind,
+                    exception);
+            if (syncKind == SyncKind.KNOWLEDGE) {
+                BlueprintProgressionSyncScheduler.markKnowledgeDirty(player);
+            } else if (syncKind == SyncKind.POINTS) {
+                BlueprintProgressionSyncScheduler.markDirty(player);
+            }
+        }
+    }
+
+    static SyncKind requiredSync(
+            Result result,
+            BlueprintLearningService.MigrationResult migration) {
+        if (migration != null && migration.changed()) {
+            // Migration may repair the legacy recipe alias as well as learned
+            // nodes and prerequisites, so publish recipe knowledge and the
+            // complete tree together.
+            return SyncKind.KNOWLEDGE;
         }
         return result != null && result.successful() ? SyncKind.POINTS : SyncKind.NONE;
     }
@@ -100,7 +131,12 @@ public final class BlueprintRecyclingService {
             return Result.failure(
                     evaluation.status(), evaluation.blueprintId(), evaluation.currentBalance());
         }
-        if (!playerData.addResearchPoints(evaluation.pointValue(), evaluation.pointCap())) {
+        ResearchPointTransactionService.Result pointResult = ResearchPointTransactionService.credit(
+                playerData,
+                evaluation.pointValue(),
+                evaluation.pointCap(),
+                ResearchPointTransactionService.OverflowPolicy.REQUIRE_FULL);
+        if (!pointResult.successful()) {
             return Result.failure(
                     Status.POINT_CAP_REACHED,
                     evaluation.blueprintId(),
@@ -110,8 +146,8 @@ public final class BlueprintRecyclingService {
         return new Result(
                 Status.SUCCESS,
                 evaluation.blueprintId(),
-                evaluation.pointValue(),
-                playerData.getResearchPoints());
+                pointResult.awardedPoints(),
+                pointResult.newBalance());
     }
 
     static Evaluation evaluate(
@@ -142,13 +178,18 @@ public final class BlueprintRecyclingService {
             return Evaluation.failure(
                     Status.POLICY_UNAVAILABLE, inputId, 0, playerData.getResearchPoints(), 0);
         }
-        return evaluatePolicy(inputId.orElseThrow(), playerData, policy);
+        return evaluatePolicy(
+                inputId.orElseThrow(),
+                playerData,
+                policy,
+                input.provenanceAllowsRecycling());
     }
 
     private static Evaluation evaluatePolicy(
             ResourceLocation inputId,
             IPlayerRecipeData playerData,
-            BlueprintResearchPolicy policy) {
+            BlueprintResearchPolicy policy,
+            boolean provenanceAllowsRecycling) {
         int currentPoints = playerData.getResearchPoints();
         if (policy == null) {
             return Evaluation.failure(
@@ -182,6 +223,10 @@ public final class BlueprintRecyclingService {
             return Evaluation.failure(
                     Status.DUPLICATE_REQUIRED, Optional.of(inputId), value, currentPoints, pointCap);
         }
+        if (!provenanceAllowsRecycling) {
+            return Evaluation.failure(
+                    Status.POLICY_INELIGIBLE, Optional.of(inputId), value, currentPoints, pointCap);
+        }
         if (value > policy.pointCap() || currentPoints > policy.pointCap() - value) {
             return Evaluation.failure(
                     Status.POINT_CAP_REACHED, Optional.of(inputId), value, currentPoints, pointCap);
@@ -212,6 +257,11 @@ public final class BlueprintRecyclingService {
             public void consumeOne() {
                 stack.shrink(1);
             }
+
+            @Override
+            public boolean provenanceAllowsRecycling() {
+                return BlueprintItem.provenanceAllowsRecycling(stack);
+            }
         };
     }
 
@@ -221,12 +271,16 @@ public final class BlueprintRecyclingService {
         int count();
 
         void consumeOne();
+
+        default boolean provenanceAllowsRecycling() {
+            return true;
+        }
     }
 
     enum SyncKind {
         NONE,
         POINTS,
-        FULL
+        KNOWLEDGE
     }
 
     public enum Status {

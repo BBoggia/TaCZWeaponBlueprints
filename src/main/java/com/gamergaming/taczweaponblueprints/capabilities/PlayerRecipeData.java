@@ -22,11 +22,31 @@ public class PlayerRecipeData implements IPlayerRecipeData {
     private static final String BLUEPRINTS_TAG = "Blueprints";
     private static final String DISCOVERED_BLUEPRINTS_TAG = "DiscoveredBlueprints";
     private static final String RESEARCH_POINTS_TAG = "ResearchPoints";
+    private static final String RESEARCH_POINT_AWARDS_TAG = "ResearchPointAwards";
 
     private final Set<String> learnedRecipes = new LinkedHashSet<>();
     private final Set<String> learnedBlueprints = new LinkedHashSet<>();
     private final Set<String> discoveredBlueprints = new LinkedHashSet<>();
+    private final ResearchPointAwardLedger researchPointAwardLedger =
+            new ResearchPointAwardLedger();
     private int researchPoints;
+
+    /**
+     * Creates a detached, progression-free copy of the RP balance and award
+     * ledger for sequential, non-mutating transaction simulation.
+     */
+    public static PlayerRecipeData copyResearchPointState(IPlayerRecipeData source) {
+        if (source == null
+                || source.getResearchPoints() < 0
+                || source.getResearchPoints() > PlayerProgressionLimits.MAX_RESEARCH_POINTS
+                || source.getResearchPointAwardLedger() == null) {
+            return null;
+        }
+        PlayerRecipeData copy = new PlayerRecipeData();
+        copy.researchPoints = source.getResearchPoints();
+        copy.researchPointAwardLedger.replaceWith(source.getResearchPointAwardLedger());
+        return copy;
+    }
 
     @Override
     public Set<String> getLearnedRecipes() {
@@ -46,6 +66,94 @@ public class PlayerRecipeData implements IPlayerRecipeData {
     @Override
     public int getResearchPoints() {
         return researchPoints;
+    }
+
+    @Override
+    public ResearchPointAwardLedger getResearchPointAwardLedger() {
+        return researchPointAwardLedger;
+    }
+
+    @Override
+    public synchronized BlueprintLearningMutation.Result applyBlueprintLearning(
+            BlueprintLearningMutation.Request request) {
+        if (request == null) {
+            throw new IllegalArgumentException(
+                    "blueprint learning request cannot be null");
+        }
+        String blueprintId = normalizeResourceId(request.blueprintId());
+        String recipeId = normalizeResourceId(request.legacyRecipeId());
+        if (blueprintId == null || recipeId == null) {
+            return BlueprintLearningMutation.Result.unchanged(
+                    BlueprintLearningMutation.Status.INVALID_IDENTITY,
+                    request.operation());
+        }
+
+        boolean learnedChanged = !learnedBlueprints.contains(blueprintId);
+        boolean discoveredChanged = !discoveredBlueprints.contains(blueprintId);
+        boolean recipeChanged = !learnedRecipes.contains(recipeId);
+        if (!learnedChanged && !discoveredChanged && !recipeChanged) {
+            return BlueprintLearningMutation.Result.unchanged(
+                    BlueprintLearningMutation.Status.ALREADY_LEARNED,
+                    request.operation());
+        }
+        if ((learnedChanged
+                && learnedBlueprints.size()
+                        >= PlayerProgressionLimits.MAX_IDS_PER_COLLECTION)
+                || (discoveredChanged
+                && discoveredBlueprints.size()
+                        >= PlayerProgressionLimits.MAX_IDS_PER_COLLECTION)
+                || (recipeChanged
+                && learnedRecipes.size()
+                        >= PlayerProgressionLimits.MAX_IDS_PER_COLLECTION)) {
+            return BlueprintLearningMutation.Result.unchanged(
+                    BlueprintLearningMutation.Status.CAPACITY_REACHED,
+                    request.operation());
+        }
+
+        if (request.operation() == BlueprintLearningMutation.Operation.PREFLIGHT) {
+            return BlueprintLearningMutation.Result.ready(
+                    learnedChanged,
+                    discoveredChanged,
+                    recipeChanged);
+        }
+
+        // Every rejecting condition is resolved above. Roll back any
+        // unexpected unchecked collection failure before exposing a result.
+        boolean discoveryAdded = false;
+        boolean recipeAdded = false;
+        boolean learnedAdded = false;
+        try {
+            if (discoveredChanged) {
+                discoveryAdded = discoveredBlueprints.add(blueprintId);
+            }
+            if (recipeChanged) {
+                recipeAdded = learnedRecipes.add(recipeId);
+            }
+            if (learnedChanged) {
+                learnedAdded = learnedBlueprints.add(blueprintId);
+            }
+            if (discoveryAdded != discoveredChanged
+                    || recipeAdded != recipeChanged
+                    || learnedAdded != learnedChanged) {
+                throw new IllegalStateException(
+                        "blueprint progression changed during atomic learning");
+            }
+        } catch (RuntimeException exception) {
+            if (learnedAdded) {
+                learnedBlueprints.remove(blueprintId);
+            }
+            if (recipeAdded) {
+                learnedRecipes.remove(recipeId);
+            }
+            if (discoveryAdded) {
+                discoveredBlueprints.remove(blueprintId);
+            }
+            throw exception;
+        }
+        return BlueprintLearningMutation.Result.applied(
+                learnedChanged,
+                discoveredChanged,
+                recipeChanged);
     }
 
     @Override
@@ -109,10 +217,23 @@ public class PlayerRecipeData implements IPlayerRecipeData {
 
     @Override
     public boolean addResearchPoints(int amount, int pointCap) {
+        return applyResearchPointTransaction(
+                amount, pointCap, ResearchPointAwardLedger.Mutation.empty());
+    }
+
+    @Override
+    public boolean applyResearchPointTransaction(
+            int amount,
+            int pointCap,
+            ResearchPointAwardLedger.Mutation ledgerMutation) {
         if (amount < 0
                 || pointCap < 0
                 || pointCap > PlayerProgressionLimits.MAX_RESEARCH_POINTS
-                || researchPoints > pointCap - amount) {
+                || (amount > 0 && researchPoints > pointCap - amount)
+                || ledgerMutation == null) {
+            return false;
+        }
+        if (!researchPointAwardLedger.apply(ledgerMutation)) {
             return false;
         }
         researchPoints += amount;
@@ -126,6 +247,11 @@ public class PlayerRecipeData implements IPlayerRecipeData {
         }
         researchPoints -= amount;
         return true;
+    }
+
+    @Override
+    public void clearResearchPointAwardLedger() {
+        researchPointAwardLedger.clear();
     }
 
     @Override
@@ -179,6 +305,7 @@ public class PlayerRecipeData implements IPlayerRecipeData {
         nbt.put(BLUEPRINTS_TAG, writeSortedIds(learnedBlueprints));
         nbt.put(DISCOVERED_BLUEPRINTS_TAG, writeSortedIds(discoveredBlueprints));
         nbt.putInt(RESEARCH_POINTS_TAG, researchPoints);
+        nbt.put(RESEARCH_POINT_AWARDS_TAG, researchPointAwardLedger.serializeNBT());
         return nbt;
     }
 
@@ -187,6 +314,7 @@ public class PlayerRecipeData implements IPlayerRecipeData {
         learnedRecipes.clear();
         learnedBlueprints.clear();
         discoveredBlueprints.clear();
+        researchPointAwardLedger.clear();
         researchPoints = 0;
         if (nbt == null) {
             return;
@@ -214,6 +342,9 @@ public class PlayerRecipeData implements IPlayerRecipeData {
                             : (int) loadedPoints;
                 }
             }
+        }
+        if (dataVersion >= 2 && nbt.contains(RESEARCH_POINT_AWARDS_TAG, Tag.TAG_COMPOUND)) {
+            researchPointAwardLedger.deserializeNBT(nbt.getCompound(RESEARCH_POINT_AWARDS_TAG));
         }
 
     }

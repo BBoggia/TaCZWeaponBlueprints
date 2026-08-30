@@ -31,6 +31,19 @@ public class ModItems {
                         ModBlocks.RESEARCH_BENCH.get(),
                         new Item.Properties()));
 
+        public static final RegistryObject<Item> BLUEPRINT_RECYCLER_ITEM =
+                ITEMS.register("blueprint_recycler", () -> new BlockItem(
+                        ModBlocks.BLUEPRINT_RECYCLER.get(),
+                        new Item.Properties()));
+
+        /** Physical datapack-addressable inputs for explicit Blueprint Recycler turn-ins. */
+        public static final RegistryObject<Item> RESEARCH_NOTE =
+                ITEMS.register("research_note", () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> RESEARCH_REPORT =
+                ITEMS.register("research_report", () -> new Item(new Item.Properties()));
+        public static final RegistryObject<Item> RESEARCH_DOSSIER =
+                ITEMS.register("research_dossier", () -> new Item(new Item.Properties()));
+
         public static final RegistryObject<Item> AMMO_BLUEPRINT_ITEM =
                 ITEMS.register("ammo_blueprint_tab", () -> new Item(
                         new Item.Properties()

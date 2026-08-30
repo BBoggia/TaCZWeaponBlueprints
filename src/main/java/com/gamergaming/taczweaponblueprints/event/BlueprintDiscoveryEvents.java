@@ -4,6 +4,7 @@ import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintDiscoveryService;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionSyncScheduler;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
+import com.gamergaming.taczweaponblueprints.progression.ResearchPointAwardReconciliationScheduler;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
@@ -27,6 +28,7 @@ public final class BlueprintDiscoveryEvents {
     @SubscribeEvent
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
         if (event.phase == TickEvent.Phase.END && event.player instanceof ServerPlayer serverPlayer) {
+            ResearchPointAwardReconciliationScheduler.process(serverPlayer);
             BlueprintProgressionSyncScheduler.flush(serverPlayer);
         }
     }
@@ -35,6 +37,7 @@ public final class BlueprintDiscoveryEvents {
     public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
             BlueprintProgressionSyncScheduler.clear(serverPlayer);
+            ResearchPointAwardReconciliationScheduler.clear(serverPlayer);
             NetworkHandler.clearPlayerSyncState(serverPlayer);
         }
     }

@@ -19,10 +19,32 @@ class BlueprintProgressionSyncSchedulerTest {
         UUID playerId = UUID.randomUUID();
 
         assertTrue(BlueprintProgressionSyncScheduler.markDirty(playerId));
+        assertTrue(BlueprintProgressionSyncScheduler.hasPendingFullSync(playerId));
         assertFalse(BlueprintProgressionSyncScheduler.markDirty(playerId));
         assertTrue(BlueprintProgressionSyncScheduler.consume(playerId));
+        assertFalse(BlueprintProgressionSyncScheduler.hasPendingFullSync(playerId));
         assertFalse(BlueprintProgressionSyncScheduler.consume(playerId));
         assertTrue(BlueprintProgressionSyncScheduler.markDirty(playerId));
+    }
+
+    @Test
+    void exposesPendingFullPublicationWithoutConsumingIt() {
+        UUID playerId = UUID.randomUUID();
+
+        assertTrue(BlueprintProgressionSyncScheduler.markDirty(playerId));
+        assertTrue(BlueprintProgressionSyncScheduler.hasPendingFullSync(playerId));
+        assertTrue(BlueprintProgressionSyncScheduler.consume(playerId));
+    }
+
+    @Test
+    void recipeKnowledgePublicationSupersedesAProgressionOnlyRequest() {
+        UUID playerId = UUID.randomUUID();
+
+        assertTrue(BlueprintProgressionSyncScheduler.markDirty(playerId));
+        assertTrue(BlueprintProgressionSyncScheduler.markKnowledgeDirty(playerId));
+        assertTrue(BlueprintProgressionSyncScheduler.hasPendingFullSync(playerId));
+        assertTrue(BlueprintProgressionSyncScheduler.hasPendingKnowledgeSync(playerId));
+        assertFalse(BlueprintProgressionSyncScheduler.consume(playerId));
     }
 
     @Test
