@@ -9,6 +9,7 @@ import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
 import com.gamergaming.taczweaponblueprints.menu.ResearchSelectionPreview;
 import com.gamergaming.taczweaponblueprints.progression.ResearchCostMode;
+import com.gamergaming.taczweaponblueprints.progression.ResearchRouteFingerprint;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCost;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchIngredient;
 
@@ -77,12 +78,16 @@ public final class SyncResearchBenchPreviewPacket {
         if (costModeOrdinal < 0 || costModeOrdinal >= costModes.length) {
             throw new IllegalArgumentException("invalid Research Bench cost mode");
         }
+        Optional<ResearchRouteFingerprint> routeFingerprint = buffer.readBoolean()
+                ? Optional.of(new ResearchRouteFingerprint(
+                        buffer.readLong(), buffer.readLong()))
+                : Optional.empty();
         this.preview = new ResearchSelectionPreview(
                 blueprintId, pointCost, pointBalance,
                 policyEligible, ingredientsSatisfied, outputSpace,
                 researchable, creativeBypass, ingredients,
                 unlockCount, totalIngredientTypes, pathPlanningState,
-                costModes[costModeOrdinal]);
+                costModes[costModeOrdinal], routeFingerprint);
     }
 
     public void toBytes(FriendlyByteBuf buffer) {
@@ -107,6 +112,11 @@ public final class SyncResearchBenchPreviewPacket {
             buffer.writeVarInt(ingredient.inventoryAvailable());
         }
         buffer.writeVarInt(preview.costMode().ordinal());
+        buffer.writeBoolean(preview.routeFingerprint().isPresent());
+        preview.routeFingerprint().ifPresent(fingerprint -> {
+            buffer.writeLong(fingerprint.high());
+            buffer.writeLong(fingerprint.low());
+        });
     }
 
     public void handle(Supplier<NetworkEvent.Context> contextSupplier) {

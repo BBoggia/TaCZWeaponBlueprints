@@ -43,4 +43,7 @@ forge*changelog.txt
 /**/.DS_Store
 
 /run-data
-/docs/development
+
+# Local agent working notes and phased development records
+/.local/
+/docs/development/

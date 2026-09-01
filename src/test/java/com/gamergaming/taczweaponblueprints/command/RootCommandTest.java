@@ -1,6 +1,7 @@
 package com.gamergaming.taczweaponblueprints.command;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import com.mojang.brigadier.CommandDispatcher;
 import org.junit.jupiter.api.Test;
@@ -16,7 +17,7 @@ class RootCommandTest {
 
         var root = dispatcher.getRoot().getChild("gg");
         assertNotNull(root);
-        assertNotNull(root.getChild("clearRecipes"));
+        assertNull(root.getChild("clearRecipes"));
         assertNotNull(root.getChild("reloadRecipes"));
 
         var loot = root.getChild("loot");

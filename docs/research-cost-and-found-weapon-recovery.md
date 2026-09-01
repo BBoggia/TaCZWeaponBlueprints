@@ -95,7 +95,7 @@ curve. Discovery awards are dispatched through the same post-commit transition
 used by ordinary reverse engineering. RP caps, maximum transaction bounds, and
 rollback behavior remain in force.
 
-This change requires matching protocol-40 clients and servers. It adds no new
+This change requires matching protocol-42 clients and servers. It adds no new
 player-save version and does not rewrite existing items. Existing guns have no
 origin marker and remain protected unless a trusted server workflow later
 creates a newly marked gun. No automatic backfill guesses whether an old gun

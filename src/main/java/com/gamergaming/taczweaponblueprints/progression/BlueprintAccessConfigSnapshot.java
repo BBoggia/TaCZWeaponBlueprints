@@ -51,7 +51,7 @@ public record BlueprintAccessConfigSnapshot(
         return new BlueprintAccessConfigSnapshot(
                 parseIds(config.progressionExemptBlueprints),
                 parseKinds(config.progressionExemptKinds),
-                normalizeTypes(config.progressionExemptItemTypes),
+                normalizeTypes(config.progressionExemptItemTypes.get()),
                 parseIds(config.startingBlueprints));
     }
 

@@ -4,9 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -37,7 +34,6 @@ import net.minecraft.world.item.Items;
 
 /** Characterizes the exact live boundary before direct learning and reverse engineering. */
 class BlueprintKnowledgeFlowPhaseZeroTest {
-    private static final Path PROJECT = Path.of(System.getProperty("user.dir"));
     private static final ResourceLocation BLUEPRINT = id("test:phase_zero_rifle");
     private static final ResourceLocation RECIPE = id("test:phase_zero_rifle_recipe");
     private static final ResourceLocation PROFILE = id("test:phase_zero_profile");
@@ -108,32 +104,7 @@ class BlueprintKnowledgeFlowPhaseZeroTest {
         assertEquals(2, BlueprintRecyclerMenu.FIRST_PLAYER_SLOT);
         assertTrue(Arrays.stream(BlueprintResearchService.Status.values())
                 .anyMatch(status -> status == BlueprintResearchService.Status.OUTPUT_FULL));
-        assertEquals("40", NetworkHandler.PROTOCOL_VERSION);
-    }
-
-    @Test
-    void phaseZeroContractFreezesTheTargetAndDefersProductionChanges()
-            throws IOException {
-        String contract = Files.readString(PROJECT.resolve(
-                "docs/blueprint-knowledge-flow-phase-0.md"));
-
-        for (String required : List.of(
-                "The recipe is learned immediately",
-                "One physical blueprint is produced",
-                "BYPASS_TREE_PREREQUISITES",
-                "DIRECT_LEARN",
-                "CREATE_BLUEPRINT",
-                "one server-owned input and one extract-only output",
-                "reverse-engineered blueprint copies are not recyclable for RP",
-                "taczweaponblueprints:research_bench",
-                "taczweaponblueprints:blueprint_recycler",
-                "Phase 0 may add this documentation and characterization tests only")) {
-            assertTrue(contract.contains(required), "Missing Phase 0 contract: " + required);
-        }
-        assertTrue(contract.contains(
-                "The existing two-workstation structure remains. A third workstation is not"));
-        assertTrue(contract.contains("No supported mode both learns the"));
-        assertTrue(contract.contains("recipe and creates a free copy"));
+        assertEquals("42", NetworkHandler.PROTOCOL_VERSION);
     }
 
     private static BlueprintResearchPolicy policy(

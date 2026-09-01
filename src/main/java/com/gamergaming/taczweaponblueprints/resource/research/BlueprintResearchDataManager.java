@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -23,7 +24,9 @@ import com.gamergaming.taczweaponblueprints.journal.BlueprintJournalBuilder;
 import com.gamergaming.taczweaponblueprints.journal.BlueprintJournalSnapshot;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionConfigSnapshot;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionAccess;
+import com.gamergaming.taczweaponblueprints.progression.ResearchRouteFingerprint;
 import com.gamergaming.taczweaponblueprints.progression.ResearchProgressionConnectivity;
+import com.gamergaming.taczweaponblueprints.progression.ResearchPathAuthority;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeBuilder;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePublication;
@@ -346,10 +349,31 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
             IPlayerRecipeData playerData) {
         BlueprintProgressionConfigSnapshot config = progressionConfig();
         ResourceLocation profileId = config.activeProfileId();
-        return policyResolver(
-                resolutionContext(profileId, config),
-                profileId,
-                playerData);
+        return policyResolution(
+                resolutionContext(profileId, config), profileId, playerData).resolver();
+    }
+
+    /**
+     * Resolves structural player policies and automatic-root authority from one
+     * immutable catalog/research/automatic publication context. Whole-path
+     * planning derives connectivity iteratively and does not invoke the legacy
+     * recursive prerequisite-satisfaction projection for every lookup.
+     */
+    public ResearchPlanningAccess planningAccessFor(IPlayerRecipeData playerData) {
+        BlueprintProgressionConfigSnapshot config = progressionConfig();
+        ResourceLocation profileId = config.activeProfileId();
+        ResolutionContext context = resolutionContext(profileId, config);
+        PolicyResolution resolution = policyResolution(context, profileId, playerData);
+        return new ResearchPlanningAccess(
+                resolution.structuralResolver(),
+                resolution.exempt(),
+                researchPathAuthority(context, profileId, resolution),
+                new ResearchRouteFingerprint.Context(
+                        context.catalog().revision(),
+                        context.research().revision(),
+                        context.automatic().publicationRevision(),
+                        context.config(),
+                        context.access()));
     }
 
     public BlueprintResearchPolicy policyFor(
@@ -389,7 +413,7 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
                 playerData,
                 ModConfigs.BLUEPRINT::isItemBlacklisted,
                 id -> BlueprintProgressionAccess.isProgressionExempt(
-                        ModConfigs.BLUEPRINT.accessSnapshot(),
+                        context.access(),
                         id,
                         context.catalog().blueprints().get(id)),
                 context.automatic().prerequisitePlan().orElse(null));
@@ -410,7 +434,7 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
                 playerData,
                 ModConfigs.BLUEPRINT::isItemBlacklisted,
                 id -> BlueprintProgressionAccess.isProgressionExempt(
-                        ModConfigs.BLUEPRINT.accessSnapshot(),
+                context.access(),
                         id,
                         context.catalog().blueprints().get(id)),
                 context.automatic().candidates().orElse(null),
@@ -430,8 +454,16 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
             ResolutionContext context,
             ResourceLocation profileId,
             IPlayerRecipeData playerData) {
+        return policyResolution(context, profileId, playerData).resolver();
+    }
+
+    private PolicyResolution policyResolution(
+            ResolutionContext context,
+            ResourceLocation profileId,
+            IPlayerRecipeData playerData) {
+        var access = context.access();
         Predicate<ResourceLocation> exempt = id -> BlueprintProgressionAccess.isProgressionExempt(
-                ModConfigs.BLUEPRINT.accessSnapshot(),
+                access,
                 id,
                 context.catalog().blueprints().get(id));
         Map<ResourceLocation, ResourceLocation> entryPointReplacements =
@@ -453,17 +485,104 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
                                 exempt,
                                 entryPointReplacements));
         if (playerData == null) {
-            return structuralResolver;
+            return new PolicyResolution(
+                    structuralResolver,
+                    structuralResolver,
+                    exempt,
+                    entryPointReplacements);
         }
         ResearchProgressionConnectivity connectivity =
                 new ResearchProgressionConnectivity(
                         playerData, structuralResolver, exempt);
         Map<ResourceLocation, BlueprintResearchPolicy> effectivePolicies = new HashMap<>();
-        return id -> effectivePolicies.computeIfAbsent(id, key -> {
-            BlueprintResearchPolicy structural = structuralResolver.apply(key);
-            return structural.withPrerequisitesSatisfied(
-                    connectivity.requirementsSatisfied(structural));
-        });
+        Function<ResourceLocation, BlueprintResearchPolicy> effectiveResolver =
+                id -> effectivePolicies.computeIfAbsent(id, key -> {
+                    BlueprintResearchPolicy structural = structuralResolver.apply(key);
+                    return structural.withPrerequisitesSatisfied(
+                            connectivity.requirementsSatisfied(structural));
+                });
+        return new PolicyResolution(
+                structuralResolver,
+                effectiveResolver,
+                exempt,
+                entryPointReplacements);
+    }
+
+    private ResearchPathAuthority researchPathAuthority(
+            ResolutionContext context,
+            ResourceLocation profileId,
+            PolicyResolution resolution) {
+        if (!context.research().snapshot().usesAutomaticWeaponPlacement(profileId)) {
+            return ResearchPathAuthority.authored();
+        }
+        Set<ResourceLocation> managedWeapons = context.catalog().blueprints().entrySet().stream()
+                .filter(entry -> isWeapon(entry.getValue()))
+                .map(Map.Entry::getKey)
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        if (!context.automatic().authorityReady()) {
+            return ResearchPathAuthority.automaticUnavailable(managedWeapons);
+        }
+        var candidates = context.automatic().candidates().orElseThrow();
+        var plan = context.automatic().prerequisitePlan().orElseThrow();
+        Map<ResourceLocation, ResearchPathAuthority.NodeExpectation> expectations =
+                new LinkedHashMap<>();
+        candidates.eligibleProposals().keySet().stream()
+                .map(ResourceLocation::tryParse)
+                .filter(java.util.Objects::nonNull)
+                .sorted(java.util.Comparator.comparing(ResourceLocation::toString))
+                .forEach(blueprintId -> {
+                    ResearchRequirements generated = plan.requirementsFor(blueprintId);
+                    List<Set<ResourceLocation>> activeGroups = new java.util.ArrayList<>();
+                    boolean invalidGroup = false;
+                    for (ResearchPrerequisiteGroup group : generated.allOf()) {
+                        LinkedHashSet<ResourceLocation> rebased = group.anyOf().stream()
+                                .map(prerequisite -> resolution.entryPointReplacements()
+                                        .getOrDefault(prerequisite, prerequisite))
+                                .filter(prerequisite -> !prerequisite.equals(blueprintId))
+                                .collect(java.util.stream.Collectors.toCollection(
+                                        LinkedHashSet::new));
+                        if (rebased.stream().anyMatch(resolution.exempt())) {
+                            continue;
+                        }
+                        if (rebased.isEmpty()) {
+                            invalidGroup = true;
+                            break;
+                        }
+                        activeGroups.add(Set.copyOf(rebased));
+                    }
+                    if (invalidGroup) {
+                        return;
+                    }
+                    if (!activeGroups.isEmpty()) {
+                        expectations.put(
+                                blueprintId,
+                                ResearchPathAuthority.NodeExpectation.requirements(activeGroups));
+                        return;
+                    }
+                    if (!generated.allOf().isEmpty()) {
+                        expectations.put(
+                                blueprintId,
+                                ResearchPathAuthority.NodeExpectation.root(
+                                        ResearchPathAuthority.RootProvenance
+                                                .PROGRESSION_EXEMPT_BOUNDARY));
+                        return;
+                    }
+                    String omission = plan.omittedCandidates().get(blueprintId);
+                    if ("generated_root".equals(omission)) {
+                        expectations.put(
+                                blueprintId,
+                                ResearchPathAuthority.NodeExpectation.root(
+                                        ResearchPathAuthority.RootProvenance
+                                                .GENERATED_FOUNDATION));
+                    } else if ("mode_does_not_create_prerequisites".equals(omission)) {
+                        expectations.put(
+                                blueprintId,
+                                ResearchPathAuthority.NodeExpectation.root(
+                                        ResearchPathAuthority.RootProvenance
+                                                .GENERATED_INDEPENDENT_ROOT));
+                    }
+                });
+        return ResearchPathAuthority.automaticReady(managedWeapons, expectations);
     }
 
     private BlueprintResearchPolicy resolveStructuralPolicy(
@@ -514,7 +633,12 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
                         research.revision()))
                 .orElseGet(() -> new AutomaticWeaponPlacementCandidateManager.Context(
                         Optional.empty(), Optional.empty()));
-        return new ResolutionContext(research, catalog, config, automatic);
+        return new ResolutionContext(
+                research,
+                catalog,
+                config,
+                ModConfigs.BLUEPRINT.accessSnapshot(),
+                automatic);
     }
 
     public record PlayerResearchPublication(
@@ -531,14 +655,55 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
         }
     }
 
+    public record ResearchPlanningAccess(
+            Function<ResourceLocation, BlueprintResearchPolicy> policyResolver,
+            Predicate<ResourceLocation> progressionExempt,
+            ResearchPathAuthority authority,
+            ResearchRouteFingerprint.Context fingerprintContext) {
+        public ResearchPlanningAccess(
+                Function<ResourceLocation, BlueprintResearchPolicy> policyResolver,
+                Predicate<ResourceLocation> progressionExempt,
+                ResearchPathAuthority authority) {
+            this(
+                    policyResolver,
+                    progressionExempt,
+                    authority,
+                    ResearchRouteFingerprint.Context.EMPTY);
+        }
+
+        public ResearchPlanningAccess {
+            if (policyResolver == null
+                    || progressionExempt == null
+                    || authority == null
+                    || fingerprintContext == null) {
+                throw new IllegalArgumentException("research planning access is invalid");
+            }
+        }
+    }
+
+    private record PolicyResolution(
+            Function<ResourceLocation, BlueprintResearchPolicy> structuralResolver,
+            Function<ResourceLocation, BlueprintResearchPolicy> resolver,
+            Predicate<ResourceLocation> exempt,
+            Map<ResourceLocation, ResourceLocation> entryPointReplacements) {
+        private PolicyResolution {
+            if (structuralResolver == null || resolver == null || exempt == null
+                    || entryPointReplacements == null) {
+                throw new IllegalArgumentException("research policy resolution is invalid");
+            }
+            entryPointReplacements = Map.copyOf(entryPointReplacements);
+        }
+    }
+
     private record ResolutionContext(
             Publication research,
             BlueprintDataManager.CatalogPublication catalog,
             BlueprintProgressionConfigSnapshot config,
+            com.gamergaming.taczweaponblueprints.progression.BlueprintAccessConfigSnapshot access,
             AutomaticWeaponPlacementCandidateManager.Context automatic) {
         private ResolutionContext {
             if (research == null || catalog == null || config == null
-                    || automatic == null) {
+                    || access == null || automatic == null) {
                 throw new IllegalArgumentException(
                         "research resolution context is invalid");
             }

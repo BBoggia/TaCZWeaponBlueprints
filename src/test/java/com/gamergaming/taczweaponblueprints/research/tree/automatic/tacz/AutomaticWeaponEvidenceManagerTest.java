@@ -287,6 +287,15 @@ class AutomaticWeaponEvidenceManagerTest {
         assertFalse(manager.publication().snapshotsByTree().isEmpty());
         assertFalse(manager.publication().prerequisitePlansByProfile().isEmpty());
         long readyRevision = manager.publication().revision();
+        AutomaticWeaponPlacementCandidateManager.Context readyContext = manager.contextFor(
+                id("test:profile"), id("test:tree"), 1L, 1L);
+        assertTrue(readyContext.authorityReady());
+        assertTrue(readyContext.revisionsMatch());
+        assertEquals(
+                AutomaticWeaponPlacementCandidateManager.PublicationState.READY,
+                readyContext.publicationState());
+        assertFalse(manager.contextFor(
+                id("test:profile"), id("test:tree"), 2L, 1L).authorityReady());
 
         failPositioning.set(true);
         assertFalse(manager.rebuild(
@@ -301,6 +310,12 @@ class AutomaticWeaponEvidenceManagerTest {
         assertTrue(manager.publication().classificationsByTree().isEmpty());
         assertTrue(manager.publication().snapshotsByTree().isEmpty());
         assertTrue(manager.publication().prerequisitePlansByProfile().isEmpty());
+        AutomaticWeaponPlacementCandidateManager.Context failedContext = manager.contextFor(
+                id("test:profile"), id("test:tree"), 1L, 2L);
+        assertFalse(failedContext.authorityReady());
+        assertEquals(
+                AutomaticWeaponPlacementCandidateManager.PublicationState.FAILED,
+                failedContext.publicationState());
 
         failPositioning.set(false);
         assertTrue(manager.rebuild(

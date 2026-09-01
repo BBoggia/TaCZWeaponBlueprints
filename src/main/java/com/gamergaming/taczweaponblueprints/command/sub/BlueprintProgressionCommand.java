@@ -91,6 +91,7 @@ public final class BlueprintProgressionCommand {
                     .orElse(false);
             if (updated) {
                 changed++;
+                NetworkHandler.clearOpenResearchBenchSelection(player);
                 NetworkHandler.syncPlayerRecipeData(player);
                 ResearchPointPresentationService.syncHelp(player);
                 // Replace any queued retroactive work captured from the old

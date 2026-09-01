@@ -63,20 +63,6 @@ class BlueprintKnowledgeFlowPhaseSevenTest {
         }
     }
 
-    @Test
-    void phaseRecordPreservesAuthorityCompatibilityAndManualQaBoundary() throws IOException {
-        String record = read("docs/blueprint-knowledge-flow-phase-7.md");
-        for (String required : List.of(
-                "never reconstructs hidden blueprint",
-                "No recipe-transfer handler",
-                "custom network protocol remains `26`",
-                "Player progression remains data version 2",
-                "JEI and EMI remain optional and client-only",
-                "does not claim the runtime checks")) {
-            assertTrue(record.contains(required), "Missing Phase 7 contract: " + required);
-        }
-    }
-
     private static String read(String relative) throws IOException {
         return Files.readString(PROJECT.resolve(relative));
     }

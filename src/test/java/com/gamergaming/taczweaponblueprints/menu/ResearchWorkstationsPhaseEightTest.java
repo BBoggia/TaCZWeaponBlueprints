@@ -49,7 +49,7 @@ class ResearchWorkstationsPhaseEightTest {
         assertEquals(RECYCLER, ModItems.BLUEPRINT_RECYCLER_ITEM.getId());
         assertEquals(RECYCLER, ModMenus.BLUEPRINT_RECYCLER.getId());
         assertTrue(ResearchBenchPresentationPolicy.permanentFullscreen());
-        assertEquals("40", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("42", NetworkHandler.PROTOCOL_VERSION);
     }
 
     @Test
@@ -132,7 +132,7 @@ class ResearchWorkstationsPhaseEightTest {
         String checklist = Files.readString(PROJECT.resolve("docs/release-checklist.md"));
         String operations = Files.readString(PROJECT.resolve("docs/operations-and-migration.md"));
 
-        assertTrue(manual.contains("protocol other than `36`"));
+        assertTrue(manual.contains("protocol other than `42`"));
         assertFalse(manual.contains("protocol other than `20`"));
         assertTrue(manual.contains("does not certify any"));
         assertTrue(manual.contains("unchecked hands-on behavior below"));
@@ -141,11 +141,4 @@ class ResearchWorkstationsPhaseEightTest {
         assertTrue(operations.contains("research-workstation split"));
     }
 
-    @Test
-    void completeWorkstationPhaseHistoryIsRetained() {
-        for (int phase = 0; phase <= 8; phase++) {
-            assertTrue(Files.isRegularFile(PROJECT.resolve(
-                    "docs/research-workstations-phase-" + phase + ".md")));
-        }
-    }
 }

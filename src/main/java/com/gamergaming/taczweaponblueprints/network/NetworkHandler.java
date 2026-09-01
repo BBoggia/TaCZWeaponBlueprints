@@ -26,7 +26,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public class NetworkHandler {
-    public static final String PROTOCOL_VERSION = "40";
+    public static final String PROTOCOL_VERSION = "42";
     // A random per-server seed prevents a partial chunk set from an earlier
     // connection being mistaken for a new sync after reconnecting.
     private static final AtomicLong SYNC_SEQUENCE =
@@ -191,6 +191,15 @@ public class NetworkHandler {
                 new SyncResearchBenchPreviewPacket(containerId, preview));
     }
 
+    /** Clears stale server/client selection state before publishing an admin reset. */
+    public static void clearOpenResearchBenchSelection(ServerPlayer player) {
+        if (player != null
+                && player.containerMenu
+                        instanceof com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu menu) {
+            menu.clearAuthoritativeSelection(player);
+        }
+    }
+
     public static void sendResearchBenchActionResult(
             ServerPlayer player,
             int containerId,
@@ -245,6 +254,9 @@ public class NetworkHandler {
     /** Clears publication state that belongs to the server instance being stopped. */
     public static void clearServerSyncState() {
         LAST_SENT_RESEARCH_TREES.clear();
+        com.gamergaming.taczweaponblueprints.menu.ResearchPlanningAdmission.clear();
+        com.gamergaming.taczweaponblueprints.progression.ResearchPathUnlockPlanner
+                .clearComplexityMemo();
     }
 
     private static void sendPlayerProgressionData(

@@ -3,12 +3,12 @@ package com.gamergaming.taczweaponblueprints.compat.fzzy_config;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
-import java.util.function.Predicate;
+import java.util.Locale;
+import java.util.Map;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -28,27 +28,36 @@ import com.gamergaming.taczweaponblueprints.progression.DuplicateBlueprintPolicy
 import com.gamergaming.taczweaponblueprints.progression.FoundWeaponRecoveryMode;
 import com.gamergaming.taczweaponblueprints.progression.ResearchCostMode;
 import com.gamergaming.taczweaponblueprints.progression.TreeResearchResultMode;
+import com.gamergaming.taczweaponblueprints.item.BlueprintData;
+import com.gamergaming.taczweaponblueprints.item.BlueprintKind;
+import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
-import com.tacz.guns.resource.CommonAssetsManager;
 
 import me.fzzyhmstrs.fzzy_config.annotations.Translation;
+import me.fzzyhmstrs.fzzy_config.annotations.Version;
 import me.fzzyhmstrs.fzzy_config.annotations.WithPerms;
 import me.fzzyhmstrs.fzzy_config.config.Config;
-import me.fzzyhmstrs.fzzy_config.util.AllowableStrings;
-import me.fzzyhmstrs.fzzy_config.validation.collection.ValidatedList;
+import me.fzzyhmstrs.fzzy_config.config.ConfigGroup;
+import me.fzzyhmstrs.fzzy_config.validation.ValidatedField;
+import me.fzzyhmstrs.fzzy_config.validation.collection.ValidatedChoiceList;
 import me.fzzyhmstrs.fzzy_config.validation.collection.ValidatedSet;
 import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedBoolean;
+import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedCondition;
 import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedEnum;
 import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedString;
 import me.fzzyhmstrs.fzzy_config.validation.number.ValidatedDouble;
 import me.fzzyhmstrs.fzzy_config.validation.number.ValidatedInt;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.fml.loading.FMLPaths;
 
+@Version(version = 2)
 @Translation(prefix = ModConfigs.BASE_KEY + "blueprint")
 public class BlueprintConfig extends Config {
     public static final int MAX_BLUEPRINTS_PER_LOOT_CONTAINER = 64;
+    /** Practical operator-facing limit; persisted player balances retain the larger protocol bound. */
+    public static final int MAX_CONFIGURED_RESEARCH_POINT_CAP = 100_000;
     public static final net.minecraft.resources.ResourceLocation DEFAULT_RESEARCH_PROFILE =
             TaCZWeaponBlueprints.loc("duplicate_recovery");
     private static final String RESOURCE_LOCATION_PATTERN =
@@ -56,77 +65,164 @@ public class BlueprintConfig extends Config {
                     + "[a-z0-9_.-]+:[a-z0-9/._-]+";
     private static final Pattern PERSISTED_BALANCE_PRESET = Pattern.compile(
             "(?m)^\\s*balancePreset\\s*=\\s*\"([A-Z_]+)\"\\s*(?:#.*)?$");
+    private static final String TRANSLATION_PREFIX = ModConfigs.BASE_KEY + "blueprint.";
+    private static final String ITEM_TYPE_PATTERN = "[a-z0-9_.-]{1,256}";
+    private static final List<String> BLUEPRINT_KINDS = List.of("gun", "ammo", "attachment");
+    private static final List<String> STANDARD_BLUEPRINT_ITEM_TYPES = List.of(
+            "rifle",
+            "pistol",
+            "sniper",
+            "shotgun",
+            "smg",
+            "rpg",
+            "mg",
+            "ammo",
+            "scope",
+            "muzzle",
+            "stock",
+            "grip",
+            "laser",
+            "extended_mag");
 
+    public ConfigGroup generalProgression = new ConfigGroup("generalProgression");
     @WithPerms(opLevel = 2)
     public ValidatedBoolean enableBlueprints = new ValidatedBoolean(true);
 
     @WithPerms(opLevel = 2)
-    public ValidatedBoolean enableDiscoveryTracking = new ValidatedBoolean(true);
+    public ValidatedCondition<Boolean> enableDiscoveryTracking = blueprintsEnabled(
+            new ValidatedBoolean(true));
 
     @WithPerms(opLevel = 2)
-    public ValidatedBoolean enableJournal = new ValidatedBoolean(true);
+    public ValidatedCondition<Boolean> enableJournal = blueprintsEnabled(
+            new ValidatedBoolean(true));
 
+    @ConfigGroup.Pop
+    @WithPerms(opLevel = 2)
+    public ValidatedCondition<Boolean> enableResearch = blueprintsEnabled(
+            new ValidatedBoolean(true));
+
+    public ConfigGroup discoveryAndLoot = new ConfigGroup("discoveryAndLoot");
     @WithPerms(opLevel = 2)
     public ValidatedEnum<BlueprintBalancePreset> balancePreset =
-            new ValidatedEnum<>(BlueprintBalancePreset.CUSTOM);
+            new ValidatedEnum<>(BlueprintBalancePreset.BALANCED, ValidatedEnum.WidgetType.CYCLING);
 
     @WithPerms(opLevel = 2)
-    public ValidatedEnum<JournalVisibility> maximumUndiscoveredVisibility =
-            new ValidatedEnum<>(JournalVisibility.FULL);
+    public ValidatedCondition<JournalVisibility> maximumUndiscoveredVisibility = customDiscovery(
+            new ValidatedEnum<>(JournalVisibility.FULL));
 
     @WithPerms(opLevel = 2)
-    public ValidatedBoolean enableResearch = new ValidatedBoolean(true);
+    public ValidatedCondition<Double> blueprintSpawnChance = customDiscovery(
+            new ValidatedDouble(0.2, 1.0, 0.0));
 
     @WithPerms(opLevel = 2)
-    public ValidatedEnum<ResearchCostMode> researchCostMode =
-            new ValidatedEnum<>(ResearchCostMode.POINTS_AND_ITEMS);
+    public ValidatedCondition<Integer> minBlueprints = customDiscovery(
+            new ValidatedInt(1, MAX_BLUEPRINTS_PER_LOOT_CONTAINER, 0));
+
+    @ConfigGroup.Pop
+    @WithPerms(opLevel = 2)
+    public ValidatedCondition<Integer> maxBlueprints = customDiscovery(
+            new ValidatedInt(2, MAX_BLUEPRINTS_PER_LOOT_CONTAINER, 0));
+
+    public ConfigGroup researchAndPoints = new ConfigGroup("researchAndPoints");
+    @WithPerms(opLevel = 2)
+    public ValidatedCondition<ResearchCostMode> researchCostMode = researchEnabled(
+            new ValidatedEnum<>(ResearchCostMode.POINTS_AND_ITEMS));
 
     @WithPerms(opLevel = 2)
-    public ValidatedEnum<TreeResearchResultMode> treeResearchResultMode =
-            new ValidatedEnum<>(TreeResearchResultMode.DIRECT_LEARN);
+    public ValidatedCondition<TreeResearchResultMode> treeResearchResultMode = researchEnabled(
+            new ValidatedEnum<>(TreeResearchResultMode.DIRECT_LEARN));
 
     @WithPerms(opLevel = 2)
-    public ValidatedEnum<DuplicateBlueprintPolicy> duplicateBlueprintPolicy =
-            new ValidatedEnum<>(DuplicateBlueprintPolicy.MANUAL_RECYCLING);
-
-    @WithPerms(opLevel = 2)
-    public ValidatedBoolean allowUnlearnedRecycling = new ValidatedBoolean(false);
-
-    @WithPerms(opLevel = 2)
-    public ValidatedEnum<FoundWeaponRecoveryMode> foundWeaponRecoveryMode =
-            new ValidatedEnum<>(FoundWeaponRecoveryMode.PROTECTED_BLUEPRINT_ONLY);
-
-    @WithPerms(opLevel = 2)
-    public ValidatedInt researchPointCap = new ValidatedInt(
+    public ValidatedCondition<Integer> researchPointCap = blueprintsEnabled(new ValidatedInt(
             BlueprintProgressionConfigSnapshot.DEFAULT_POINT_CAP,
-            PlayerProgressionLimits.MAX_RESEARCH_POINTS,
-            0);
+            MAX_CONFIGURED_RESEARCH_POINT_CAP,
+            0));
 
     @WithPerms(opLevel = 2)
-    public ValidatedBoolean creativeBypassesResearchCost = new ValidatedBoolean(false);
+    public ValidatedCondition<Boolean> enableResearchPointAwards = blueprintsEnabled(
+            new ValidatedBoolean(true));
 
     @WithPerms(opLevel = 2)
-    public ValidatedString activeResearchProfile = new ValidatedString(
+    public ValidatedCondition<Boolean> enableCombatResearchPointAwards = uiCondition(
+            new ValidatedBoolean(false),
+            () -> enableBlueprints.get() && enableResearchPointAwards.get(),
+            TRANSLATION_PREFIX + "condition.researchPointAwards");
+
+    @ConfigGroup.Pop
+    @WithPerms(opLevel = 2)
+    public ValidatedCondition<Boolean> creativeBypassesResearchCost = researchEnabled(
+            new ValidatedBoolean(false));
+
+    public ConfigGroup analyzer = new ConfigGroup("analyzer");
+    @WithPerms(opLevel = 2)
+    public ValidatedCondition<DuplicateBlueprintPolicy> duplicateBlueprintPolicy = blueprintsEnabled(
+            new ValidatedEnum<>(DuplicateBlueprintPolicy.MANUAL_RECYCLING));
+
+    @WithPerms(opLevel = 2)
+    public ValidatedCondition<Boolean> allowUnlearnedRecycling = uiCondition(
+            new ValidatedBoolean(false),
+            () -> enableBlueprints.get()
+                    && duplicateBlueprintPolicy.get() == DuplicateBlueprintPolicy.MANUAL_RECYCLING,
+            TRANSLATION_PREFIX + "condition.recyclingEnabled");
+
+    @ConfigGroup.Pop
+    @WithPerms(opLevel = 2)
+    public ValidatedCondition<FoundWeaponRecoveryMode> foundWeaponRecoveryMode = blueprintsEnabled(
+            new ValidatedEnum<>(FoundWeaponRecoveryMode.PROTECTED_BLUEPRINT_ONLY));
+
+    public ConfigGroup startingAccess = new ConfigGroup("startingAccess");
+    @WithPerms(opLevel = 2)
+    public ValidatedSet<String> startingBlueprints = new ValidatedSet<>(
+            new HashSet<>(),
+            blueprintIdAutocomplete());
+
+    @WithPerms(opLevel = 2)
+    public ValidatedSet<String> progressionExemptBlueprints = new ValidatedSet<>(
+            new HashSet<>(),
+            blueprintIdAutocomplete());
+
+    @WithPerms(opLevel = 2)
+    public ValidatedChoiceList<String> progressionExemptKinds = new ValidatedChoiceList<>(
+            List.of(),
+            BLUEPRINT_KINDS,
+            new ValidatedString("gun", ITEM_TYPE_PATTERN),
+            BlueprintConfig::blueprintKindName,
+            BlueprintConfig::blueprintKindDescription,
+            ValidatedChoiceList.WidgetType.INLINE);
+
+    @ConfigGroup.Pop
+    @WithPerms(opLevel = 2)
+    public PreservingStringChoiceList progressionExemptItemTypes = new PreservingStringChoiceList(
+            List.of(),
+            STANDARD_BLUEPRINT_ITEM_TYPES,
+            new ValidatedString("pistol", ITEM_TYPE_PATTERN),
+            BlueprintConfig::loadedBlueprintItemTypes,
+            value -> value != null && value.matches(ITEM_TYPE_PATTERN),
+            BlueprintConfig::blueprintItemTypeName,
+            BlueprintConfig::blueprintItemTypeDescription,
+            ValidatedChoiceList.WidgetType.SCROLLABLE);
+
+    public ConfigGroup advanced = new ConfigGroup("advanced", true);
+    @WithPerms(opLevel = 2)
+    public ValidatedCondition<String> activeResearchProfile = researchEnabled(new ValidatedString(
             DEFAULT_RESEARCH_PROFILE.toString(),
-            RESOURCE_LOCATION_PATTERN);
+            RESOURCE_LOCATION_PATTERN));
 
     @WithPerms(opLevel = 2)
-    public ValidatedBoolean enableResearchPointAwards = new ValidatedBoolean(true);
+    public ValidatedSet<String> gunBlacklist = new ValidatedSet<>(
+            new HashSet<>(),
+            blueprintIdAutocomplete("tacz:ak47", BlueprintKind.GUN));
 
     @WithPerms(opLevel = 2)
-    public ValidatedBoolean enableCombatResearchPointAwards = new ValidatedBoolean(false);
+    public ValidatedSet<String> ammoBlacklist = new ValidatedSet<>(
+            new HashSet<>(),
+            blueprintIdAutocomplete("oldgun:pf60_ammo", BlueprintKind.AMMO));
 
-    // @Comment("Blueprint spawn chance")
+    @ConfigGroup.Pop
     @WithPerms(opLevel = 2)
-    public ValidatedDouble blueprintSpawnChance = new ValidatedDouble(0.2, 1.0, 0.0);
-
-    // @Comment("Minimum number of blueprints that can spawn if spawn chance is met")
-    @WithPerms(opLevel = 2)
-    public ValidatedInt minBlueprints = new ValidatedInt(1, MAX_BLUEPRINTS_PER_LOOT_CONTAINER, 0);
-
-    // @Comment("Maximum number of blueprints that can spawn if spawn chance is met")
-    @WithPerms(opLevel = 2)
-    public ValidatedInt maxBlueprints = new ValidatedInt(2, MAX_BLUEPRINTS_PER_LOOT_CONTAINER, 0);
+    public ValidatedSet<String> attachmentBlacklist = new ValidatedSet<>(
+            new HashSet<>(),
+            blueprintIdAutocomplete("tacz:extended_mag_1", BlueprintKind.ATTACHMENT));
 
     private transient volatile BlueprintProgressionConfigSnapshot progressionSnapshot;
     private transient volatile BlueprintAccessConfigSnapshot accessSnapshot;
@@ -139,6 +235,12 @@ public class BlueprintConfig extends Config {
 
     @Override
     public void update(int deserializedVersion) {
+        if (deserializedVersion < 1) {
+            // Version-zero files exposed these four discovery settings
+            // directly. Preserve their established behavior by migrating the
+            // existing server to Custom rather than applying a new overlay.
+            balancePreset.validateAndSet(BlueprintBalancePreset.CUSTOM);
+        }
         normalizeAndPublish();
     }
 
@@ -299,116 +401,179 @@ public class BlueprintConfig extends Config {
         }
     }
 
-    @WithPerms(opLevel = 2)
-    public ValidatedSet<String> progressionExemptBlueprints = new ValidatedSet<>(
-            new HashSet<>(),
-            new ValidatedString("tacz:ak47", RESOURCE_LOCATION_PATTERN));
-
-    @WithPerms(opLevel = 2)
-    public ValidatedSet<String> progressionExemptKinds = new ValidatedSet<>(
-            new HashSet<>(),
-            new ValidatedString(
-                    "gun",
-                    new AllowableStrings(
-                            value -> List.of("gun", "ammo", "attachment").contains(value),
-                            () -> List.of("gun", "ammo", "attachment"))));
-
-    @WithPerms(opLevel = 2)
-    public ValidatedSet<String> progressionExemptItemTypes = new ValidatedSet<>(
-            new HashSet<>(),
-            new ValidatedString("pistol", "[a-z0-9_.-]{1,256}"));
-
-    @WithPerms(opLevel = 2)
-    public ValidatedSet<String> startingBlueprints = new ValidatedSet<>(
-            new HashSet<>(),
-            new ValidatedString("tacz:ak47", RESOURCE_LOCATION_PATTERN));
-
-    // @Comment("Blacklist of guns that will not have blueprints generated for them")
-    @WithPerms(opLevel = 2)
-    public ValidatedSet<String> gunBlacklist = new ValidatedSet<>(
-        new HashSet<>(),
-        new ValidatedString(
-            "tacz:ak47", 
-            new AllowableStrings(createGunIdFilter(), getGunItemIdStrings())
-        )
-    );
-
-    // @Comment("Blacklist of ammo that will not have blueprints generated for them")
-    @WithPerms(opLevel = 2)
-    public ValidatedSet<String> ammoBlacklist = new ValidatedSet<>(
-        new HashSet<>(),
-        new ValidatedString(
-            "oldgun:pf60_ammo", 
-            new AllowableStrings(createAmmoIdFilter(), getAmmoItemIdStrings())
-        )
-    );
-
-    // @Comment("Blacklist of attachments that will not have blueprints generated for them")
-    @WithPerms(opLevel = 2)
-    public ValidatedSet<String> attachmentBlacklist = new ValidatedSet<>(
-        new HashSet<>(),
-        new ValidatedString(
-            "tacz:extended_mag_1", 
-            new AllowableStrings(createAttachmentIdFilter(), getAttachmentItemIdStrings())
-        )
-    );
-
     public boolean isItemBlacklisted(String itemId) {
         return gunBlacklist.contains(itemId) || ammoBlacklist.contains(itemId) || attachmentBlacklist.contains(itemId);
     }
 
-    private static Predicate<String> createGunIdFilter() {
-       return gunId -> {
-           return CommonAssetsManager.getInstance().getAllGuns()
-               .stream()
-               .map(gun -> gun.getKey().toString())
-               .collect(Collectors.toSet())
-               .contains(gunId);
-       };
-   }
-
-    private static Predicate<String> createAttachmentIdFilter() {
-        return attachmentId -> {
-            return CommonAssetsManager.getInstance().getAllAttachments()
-                .stream()
-                .map(attachment -> attachment.getKey().toString())
-                .collect(Collectors.toList())
-                .contains(attachmentId);
-        };
+    private <T> ValidatedCondition<T> blueprintsEnabled(ValidatedField<T> field) {
+        return uiCondition(
+                field,
+                enableBlueprints::get,
+                TRANSLATION_PREFIX + "condition.blueprintsEnabled");
     }
 
-    private static Predicate<String> createAmmoIdFilter() {
-        return ammoId -> {
-            return CommonAssetsManager.getInstance().getAllAmmos()
-                .stream()
-                .map(ammo -> ammo.getKey().toString())
-                .collect(Collectors.toList())
-                .contains(ammoId);
-        };
+    private <T> ValidatedCondition<T> researchEnabled(ValidatedField<T> field) {
+        return uiCondition(
+                field,
+                () -> enableBlueprints.get() && enableResearch.get(),
+                TRANSLATION_PREFIX + "condition.researchEnabled");
     }
 
-    private static Supplier<List<String>> getAttachmentItemIdStrings() {
-        return () -> {
-            List<String> attachmentIds = new ArrayList<>();
-            CommonAssetsManager.getInstance().getAllAttachments().forEach(attachment -> attachmentIds.add(attachment.getKey().toString()));
-            return attachmentIds;
-        };
+    private <T> ValidatedCondition<T> customDiscovery(ValidatedField<T> field) {
+        return uiCondition(
+                field,
+                () -> enableBlueprints.get()
+                        && balancePreset.get() == BlueprintBalancePreset.CUSTOM,
+                TRANSLATION_PREFIX + "condition.customDiscovery");
     }
 
-    private static Supplier<List<String>> getAmmoItemIdStrings() {
-        return () -> {
-            List<String> ammoIds = new ArrayList<>();
-            CommonAssetsManager.getInstance().getAllAmmos().forEach(ammo -> ammoIds.add(ammo.getKey().toString()));
-            return ammoIds;
-        };
+    private static <T> ValidatedCondition<T> uiCondition(
+            ValidatedField<T> field,
+            Supplier<Boolean> condition,
+            String failureTranslationKey) {
+        return field.toCondition(
+                condition,
+                Component.translatable(failureTranslationKey),
+                field::get);
     }
 
-    private static Supplier<List<String>> getGunItemIdStrings() {
-        return () -> {
-            List<String> gunIds = new ArrayList<>();
-            CommonAssetsManager.getInstance().getAllGuns().forEach(gun -> gunIds.add(gun.getKey().toString()));
-            return gunIds;
-        };
+    private static Collection<String> loadedBlueprintItemTypes() {
+        return BlueprintDataManager.presentationCatalog().getAllBlueprints().stream()
+                .map(data -> data.getItemType() == null
+                        ? ""
+                        : data.getItemType().toLowerCase(Locale.ROOT))
+                .filter(value -> value.matches(ITEM_TYPE_PATTERN))
+                .distinct()
+                .sorted()
+                .toList();
+    }
+
+    private static BlueprintIdAutocompleteString blueprintIdAutocomplete() {
+        return blueprintIdAutocomplete("tacz:ak47", null);
+    }
+
+    private static BlueprintIdAutocompleteString blueprintIdAutocomplete(
+            String defaultValue,
+            BlueprintKind requiredKind) {
+        return new BlueprintIdAutocompleteString(
+                defaultValue,
+                value -> value != null && value.matches(RESOURCE_LOCATION_PATTERN),
+                () -> loadedBlueprintIdSuggestions(requiredKind));
+    }
+
+    private static List<BlueprintIdAutocompleteString.BlueprintIdSuggestion> loadedBlueprintIdSuggestions(
+            BlueprintKind requiredKind) {
+        return blueprintIdSuggestions(
+                BlueprintDataManager.presentationCatalog().catalogPublication().blueprints(),
+                requiredKind);
+    }
+
+    static List<BlueprintIdAutocompleteString.BlueprintIdSuggestion> blueprintIdSuggestions(
+            Map<net.minecraft.resources.ResourceLocation, BlueprintData> blueprints,
+            BlueprintKind requiredKind) {
+        if (blueprints == null || blueprints.isEmpty()) {
+            return List.of();
+        }
+        return blueprints.entrySet().stream()
+                .filter(entry -> entry.getKey() != null && entry.getValue() != null)
+                .filter(entry -> requiredKind == null || entry.getValue().getKind() == requiredKind)
+                .map(entry -> new BlueprintIdAutocompleteString.BlueprintIdSuggestion(
+                        entry.getKey().toString(),
+                        blueprintDisplayName(entry.getValue(), entry.getKey().getPath())))
+                .sorted(java.util.Comparator
+                        .comparing(
+                                BlueprintIdAutocompleteString.BlueprintIdSuggestion::displayName,
+                                String.CASE_INSENSITIVE_ORDER)
+                        .thenComparing(BlueprintIdAutocompleteString.BlueprintIdSuggestion::id))
+                .toList();
+    }
+
+    private static String blueprintDisplayName(BlueprintData data, String fallbackPath) {
+        if (data == null || data.getNameKey() == null || data.getNameKey().isBlank()) {
+            return humanizeChoice(fallbackPath);
+        }
+        String key = data.getNameKey();
+        String translated = Component.translatable(key).getString().strip();
+        if (translated.equals(key.strip()) && key.endsWith(".name")) {
+            String alternateKey = key.substring(0, key.length() - ".name".length());
+            String alternate = Component.translatable(alternateKey).getString().strip();
+            if (!alternate.equals(alternateKey)) {
+                translated = alternate;
+            }
+        }
+        return translated.isBlank() || translated.equals(key.strip())
+                ? humanizeChoice(fallbackPath)
+                : translated;
+    }
+
+    private static net.minecraft.network.chat.MutableComponent blueprintKindName(
+            String value,
+            String ignoredTranslationKey) {
+        return Component.translatableWithFallback(
+                TRANSLATION_PREFIX + "progressionExemptKinds.option." + value,
+                switch (value) {
+                    case "gun" -> "Guns";
+                    case "ammo" -> "Ammunition";
+                    case "attachment" -> "Attachments";
+                    default -> humanizeChoice(value);
+                });
+    }
+
+    private static Component blueprintKindDescription(String value, String ignoredDescriptionKey) {
+        return Component.translatableWithFallback(
+                TRANSLATION_PREFIX + "progressionExemptKinds.option." + value + ".desc",
+                "Make every recipe in this category available without a blueprint.");
+    }
+
+    private static net.minecraft.network.chat.MutableComponent blueprintItemTypeName(
+            String value,
+            String ignoredTranslationKey) {
+        return Component.translatableWithFallback(
+                TRANSLATION_PREFIX + "progressionExemptItemTypes.option." + value,
+                switch (value) {
+                    case "rifle" -> "Rifles";
+                    case "pistol" -> "Pistols";
+                    case "sniper" -> "Sniper Rifles";
+                    case "shotgun" -> "Shotguns";
+                    case "smg" -> "Submachine Guns";
+                    case "rpg" -> "Rocket Launchers";
+                    case "mg" -> "Machine Guns";
+                    case "ammo" -> "Ammunition";
+                    case "scope" -> "Scopes";
+                    case "muzzle" -> "Muzzle Attachments";
+                    case "stock" -> "Stocks";
+                    case "grip" -> "Grips";
+                    case "laser" -> "Lasers";
+                    case "extended_mag" -> "Extended Magazines";
+                    default -> humanizeChoice(value);
+                });
+    }
+
+    private static Component blueprintItemTypeDescription(String value, String ignoredDescriptionKey) {
+        return Component.translatableWithFallback(
+                TRANSLATION_PREFIX + "progressionExemptItemTypes.option.desc",
+                "Make every recipe in this TaCZ subgroup available without a blueprint.");
+    }
+
+    private static String humanizeChoice(String value) {
+        if (value == null || value.isBlank()) {
+            return "Unknown";
+        }
+        String[] words = value.replace('_', ' ').replace('-', ' ').replace('.', ' ').split("\\s+");
+        StringBuilder label = new StringBuilder();
+        for (String word : words) {
+            if (word.isEmpty()) {
+                continue;
+            }
+            if (!label.isEmpty()) {
+                label.append(' ');
+            }
+            label.append(Character.toUpperCase(word.charAt(0)));
+            if (word.length() > 1) {
+                label.append(word.substring(1));
+            }
+        }
+        return label.toString();
     }
     
 }

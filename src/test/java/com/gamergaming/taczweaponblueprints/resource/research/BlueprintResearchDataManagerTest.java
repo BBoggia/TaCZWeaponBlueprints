@@ -16,6 +16,8 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
+import com.gamergaming.taczweaponblueprints.progression.ResearchPathAuthority;
+
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.PackResources;
 import net.minecraft.server.packs.PackType;
@@ -26,6 +28,23 @@ import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.profiling.InactiveProfiler;
 
 class BlueprintResearchDataManagerTest {
+    @Test
+    void planningAccessKeepsItsResolverAuthorityAndExemptionSnapshotTogether() {
+        Predicate<ResourceLocation> exemption = id -> id.getPath().startsWith("free_");
+        BlueprintResearchDataManager.ResearchPlanningAccess access =
+                new BlueprintResearchDataManager.ResearchPlanningAccess(
+                        ignored -> null,
+                        exemption,
+                        ResearchPathAuthority.authored());
+
+        assertSame(exemption, access.progressionExempt());
+        assertSame(ResearchPathAuthority.authored(), access.authority());
+        assertEquals(
+                com.gamergaming.taczweaponblueprints.progression.ResearchRouteFingerprint
+                        .Context.EMPTY,
+                access.fingerprintContext());
+    }
+
     @Test
     void preparesTechTreeMapsAndAdditiveEntryBundlesAtomically() {
         ResourceManager resources = resourceManager(Map.of(

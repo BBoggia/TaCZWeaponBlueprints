@@ -1,82 +1,78 @@
-# TaCZ Weapon Blueprints
+# [TaCZ] Weapon Research & Blueprints
 
-Turn Timeless and Classics Zero into a persistent, server-authoritative weapon
-progression system built around exploration, research, and blueprints.
+Turn the Timeless and Classics Zero arsenal into a lasting progression system
+built around exploration, blueprints, and research.
 
-Blueprints can appear in configurable world loot. Learning one permanently
-unlocks that player's matching TaCZ gun-smithing recipe across death, dimension
-changes, logout, and server restarts. The server enforces every unlock rather
-than trusting the client recipe screen.
+Blueprints can appear in configurable world loot. Using one permanently
+unlocks the matching TaCZ gun-smithing recipe for that player, and the unlock
+remains through death, dimension changes, logout, and server restarts. The
+system is server-authoritative, so locked recipes cannot be bypassed through a
+client recipe screen.
 
-## Research Bench and automatic Tech Tree
+## Features
 
-The Research Bench opens into an edge-to-edge weapon Tech Tree inspired by the
-interconnected progression of Rust and the gradual specialization of War
-Thunder.
+- **Lootable Blueprints** — Find blueprints while exploring and permanently
+  learn the matching TaCZ recipes.<br><br>
+- **Research Bench Tech Tree** — Browse the available weapon collection in one
+  edge-to-edge Tech Tree with search, pan, zoom, keyboard navigation, and
+  highlighted research routes.<br><br>
+- **Automatic Weapon Placement** — The built-in tree organizes TaCZ weapons by
+  strength, handling, range, and play style. Its width, layers, and branches
+  adapt as compatible add-on guns enter or leave the server's weapon catalog.<br><br>
+- **Shortest-Path Research** — Select a higher locked weapon to preview and
+  unlock the shortest valid route to it. Shared prerequisites are paid for
+  only once, and an out-of-order blueprint can't bypass the missing route back
+  to the start of the tree.<br><br>
+- **Safe Research Purchases** — Research is handled as an atomic transaction.
+  The server commits only the route shown in the current preview. If the rules
+  change or the complete purchase can't finish, no partial RP or material cost
+  is consumed.<br><br>
+- **Flexible Research Costs** — Servers can require Research Points (RP),
+  inventory materials, or both without rewriting every research definition.<br><br>
+- **Blueprint Analyzer** — Reverse engineer supported TaCZ equipment, recycle
+  learned duplicate blueprints, and redeem configured Research Data for RP.
+  Servers can protect crafted guns while allowing guns found in loot to become
+  a blueprint, convert directly into RP, or offer the player both choices.<br><br>
+- **Blueprint Journal** — Track discoveries, learned recipes, completion, and
+  the active server rules. A reusable Getting Started page explains the main
+  progression loop and available ways to earn RP.<br><br>
+- **JEI and EMI Information** — Optional integrations explain the Research
+  Bench, Blueprint Analyzer, blueprints, and Research Data without revealing
+  hidden research targets or bypassing unlocks.
 
-- The complete 53-weapon TaCZ 1.1.8 arsenal is arranged from a shared foundation
-  into distinct, gradually narrowing weapon families.
-- Automatic placement uses weapon capabilities such as damage, sustained fire,
-  precision, range, area control, handling, and versatility.
-- Compatible add-on guns are scored and incorporated automatically in an
-  automatic tree. Pack authors may instead select an authored-only tree, where
-  only explicitly placed weapons appear and unspecified weapons are omitted.
-- Grouped routes support meaningful "one of these paths" requirements without
-  turning every merge into a mandatory grind.
-- Dynamic row width, branch-aware spacing, responsive wrapping, search, pan,
-  Fit, keyboard navigation, and extended zoom-out keep large modpack trees
-  readable.
-- Select a higher locked weapon to preview and purchase the deterministic
-  shortest valid path. Every newly unlocked prerequisite is charged once and
-  committed in one atomic transaction.
-- Track a revealed weapon as a session goal and keep its remaining route, RP,
-  and material requirements highlighted.
+Weapons are the only Tech Tree category enabled by default. Built-in research
+data for TaCZ ammo and attachments remains available for pack authors
+who want to enable and customize those categories.
 
-Weapons are the only Tech Tree domain enabled by default. The built-in data for
-TaCZ ammunition and attachments remains available for pack authors who want to
-enable and customize those domains.
+## Getting Started
 
-## Research Points, costs, and the Blueprint Analyzer
+1. Install the mod and its required dependencies on both the client and server.
+2. Explore configured loot locations to find your first blueprint or Research
+   Data.
+3. Use a blueprint to learn its recipe, then open the Blueprint Journal to
+   review your progress and ways to earn RP.
+4. Craft a Research Bench to browse the Tech Tree. Use the Blueprint Analyzer
+   when you want to reverse engineer equipment or recycle supported items.<br><br>
 
-Research can require Research Points, inventory materials, or both. Servers can
-choose between `POINTS_AND_ITEMS`, `POINTS_ONLY`, and `ITEMS_ONLY` without
-rewriting datapack costs.
+## Servers and Modpacks
 
-The Blueprint Analyzer provides a deliberate workstation for:
+Server configuration controls blueprint loot, pacing, blacklists, Research
+Point limits, research costs, found-weapon recovery, recycling, discovery
+visibility, starting blueprints, and progression exemptions. Settings are
+organized into clear sections, while advanced pack controls remain available
+without crowding the common options. Players can separately choose a Compact,
+Balanced, Spacious, or Custom Tech Tree layout and adjust confirmation,
+notifications, the background grid, and reduced motion.
 
-- reverse engineering physical TaCZ weapons;
-- recycling eligible duplicate blueprints into Research Points;
-- redeeming configured Research Data;
-- distinguishing verified loot weapons from crafted or unverified legacy guns;
-- optionally turning a found weapon into a recyclable blueprint, converting it
-  directly into RP, or letting the player choose.
+Datapacks can customize loot pools, research costs, ingredients, entry points,
+visibility, prerequisites, grouped routes, Research Point awards, and Tech Tree
+presentation. Pack authors can use the automatic weapon tree or provide an
+authored-only tree containing only their selected weapons. If a reload contains
+invalid data, the server keeps the last working settings.
 
-Crafted weapons remain protected from recovery exploits. Every preview and
-transaction is resolved by the server, checks current inventory and RP state,
-and either commits completely or consumes nothing.
-
-## Built for modpacks and servers
-
-Loot pools, research profiles, costs, ingredient tags, visibility, recycling,
-entry points, prerequisites, grouped routes, presentation, and tree authority
-are datapack-driven. Pack authors can use one fully generated automatic weapon
-tree or replace it with an authored-only selection, add custom content-pack
-branches, or remove tiers without modifying the mod.
-
-Synchronized configuration includes:
-
-- blueprint loot chance, roll limits, pacing presets, and blacklists;
-- Research Point cap and research cost mode;
-- found-weapon recovery and duplicate-recycling policy;
-- discovery visibility and Creative cost bypass;
-- starting blueprints and progression exemptions;
-- separate client-side tree spacing, wrapping, crossing, compaction, grid, and
-  reduced-motion controls.
-
-The Blueprint Journal provides discovery and completion tracking, policy-aware
-details, and a reusable Getting Started guide. Optional JEI and EMI integrations
-add generic information pages without exposing hidden research targets or
-allowing recipe-transfer bypasses.
+The mod supports TaCZ content packs without requiring a separate blueprint
+definition for every added gun. The available blueprint catalog is rebuilt
+from the recipes currently available on the server.
 
 ## Requirements
 
@@ -84,13 +80,23 @@ allowing recipe-transfer bypasses.
 - Forge 47.x, validated with 47.3.0
 - Timeless and Classics Zero 1.1.8-hotfix (`1.1.8` up to, but not including,
   `1.2`)
-- Fzzy Config 0.5.9
+- Fzzy Config 0.7.6
 - Kotlin for Forge 4.11.x, required by Fzzy Config
 
 JEI 15.x and EMI 1.1.x are optional client-side integrations.
 
-Install TaCZ Weapon Blueprints and its required dependencies on both the client
-and server. Version 1.3.0 uses network protocol 40, so clients and servers must
-run matching mod versions. Existing learned blueprints, discoveries, Research
-Points, loot configuration, and supported datapacks remain compatible; no world
-migration is required.
+## Installation and Compatibility
+
+Install [TaCZ] Weapon Research & Blueprints and every required dependency on
+both the client and server. Clients and servers must use matching [TaCZ] Weapon
+Research & Blueprints versions.
+
+Existing learned blueprints, discoveries, Research Points, worlds, loot
+configuration, and supported datapacks remain compatible with the current
+release. No world migration is required.
+
+## Support
+
+When reporting a problem, include the Minecraft, Forge, TaCZ, Fzzy Config,
+Kotlin for Forge, and [TaCZ] Weapon Research & Blueprints versions, along with the relevant
+`latest.log` and the names of installed TaCZ content packs.

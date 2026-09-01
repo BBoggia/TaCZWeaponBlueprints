@@ -6,6 +6,7 @@ import java.util.function.Supplier;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchResearchAction;
+import com.gamergaming.taczweaponblueprints.progression.ResearchRouteFingerprint;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
@@ -18,12 +19,13 @@ public final class ResearchBenchActionPacket {
     private final int requestId;
     private final ResearchBenchResearchAction action;
     private final Optional<ResourceLocation> blueprintId;
+    private final Optional<ResearchRouteFingerprint> routeFingerprint;
 
     public ResearchBenchActionPacket(
             int containerId,
             ResearchBenchResearchAction action,
             Optional<ResourceLocation> blueprintId) {
-        this(containerId, 0, action, blueprintId);
+        this(containerId, 0, action, blueprintId, Optional.empty());
     }
 
     public ResearchBenchActionPacket(
@@ -31,6 +33,15 @@ public final class ResearchBenchActionPacket {
             int requestId,
             ResearchBenchResearchAction action,
             Optional<ResourceLocation> blueprintId) {
+        this(containerId, requestId, action, blueprintId, Optional.empty());
+    }
+
+    public ResearchBenchActionPacket(
+            int containerId,
+            int requestId,
+            ResearchBenchResearchAction action,
+            Optional<ResourceLocation> blueprintId,
+            Optional<ResearchRouteFingerprint> routeFingerprint) {
         if (containerId < 0 || requestId < 0 || action == null) {
             throw new IllegalArgumentException("invalid Research Bench action");
         }
@@ -38,7 +49,15 @@ public final class ResearchBenchActionPacket {
         this.requestId = requestId;
         this.action = action;
         this.blueprintId = blueprintId == null ? Optional.empty() : blueprintId;
+        this.routeFingerprint = routeFingerprint == null
+                ? Optional.empty()
+                : routeFingerprint;
         this.blueprintId.ifPresent(ResearchBenchActionPacket::validateId);
+        if (this.routeFingerprint.filter(fingerprint -> !fingerprint.present()).isPresent()
+                || action == ResearchBenchResearchAction.SELECT
+                        && this.routeFingerprint.isPresent()) {
+            throw new IllegalArgumentException("invalid Research Bench route fingerprint");
+        }
     }
 
     public ResearchBenchActionPacket(FriendlyByteBuf buffer) {
@@ -48,6 +67,10 @@ public final class ResearchBenchActionPacket {
                 readAction(buffer),
                 buffer.readBoolean()
                         ? Optional.of(readId(buffer))
+                        : Optional.empty(),
+                buffer.readBoolean()
+                        ? Optional.of(new ResearchRouteFingerprint(
+                                buffer.readLong(), buffer.readLong()))
                         : Optional.empty());
     }
 
@@ -58,6 +81,11 @@ public final class ResearchBenchActionPacket {
         buffer.writeBoolean(blueprintId.isPresent());
         blueprintId.ifPresent(id -> buffer.writeUtf(
                 id.toString(), PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH));
+        buffer.writeBoolean(routeFingerprint.isPresent());
+        routeFingerprint.ifPresent(fingerprint -> {
+            buffer.writeLong(fingerprint.high());
+            buffer.writeLong(fingerprint.low());
+        });
     }
 
     public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
@@ -68,7 +96,8 @@ public final class ResearchBenchActionPacket {
                     && sender.containerMenu.containerId == containerId
                     && sender.containerMenu instanceof ResearchBenchMenu menu
                     && menu.stillValid(sender)) {
-                menu.handleAction(sender, action, blueprintId).ifPresent(result -> {
+                menu.handleAction(
+                        sender, action, blueprintId, routeFingerprint).ifPresent(result -> {
                     if (requestId > 0) {
                         NetworkHandler.sendResearchBenchActionResult(
                                 sender, containerId, requestId, result);
@@ -93,6 +122,10 @@ public final class ResearchBenchActionPacket {
 
     Optional<ResourceLocation> blueprintId() {
         return blueprintId;
+    }
+
+    Optional<ResearchRouteFingerprint> routeFingerprint() {
+        return routeFingerprint;
     }
 
     private static ResearchBenchResearchAction readAction(FriendlyByteBuf buffer) {

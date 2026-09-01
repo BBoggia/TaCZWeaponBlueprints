@@ -46,21 +46,6 @@ class BlueprintKnowledgeFlowPhaseEightTest {
     }
 
     @Test
-    void phaseRecordPreservesCompatibilityAndManualQaBoundary() throws IOException {
-        String record = read("docs/blueprint-knowledge-flow-phase-8.md");
-        for (String required : List.of(
-                "do not modify those fields",
-                "does not select a research profile",
-                "never automatically applies",
-                "contains no player identifiers",
-                "from `26` to `27`",
-                "Player progression remains data version 2",
-                "Hands-on runtime checks remain required")) {
-            assertTrue(record.contains(required), "Missing Phase 8 contract: " + required);
-        }
-    }
-
-    @Test
     void everySupportedConsumerUsesAndReportsTheEffectivePreset() throws IOException {
         String legacyLoot = read(
                 "src/main/java/com/gamergaming/taczweaponblueprints/loot/AddItemsModifier.java");

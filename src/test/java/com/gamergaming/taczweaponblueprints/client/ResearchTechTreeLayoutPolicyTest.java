@@ -100,4 +100,36 @@ class ResearchTechTreeLayoutPolicyTest {
                         base.nodeGap()),
                 adapted.maxRankBlockWidth());
     }
+
+    @Test
+    void layoutPresetsProduceDistinctSafeTechTreeSpacing() {
+        ResearchTechTreeLayoutPolicy compact = assertDoesNotThrow(() ->
+                ResearchTechTreeLayoutPolicy.fromShared(ResearchTreeLayoutPreset.COMPACT.resolve(
+                        ResearchTreeLayoutPolicy.UNIFIED_OVERVIEW)));
+        ResearchTechTreeLayoutPolicy balanced = assertDoesNotThrow(() ->
+                ResearchTechTreeLayoutPolicy.fromShared(ResearchTreeLayoutPreset.BALANCED.resolve(
+                        ResearchTreeLayoutPolicy.UNIFIED_OVERVIEW)));
+        ResearchTechTreeLayoutPolicy spacious = assertDoesNotThrow(() ->
+                ResearchTechTreeLayoutPolicy.fromShared(ResearchTreeLayoutPreset.SPACIOUS.resolve(
+                        ResearchTreeLayoutPolicy.UNIFIED_OVERVIEW)));
+
+        assertEquals(12, compact.sameTierStepGap());
+        assertEquals(20, balanced.sameTierStepGap());
+        assertEquals(26, spacious.sameTierStepGap());
+        assertTrue(compact.nodeGap() < balanced.nodeGap());
+        assertTrue(balanced.nodeGap() < spacious.nodeGap());
+    }
+
+    @Test
+    void maximumCustomSpacingIsAdaptedToTheBoundedTechTreeCanvas() {
+        ResearchTreeLayoutPolicy maximum = new ResearchTreeLayoutPolicy(
+                220, 220, 220, 220, 220, 220, 220, 220, 220,
+                ResearchTreeLayout.MAX_DIMENSION, 32, 32);
+
+        ResearchTechTreeLayoutPolicy adapted = assertDoesNotThrow(
+                () -> ResearchTechTreeLayoutPolicy.fromShared(maximum));
+
+        assertTrue(adapted.sameTierStepGap() <= maximum.tierGap());
+        assertTrue(adapted.portalPadding() <= maximum.portalPadding());
+    }
 }

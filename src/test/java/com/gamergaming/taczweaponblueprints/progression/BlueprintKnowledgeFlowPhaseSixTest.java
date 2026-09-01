@@ -22,7 +22,7 @@ class BlueprintKnowledgeFlowPhaseSixTest {
         assertTrue(BlueprintAccessConfigSnapshot.EMPTY.progressionExemptKinds().isEmpty());
         assertTrue(BlueprintAccessConfigSnapshot.EMPTY.progressionExemptItemTypes().isEmpty());
         assertTrue(BlueprintAccessConfigSnapshot.EMPTY.startingBlueprints().isEmpty());
-        assertEquals("40", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("42", NetworkHandler.PROTOCOL_VERSION);
     }
 
     @Test
@@ -49,21 +49,4 @@ class BlueprintKnowledgeFlowPhaseSixTest {
         assertTrue(build.contains("awardPolicy: 'starting_grants_do_not_award'"));
     }
 
-    @Test
-    void phaseRecordCapturesPersistenceAuthorityAndManualBoundary() throws IOException {
-        String record = Files.readString(PROJECT.resolve(
-                "docs/blueprint-knowledge-flow-phase-6.md"));
-        for (String required : List.of(
-                "live access policy",
-                "idempotent, additive grants of durable knowledge",
-                "without being inserted into `LearnedBlueprints`",
-                "Removing an exemption immediately returns the target",
-                "Removing an ID from `startingBlueprints` never revokes knowledge",
-                "dispatches no discovery or\nlearning Research Point awards",
-                "custom network protocol remains `26`",
-                "Player progression remains data version 2",
-                "does not claim the hands-on cases")) {
-            assertTrue(record.contains(required), "Missing Phase 6 contract: " + required);
-        }
-    }
 }

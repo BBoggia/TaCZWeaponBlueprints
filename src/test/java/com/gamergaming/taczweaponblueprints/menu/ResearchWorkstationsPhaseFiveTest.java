@@ -50,7 +50,8 @@ class ResearchWorkstationsPhaseFiveTest {
                 "unlockCount",
                 "ingredientTypeCount",
                 "pathPlanningState",
-                "costMode"), fields);
+                "costMode",
+                "routeFingerprint"), fields);
         assertFalse(fields.contains("recycling"));
         assertFalse(fields.contains("researchData"));
     }
@@ -68,6 +69,6 @@ class ResearchWorkstationsPhaseFiveTest {
 
     @Test
     void destructiveWireCleanupUsesANewExactProtocol() {
-        assertEquals("40", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("42", NetworkHandler.PROTOCOL_VERSION);
     }
 }

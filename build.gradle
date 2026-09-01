@@ -33,7 +33,7 @@ base {
 // opt-in hybrid-generation evidence. Deliberate changes must update runtime
 // constants, release gates, and migration documentation together.
 def certifiedAutomaticPlacementVersion = 'tacz-gun-placement-v13'
-def certifiedResearchTreeProtocol = '40'
+def certifiedResearchTreeProtocol = '42'
 def certifiedResearchCatalogExportFormat = 18
 def certifiedAutomaticPrerequisiteStrategy = 'grouped_routes_v1'
 def certifiedAutomaticScoringModel = 'capability_v3'
@@ -251,6 +251,16 @@ dependencies {
     implementation 'org.apache.commons:commons-math3:3.6.1'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
+    // ForgeGradle's deobfuscated mod dependency does not expose Fzzy Config's
+    // runtime serializer dependencies to plain JUnit workers.
+    testRuntimeOnly 'blue.endless:jankson:1.2.3'
+    // Custom validated entries reference Fzzy's public TOML serializer types;
+    // Fzzy already bundles this library for runtime through Jar-in-Jar.
+    compileOnly 'net.peanuuutz.tomlkt:tomlkt-jvm:0.3.7'
+    testRuntimeOnly 'net.peanuuutz.tomlkt:tomlkt-jvm:0.3.7'
+    testRuntimeOnly 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3'
+    testRuntimeOnly 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2'
+    testRuntimeOnly 'org.jetbrains.kotlin:kotlin-reflect:2.0.20'
 
     implementation fg.deobf("maven.modrinth:timeless-and-classics-zero:${tacz_version}") {
         exclude group: 'org.apache.commons', module: 'commons-math3'
@@ -3334,6 +3344,26 @@ tasks.register('verifyReleaseArtifact') {
                     'gui.taczweaponblueprints.research_group.undisclosed',
                     'config.taczweaponblueprints.research_tree_client',
                     'config.taczweaponblueprints.research_tree_client.desc',
+                    'config.taczweaponblueprints.research_tree_client.interaction',
+                    'config.taczweaponblueprints.research_tree_client.interaction.desc',
+                    'config.taczweaponblueprints.research_tree_client.treeAppearance',
+                    'config.taczweaponblueprints.research_tree_client.treeAppearance.desc',
+                    'config.taczweaponblueprints.research_tree_client.advancedLayout',
+                    'config.taczweaponblueprints.research_tree_client.advancedLayout.desc',
+                    'config.taczweaponblueprints.research_tree_client.layoutPreset',
+                    'config.taczweaponblueprints.research_tree_client.layoutPreset.desc',
+                    'config.taczweaponblueprints.research_tree_client.layoutPreset.CUSTOM',
+                    'config.taczweaponblueprints.research_tree_client.layoutPreset.CUSTOM.desc',
+                    'config.taczweaponblueprints.research_tree_client.layoutPreset.COMPACT',
+                    'config.taczweaponblueprints.research_tree_client.layoutPreset.COMPACT.desc',
+                    'config.taczweaponblueprints.research_tree_client.layoutPreset.BALANCED',
+                    'config.taczweaponblueprints.research_tree_client.layoutPreset.BALANCED.desc',
+                    'config.taczweaponblueprints.research_tree_client.layoutPreset.SPACIOUS',
+                    'config.taczweaponblueprints.research_tree_client.layoutPreset.SPACIOUS.desc',
+                    'config.taczweaponblueprints.research_tree_client.resetTreeAppearance',
+                    'config.taczweaponblueprints.research_tree_client.resetTreeAppearance.desc',
+                    'config.taczweaponblueprints.research_tree_client.condition.holdToResearch',
+                    'config.taczweaponblueprints.research_tree_client.condition.customLayout',
                     'config.taczweaponblueprints.research_tree_client.holdToResearch',
                     'config.taczweaponblueprints.research_tree_client.holdToResearch.desc',
                     'config.taczweaponblueprints.research_tree_client.holdDurationMillis',
@@ -3366,6 +3396,23 @@ tasks.register('verifyReleaseArtifact') {
                     'config.taczweaponblueprints.research_tree_client.orderingSweeps.desc',
                     'config.taczweaponblueprints.research_tree_client.compactionSweeps',
                     'config.taczweaponblueprints.research_tree_client.compactionSweeps.desc',
+                    'config.taczweaponblueprints.blueprint.generalProgression',
+                    'config.taczweaponblueprints.blueprint.generalProgression.desc',
+                    'config.taczweaponblueprints.blueprint.discoveryAndLoot',
+                    'config.taczweaponblueprints.blueprint.discoveryAndLoot.desc',
+                    'config.taczweaponblueprints.blueprint.researchAndPoints',
+                    'config.taczweaponblueprints.blueprint.researchAndPoints.desc',
+                    'config.taczweaponblueprints.blueprint.analyzer',
+                    'config.taczweaponblueprints.blueprint.analyzer.desc',
+                    'config.taczweaponblueprints.blueprint.startingAccess',
+                    'config.taczweaponblueprints.blueprint.startingAccess.desc',
+                    'config.taczweaponblueprints.blueprint.advanced',
+                    'config.taczweaponblueprints.blueprint.advanced.desc',
+                    'config.taczweaponblueprints.blueprint.condition.blueprintsEnabled',
+                    'config.taczweaponblueprints.blueprint.condition.researchEnabled',
+                    'config.taczweaponblueprints.blueprint.condition.customDiscovery',
+                    'config.taczweaponblueprints.blueprint.condition.recyclingEnabled',
+                    'config.taczweaponblueprints.blueprint.condition.researchPointAwards',
                     'config.taczweaponblueprints.blueprint.progressionExemptBlueprints',
                     'config.taczweaponblueprints.blueprint.progressionExemptBlueprints.desc',
                     'config.taczweaponblueprints.blueprint.balancePreset',
@@ -3378,6 +3425,13 @@ tasks.register('verifyReleaseArtifact') {
                     'config.taczweaponblueprints.blueprint.balancePreset.BALANCED.desc',
                     'config.taczweaponblueprints.blueprint.balancePreset.SCARCE',
                     'config.taczweaponblueprints.blueprint.balancePreset.SCARCE.desc',
+                    'config.taczweaponblueprints.blueprint.maximumUndiscoveredVisibility.HIDDEN',
+                    'config.taczweaponblueprints.blueprint.maximumUndiscoveredVisibility.SILHOUETTE',
+                    'config.taczweaponblueprints.blueprint.maximumUndiscoveredVisibility.NAME',
+                    'config.taczweaponblueprints.blueprint.maximumUndiscoveredVisibility.PREVIEW',
+                    'config.taczweaponblueprints.blueprint.maximumUndiscoveredVisibility.FULL',
+                    'config.taczweaponblueprints.blueprint.duplicateBlueprintPolicy.KEEP',
+                    'config.taczweaponblueprints.blueprint.duplicateBlueprintPolicy.MANUAL_RECYCLING',
                     'config.taczweaponblueprints.blueprint.progressionExemptKinds',
                     'config.taczweaponblueprints.blueprint.progressionExemptKinds.desc',
                     'config.taczweaponblueprints.blueprint.progressionExemptItemTypes',

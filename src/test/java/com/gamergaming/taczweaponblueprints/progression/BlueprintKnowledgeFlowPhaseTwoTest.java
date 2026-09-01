@@ -75,25 +75,7 @@ class BlueprintKnowledgeFlowPhaseTwoTest {
         assertEquals(1, BlueprintRecyclerMenu.OUTPUT_SLOT);
         assertEquals(2, BlueprintRecyclerMenu.FIRST_PLAYER_SLOT);
         assertEquals(2, PlayerProgressionLimits.DATA_VERSION);
-        assertEquals("40", NetworkHandler.PROTOCOL_VERSION);
-    }
-
-    @Test
-    void phaseTwoRecordDocumentsActivationAndDeferrals() throws IOException {
-        String record = read("docs/blueprint-knowledge-flow-phase-2.md");
-        for (String required : List.of(
-                "BlueprintLearningMutation",
-                "PREFLIGHT",
-                "COMMIT",
-                "progression collections",
-                "BlueprintLearningService",
-                "BYPASS_TREE_PREREQUISITES",
-                "only after `SUCCESS`",
-                "Research Tree still creates one physical blueprint",
-                "protocol remains 25",
-                "player data version remains 2")) {
-            assertTrue(record.contains(required), "Missing Phase 2 record: " + required);
-        }
+        assertEquals("42", NetworkHandler.PROTOCOL_VERSION);
     }
 
     private static String read(String relative) throws IOException {

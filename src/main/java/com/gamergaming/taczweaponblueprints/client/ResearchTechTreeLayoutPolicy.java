@@ -42,15 +42,28 @@ public record ResearchTechTreeLayoutPolicy(
         if (policy == null) {
             throw new IllegalArgumentException("shared research layout policy cannot be null");
         }
+        int desiredSameTierStepGap = Math.min(
+                policy.tierGap(),
+                Math.max(0, policy.nodeGap() - 4));
+        int sameTierStepGap = safeSameTierStepGap(
+                policy.canvasPadding(),
+                desiredSameTierStepGap,
+                policy.tierGap());
+        int portalPadding = Math.min(
+                policy.portalPadding(),
+                safePortalPadding(
+                        policy.canvasPadding(),
+                        sameTierStepGap,
+                        policy.tierGap()));
         int maximumUsableRankWidth = Math.min(
                 maximumUsableRankWidth(policy.canvasPadding()),
                 rankBlockWidth(MAXIMUM_NODES_PER_ROW, policy.nodeGap()));
         return new ResearchTechTreeLayoutPolicy(
                 policy.canvasPadding(),
                 policy.nodeGap(),
-                Math.min(policy.tierGap(), 20),
+                sameTierStepGap,
                 policy.tierGap(),
-                policy.portalPadding(),
+                portalPadding,
                 maximumUsableRankWidth,
                 policy.orderingSweeps(),
                 policy.compactionSweeps());
@@ -160,6 +173,50 @@ public record ResearchTechTreeLayoutPolicy(
             int sameTierStepGap,
             int tierGap,
             int portalPadding) {
+        long extent = worstCaseHeight(
+                canvasPadding, sameTierStepGap, tierGap, portalPadding);
+        if (extent > ResearchTreeLayout.MAX_DIMENSION) {
+            throw new IllegalArgumentException(
+                    "Research Tech Tree layout policy can exceed the canvas height");
+        }
+    }
+
+    private static int safeSameTierStepGap(
+            int canvasPadding,
+            int desiredSameTierStepGap,
+            int tierGap) {
+        long rowTransitions = (long) ResearchTreeGraph.MAX_NODES - 1L;
+        long bandTransitions = Math.min(
+                rowTransitions,
+                (long) ResearchTechTreeDefinition.MAX_PRESENTATION_BANDS - 1L);
+        long baseAtZeroStepGap = worstCaseHeight(canvasPadding, 0, tierGap, 0);
+        long available = Math.max(
+                0L,
+                ResearchTreeLayout.MAX_DIMENSION - baseAtZeroStepGap);
+        long maximum = available / Math.max(1L, rowTransitions - bandTransitions);
+        return Math.min(desiredSameTierStepGap, Math.toIntExact(maximum));
+    }
+
+    private static int safePortalPadding(
+            int canvasPadding,
+            int sameTierStepGap,
+            int tierGap) {
+        long baseAtZeroPadding = worstCaseHeight(
+                canvasPadding, sameTierStepGap, tierGap, 0);
+        long available = Math.max(
+                0L,
+                ResearchTreeLayout.MAX_DIMENSION - baseAtZeroPadding);
+        long paddingEnvelopePerPixel = 2L * ResearchTreeGraph.MAX_NODES;
+        return Math.toIntExact(Math.min(
+                MAX_SPACING,
+                available / paddingEnvelopePerPixel));
+    }
+
+    private static long worstCaseHeight(
+            int canvasPadding,
+            int sameTierStepGap,
+            int tierGap,
+            int portalPadding) {
         long nodeRows = Math.multiplyExact(
                 (long) ResearchTreeGraph.MAX_NODES,
                 ResearchTreeLayout.NODE_HEIGHT);
@@ -180,7 +237,7 @@ public record ResearchTechTreeLayoutPolicy(
         long requirementJunctionEnvelope = Math.multiplyExact(
                 (long) ResearchTreeGraph.MAX_EDGES,
                 REQUIREMENT_JUNCTION_SPACING);
-        long extent = Math.addExact(
+        return Math.addExact(
                 2L * canvasPadding,
                 Math.addExact(
                         nodeRows,
@@ -189,10 +246,6 @@ public record ResearchTechTreeLayoutPolicy(
                                 Math.addExact(
                                         portalEnvelope,
                                         requirementJunctionEnvelope))));
-        if (extent > ResearchTreeLayout.MAX_DIMENSION) {
-            throw new IllegalArgumentException(
-                    "Research Tech Tree layout policy can exceed the canvas height");
-        }
     }
 
     private static int portalClearance(int portalPadding) {

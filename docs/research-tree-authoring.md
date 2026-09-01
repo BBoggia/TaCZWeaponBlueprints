@@ -4,7 +4,7 @@
 > with their disclosure-safe graph, and rendered as selectable branches or a
 > complete identity-visible All Weapons overview.
 
-TaCZ Weapon Blueprints builds the Research Bench tree from the active research
+[TaCZ] Weapon Research & Blueprints builds the Research Bench tree from the active research
 profile and its research rules. A server or modpack can replace the entire
 progression, rebalance individual weapons, or add content-pack branches without
 writing Java code.
@@ -37,8 +37,8 @@ fixture. The economy section compares finite configured RP income with policy
 costs, leaf paths, AND-of-OR-aware prerequisite closures, and the full tree. Rank,
 tier, band, and layout never set costs; the current export reports
 `cost_authority: research_policy` and `automatic_cost_curve_enabled: false`.
-See [generation redesign Phase 9](research-tree-generation-redesign-phase-9.md)
-for definitions and the packaged baseline.
+The export itself defines these fields and records the packaged baseline used
+for comparison.
 
 ## Generate Tech Tree weapon-rating evidence
 
@@ -59,10 +59,10 @@ Stats determine combat and utility evidence only. Player appeal requires a
 separate reviewed score and reason. The built-in task uses the reviewed TaCZ
 1.1.8 document in `src/authoring/resources`; use
 `-PresearchAppealRatings=/path/to/appeal.json` to replace it for a custom pack.
-An omitted custom score is neutral and marked `appeal_unreviewed`. The report is non-authoritative: it
-cannot create costs, prerequisites, research eligibility, or Tech Tree
-placements. The exact Phase 2 formula and review workflow are documented in
-[`research-tech-tree-phase-2.md`](development/research-tech-tree-phase-2.md).
+An omitted custom score is neutral and marked `appeal_unreviewed`. The report
+is non-authoritative: it cannot create costs, prerequisites, research
+eligibility, or Tech Tree placements. Review the generated evidence and its
+recorded formula version before adopting suggestions in a pack.
 
 The add-on automatic-placement path shares this report's normalized raw
 mechanical derivation, but not its subjective appeal score or its final
@@ -70,8 +70,9 @@ mechanical derivation, but not its subjective appeal score or its final
 combat/utility result and reports missing-evidence confidence separately. A
 revision-matched eligible proposal may now control presentation position and,
 only in explicit `connected` mode, add a bounded validated prerequisite set. It cannot
-create research costs or otherwise change eligibility. See
-[`research-automatic-placement-phase-1.md`](research-automatic-placement-phase-1.md).
+create research costs or otherwise change eligibility. The packaged scoring
+model is documented in
+[Capability scoring](research-capability-scoring-v3.md).
 
 To regenerate the pinned appeal-free TaCZ 1.1.8 comparison population used by
 the runtime evidence snapshot, run:
@@ -84,27 +85,16 @@ This writes the strict bundled resource under
 `assets/taczweaponblueprints/research/automatic`. Its source and metric
 fingerprints are regression contracts; change the formula/reference version
 when an intentional update changes either fingerprint. The reference remains
-evidence only and cannot itself place or unlock a blueprint. The runtime and
-regeneration boundary is documented in
-[`research-automatic-placement-phase-2.md`](research-automatic-placement-phase-2.md).
-Phase 3's fixed score bands, multiple progression levels, stable sibling slots,
-and non-authoritative review boundary are documented in
-[`research-automatic-placement-phase-3.md`](research-automatic-placement-phase-3.md).
-Phase 4's strict activation profile, fallback-only candidate gate, and atomic
-revision coupling are documented in
-[`research-automatic-placement-phase-4.md`](research-automatic-placement-phase-4.md).
-Phase 5's live presentation projection, protocol-20 semantic coordinate, and
-failure-atomic compatibility boundary are documented in
-[`research-automatic-placement-phase-5.md`](research-automatic-placement-phase-5.md).
-Phase 6's balanced connected-mode prerequisite planner, server authority, and
-fail-open rules are documented in
-[`research-automatic-placement-phase-6.md`](research-automatic-placement-phase-6.md).
-Phase 7's operator status/inspection evidence and deterministic format-3 export
-are documented in
-[`research-automatic-placement-phase-7.md`](research-automatic-placement-phase-7.md).
-Phase 8's maximum population, packaged safe-default contract, release evidence,
-and remaining runtime-QA boundary are documented in
-[`research-automatic-placement-phase-8.md`](research-automatic-placement-phase-8.md).
+evidence only and cannot itself place or unlock a blueprint.
+
+Automatic placement uses fixed score bands, stable sibling slots, a strict
+activation profile, a fallback-only candidate gate, and atomic revision
+publication. Connected mode adds only validated prerequisite groups. Invalid
+plans fail open without changing research costs or player progress. Status,
+inspection, and export commands provide deterministic operator evidence, while
+hard population limits and safe defaults keep large content packs bounded. See
+[Dynamic Research Tree width](research-tree-dynamic-width.md) for the current
+layout limits.
 
 Weapon placement now has one explicit authority per tree; it is never a hybrid.
 An `automatic` tree sends every catalog gun through scoring, placement, and
@@ -113,8 +103,6 @@ and prerequisite declarations. An `authored_only` tree ignores automatic
 proposals and publishes only guns matched by an exact, tag, or non-fallback
 selector placement. Unmatched guns and entries marked `fallback` are omitted.
 Ammo and attachment placement and prerequisites remain authored in either mode.
-See
-[`research-tree-generation-redesign-phase-4.md`](research-tree-generation-redesign-phase-4.md).
 
 ## Resource locations
 
@@ -165,7 +153,7 @@ Attachments and Ammo.
 
 ## Reverse-engineering policy
 
-Phase 4 reuses the same profile, target selector, specificity, priority, and
+Reverse engineering reuses the same profile, target selector, specificity, priority, and
 resource-ID tie-break used by ordinary research rules. There is no separate
 matching language to keep synchronized. Profiles may provide defaults and any
 research rule may overlay individual fields:
@@ -306,10 +294,7 @@ never makes a same-rank dependency legal. `tier`/`level` remain legacy
 presentation metadata and are converted to optional band references during
 publication; they do not decide format-2 edge legality or client rows. Format 1
 must omit `rank` and is converted losslessly using a wide tier stride followed
-by deterministic topological lifting. See
-[`research-tree-generation-redesign-phase-2.md`](research-tree-generation-redesign-phase-2.md)
-and
-[`research-tree-generation-redesign-phase-3.md`](research-tree-generation-redesign-phase-3.md).
+by deterministic topological lifting.
 
 A minimal format-2 manual placement pair looks like this:
 
@@ -478,8 +463,7 @@ The built-in map contains 53 dormant authored weapon, 95 attachment, and 24
 ammo placements. Its `automatic` authority ignores every authored weapon
 coordinate and prerequisite, so all 53 live recipe-backed weapons use the same
 revision-matched generator. The disabled attachment/ammo bundles
-remain available as format-1 opt-in compatibility data. The map is documented in
-[`research-tech-tree-phase-3.md`](development/research-tech-tree-phase-3.md).
+remain available as format-1 opt-in compatibility data.
 
 For a release datapack, audit each domain independently: every exact placement
 should resolve to exactly one research rule, every prerequisite should stay in
@@ -770,6 +754,6 @@ After changing a pack, run `/reload`, then check `status`, inspect representativ
 roots and leaves, and export again. Structural diagnostics report missing
 prerequisites, visible nodes whose path is hidden, and competing rule selections.
 
-The built-in seven-branch TaCZ ordering and its role-normalized balance method
-are recorded in
-[`research-tree-navigation-phase-6.md`](development/research-tree-navigation-phase-6.md).
+The built-in TaCZ tree uses seven stable weapon branches with role-normalized
+balance. Review the live export after changing branch membership, prerequisites,
+or scoring inputs.

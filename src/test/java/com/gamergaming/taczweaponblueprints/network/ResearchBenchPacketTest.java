@@ -12,6 +12,7 @@ import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchResearchAction;
 import com.gamergaming.taczweaponblueprints.menu.ResearchSelectionPreview;
 import com.gamergaming.taczweaponblueprints.progression.ResearchCostMode;
+import com.gamergaming.taczweaponblueprints.progression.ResearchRouteFingerprint;
 
 import io.netty.buffer.Unpooled;
 import net.minecraft.network.FriendlyByteBuf;
@@ -22,8 +23,13 @@ class ResearchBenchPacketTest {
 
     @Test
     void actionRoundTripsOnlyContainerActionAndBoundedBlueprintId() {
+        ResearchRouteFingerprint fingerprint = new ResearchRouteFingerprint(12L, 34L);
         ResearchBenchActionPacket packet = new ResearchBenchActionPacket(
-                17, 42, ResearchBenchResearchAction.RESEARCH, Optional.of(BLUEPRINT));
+                17,
+                42,
+                ResearchBenchResearchAction.RESEARCH,
+                Optional.of(BLUEPRINT),
+                Optional.of(fingerprint));
         FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
         try {
             packet.toBytes(buffer);
@@ -32,6 +38,7 @@ class ResearchBenchPacketTest {
             assertEquals(42, decoded.requestId());
             assertEquals(ResearchBenchResearchAction.RESEARCH, decoded.action());
             assertEquals(Optional.of(BLUEPRINT), decoded.blueprintId());
+            assertEquals(Optional.of(fingerprint), decoded.routeFingerprint());
         } finally {
             buffer.release();
         }
@@ -72,6 +79,12 @@ class ResearchBenchPacketTest {
                 1,
                 ResearchBenchResearchAction.SELECT,
                 Optional.of(new ResourceLocation("test", "x".repeat(252)))));
+        assertThrows(IllegalArgumentException.class, () -> new ResearchBenchActionPacket(
+                1,
+                1,
+                ResearchBenchResearchAction.SELECT,
+                Optional.of(BLUEPRINT),
+                Optional.of(new ResearchRouteFingerprint(1L, 2L))));
     }
 
     @Test
@@ -99,7 +112,10 @@ class ResearchBenchPacketTest {
     void boundedPathPlanningFailuresRoundTripAsAppendOnlyActionResults() {
         for (ResearchBenchMenu.ActionResultCode code : List.of(
                 ResearchBenchMenu.ActionResultCode.PATH_TOO_LARGE,
-                ResearchBenchMenu.ActionResultCode.ROUTE_TOO_COMPLEX)) {
+                ResearchBenchMenu.ActionResultCode.ROUTE_TOO_COMPLEX,
+                ResearchBenchMenu.ActionResultCode.TECH_TREE_UNAVAILABLE,
+                ResearchBenchMenu.ActionResultCode.UNSATISFIABLE,
+                ResearchBenchMenu.ActionResultCode.STALE_PREVIEW)) {
             ResearchBenchMenu.ActionResult result = new ResearchBenchMenu.ActionResult(
                     ResearchBenchResearchAction.RESEARCH,
                     Optional.of(BLUEPRINT),
@@ -129,6 +145,12 @@ class ResearchBenchPacketTest {
                         ResearchBenchResearchAction.SELECT,
                         Optional.of(BLUEPRINT),
                         ResearchBenchMenu.ActionResultCode.SUCCESS));
+        assertEquals(
+                ResearchBenchMenu.ActionResultCode.REQUEST_THROTTLED,
+                new ResearchBenchMenu.ActionResult(
+                        ResearchBenchResearchAction.SELECT,
+                        Optional.of(BLUEPRINT),
+                        ResearchBenchMenu.ActionResultCode.REQUEST_THROTTLED).code());
     }
 
     @Test
@@ -167,6 +189,7 @@ class ResearchBenchPacketTest {
 
     @Test
     void pathPreviewRoundTripsAggregateCountsAndTruncatedMaterials() {
+        ResearchRouteFingerprint fingerprint = new ResearchRouteFingerprint(56L, 78L);
         ResearchSelectionPreview preview = new ResearchSelectionPreview(
                 Optional.of(BLUEPRINT),
                 42,
@@ -182,7 +205,10 @@ class ResearchBenchPacketTest {
                         12,
                         12)),
                 5,
-                3);
+                3,
+                ResearchSelectionPreview.PathPlanningState.NONE,
+                ResearchCostMode.POINTS_AND_ITEMS,
+                Optional.of(fingerprint));
         FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
         try {
             new SyncResearchBenchPreviewPacket(9, preview).toBytes(buffer);
@@ -191,6 +217,7 @@ class ResearchBenchPacketTest {
             assertEquals(preview, decoded);
             assertEquals(5, decoded.unlockCount());
             assertEquals(2, decoded.additionalIngredientTypes());
+            assertEquals(Optional.of(fingerprint), decoded.routeFingerprint());
         } finally {
             buffer.release();
         }
@@ -227,7 +254,7 @@ class ResearchBenchPacketTest {
         FriendlyByteBuf invalid = new FriendlyByteBuf(Unpooled.buffer());
         try {
             new SyncResearchBenchPreviewPacket(9, preview).toBytes(invalid);
-            invalid.setByte(invalid.writerIndex() - 1, ResearchCostMode.values().length);
+            invalid.setByte(invalid.writerIndex() - 2, ResearchCostMode.values().length);
             assertThrows(
                     IllegalArgumentException.class,
                     () -> new SyncResearchBenchPreviewPacket(invalid));
@@ -238,25 +265,31 @@ class ResearchBenchPacketTest {
 
     @Test
     void boundedPathPlanningStateRoundTripsAndRejectsUnknownOrdinals() {
-        ResearchSelectionPreview preview = new ResearchSelectionPreview(
-                Optional.of(BLUEPRINT),
-                0,
-                80,
-                false,
-                true,
-                true,
-                false,
-                false,
-                List.of(),
-                1,
-                0,
-                ResearchSelectionPreview.PathPlanningState.PATH_TOO_LARGE);
-        FriendlyByteBuf roundTrip = new FriendlyByteBuf(Unpooled.buffer());
-        try {
-            new SyncResearchBenchPreviewPacket(9, preview).toBytes(roundTrip);
-            assertEquals(preview, new SyncResearchBenchPreviewPacket(roundTrip).preview());
-        } finally {
-            roundTrip.release();
+        for (ResearchSelectionPreview.PathPlanningState state : List.of(
+                ResearchSelectionPreview.PathPlanningState.PATH_TOO_LARGE,
+                ResearchSelectionPreview.PathPlanningState.ROUTE_TOO_COMPLEX,
+                ResearchSelectionPreview.PathPlanningState.TECH_TREE_UNAVAILABLE,
+                ResearchSelectionPreview.PathPlanningState.UNSATISFIABLE)) {
+            ResearchSelectionPreview preview = new ResearchSelectionPreview(
+                    Optional.of(BLUEPRINT),
+                    0,
+                    80,
+                    false,
+                    true,
+                    true,
+                    false,
+                    false,
+                    List.of(),
+                    1,
+                    0,
+                    state);
+            FriendlyByteBuf roundTrip = new FriendlyByteBuf(Unpooled.buffer());
+            try {
+                new SyncResearchBenchPreviewPacket(9, preview).toBytes(roundTrip);
+                assertEquals(preview, new SyncResearchBenchPreviewPacket(roundTrip).preview());
+            } finally {
+                roundTrip.release();
+            }
         }
 
         FriendlyByteBuf invalid = new FriendlyByteBuf(Unpooled.buffer());

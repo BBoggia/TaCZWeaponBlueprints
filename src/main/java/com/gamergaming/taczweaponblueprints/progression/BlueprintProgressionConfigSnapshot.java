@@ -25,7 +25,7 @@ public record BlueprintProgressionConfigSnapshot(
         TreeResearchResultMode treeResearchResultMode,
         ResearchCostMode researchCostMode,
         FoundWeaponRecoveryMode foundWeaponRecoveryMode) {
-    public static final int DEFAULT_POINT_CAP = 1_000_000;
+    public static final int DEFAULT_POINT_CAP = 10_000;
 
     public BlueprintProgressionConfigSnapshot {
         if (maximumUndiscoveredVisibility == null || duplicatePolicy == null

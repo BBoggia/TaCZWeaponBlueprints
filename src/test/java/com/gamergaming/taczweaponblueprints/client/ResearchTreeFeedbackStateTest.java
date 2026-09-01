@@ -19,6 +19,7 @@ class ResearchTreeFeedbackStateTest {
         assertEquals(ResearchTreeFeedbackState.Status.IDLE, feedback.snapshot().status());
         feedback.pending(NODE);
         assertEquals(ResearchTreeFeedbackState.Status.PENDING, feedback.snapshot().status());
+        assertTrue(feedback.pending());
         feedback.succeeded(NODE);
         assertEquals(ResearchTreeFeedbackState.Status.SUCCESS, feedback.snapshot().status());
         feedback.failed(NODE, "points_required");
@@ -26,6 +27,7 @@ class ResearchTreeFeedbackStateTest {
         assertEquals("points_required", feedback.snapshot().resultKey().orElseThrow());
         feedback.clear();
         assertEquals(ResearchTreeFeedbackState.Status.IDLE, feedback.snapshot().status());
+        assertFalse(feedback.pending());
         assertTrue(feedback.snapshot().blueprintId().isEmpty());
     }
 

@@ -7,6 +7,7 @@ import java.util.Optional;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintResearchService;
 import com.gamergaming.taczweaponblueprints.progression.ResearchCostMode;
+import com.gamergaming.taczweaponblueprints.progression.ResearchRouteFingerprint;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCost;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchIngredient;
 
@@ -26,10 +27,12 @@ public record ResearchSelectionPreview(
         int unlockCount,
         int ingredientTypeCount,
         PathPlanningState pathPlanningState,
-        ResearchCostMode costMode) {
+        ResearchCostMode costMode,
+        Optional<ResearchRouteFingerprint> routeFingerprint) {
     public static final ResearchSelectionPreview EMPTY = new ResearchSelectionPreview(
             Optional.empty(), 0, 0, false, false, false, false, false,
-            List.of(), 0, 0, PathPlanningState.NONE, ResearchCostMode.POINTS_AND_ITEMS);
+            List.of(), 0, 0, PathPlanningState.NONE, ResearchCostMode.POINTS_AND_ITEMS,
+            Optional.empty());
 
     /** Compatibility constructor for the original single-node preview shape. */
     public ResearchSelectionPreview(
@@ -55,7 +58,8 @@ public record ResearchSelectionPreview(
                 blueprintId == null || blueprintId.isEmpty() ? 0 : 1,
                 ingredients == null ? 0 : ingredients.size(),
                 PathPlanningState.NONE,
-                ResearchCostMode.POINTS_AND_ITEMS);
+                ResearchCostMode.POINTS_AND_ITEMS,
+                Optional.empty());
     }
 
     /** Compatibility constructor for the protocol-38 path preview shape. */
@@ -84,7 +88,8 @@ public record ResearchSelectionPreview(
                 unlockCount,
                 ingredientTypeCount,
                 PathPlanningState.NONE,
-                ResearchCostMode.POINTS_AND_ITEMS);
+                ResearchCostMode.POINTS_AND_ITEMS,
+                Optional.empty());
     }
 
     /** Compatibility constructor for the protocol-39 path-planning preview shape. */
@@ -114,7 +119,40 @@ public record ResearchSelectionPreview(
                 unlockCount,
                 ingredientTypeCount,
                 pathPlanningState,
-                ResearchCostMode.POINTS_AND_ITEMS);
+                ResearchCostMode.POINTS_AND_ITEMS,
+                Optional.empty());
+    }
+
+    /** Compatibility constructor for the protocol-41 cost-mode preview shape. */
+    public ResearchSelectionPreview(
+            Optional<ResourceLocation> blueprintId,
+            int pointCost,
+            int pointBalance,
+            boolean policyEligible,
+            boolean ingredientsSatisfied,
+            boolean outputSpace,
+            boolean researchable,
+            boolean creativeBypass,
+            List<IngredientPreview> ingredients,
+            int unlockCount,
+            int ingredientTypeCount,
+            PathPlanningState pathPlanningState,
+            ResearchCostMode costMode) {
+        this(
+                blueprintId,
+                pointCost,
+                pointBalance,
+                policyEligible,
+                ingredientsSatisfied,
+                outputSpace,
+                researchable,
+                creativeBypass,
+                ingredients,
+                unlockCount,
+                ingredientTypeCount,
+                pathPlanningState,
+                costMode,
+                Optional.empty());
     }
 
     public ResearchSelectionPreview {
@@ -124,6 +162,7 @@ public record ResearchSelectionPreview(
                 ? PathPlanningState.NONE
                 : pathPlanningState;
         costMode = costMode == null ? ResearchCostMode.POINTS_AND_ITEMS : costMode;
+        routeFingerprint = routeFingerprint == null ? Optional.empty() : routeFingerprint;
         if (pointCost < 0 || pointCost > PlayerProgressionLimits.MAX_RESEARCH_POINTS
                 || pointBalance < 0 || pointBalance > PlayerProgressionLimits.MAX_RESEARCH_POINTS
                 || ingredients.size() > BlueprintResearchCost.MAX_INGREDIENT_TYPES
@@ -175,6 +214,13 @@ public record ResearchSelectionPreview(
             throw new IllegalArgumentException(
                     "failed path planning preview contains a partial economy");
         }
+        if (routeFingerprint.filter(fingerprint -> !fingerprint.present()).isPresent()
+                || routeFingerprint.isPresent()
+                        && (blueprintId.isEmpty()
+                                || !policyEligible
+                                || pathPlanningState != PathPlanningState.NONE)) {
+            throw new IllegalArgumentException("research route fingerprint is inconsistent");
+        }
     }
 
     /**
@@ -205,14 +251,20 @@ public record ResearchSelectionPreview(
     public enum PathPlanningState {
         NONE,
         PATH_TOO_LARGE,
-        ROUTE_TOO_COMPLEX;
+        ROUTE_TOO_COMPLEX,
+        TECH_TREE_UNAVAILABLE,
+        UNSATISFIABLE;
 
         public static PathPlanningState fromStatus(BlueprintResearchService.Status status) {
             return status == BlueprintResearchService.Status.PATH_TOO_LARGE
                     ? PATH_TOO_LARGE
                     : status == BlueprintResearchService.Status.ROUTE_TOO_COMPLEX
                             ? ROUTE_TOO_COMPLEX
-                            : NONE;
+                            : status == BlueprintResearchService.Status.TECH_TREE_UNAVAILABLE
+                                    ? TECH_TREE_UNAVAILABLE
+                                    : status == BlueprintResearchService.Status.UNSATISFIABLE
+                                            ? UNSATISFIABLE
+                                            : NONE;
         }
     }
 

@@ -2,7 +2,9 @@
 
 ## Supported runtime
 
-Release 1.2.0 is built for Minecraft 1.20.1, Forge 47.x, TaCZ 1.1.8-hotfix, and Fzzy Config 0.5.9. Declared dependency ranges intentionally stop before TaCZ 1.2 and Fzzy Config 0.6 because those API lines have not been validated.
+The current build targets Minecraft 1.20.1, Forge 47.x, TaCZ 1.1.8-hotfix,
+and Fzzy Config 0.7.6. Declared dependency ranges intentionally stop before
+TaCZ 1.2 and Fzzy Config 0.8 because those API lines have not been validated.
 
 TaCZ 1.1.8 can inject a Model 943 revolver and ammunition into a world's optional bonus chest, but does not provide a gun-smithing recipe for that weapon. It is therefore not part of the recipe-backed blueprint tree. The automatic generator selects the live foundation from the complete recipe-backed weapon catalog.
 
@@ -23,9 +25,10 @@ that needs a temporary compatibility window. Changing the setting requires no
 world conversion and does not rewrite existing knowledge or physical items.
 In `DIRECT_LEARN`, selecting a higher locked node previews and can purchase a
 globally shortest viable prerequisite closure. Among equally short closures,
-the server prefers one affordable with the current inventory and RP, then uses
-stable economic and resource-ID ties. Progression-exempt alternatives satisfy
-their groups without being purchased. The server charges every
+the server compares RP cost, total material units, and canonical blueprint IDs.
+Inventory and RP affect readiness without changing that canonical route.
+Progression-exempt alternatives satisfy their groups without being purchased.
+The server charges every
 distinct newly learned node's aggregate RP and materials exactly once and
 commits the complete path atomically. `CREATE_BLUEPRINT` intentionally retains
 single-node behavior because creating one physical item cannot represent a
@@ -91,13 +94,28 @@ recyclable-only output because neither path teaches the recipe. See
 
 ## Balance presets and setup assistant
 
-`balancePreset` defaults to `CUSTOM`, preserving existing configuration and
-upgrade behavior. `ACCESSIBLE`, `BALANCED`, and `SCARCE` are reversible
-overlays for maximum undiscovered visibility plus the global default blueprint
-loot chance and roll range. Per-rule datapack overrides continue to win. A
-preset does not alter the active research profile, costs, prerequisites, RP
-economy, blacklists, exemptions, starting grants, or any player's learned and
+Fresh configurations default `balancePreset` to `BALANCED`. A version-zero
+configuration created by an earlier release automatically migrates to
+`CUSTOM`, preserving its existing undiscovered-visibility and blueprint-loot
+values. `ACCESSIBLE`, `BALANCED`, and `SCARCE` are reversible overlays for
+maximum undiscovered visibility plus the global default blueprint loot chance
+and roll range. Per-rule datapack overrides continue to win. A preset does not
+alter the active research profile, costs, prerequisites, RP economy,
+blacklists, exemptions, starting grants, or any player's learned and
 discovered IDs.
+
+Fzzy Config groups are presentation-only and do not nest or rename the
+existing TOML fields. The Server Settings screen shows related controls in
+collapsible sections and makes dependent controls inactive when their parent
+feature or preset is unavailable. Their stored values remain intact and become
+active again when the dependency is restored.
+
+Client Tech Tree settings now default to the `BALANCED` layout preset on a new
+installation. Existing version-zero client files migrate to `CUSTOM`, so their
+individual spacing, wrapping, ordering, and compaction values remain
+authoritative. Named presets are reversible overlays and never overwrite the
+dormant Custom values. Restore Tree Appearance is the only control that
+intentionally resets those advanced values.
 
 Operators can use this preview-first flow after installing or changing TaCZ
 content packs:
@@ -137,7 +155,7 @@ ledger. Version-1 saves migrate automatically with an empty ledger; learned and
 discovered blueprint IDs, Research Points, and legacy recipe aliases remain
 unchanged and require no world conversion. The ledger is copied across every
 player clone and is not sent to clients. The custom network protocol is
-`40`, so clients and servers must update together. Protocol 40 transfers each
+`42`, so clients and servers must update together. Protocol 42 transfers each
 disclosure-safe research graph, matching group presentation, and optional
 identity-safe Tech Tree metadata as one bounded atomic publication. It also
 transfers canonical prerequisite-group boundaries, visible alternatives,
@@ -151,7 +169,13 @@ It retains hardened progression chunk generations and uses a research-only,
 live-inventory Research Bench preview, including multi-node unlock count,
 aggregate path costs, and the complete material-type count even when only the
 first six bounded material rows are shown. The preview also carries the
-effective research-cost mode. Blueprint Analyzer previews independently carry
+effective research-cost mode, an opaque route-and-quote fingerprint, and the
+difference between an unavailable automatic-tree publication and a published
+graph with no complete authorized route. The server rejects a Research action
+whose fingerprint no longer matches the freshly prepared attempt, refreshes
+the current preview, and consumes nothing. A matching attempt commits the same
+prepared plan rather than planning the path again. Blueprint
+Analyzer previews independently carry
 duplicate, Research Data, physical-item reverse-engineering, trusted weapon
 origin, and direct found-weapon recovery decisions plus an opaque
 workstation-state token. It correlates Research Bench
@@ -296,6 +320,13 @@ Permission-level-2 operators may grant RP with
 `/gg progression points give <targets> <amount>`. Grants respect the live
 `researchPointCap`, synchronize successful balances immediately, and leave
 learned/discovered blueprint state unchanged.
+
+New configurations use a 10,000 RP balance cap. The Server Settings slider is
+bounded to 0-100,000 so accidental extreme values do not make the control
+impractical. Upgrading a configuration whose cap is above 100,000 bounds the
+configured cap to 100,000, but never deletes an existing player's stored RP.
+A player already above the new cap keeps that balance and simply cannot receive
+additional RP until spending brings it below the configured limit.
 
 Research Point award resources reload independently from research progression
 and loot. A malformed award file, conflicting shared-budget declaration, or
@@ -488,7 +519,7 @@ To roll back the mod version, stop the server, restore the previous JAR and matc
 Third-party TaCZ content packs can contain malformed recipes, language files, models, sounds, or missing definitions. The blueprint catalog isolates invalid recipes and reports aggregate samples while preserving valid entries. Fix those resources in the originating content pack; they are not blueprint datapack failures.
 
 JEI and EMI are optional client integrations. A server should not install them
-just for this mod. When either viewer is present, TaCZ Weapon Blueprints adds
+just for this mod. When either viewer is present, [TaCZ] Weapon Research & Blueprints adds
 generic localized item information only; the current costs and available
 research actions still come from the Research Bench or Blueprint Analyzer. If
 an optional-viewer startup fails, capture a complete client log and verify the
@@ -528,7 +559,7 @@ bundled `connected` mode with `place_connected` review handling, the three
 version identities, dynamic layering with a configured 9–20-node range and its
 baseline resolved width, optional
 tree-owned optional/dynamic/configured presentation bands, the 4,096-candidate
-limit, protocol 40, export format 18, and automatic prerequisite strategy
+limit, protocol 42, export format 18, and automatic prerequisite strategy
 `grouped_routes_v1` unless the
 corresponding contract and compatibility documentation are deliberately
 revised.
@@ -590,7 +621,7 @@ The grouped-prerequisite Phase 12 visual-refinement gate writes
 `branch-aware-visual-refinement-v1` and verifies client-only family-preserving
 responsive wrapping, bounded grouped-junction clearance, branch-seam pressure,
 and deterministic 287/4,096-node geometry. It does not migrate saves or change
-the published graph: prerequisite groups, semantic ranks, costs, protocol 40,
+the published graph: prerequisite groups, semantic ranks, costs, protocol 42,
 export format 18, and the packaged `grouped_routes_v1` strategy remain
 authoritative. Before public release, retain the gate report and complete its
 linked before/after screenshot checks at normal and maximum zoom-out.

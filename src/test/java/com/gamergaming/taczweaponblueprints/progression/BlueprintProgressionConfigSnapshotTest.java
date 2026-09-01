@@ -58,6 +58,7 @@ class BlueprintProgressionConfigSnapshotTest {
         assertEquals(BlueprintProgressionConfigSnapshot.DEFAULT_POINT_CAP, snapshot.pointCap());
         assertFalse(snapshot.creativeBypassesResearchCost());
         assertEquals(BlueprintConfig.DEFAULT_RESEARCH_PROFILE, snapshot.activeProfileId());
+        assertEquals(10_000, BlueprintProgressionConfigSnapshot.DEFAULT_POINT_CAP);
 
         config.enableResearch.accept(false);
         config.onSyncServer();

@@ -205,6 +205,39 @@ public final class ResearchTreeProjectionCache {
         return geometryChanged || techGeometryChanged;
     }
 
+    /**
+     * Applies a requested client layout and recovers with the built-in Balanced
+     * policy when only that visual policy is rejected. If both attempts fail,
+     * the original failure is rethrown with the fallback failure suppressed;
+     * {@link #update(ResearchTreePublication, ResearchTreeLayoutPolicy)} keeps
+     * the previously committed cache intact in either case.
+     */
+    UpdateOutcome updateWithBalancedFallback(
+            ResearchTreePublication nextPublication,
+            ResearchTreeLayoutPolicy requestedLayoutPolicy) {
+        if (nextPublication == null || requestedLayoutPolicy == null) {
+            throw new IllegalArgumentException(
+                    "Research Tree fallback update inputs cannot be null");
+        }
+        try {
+            return new UpdateOutcome(
+                    update(nextPublication, requestedLayoutPolicy),
+                    Optional.empty());
+        } catch (RuntimeException requestedFailure) {
+            if (DEFAULT_LAYOUT_POLICY.equals(requestedLayoutPolicy)) {
+                throw requestedFailure;
+            }
+            try {
+                return new UpdateOutcome(
+                        update(nextPublication, DEFAULT_LAYOUT_POLICY),
+                        Optional.of(requestedFailure));
+            } catch (RuntimeException fallbackFailure) {
+                requestedFailure.addSuppressed(fallbackFailure);
+                throw requestedFailure;
+            }
+        }
+    }
+
     public ResearchTreePublication publication() {
         return publication;
     }
@@ -558,6 +591,21 @@ public final class ResearchTreeProjectionCache {
         ResearchTechTreeLayoutCatalog layout(
                 ResearchTechTreeProjectionCatalog projections,
                 ResearchTechTreeLayoutPolicy policy);
+    }
+
+    record UpdateOutcome(
+            boolean geometryChanged,
+            Optional<RuntimeException> recoveredLayoutFailure) {
+        UpdateOutcome {
+            if (recoveredLayoutFailure == null) {
+                throw new IllegalArgumentException(
+                        "Research Tree fallback outcome cannot contain null state");
+            }
+        }
+
+        boolean usedBalancedFallback() {
+            return recoveredLayoutFailure.isPresent();
+        }
     }
 
     private record OverviewLayoutBuild(ResearchTreeLayout layout, boolean fallbackUsed) {

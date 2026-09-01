@@ -9,7 +9,9 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
+import com.gamergaming.taczweaponblueprints.progression.BlueprintResearchService;
 import com.gamergaming.taczweaponblueprints.progression.ResearchCostMode;
+import com.gamergaming.taczweaponblueprints.progression.ResearchRouteFingerprint;
 
 import net.minecraft.resources.ResourceLocation;
 
@@ -116,6 +118,14 @@ class ResearchSelectionPreviewTest {
                 failure.pathPlanningState());
         assertEquals(0, failure.pointCost());
         assertTrue(failure.ingredients().isEmpty());
+        assertEquals(
+                ResearchSelectionPreview.PathPlanningState.TECH_TREE_UNAVAILABLE,
+                ResearchSelectionPreview.PathPlanningState.fromStatus(
+                        BlueprintResearchService.Status.TECH_TREE_UNAVAILABLE));
+        assertEquals(
+                ResearchSelectionPreview.PathPlanningState.UNSATISFIABLE,
+                ResearchSelectionPreview.PathPlanningState.fromStatus(
+                        BlueprintResearchService.Status.UNSATISFIABLE));
         assertThrows(IllegalArgumentException.class, () -> new ResearchSelectionPreview(
                 Optional.of(BLUEPRINT),
                 0,
@@ -175,5 +185,24 @@ class ResearchSelectionPreviewTest {
                         List.of(PAPER), Optional.empty(), 1, 1)),
                 1, 1, ResearchSelectionPreview.PathPlanningState.NONE,
                 ResearchCostMode.POINTS_ONLY));
+    }
+
+    @Test
+    void fingerprintRequiresAUsableSelectedRoute() {
+        assertThrows(IllegalArgumentException.class, () -> new ResearchSelectionPreview(
+                Optional.of(BLUEPRINT),
+                0,
+                0,
+                true,
+                true,
+                true,
+                true,
+                false,
+                List.of(),
+                1,
+                0,
+                ResearchSelectionPreview.PathPlanningState.NONE,
+                ResearchCostMode.POINTS_AND_ITEMS,
+                Optional.of(ResearchRouteFingerprint.NONE)));
     }
 }

@@ -41,6 +41,118 @@ public final class BlueprintResearchService {
         return research(player, blueprintId, playerInventoryInput(player));
     }
 
+    /**
+     * Commits the exact direct-learning path prepared and fingerprinted by the
+     * open Research Bench. Economic state and learning capacity are still
+     * rechecked atomically; route selection is deliberately not repeated.
+     */
+    public static Result researchPreparedPathFromInventory(
+            ServerPlayer player,
+            ResourceLocation blueprintId,
+            ResearchPathUnlockPlanner.Plan preparedPath) {
+        if (player == null || !player.isAlive() || !validId(blueprintId)
+                || preparedPath == null
+                || preparedPath.nodes().isEmpty()
+                || !blueprintId.equals(
+                        preparedPath.nodes().get(preparedPath.nodes().size() - 1).blueprintId())
+                || !preparedPath.solution().supportIds().contains(blueprintId)) {
+            return Result.failure(
+                    Status.INVALID_INPUT,
+                    Optional.ofNullable(blueprintId),
+                    player == null ? 0 : player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
+                            .map(IPlayerRecipeData::getResearchPoints).orElse(0),
+                    TreeResearchResultMode.DIRECT_LEARN);
+        }
+        Optional<IPlayerRecipeData> resolvedData =
+                player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve();
+        if (resolvedData.isEmpty()) {
+            return Result.failure(
+                    Status.PLAYER_DATA_UNAVAILABLE,
+                    Optional.of(blueprintId),
+                    0,
+                    TreeResearchResultMode.DIRECT_LEARN);
+        }
+        IPlayerRecipeData playerData = resolvedData.orElseThrow();
+        BlueprintProgressionConfigSnapshot config =
+                ModConfigs.BLUEPRINT.progressionSnapshot();
+        if (!config.treeResearchResultMode().learnsDirectly()) {
+            return Result.failure(
+                    Status.STALE_POLICY,
+                    Optional.of(blueprintId),
+                    playerData.getResearchPoints(),
+                    TreeResearchResultMode.DIRECT_LEARN);
+        }
+        Result result = commitPreparedPath(
+                blueprintId,
+                playerData,
+                preparedPath,
+                id -> BlueprintLearningService.targetFromCatalog(
+                        BlueprintDataManager.SERVER, id),
+                playerInventoryInput(player),
+                config.blueprintsEnabled());
+        if (result.successful()) {
+            ResearchPointAwardDispatcher.blueprintTransitionBatch(
+                    player,
+                    playerData,
+                    result.transitions().stream()
+                            .map(transition -> new ResearchPointAwardDispatcher.BlueprintTransition(
+                                    transition.blueprintId(),
+                                    transition.discoveredChanged(),
+                                    transition.learnedChanged()))
+                            .toList());
+            syncPostCommitBestEffort(player, true);
+        }
+        return result;
+    }
+
+    static Result commitPreparedPath(
+            ResourceLocation blueprintId,
+            IPlayerRecipeData playerData,
+            ResearchPathUnlockPlanner.Plan preparedPath,
+            Function<ResourceLocation, LearningTarget> targetResolver,
+            ResearchInput input,
+            boolean blueprintsEnabled) {
+        Optional<ResourceLocation> id = Optional.ofNullable(blueprintId)
+                .filter(BlueprintResearchService::validId);
+        if (id.isEmpty() || playerData == null || preparedPath == null
+                || targetResolver == null || input == null
+                || preparedPath.nodes().isEmpty()
+                || !blueprintId.equals(
+                        preparedPath.nodes().get(preparedPath.nodes().size() - 1).blueprintId())
+                || !preparedPath.solution().supportIds().contains(blueprintId)) {
+            return Result.failure(
+                    Status.INVALID_INPUT,
+                    id,
+                    playerData == null ? 0 : playerData.getResearchPoints(),
+                    TreeResearchResultMode.DIRECT_LEARN);
+        }
+        List<ItemStack> inputSnapshot;
+        try {
+            inputSnapshot = input.stacks();
+        } catch (RuntimeException exception) {
+            return Result.failure(
+                    Status.TRANSACTION_FAILED,
+                    id,
+                    playerData.getResearchPoints(),
+                    TreeResearchResultMode.DIRECT_LEARN);
+        }
+        return commitPath(
+                blueprintId,
+                playerData,
+                preparedPath,
+                targetResolver,
+                input,
+                inputSnapshot,
+                blueprintsEnabled);
+    }
+
+    /** Publishes legacy knowledge migrated while preparing an authoritative preview. */
+    public static void syncMigratedKnowledgeBestEffort(ServerPlayer player) {
+        if (player != null) {
+            syncPostCommitBestEffort(player, true);
+        }
+    }
+
     private static Result research(
             ServerPlayer player,
             ResourceLocation blueprintId,
@@ -58,15 +170,43 @@ public final class BlueprintResearchService {
         BlueprintProgressionConfigSnapshot config =
                 ModConfigs.BLUEPRINT.progressionSnapshot();
         TreeResearchResultMode resultMode = config.treeResearchResultMode();
-        if (BlueprintProgressionAccess.isProgressionExempt(blueprintId)) {
+        Function<ResourceLocation, BlueprintResearchPolicy> policyResolver;
+        Predicate<ResourceLocation> pathProgressionExempt;
+        ResearchPathAuthority pathAuthority;
+        try {
+            if (resultMode.learnsDirectly()) {
+                BlueprintResearchDataManager.ResearchPlanningAccess planningAccess =
+                        BlueprintResearchDataManager.INSTANCE.planningAccessFor(playerData);
+                policyResolver = planningAccess.policyResolver();
+                pathProgressionExempt = planningAccess.progressionExempt();
+                pathAuthority = planningAccess.authority();
+            } else {
+                policyResolver = BlueprintResearchDataManager.INSTANCE.policyResolverFor(playerData);
+                pathProgressionExempt = BlueprintProgressionAccess::isProgressionExempt;
+                pathAuthority = ResearchPathAuthority.authored();
+            }
+        } catch (RuntimeException exception) {
             return Result.failure(
-                    Status.POLICY_INELIGIBLE,
+                    Status.POLICY_UNAVAILABLE,
                     Optional.of(blueprintId),
                     playerData.getResearchPoints(),
                     resultMode);
         }
-        Function<ResourceLocation, BlueprintResearchPolicy> policyResolver =
-                BlueprintResearchDataManager.INSTANCE.policyResolverFor(playerData);
+        try {
+            if (pathProgressionExempt.test(blueprintId)) {
+                return Result.failure(
+                        Status.POLICY_INELIGIBLE,
+                        Optional.of(blueprintId),
+                        playerData.getResearchPoints(),
+                        resultMode);
+            }
+        } catch (RuntimeException exception) {
+            return Result.failure(
+                    Status.POLICY_UNAVAILABLE,
+                    Optional.of(blueprintId),
+                    playerData.getResearchPoints(),
+                    resultMode);
+        }
         Function<ResourceLocation, LearningTarget> targetResolver =
                 id -> BlueprintLearningService.targetFromCatalog(
                         BlueprintDataManager.SERVER, id);
@@ -79,7 +219,8 @@ public final class BlueprintResearchService {
                         input,
                         player.isCreative(),
                         config.blueprintsEnabled(),
-                        BlueprintProgressionAccess::isProgressionExempt)
+                        pathProgressionExempt,
+                        pathAuthority)
                 : research(
                         blueprintId,
                         playerData,
@@ -120,9 +261,31 @@ public final class BlueprintResearchService {
             boolean creativePlayer,
             boolean blueprintsEnabled,
             Predicate<ResourceLocation> progressionExempt) {
+        return researchPath(
+                blueprintId,
+                playerData,
+                policyResolver,
+                targetResolver,
+                input,
+                creativePlayer,
+                blueprintsEnabled,
+                progressionExempt,
+                ResearchPathAuthority.authored());
+    }
+
+    static Result researchPath(
+            ResourceLocation blueprintId,
+            IPlayerRecipeData playerData,
+            Function<ResourceLocation, BlueprintResearchPolicy> policyResolver,
+            Function<ResourceLocation, LearningTarget> targetResolver,
+            ResearchInput input,
+            boolean creativePlayer,
+            boolean blueprintsEnabled,
+            Predicate<ResourceLocation> progressionExempt,
+            ResearchPathAuthority authority) {
         Optional<ResourceLocation> id = Optional.ofNullable(blueprintId)
                 .filter(BlueprintResearchService::validId);
-        if (id.isEmpty() || input == null || progressionExempt == null) {
+        if (id.isEmpty() || input == null || progressionExempt == null || authority == null) {
             return Result.failure(
                     Status.INVALID_INPUT,
                     id,
@@ -167,7 +330,8 @@ public final class BlueprintResearchService {
                 policyResolver,
                 progressionExempt,
                 creativePlayer,
-                inputSnapshot);
+                inputSnapshot,
+                authority);
         if (!planned.successful()) {
             return Result.failure(
                     planned.status(),
@@ -211,22 +375,24 @@ public final class BlueprintResearchService {
                     currentPoints,
                     TreeResearchResultMode.DIRECT_LEARN);
         }
-        if (currentPoints < path.pointCost()) {
+        ResearchPathUnlockPlanner.RouteQuote quote = path.quote();
+        if (currentPoints < quote.pointCost()) {
             return Result.failure(
                     Status.POINTS_REQUIRED,
                     id,
                     currentPoints,
                     TreeResearchResultMode.DIRECT_LEARN);
         }
-        Optional<ResearchIngredientPlanner.Plan> ingredientPlan =
-                ResearchIngredientPlanner.plan(inputSnapshot, path.ingredients());
-        if (ingredientPlan.isEmpty()) {
+        Optional<ResearchPathUnlockPlanner.TransactionPlan> prepared =
+                ResearchPathUnlockPlanner.prepareTransaction(path, inputSnapshot);
+        if (prepared.isEmpty()) {
             return Result.failure(
                     Status.INGREDIENTS_REQUIRED,
                     id,
                     currentPoints,
                     TreeResearchResultMode.DIRECT_LEARN);
         }
+        ResearchPathUnlockPlanner.TransactionPlan transaction = prepared.orElseThrow();
 
         KnowledgeSnapshot knowledgeSnapshot;
         try {
@@ -238,11 +404,11 @@ public final class BlueprintResearchService {
                     currentPoints,
                     TreeResearchResultMode.DIRECT_LEARN);
         }
-        List<LearningTarget> targets = new ArrayList<>(path.unlockCount());
+        List<LearningTarget> targets = new ArrayList<>(transaction.unlockCount());
         Set<String> learnedAfter = new LinkedHashSet<>(knowledgeSnapshot.learnedBlueprints());
         Set<String> discoveredAfter = new LinkedHashSet<>(knowledgeSnapshot.discoveredBlueprints());
         Set<String> recipesAfter = new LinkedHashSet<>(knowledgeSnapshot.learnedRecipes());
-        for (ResearchPathUnlockPlanner.PlannedNode node : path.nodes()) {
+        for (ResearchPathUnlockPlanner.PlannedNode node : transaction.solution().nodes()) {
             LearningTarget target;
             try {
                 target = targetResolver.apply(node.blueprintId());
@@ -313,7 +479,7 @@ public final class BlueprintResearchService {
             targets.add(target);
         }
 
-        if (path.pointCost() > 0 && !playerData.spendResearchPoints(path.pointCost())) {
+        if (quote.pointCost() > 0 && !playerData.spendResearchPoints(quote.pointCost())) {
             return Result.failure(
                     Status.STALE_POLICY,
                     id,
@@ -321,7 +487,7 @@ public final class BlueprintResearchService {
                     TreeResearchResultMode.DIRECT_LEARN);
         }
         try {
-            input.consume(ingredientPlan.orElseThrow());
+            input.consume(transaction.ingredientPlan());
         } catch (RuntimeException exception) {
             boolean restored = rollbackPath(
                     playerData, input, inputSnapshot, knowledgeSnapshot);
@@ -366,9 +532,9 @@ public final class BlueprintResearchService {
         return new Result(
                 Status.SUCCESS,
                 id,
-                path.pointCost(),
+                quote.pointCost(),
                 playerData.getResearchPoints(),
-                path.costBypassed(),
+                quote.costBypassed(),
                 TreeResearchResultMode.DIRECT_LEARN,
                 transitions.stream().anyMatch(LearningTransition::learnedChanged),
                 transitions.stream().anyMatch(LearningTransition::discoveredChanged),
@@ -832,7 +998,9 @@ public final class BlueprintResearchService {
         PROGRESSION_CAPACITY_EXHAUSTED,
         ROLLBACK_FAILED,
         PATH_TOO_LARGE,
-        ROUTE_TOO_COMPLEX
+        ROUTE_TOO_COMPLEX,
+        TECH_TREE_UNAVAILABLE,
+        UNSATISFIABLE
     }
 
     /**

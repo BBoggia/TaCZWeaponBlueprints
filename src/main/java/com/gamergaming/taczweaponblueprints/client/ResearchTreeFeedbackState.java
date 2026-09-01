@@ -88,6 +88,10 @@ final class ResearchTreeFeedbackState {
                 && snapshot.blueprintId().filter(blueprintId::equals).isPresent();
     }
 
+    boolean pending() {
+        return snapshot.status() == Status.PENDING;
+    }
+
     boolean expirePending(long nowMillis, long timeoutMillis, String resultKey) {
         if (timeoutMillis < 1L || snapshot.status() != Status.PENDING
                 || nowMillis - snapshot.updatedAtMillis() < timeoutMillis) {

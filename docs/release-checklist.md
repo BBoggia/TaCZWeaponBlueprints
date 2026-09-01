@@ -8,6 +8,17 @@ Use this checklist for every public build. Release commands require JDK 17.
   changelog and Git tag.
 - Confirm `mod_license` agrees with the root `LICENSE.txt`.
 - Update the changelog heading with the release version and date.
+- Update `docs/curseforge-description.md` when evergreen features,
+  requirements, or installation steps changed, and prepare
+  `docs/releases/<version>.md` for this release.
+- Review the README, changelog, CurseForge description, release notes, and
+  `mod_description` against the shared writing standard. From the shared
+  workspace, run:
+
+  ```text
+  ../Content&DocumentationStandards/scripts/check-writing.sh .
+  ```
+
 - Merge or rebase the latest `origin/main` before the final validation build.
 - Confirm `git status --short` contains only intentional release changes.
 - Review generated-resource additions and deletions, especially the global
@@ -67,7 +78,7 @@ policy. Packaged-artifact verification separately requires every kernel and
 configuration class plus all twelve localized setting surfaces.
 
 The build also runs `verifyTaperedAutomaticTopologyContract`. It pins automatic
-topology `tacz-gun-placement-v13`, Research Tree protocol 40, export format 18,
+topology `tacz-gun-placement-v13`, Research Tree protocol 42, export format 18,
 and the canonical-coordinate/decision/finalized-rank publication contract;
 requires clean server planning, finalization, diagnostics, client layout,
 network, and packaged-data suites; and writes
@@ -85,7 +96,7 @@ The build also runs `verifyGroupedPrerequisiteAcceptanceContract`. It requires
 all 20 named Phase 7 semantic and integration invariants to resolve to exact,
 clean JUnit cases and writes
 `build/reports/grouped-prerequisite-acceptance.json`. Confirm the report pins
-`truth-tables-integration-v1`, protocol 40, export format 18, and
+`truth-tables-integration-v1`, protocol 42, export format 18, and
 `grouped_routes_v1`, and that the JAR manifest and release-candidate report
 contain the same acceptance contract.
 
@@ -104,7 +115,7 @@ invariants, and writes `build/reports/grouped-route-selection.json`. Confirm it
 pins `group-aware-route-balance-v1`, the grouped
 `group_aware_route_balance_v1` guard, the separate legacy union guard, the
 8.0x proven-imbalance threshold (with 4.0x retained as a p95 warning), protocol
-37, and export format 18. Confirm the
+41, and export format 18. Confirm the
 JAR manifest and release-candidate report contain the same selection contract.
 
 The build also runs `verifyGroupedRouteStabilizationContract`. It consumes the
@@ -192,7 +203,7 @@ bounded four-point score tolerance, and explicit truncation diagnostics,
 family-preserving responsive row boundaries and bounded ten-pixel lanes for
 additional any-of junctions,
 tree-owned optional/dynamic/configured presentation bands, the 4,096-candidate
-ceiling, protocol 40, export format 18, and packaged automatic prerequisite
+ceiling, protocol 42, export format 18, and packaged automatic prerequisite
 strategy `grouped_routes_v1`. Confirm canonical branch coordinates
 round-trip for every automatic member, two-family layouts receive a visible
 gutter, planned and published ranks are reported separately, and complete
@@ -258,10 +269,10 @@ interaction pass:
 - test mandatory any-of joins with shared prerequisites, one already learned
   route, one progression-exempt alternative, two equal-length routes with
   different materials, and one blocked alternative; confirm the globally
-  shortest combined closure wins, an affordable equal-length route is
-  preferred, learned/exempt routes cost nothing, remaining ties use stable
-  economic then resource-ID order, and blocked alternatives are never silently
-  traversed;
+  shortest combined closure wins regardless of current inventory, learned and
+  progression-exempt routes cost nothing, remaining ties use stable RP,
+  total-material-unit, then resource-ID order, and blocked alternatives are
+  never silently traversed;
 - preview a path with more than six material predicates in compact and
   fullscreen modes; confirm both report the additional material-type count and
   readiness still reflects the complete server allocation;
@@ -321,8 +332,11 @@ entries.
 - Record the SHA-256 hash of `build/libs/taczweaponblueprints-<version>.jar`.
 - Create an annotated `v<version>` tag on the exact validated commit.
 - Push the commit and tag without force-updating an existing release tag.
-- Create the GitHub release from that tag and use the changelog section as its
-  release notes.
+- Create the GitHub release from that tag and use
+  `docs/releases/<version>.md` as its release notes.
 - Attach the reobfuscated JAR from `build/libs`; do not attach a development or
   sources JAR in its place.
 - Download the uploaded asset and verify its SHA-256 against the local artifact.
+- Upload the same verified JAR to CurseForge, using
+  `docs/curseforge-description.md` for changed evergreen page copy and
+  `docs/releases/<version>.md` for the file changelog.

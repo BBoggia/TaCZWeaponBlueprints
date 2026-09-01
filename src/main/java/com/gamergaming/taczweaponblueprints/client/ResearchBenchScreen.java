@@ -651,14 +651,22 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                         BlueprintItem.createBlueprint(node.blueprintId().toString()));
             }
         }
+        ResearchTreePublication nextTreePublication = new ResearchTreePublication(
+                publication.graph(),
+                publication.presentation(),
+                publication.techTree());
         boolean projectionGeometryChanged;
         try {
-            projectionGeometryChanged = treeProjections.update(
-                    new ResearchTreePublication(
-                            publication.graph(),
-                            publication.presentation(),
-                            publication.techTree()),
-                    requestedLayoutPolicy);
+            ResearchTreeProjectionCache.UpdateOutcome update =
+                    treeProjections.updateWithBalancedFallback(
+                            nextTreePublication,
+                            requestedLayoutPolicy);
+            projectionGeometryChanged = update.geometryChanged();
+            if (update.usedBalancedFallback()) {
+                TaCZWeaponBlueprints.LOGGER.warn(
+                        "Unable to apply the requested Research Tree layout; using Balanced layout",
+                        update.recoveredLayoutFailure().orElseThrow());
+            }
         } catch (RuntimeException exception) {
             // The projection cache prepares all topology objects before it commits anything.
             // Keep the last valid graph visible and remember this rejected publication so the
@@ -1720,7 +1728,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     }
 
     private void requestSelection(ResourceLocation blueprintId) {
-        if (researchTreePublicationRejected || selectionFeedback.pendingFor(blueprintId)) {
+        if (researchTreePublicationRejected || selectionFeedback.pending()) {
             return;
         }
         int requestId = nextActionRequestId();
@@ -1736,7 +1744,14 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             ResearchBenchResearchAction action,
             Optional<ResourceLocation> id) {
         NetworkHandler.INSTANCE.sendToServer(
-                new ResearchBenchActionPacket(menu.containerId, requestId, action, id));
+                new ResearchBenchActionPacket(
+                        menu.containerId,
+                        requestId,
+                        action,
+                        id,
+                        action == ResearchBenchResearchAction.RESEARCH
+                                ? menu.preview().routeFingerprint()
+                                : Optional.empty()));
     }
 
     private int nextActionRequestId() {
@@ -1760,7 +1775,11 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                     : selectionFeedback.failed(
                             blueprintId,
                             requestId,
-                            "selection_rejected",
+                            result.code()
+                                            == ResearchBenchMenu.ActionResultCode
+                                                    .REQUEST_THROTTLED
+                                    ? "request_throttled"
+                                    : "selection_rejected",
                             nowMillis);
             if (changed && result.successful()) {
                 selectionFeedback.clear();
@@ -2816,9 +2835,14 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         ResearchTreeFeedbackState.Snapshot selection = selectionFeedback.snapshot();
         if (selection.blueprintId().filter(node.blueprintId()::equals).isPresent()
                 && selection.status() == ResearchTreeFeedbackState.Status.FAILURE) {
+            boolean throttled = selection.resultKey()
+                    .filter("request_throttled"::equals)
+                    .isPresent();
             return new SelectedNodeUi(
                     Component.translatable(
-                            "gui.taczweaponblueprints.research_bench.tree.selection.selection_failed"),
+                            throttled
+                                    ? "message.taczweaponblueprints.research.request_throttled"
+                                    : "gui.taczweaponblueprints.research_bench.tree.selection.selection_failed"),
                     BAD,
                     false);
         }
@@ -2843,7 +2867,8 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                     PROGRESSION_CAPACITY_EXHAUSTED,
                     DISCOVERY_REQUIRED, PREREQUISITES_REQUIRED -> WARN;
             case LOCKED, RESEARCH_DISABLED, COST_UNAVAILABLE, CONTENT_UNAVAILABLE,
-                    PATH_TOO_LARGE, ROUTE_TOO_COMPLEX -> BAD;
+                    PATH_TOO_LARGE, ROUTE_TOO_COMPLEX, TECH_TREE_UNAVAILABLE,
+                    UNSATISFIABLE -> BAD;
         };
     }
 

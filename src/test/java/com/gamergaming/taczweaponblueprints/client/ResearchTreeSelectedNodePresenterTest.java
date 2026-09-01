@@ -155,7 +155,9 @@ class ResearchTreeSelectedNodePresenterTest {
         ResourceLocation nodeId = new ResourceLocation("test:complex_path_target");
         for (ResearchSelectionPreview.PathPlanningState state : List.of(
                 ResearchSelectionPreview.PathPlanningState.PATH_TOO_LARGE,
-                ResearchSelectionPreview.PathPlanningState.ROUTE_TOO_COMPLEX)) {
+                ResearchSelectionPreview.PathPlanningState.ROUTE_TOO_COMPLEX,
+                ResearchSelectionPreview.PathPlanningState.TECH_TREE_UNAVAILABLE,
+                ResearchSelectionPreview.PathPlanningState.UNSATISFIABLE)) {
             ResearchSelectionPreview preview = new ResearchSelectionPreview(
                     Optional.of(nodeId),
                     0,
@@ -180,9 +182,17 @@ class ResearchTreeSelectedNodePresenterTest {
                             preview));
 
             assertEquals(
-                    state == ResearchSelectionPreview.PathPlanningState.PATH_TOO_LARGE
-                            ? ResearchTreeSelectedNodePresenter.Message.PATH_TOO_LARGE
-                            : ResearchTreeSelectedNodePresenter.Message.ROUTE_TOO_COMPLEX,
+                    switch (state) {
+                        case PATH_TOO_LARGE ->
+                                ResearchTreeSelectedNodePresenter.Message.PATH_TOO_LARGE;
+                        case ROUTE_TOO_COMPLEX ->
+                                ResearchTreeSelectedNodePresenter.Message.ROUTE_TOO_COMPLEX;
+                        case TECH_TREE_UNAVAILABLE ->
+                                ResearchTreeSelectedNodePresenter.Message.TECH_TREE_UNAVAILABLE;
+                        case UNSATISFIABLE ->
+                                ResearchTreeSelectedNodePresenter.Message.UNSATISFIABLE;
+                        case NONE -> throw new AssertionError("unexpected successful state");
+                    },
                     presentation.message());
             assertTrue(presentation.actionVisible());
             assertFalse(presentation.actionEnabled());

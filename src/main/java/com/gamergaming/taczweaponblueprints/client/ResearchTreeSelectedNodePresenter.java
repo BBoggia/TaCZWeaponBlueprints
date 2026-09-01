@@ -83,6 +83,8 @@ final class ResearchTreeSelectedNodePresenter {
         Message pathPlanningFailure = switch (preview.pathPlanningState()) {
             case PATH_TOO_LARGE -> Message.PATH_TOO_LARGE;
             case ROUTE_TOO_COMPLEX -> Message.ROUTE_TOO_COMPLEX;
+            case TECH_TREE_UNAVAILABLE -> Message.TECH_TREE_UNAVAILABLE;
+            case UNSATISFIABLE -> Message.UNSATISFIABLE;
             case NONE -> null;
         };
         if (pathPlanningFailure != null) {
@@ -202,7 +204,10 @@ final class ResearchTreeSelectedNodePresenter {
         }
 
         boolean pathPlanningFailed() {
-            return message == Message.PATH_TOO_LARGE || message == Message.ROUTE_TOO_COMPLEX;
+            return message == Message.PATH_TOO_LARGE
+                    || message == Message.ROUTE_TOO_COMPLEX
+                    || message == Message.TECH_TREE_UNAVAILABLE
+                    || message == Message.UNSATISFIABLE;
         }
 
         boolean pointsEnabled() {
@@ -230,6 +235,8 @@ final class ResearchTreeSelectedNodePresenter {
         COST_UNAVAILABLE,
         CONTENT_UNAVAILABLE,
         PATH_TOO_LARGE,
-        ROUTE_TOO_COMPLEX
+        ROUTE_TOO_COMPLEX,
+        TECH_TREE_UNAVAILABLE,
+        UNSATISFIABLE
     }
 }

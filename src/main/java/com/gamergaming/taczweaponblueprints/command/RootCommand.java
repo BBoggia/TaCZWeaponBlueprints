@@ -1,6 +1,5 @@
 package com.gamergaming.taczweaponblueprints.command;
 
-import com.gamergaming.taczweaponblueprints.command.compat.tacz.ClearRecipesCommand;
 import com.gamergaming.taczweaponblueprints.command.compat.tacz.ReloadRecipesCommand;
 import com.gamergaming.taczweaponblueprints.command.sub.BlueprintLootCommand;
 import com.gamergaming.taczweaponblueprints.command.sub.BlueprintProgressionCommand;
@@ -18,7 +17,6 @@ public class RootCommand {
         LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal(COMMAND_NAME)
                 .requires((source -> source.hasPermission(2)));
 
-        root.then(ClearRecipesCommand.get());
         root.then(ReloadRecipesCommand.get());
         root.then(BlueprintLootCommand.get());
         root.then(BlueprintProgressionCommand.get());
@@ -26,5 +24,5 @@ public class RootCommand {
 
         dispatcher.register(root);
     }
-    
+
 }

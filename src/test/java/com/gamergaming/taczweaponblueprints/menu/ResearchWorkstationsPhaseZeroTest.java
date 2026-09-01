@@ -31,7 +31,7 @@ class ResearchWorkstationsPhaseZeroTest {
         assertEquals(RESEARCH_BENCH, ModBlocks.RESEARCH_BENCH.getId());
         assertEquals(RESEARCH_BENCH, ModItems.RESEARCH_BENCH_ITEM.getId());
         assertEquals(RESEARCH_BENCH, ModMenus.RESEARCH_BENCH.getId());
-        assertEquals("40", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("42", NetworkHandler.PROTOCOL_VERSION);
     }
 
     @Test

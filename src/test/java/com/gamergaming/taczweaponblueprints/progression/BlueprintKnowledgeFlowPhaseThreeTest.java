@@ -1,11 +1,6 @@
 package com.gamergaming.taczweaponblueprints.progression;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -17,8 +12,6 @@ import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 
 /** Structural compatibility gates for the direct-learning cutover. */
 class BlueprintKnowledgeFlowPhaseThreeTest {
-    private static final Path PROJECT = Path.of(System.getProperty("user.dir"));
-
     @Test
     void packagedConfigUsesDirectLearningAndRetainsLegacyChoice() {
         BlueprintConfig config = new BlueprintConfig();
@@ -50,32 +43,16 @@ class BlueprintKnowledgeFlowPhaseThreeTest {
                         .PROGRESSION_CAPACITY_EXHAUSTED.ordinal());
         assertEquals(20, ResearchBenchMenu.ActionResultCode.ROLLBACK_FAILED.ordinal());
         assertEquals(21, ResearchBenchMenu.ActionResultCode.PATH_TOO_LARGE.ordinal());
+        assertEquals(22, ResearchBenchMenu.ActionResultCode.ROUTE_TOO_COMPLEX.ordinal());
+        assertEquals(23,
+                ResearchBenchMenu.ActionResultCode.TECH_TREE_UNAVAILABLE.ordinal());
+        assertEquals(24, ResearchBenchMenu.ActionResultCode.UNSATISFIABLE.ordinal());
+        assertEquals(25, ResearchBenchMenu.ActionResultCode.STALE_PREVIEW.ordinal());
         assertEquals(
                 ResearchBenchMenu.ActionResultCode.values().length - 1,
-                ResearchBenchMenu.ActionResultCode.ROUTE_TOO_COMPLEX.ordinal());
-        assertEquals("40", NetworkHandler.PROTOCOL_VERSION);
+                ResearchBenchMenu.ActionResultCode.REQUEST_THROTTLED.ordinal());
+        assertEquals("42", NetworkHandler.PROTOCOL_VERSION);
         assertEquals(2, PlayerProgressionLimits.DATA_VERSION);
     }
 
-    @Test
-    void phaseThreeRecordDocumentsAtomicCutoverAndDeferrals()
-            throws IOException {
-        String record = Files.readString(PROJECT.resolve(
-                "docs/blueprint-knowledge-flow-phase-3.md"));
-
-        for (String required : List.of(
-                "DIRECT_LEARN",
-                "CREATE_BLUEPRINT",
-                "BlueprintLearningService.prepare",
-                "BlueprintLearningService.commitPrepared",
-                "full inventory cannot reject research",
-                "complete inventory snapshot and original RP balance are restored",
-                "rollback failure",
-                "protocol remains `25`",
-                "Player data version remains `2`",
-                "does not yet implement physical-item reverse engineering")) {
-            assertTrue(record.contains(required),
-                    "Missing Phase 3 record: " + required);
-        }
-    }
 }

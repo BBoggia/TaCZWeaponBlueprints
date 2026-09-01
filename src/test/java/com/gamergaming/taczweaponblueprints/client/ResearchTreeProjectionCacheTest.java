@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeBranchLayoutComposer;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGroupSkeletonCatalog;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayout;
@@ -608,6 +609,36 @@ class ResearchTreeProjectionCacheTest {
 
         rejectComposition.set(false);
         assertTrue(cache.update(publication, replacement));
+    }
+
+    @Test
+    void rejectedClientLayoutRecoversWithBalancedBeforeTheFirstCommit() {
+        ResearchTechTreeLayoutPolicy balancedTechPolicy =
+                ResearchTechTreeLayoutPolicy.fromShared(
+                        ResearchTreeLayoutPolicy.UNIFIED_OVERVIEW);
+        ResearchTreeProjectionCache cache = new ResearchTreeProjectionCache(
+                ResearchTreeOverviewLayoutComposer::compose,
+                ResearchTreeBranchLayoutComposer::compose,
+                (projections, policy) -> {
+                    if (!balancedTechPolicy.equals(policy)) {
+                        throw new IllegalStateException("fixture requested-layout failure");
+                    }
+                    return ResearchTechTreeLayoutEngine.layoutCatalog(projections, policy);
+                });
+        ResearchTreePublication publication = publication(
+                ResearchTreeGraph.Availability.PREREQUISITES_REQUIRED);
+
+        ResearchTreeProjectionCache.UpdateOutcome outcome =
+                cache.updateWithBalancedFallback(publication, policyWithNodeGap(2));
+
+        assertTrue(outcome.geometryChanged());
+        assertTrue(outcome.usedBalancedFallback());
+        assertEquals("fixture requested-layout failure",
+                outcome.recoveredLayoutFailure().orElseThrow().getMessage());
+        assertSame(publication, cache.publication());
+        assertFalse(cache.projection(
+                ResearchTreePresentationContract.BrowseView.ALL_WEAPONS,
+                null).graph().nodes().isEmpty());
     }
 
     @Test

@@ -82,4 +82,53 @@ class BlueprintBalanceSettingsTest {
         assertEquals(JournalVisibility.HIDDEN, config.maximumUndiscoveredVisibility.get());
         assertEquals(0.73, config.blueprintSpawnChance.get());
     }
+
+    @Test
+    void freshServersUseBalancedWhileVersionZeroServersKeepCustomAuthority() {
+        BlueprintConfig fresh = new BlueprintConfig();
+        assertEquals(BlueprintBalancePreset.BALANCED, fresh.balancePreset.get());
+        assertEquals(0.20, fresh.balanceSettings().lootChance());
+        assertEquals(10_000, fresh.progressionSnapshot().pointCap());
+
+        fresh.maximumUndiscoveredVisibility.validateAndSet(JournalVisibility.HIDDEN);
+        fresh.blueprintSpawnChance.validateAndSet(0.73);
+        fresh.update(0);
+
+        assertEquals(BlueprintBalancePreset.CUSTOM, fresh.balancePreset.get());
+        assertEquals(JournalVisibility.HIDDEN,
+                fresh.progressionSnapshot().maximumUndiscoveredVisibility());
+        assertEquals(0.73, fresh.balanceSettings().lootChance());
+    }
+
+    @Test
+    void configuredPointCapUsesThePracticalSliderRange() {
+        BlueprintConfig config = new BlueprintConfig();
+        config.researchPointCap.validateAndSet(
+                BlueprintConfig.MAX_CONFIGURED_RESEARCH_POINT_CAP);
+        config.onSyncServer();
+        assertEquals(
+                BlueprintConfig.MAX_CONFIGURED_RESEARCH_POINT_CAP,
+                config.progressionSnapshot().pointCap());
+
+        config.researchPointCap.validateAndSet(
+                BlueprintConfig.MAX_CONFIGURED_RESEARCH_POINT_CAP + 1);
+        config.onSyncServer();
+        assertEquals(
+                BlueprintConfig.MAX_CONFIGURED_RESEARCH_POINT_CAP,
+                config.progressionSnapshot().pointCap());
+    }
+
+    @Test
+    void inactiveCustomControlsRetainTheirStoredRuntimeValues() {
+        BlueprintConfig config = new BlueprintConfig();
+        config.maximumUndiscoveredVisibility.validateAndSet(JournalVisibility.HIDDEN);
+        config.blueprintSpawnChance.validateAndSet(0.73);
+
+        assertEquals(BlueprintBalancePreset.BALANCED, config.balancePreset.get());
+        assertEquals(JournalVisibility.HIDDEN, config.maximumUndiscoveredVisibility.get());
+        assertEquals(0.73, config.blueprintSpawnChance.get());
+        assertEquals(JournalVisibility.FULL,
+                config.balanceSettings().maximumUndiscoveredVisibility());
+        assertEquals(0.20, config.balanceSettings().lootChance());
+    }
 }

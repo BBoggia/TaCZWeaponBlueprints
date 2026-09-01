@@ -258,10 +258,11 @@ public final class AutomaticWeaponPlacementCandidateManager {
             long catalogRevision,
             long researchRevision) {
         Publication current = publication;
-        if (profileId == null || treeId == null
-                || current.catalogRevision() != catalogRevision
-                || current.researchRevision() != researchRevision) {
-            return Context.EMPTY;
+        boolean revisionsMatch = current.catalogRevision() == catalogRevision
+                && current.researchRevision() == researchRevision;
+        if (profileId == null || treeId == null || !revisionsMatch
+                || current.health().state() != PublicationState.READY) {
+            return Context.unavailable(current, revisionsMatch);
         }
         AutomaticWeaponPlacementCandidateSnapshot candidates =
                 current.snapshotsByTree().get(treeId);
@@ -269,10 +270,14 @@ public final class AutomaticWeaponPlacementCandidateManager {
                 current.prerequisitePlansByProfile().get(profileId);
         if (candidates == null || prerequisitePlan == null
                 || !prerequisitePlan.matches(profileId, candidates)) {
-            return Context.EMPTY;
+            return Context.unavailable(current, true);
         }
         return new Context(
-                Optional.of(candidates), Optional.of(prerequisitePlan));
+                Optional.of(candidates),
+                Optional.of(prerequisitePlan),
+                current.health().state(),
+                current.revision(),
+                true);
     }
 
     /** Returns a read-only explanation derived from one atomic publication read. */
@@ -655,15 +660,34 @@ public final class AutomaticWeaponPlacementCandidateManager {
 
     public record Context(
             Optional<AutomaticWeaponPlacementCandidateSnapshot> candidates,
-            Optional<AutomaticWeaponPrerequisitePlan> prerequisitePlan) {
-        private static final Context EMPTY = new Context(Optional.empty(), Optional.empty());
+            Optional<AutomaticWeaponPrerequisitePlan> prerequisitePlan,
+            PublicationState publicationState,
+            long publicationRevision,
+            boolean revisionsMatch) {
+        private static final Context EMPTY = new Context(
+                Optional.empty(), Optional.empty(), PublicationState.EMPTY, 0L, false);
+
+        /** Compatibility constructor for direct ready/empty context fixtures. */
+        public Context(
+                Optional<AutomaticWeaponPlacementCandidateSnapshot> candidates,
+                Optional<AutomaticWeaponPrerequisitePlan> prerequisitePlan) {
+            this(
+                    candidates,
+                    prerequisitePlan,
+                    candidates != null && candidates.isPresent()
+                            ? PublicationState.READY
+                            : PublicationState.EMPTY,
+                    0L,
+                    candidates != null && candidates.isPresent());
+        }
 
         public Context {
             candidates = candidates == null ? Optional.empty() : candidates;
             prerequisitePlan = prerequisitePlan == null
                     ? Optional.empty()
                     : prerequisitePlan;
-            if (candidates.isPresent() != prerequisitePlan.isPresent()
+            if (publicationState == null || publicationRevision < 0L
+                    || candidates.isPresent() != prerequisitePlan.isPresent()
                     || candidates.isPresent()
                             && !prerequisitePlan.orElseThrow().matches(
                                     prerequisitePlan.orElseThrow().profileId(),
@@ -671,6 +695,22 @@ public final class AutomaticWeaponPlacementCandidateManager {
                 throw new IllegalArgumentException(
                         "Automatic placement context is inconsistent");
             }
+        }
+
+        public boolean authorityReady() {
+            return revisionsMatch
+                    && publicationState == PublicationState.READY
+                    && candidates.isPresent()
+                    && prerequisitePlan.isPresent();
+        }
+
+        private static Context unavailable(Publication publication, boolean revisionsMatch) {
+            return new Context(
+                    Optional.empty(),
+                    Optional.empty(),
+                    publication.health().state(),
+                    publication.revision(),
+                    revisionsMatch);
         }
     }
 }

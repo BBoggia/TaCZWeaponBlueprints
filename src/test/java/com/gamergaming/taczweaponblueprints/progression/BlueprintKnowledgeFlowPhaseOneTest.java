@@ -2,7 +2,6 @@ package com.gamergaming.taczweaponblueprints.progression;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -43,7 +42,7 @@ class BlueprintKnowledgeFlowPhaseOneTest {
                 Arrays.stream(TreeResearchResultMode.values())
                         .map(Enum::name)
                         .toList());
-        assertEquals("40", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("42", NetworkHandler.PROTOCOL_VERSION);
         assertEquals(
                 Set.of("RECYCLE", "REDEEM", "REDEEM_STACK", "REVERSE_ENGINEER", "RECOVER_POINTS"),
                 Arrays.stream(BlueprintRecyclerActionContract.Action.values())
@@ -51,25 +50,4 @@ class BlueprintKnowledgeFlowPhaseOneTest {
                         .collect(Collectors.toSet()));
     }
 
-    @Test
-    void phaseOneRecordDocumentsExactPrecedenceAndDeferrals()
-            throws IOException {
-        String record = Files.readString(PROJECT.resolve(
-                "docs/blueprint-knowledge-flow-phase-1.md"));
-
-        for (String required : List.of(
-                "BlueprintUnlockOrigin",
-                "PhysicalBlueprintLearningMode",
-                "TreeResearchResultMode",
-                "BlueprintAccessPolicy",
-                "CONTENT_UNAVAILABLE",
-                "PROGRESSION_EXEMPT",
-                "PHYSICAL_BLUEPRINT_LEARNING_DISABLED",
-                "PROGRESSION_CAPACITY_EXHAUSTED",
-                "Migration preservation lane",
-                "No live caller is routed through this evaluator in Phase 1",
-                "protocol remains 25")) {
-            assertTrue(record.contains(required), "Missing Phase 1 record: " + required);
-        }
-    }
 }

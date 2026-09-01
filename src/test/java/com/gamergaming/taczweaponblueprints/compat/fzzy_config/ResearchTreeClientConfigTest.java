@@ -7,14 +7,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayoutPolicy;
 import com.gamergaming.taczweaponblueprints.client.ResearchTreeDisplayPolicy;
+import com.gamergaming.taczweaponblueprints.client.ResearchTreeLayoutPreset;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayoutPolicy;
 
 class ResearchTreeClientConfigTest {
     @Test
     void defaultsPublishTheStableLayoutPolicy() {
         ResearchTreeClientConfig config = new ResearchTreeClientConfig();
 
+        assertEquals(ResearchTreeLayoutPreset.BALANCED, config.layoutPreset.get());
         assertEquals(ResearchTreeLayoutPolicy.UNIFIED_OVERVIEW, config.layoutPolicy());
         assertTrue(config.holdToResearchEnabled());
         assertEquals(
@@ -83,5 +85,64 @@ class ResearchTreeClientConfigTest {
 
         assertEquals(new ResearchTreeDisplayPolicy(true, true), config.displayPolicy());
         assertEquals(layout, config.layoutPolicy());
+    }
+
+    @Test
+    void namedPresetOverridesWithoutErasingDormantCustomValues() {
+        ResearchTreeClientConfig config = new ResearchTreeClientConfig();
+        config.layoutPreset.validateAndSet(ResearchTreeLayoutPreset.CUSTOM);
+        config.nodeGap.validateAndSet(71);
+        config.interGroupGap.validateAndSet(93);
+        config.onUpdateClient();
+        assertEquals(71, config.layoutPolicy().nodeGap());
+
+        config.layoutPreset.validateAndSet(ResearchTreeLayoutPreset.COMPACT);
+        config.onUpdateClient();
+
+        assertEquals(
+                ResearchTreeLayoutPreset.COMPACT.resolve(ResearchTreeLayoutPolicy.UNIFIED_OVERVIEW),
+                config.layoutPolicy());
+        assertEquals(71, config.nodeGap.getUnconditional());
+        assertEquals(93, config.interGroupGap.getUnconditional());
+
+        config.layoutPreset.validateAndSet(ResearchTreeLayoutPreset.CUSTOM);
+        config.onUpdateClient();
+        assertEquals(71, config.layoutPolicy().nodeGap());
+        assertEquals(93, config.layoutPolicy().interGroupGap());
+    }
+
+    @Test
+    void versionZeroMigrationPreservesAdvancedLayoutAuthority() {
+        ResearchTreeClientConfig config = new ResearchTreeClientConfig();
+        config.nodeGap.validateAndSet(47);
+
+        config.update(0);
+
+        assertEquals(ResearchTreeLayoutPreset.CUSTOM, config.layoutPreset.get());
+        assertEquals(47, config.layoutPolicy().nodeGap());
+    }
+
+    @Test
+    void inactiveDependentControlsStillExposeTheirStoredRuntimeValue() {
+        ResearchTreeClientConfig config = new ResearchTreeClientConfig();
+        config.holdDurationMillis.validateAndSet(1_400);
+        config.holdToResearch.validateAndSet(false);
+
+        assertEquals(1_400, config.holdDurationMillis());
+        assertEquals(1_400, config.holdDurationMillis.get());
+    }
+
+    @Test
+    void restoreTreeAppearanceResetsPresetAndAdvancedValues() {
+        ResearchTreeClientConfig config = new ResearchTreeClientConfig();
+        config.layoutPreset.validateAndSet(ResearchTreeLayoutPreset.CUSTOM);
+        config.nodeGap.validateAndSet(99);
+
+        config.restoreTreeAppearanceDefaults();
+
+        assertEquals(ResearchTreeLayoutPreset.BALANCED, config.layoutPreset.get());
+        assertEquals(ResearchTreeLayoutPolicy.UNIFIED_OVERVIEW.nodeGap(),
+                config.nodeGap.getUnconditional());
+        assertEquals(ResearchTreeLayoutPolicy.UNIFIED_OVERVIEW, config.layoutPolicy());
     }
 }

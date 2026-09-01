@@ -35,7 +35,7 @@ class BlueprintKnowledgeFlowPhaseFiveTest {
         assertEquals(0, BlueprintRecyclerMenu.INPUT_SLOT);
         assertEquals(1, BlueprintRecyclerMenu.OUTPUT_SLOT);
         assertEquals(2, BlueprintRecyclerMenu.FIRST_PLAYER_SLOT);
-        assertEquals("40", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("42", NetworkHandler.PROTOCOL_VERSION);
     }
 
     @Test
@@ -60,22 +60,4 @@ class BlueprintKnowledgeFlowPhaseFiveTest {
         assertTrue(build.contains("'reverse_engineer'"));
     }
 
-    @Test
-    void phaseRecordCapturesAuthorityRollbackCompatibilityAndManualBoundary()
-            throws IOException {
-        String record = Files.readString(PROJECT.resolve(
-                "docs/blueprint-knowledge-flow-phase-5.md"));
-        for (String required : List.of(
-                "one physical input plus one extract-only blueprint output",
-                "opaque monotonically changing workstation-state token",
-                "logical TaCZ identity",
-                "restores every owned value",
-                "records discovery only after the output exists",
-                "non-recyclable",
-                "protocol advances exactly once from 25 to 26",
-                "Player progression remains data version 2",
-                "does not claim the hands-on cases")) {
-            assertTrue(record.contains(required), "Missing Phase 5 contract: " + required);
-        }
-    }
 }
