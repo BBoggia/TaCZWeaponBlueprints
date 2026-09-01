@@ -5,6 +5,6 @@
   "target": { "blueprints": ["tacz:rpg7"] },
   "visibility": "full",
   "tree_enabled": true,
-  "research_cost": { "points": 10, "ingredients": [{ "items": ["minecraft:paper"], "count": 5 }, { "items": ["minecraft:iron_ingot"], "count": 4 }] },
+  "research_cost": { "points": 6, "ingredients": [{ "items": ["minecraft:paper"], "count": 3 }, { "items": ["minecraft:iron_ingot"], "count": 2 }] },
   "prerequisites": ["tacz:m320", "tacz:fn_evolys"]
 }

@@ -14,6 +14,7 @@ import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
 import com.gamergaming.taczweaponblueprints.item.BlueprintProvenance;
+import com.gamergaming.taczweaponblueprints.item.PhysicalWeaponProvenance;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCost;
@@ -47,7 +48,11 @@ public final class BlueprintReverseEngineeringService {
                     transaction.outputStack().isEmpty());
         }
         var config = ModConfigs.BLUEPRINT.progressionSnapshot();
-        return evaluate(
+        boolean verifiedFound = PhysicalWeaponProvenance.from(transaction.physicalInput())
+                .filter(PhysicalWeaponProvenance::verifiedLoot).isPresent();
+        boolean forceRecyclableOutput = verifiedFound
+                && config.foundWeaponRecoveryMode().foundBlueprintRecyclable();
+        Evaluation evaluation = evaluate(
                 transaction.physicalInput(),
                 transaction.inventoryStacks(),
                 transaction.outputStack().isEmpty(),
@@ -59,7 +64,54 @@ public final class BlueprintReverseEngineeringService {
                 BlueprintProgressionAccess::isProgressionExempt,
                 config.blueprintsEnabled(),
                 config.pointCap(),
-                null);
+                null,
+                forceRecyclableOutput);
+        evaluation = evaluation.withFoundBlueprintRecyclable(forceRecyclableOutput);
+        if (verifiedFound
+                && !config.foundWeaponRecoveryMode().blueprintExtractionEnabled()
+                && (evaluation.status() == Status.READY
+                        || evaluation.status() == Status.OUTPUT_OCCUPIED)) {
+            return evaluation.withStatus(Status.RECOVERY_MODE_DISABLED);
+        }
+        return evaluation;
+    }
+
+    /**
+     * Direct recovery shares physical, content, cost, and economy gates with
+     * reverse engineering. It intentionally ignores output-slot availability
+     * and physical-blueprint learning permission because it creates no item and
+     * teaches no recipe.
+     */
+    static Evaluation evaluateForDirectRecovery(
+            ServerPlayer player,
+            WorkstationTransaction transaction) {
+        if (player == null || !player.isAlive() || transaction == null) {
+            return Evaluation.failure(Status.INVALID_PLAYER, 0, 0, true);
+        }
+        Optional<IPlayerRecipeData> resolvedData =
+                player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve();
+        if (resolvedData.isEmpty()) {
+            return Evaluation.failure(
+                    Status.PLAYER_DATA_UNAVAILABLE,
+                    0,
+                    ModConfigs.BLUEPRINT.progressionSnapshot().pointCap(),
+                    true);
+        }
+        var config = ModConfigs.BLUEPRINT.progressionSnapshot();
+        return evaluate(
+                transaction.physicalInput(),
+                transaction.inventoryStacks(),
+                true,
+                BlueprintResearchDataManager.INSTANCE.snapshot(),
+                BlueprintDataManager.SERVER.getBlueprintDataMap(),
+                config.activeProfileId(),
+                resolvedData.orElseThrow(),
+                ModConfigs.BLUEPRINT::isItemBlacklisted,
+                BlueprintProgressionAccess::isProgressionExempt,
+                config.blueprintsEnabled(),
+                config.pointCap(),
+                null,
+                true);
     }
 
     /**
@@ -121,17 +173,39 @@ public final class BlueprintReverseEngineeringService {
             boolean blueprintsEnabled,
             int pointCap,
             PhysicalItemBlueprintResolver.IdentityAdapter identityAdapter) {
+        return evaluate(
+                physicalInput,
+                inventory,
+                outputAvailable,
+                snapshot,
+                catalog,
+                profileId,
+                playerData,
+                blockedPredicate,
+                progressionExemptPredicate,
+                blueprintsEnabled,
+                pointCap,
+                identityAdapter,
+                false);
+    }
+
+    static Evaluation evaluate(
+            ItemStack physicalInput,
+            List<ItemStack> inventory,
+            boolean outputAvailable,
+            BlueprintResearchSnapshot snapshot,
+            Map<ResourceLocation, BlueprintData> catalog,
+            ResourceLocation profileId,
+            IPlayerRecipeData playerData,
+            Predicate<String> blockedPredicate,
+            Predicate<ResourceLocation> progressionExemptPredicate,
+            boolean blueprintsEnabled,
+            int pointCap,
+            PhysicalItemBlueprintResolver.IdentityAdapter identityAdapter,
+            boolean nonLearningResultPermitted) {
         int balance = playerData == null ? 0 : playerData.getResearchPoints();
-        BlueprintReverseEngineeringEvaluator.Evaluation base = identityAdapter == null
-                ? BlueprintReverseEngineeringEvaluator.evaluate(
-                        physicalInput,
-                        snapshot,
-                        catalog,
-                        profileId,
-                        playerData,
-                        blockedPredicate,
-                        progressionExemptPredicate)
-                : BlueprintReverseEngineeringEvaluator.evaluate(
+        BlueprintReverseEngineeringEvaluator.Evaluation base =
+                BlueprintReverseEngineeringEvaluator.evaluate(
                         physicalInput,
                         snapshot,
                         catalog,
@@ -139,7 +213,8 @@ public final class BlueprintReverseEngineeringService {
                         playerData,
                         blockedPredicate,
                         progressionExemptPredicate,
-                        identityAdapter);
+                        identityAdapter,
+                        nonLearningResultPermitted);
         Status baseStatus = map(base.status());
         BlueprintResearchCost cost = base.reversePolicy()
                 .map(BlueprintReverseEngineeringPolicy::cost)
@@ -246,7 +321,8 @@ public final class BlueprintReverseEngineeringService {
             output = transaction.createOutput(
                     blueprintId,
                     BlueprintProvenance.reverseEngineered(
-                            policy.outputRecyclable(),
+                            policy.outputRecyclable()
+                                    || evaluation.forceRecyclableOutput(),
                             policy.physicalBlueprintLearningMode()));
             if (!outputValidator.test(output, blueprintId)) {
                 return Result.failure(Status.TRANSACTION_FAILED, target, originalPoints);
@@ -395,6 +471,7 @@ public final class BlueprintReverseEngineeringService {
         POINTS_REQUIRED,
         INGREDIENTS_REQUIRED,
         OUTPUT_OCCUPIED,
+        RECOVERY_MODE_DISABLED,
         READY,
         SUCCESS,
         STALE_INPUT,
@@ -411,7 +488,8 @@ public final class BlueprintReverseEngineeringService {
             int pointCap,
             boolean ingredientsSatisfied,
             boolean outputAvailable,
-            Optional<ResearchIngredientPlanner.Allocation> allocation) {
+            Optional<ResearchIngredientPlanner.Allocation> allocation,
+            boolean forceRecyclableOutput) {
         public Evaluation {
             if (status == null || base == null || cost == null
                     || pointBalance < 0 || pointBalance > PlayerProgressionLimits.MAX_RESEARCH_POINTS
@@ -419,6 +497,28 @@ public final class BlueprintReverseEngineeringService {
                 throw new IllegalArgumentException("invalid reverse-engineering evaluation");
             }
             allocation = allocation == null ? Optional.empty() : allocation;
+        }
+
+        /** Compatibility constructor for evaluations predating found-weapon recovery. */
+        public Evaluation(
+                Status status,
+                BlueprintReverseEngineeringEvaluator.Evaluation base,
+                BlueprintResearchCost cost,
+                int pointBalance,
+                int pointCap,
+                boolean ingredientsSatisfied,
+                boolean outputAvailable,
+                Optional<ResearchIngredientPlanner.Allocation> allocation) {
+            this(
+                    status,
+                    base,
+                    cost,
+                    pointBalance,
+                    pointCap,
+                    ingredientsSatisfied,
+                    outputAvailable,
+                    allocation,
+                    false);
         }
 
         public static Evaluation failure(
@@ -439,7 +539,8 @@ public final class BlueprintReverseEngineeringService {
                     Math.max(0, pointCap),
                     true,
                     outputAvailable,
-                    Optional.empty());
+                    Optional.empty(),
+                    false);
         }
 
         public Optional<ResourceLocation> blueprintId() {
@@ -468,6 +569,32 @@ public final class BlueprintReverseEngineeringService {
 
         public boolean ready() {
             return status == Status.READY;
+        }
+
+        Evaluation withStatus(Status replacement) {
+            return new Evaluation(
+                    replacement,
+                    base,
+                    cost,
+                    pointBalance,
+                    pointCap,
+                    ingredientsSatisfied,
+                    outputAvailable,
+                    allocation,
+                    forceRecyclableOutput);
+        }
+
+        Evaluation withFoundBlueprintRecyclable(boolean recyclable) {
+            return new Evaluation(
+                    status,
+                    base,
+                    cost,
+                    pointBalance,
+                    pointCap,
+                    ingredientsSatisfied,
+                    outputAvailable,
+                    allocation,
+                    recyclable);
         }
     }
 

@@ -102,6 +102,44 @@ class ResearchTreeCanvasTest {
     }
 
     @Test
+    void requirementGroupBoundariesRebuildGeometryButSatisfactionDoesNot() {
+        List<ResearchTreeGraph.Node> nodes = List.of(
+                fullNode(0, "test:a", 0),
+                fullNode(1, "test:b", 0),
+                fullNode(2, "test:target", 2));
+        ResearchTreeGraph mandatory = new ResearchTreeGraph(
+                nodes,
+                List.of(
+                        new ResearchTreeGraph.Edge(id("test:a"), id("test:target")),
+                        new ResearchTreeGraph.Edge(id("test:b"), id("test:target"))));
+        ResearchTreeGraph alternatives = ResearchTreeGraph.withRequirementGroups(
+                nodes,
+                List.of(new ResearchTreeGraph.RequirementGroup(
+                        id("test:target"),
+                        0,
+                        List.of(id("test:a"), id("test:b")),
+                        0,
+                        true,
+                        false)));
+        ResearchTreeGraph satisfiedAlternatives = ResearchTreeGraph.withRequirementGroups(
+                nodes,
+                List.of(new ResearchTreeGraph.RequirementGroup(
+                        id("test:target"),
+                        0,
+                        List.of(id("test:a"), id("test:b")),
+                        0,
+                        true,
+                        true)));
+        ResearchTreeLayout layout = ResearchTreeLayoutEngine.layout(mandatory);
+        ResearchTreeCanvas canvas = canvas();
+
+        canvas.setContent(mandatory, layout, Map.of(), null);
+        assertTrue(canvas.setContent(alternatives, layout, Map.of(), null));
+        assertFalse(canvas.setContent(satisfiedAlternatives, layout, Map.of(), null));
+        assertTrue(canvas.requirementGroups(id("test:target")).get(0).satisfied());
+    }
+
+    @Test
     void reusableBoundaryRejectsMismatchedLayoutsAndDisclosureViolatingIcons() {
         ResearchTreeCanvas canvas = canvas();
         Map<ResourceLocation, ItemStack> unknownIcon = new java.util.HashMap<>();
@@ -577,11 +615,14 @@ class ResearchTreeCanvasTest {
                 canvas.techTreePortalTargetAt(mouseX, mouseY).orElseThrow());
         assertTrue(canvas.portalAt(mouseX, mouseY).isEmpty());
         assertTrue(canvas.graph().node(portal.target().primaryLink().remoteNodeId()).isEmpty());
+        long mandatoryGroupsOwnedByProjection = ResearchTechTreeClientFixture.publication()
+                .graph()
+                .requirementGroups()
+                .stream()
+                .filter(group -> projection.graph().node(group.dependentId()).isPresent())
+                .count();
         assertEquals(
-                projection.graph().edges().size() + projection.boundaryLinks().stream()
-                        .filter(link -> link.direction()
-                                == ResearchTechTreeProjection.Direction.REQUIREMENT)
-                        .count(),
+                mandatoryGroupsOwnedByProjection,
                 projection.graph().nodes().stream()
                         .mapToInt(node -> canvas.totalRequirementCount(node.blueprintId()))
                         .sum());

@@ -2,7 +2,9 @@ package com.gamergaming.taczweaponblueprints.resource.research;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
@@ -23,8 +25,9 @@ import net.minecraft.resources.ResourceLocation;
 /** Deterministically resolves additive Tech Tree entry bundles for one blueprint. */
 public final class ResearchTechTreePlacementResolver {
     private static final Comparator<MatchedBinding> MATCH_ORDER = Comparator
-            .comparingInt((MatchedBinding value) -> value.specificity().rank()).reversed()
-            .thenComparing(value -> value.binding().entry().fallback())
+            .comparing((MatchedBinding value) -> value.binding().entry().fallback())
+            .thenComparing(Comparator.comparingInt(
+                    (MatchedBinding value) -> value.specificity().rank()).reversed())
             .thenComparing(Comparator.comparingInt(
                     (MatchedBinding value) -> value.binding().bundle().priority()).reversed())
             .thenComparing(value -> value.binding().bundleId().toString())
@@ -45,26 +48,20 @@ public final class ResearchTechTreePlacementResolver {
             return Selection.NONE;
         }
 
-        List<MatchedBinding> matches = matches(
+        List<TechTreeEntryBinding> selectorMatches = blueprintData == null
+                ? List.of()
+                : stableSnapshot.selectorTechTreeEntriesFor(treeId).stream()
+                        .filter(binding -> binding.entry().target().selector()
+                                .filter(selector -> selector.matches(blueprintId, blueprintData))
+                                .isPresent())
+                        .toList();
+        List<MatchedBinding> matches = orderedMatches(
                 stableSnapshot.exactTechTreeEntriesFor(treeId, blueprintId),
-                MatchSpecificity.EXACT);
-        if (matches.isEmpty()) {
-            matches = matches(
-                    stableSnapshot.tagTechTreeEntriesFor(treeId, blueprintId),
-                    MatchSpecificity.TAG);
-        }
-        if (matches.isEmpty() && blueprintData != null) {
-            matches = stableSnapshot.selectorTechTreeEntriesFor(treeId).stream()
-                    .filter(binding -> binding.entry().target().selector()
-                            .filter(selector -> selector.matches(blueprintId, blueprintData))
-                            .isPresent())
-                    .map(binding -> new MatchedBinding(binding, MatchSpecificity.SELECTOR))
-                    .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
-        }
+                stableSnapshot.tagTechTreeEntriesFor(treeId, blueprintId),
+                selectorMatches);
         if (matches.isEmpty()) {
             return Selection.NONE;
         }
-        matches.sort(MATCH_ORDER);
         MatchedBinding selected = matches.get(0);
         validateKind(blueprintId, blueprintData, selected.binding());
 
@@ -124,20 +121,29 @@ public final class ResearchTechTreePlacementResolver {
             return base;
         }
         Placement placement = base.placement().orElseThrow();
-        ProgressionCoordinate coordinate = stableSnapshot
-                .techTreeProgressionFor(profileId, blueprintId)
-                .orElse(placement.progressionCoordinate());
+        boolean compiledFromSelectedSource = stableSnapshot
+                .staticTechTreeEntryFor(treeId, blueprintId)
+                .filter(binding -> binding.bundleId().equals(
+                                placement.source().bundleId())
+                        && binding.entryIndex()
+                                == placement.source().entryIndex())
+                .isPresent();
+        ProgressionCoordinate coordinate = compiledFromSelectedSource
+                ? stableSnapshot.techTreeProgressionFor(profileId, blueprintId)
+                        .orElse(placement.progressionCoordinate())
+                : placement.progressionCoordinate();
         return new Selection(
                 Optional.of(placement.withProgressionCoordinate(coordinate)),
                 base.competingSources());
     }
 
     /**
-     * Applies a revision-validated automatic eligibility snapshot without changing
-     * the established authored/fallback resolver. Automatic authority can replace
-     * a legacy fallback or place a non-authored gun that has no base placement.
-     * The caller remains responsible
-     * for obtaining the snapshot from the revision-coupled candidate manager.
+     * Applies the tree's explicit weapon-placement authority. An automatic tree
+     * ignores every authored weapon coordinate and accepts only a
+     * revision-validated automatic proposal; an authored tree ignores automatic
+     * proposals. Non-weapon placement remains authored in either mode. The caller
+     * remains responsible for obtaining the snapshot from the revision-coupled
+     * candidate manager.
      */
     public static EffectiveSelection resolveWithAutomatic(
             BlueprintResearchSnapshot snapshot,
@@ -146,14 +152,16 @@ public final class ResearchTechTreePlacementResolver {
             BlueprintData blueprintData,
             AutomaticWeaponPlacementCandidateSnapshot candidates) {
         Selection base = resolve(snapshot, treeId, blueprintId, blueprintData);
-        return applyAutomatic(treeId, blueprintId, blueprintData, base, candidates);
+        return applyAutomatic(
+                treeId,
+                blueprintId,
+                blueprintData,
+                base,
+                candidates,
+                usesAutomaticAuthority(snapshot, treeId));
     }
 
-    /**
-     * Profile-aware automatic resolution used by publication. Authored entries use
-     * the snapshot's compiled rank, while an eligible automatic proposal supplies
-     * the generated presentation coordinate.
-     */
+    /** Profile-aware authority resolution used by publication. */
     public static EffectiveSelection resolveWithAutomaticForProfile(
             BlueprintResearchSnapshot snapshot,
             ResourceLocation profileId,
@@ -163,7 +171,13 @@ public final class ResearchTechTreePlacementResolver {
             AutomaticWeaponPlacementCandidateSnapshot candidates) {
         Selection base = resolveForProfile(
                 snapshot, profileId, treeId, blueprintId, blueprintData);
-        return applyAutomatic(treeId, blueprintId, blueprintData, base, candidates);
+        return applyAutomatic(
+                treeId,
+                blueprintId,
+                blueprintData,
+                base,
+                candidates,
+                usesAutomaticAuthority(snapshot, treeId));
     }
 
     private static EffectiveSelection applyAutomatic(
@@ -171,9 +185,16 @@ public final class ResearchTechTreePlacementResolver {
             ResourceLocation blueprintId,
             BlueprintData blueprintData,
             Selection base,
-            AutomaticWeaponPlacementCandidateSnapshot candidates) {
-        if (candidates == null) {
+            AutomaticWeaponPlacementCandidateSnapshot candidates,
+            boolean automaticAuthority) {
+        if (!automaticAuthority) {
             return new EffectiveSelection(base, Optional.empty());
+        }
+        if (blueprintData != null && blueprintData.getKind() != BlueprintKind.GUN) {
+            return new EffectiveSelection(base, Optional.empty());
+        }
+        if (candidates == null) {
+            return new EffectiveSelection(Selection.NONE, Optional.empty());
         }
         if (!candidates.treeId().equals(treeId)) {
             throw new IllegalArgumentException(
@@ -181,21 +202,26 @@ public final class ResearchTechTreePlacementResolver {
         }
         Optional<AutomaticWeaponPlacementProposal> proposal = candidates.eligibleProposal(blueprintId);
         if (proposal.isEmpty()) {
-            return new EffectiveSelection(base, Optional.empty());
+            return new EffectiveSelection(Selection.NONE, Optional.empty());
         }
-        if (blueprintData == null || blueprintData.getKind() != BlueprintKind.GUN) {
+        if (blueprintData == null) {
             throw new IllegalStateException(
-                    "Automatic weapon placement proposal targets a non-gun blueprint");
+                    "Automatic weapon placement proposal has no catalog blueprint data");
         }
-        Optional<Placement> placement = base.placement();
-        if (placement.isPresent()
-                && (placement.orElseThrow().origin() != PlacementOrigin.LEGACY_FALLBACK
-                        || !PlacementOrigin.AUTOMATIC.outranks(
-                                placement.orElseThrow().origin()))) {
-            throw new IllegalStateException(
-                    "Automatic placement proposal attempted to replace a non-fallback placement");
-        }
-        return new EffectiveSelection(base, proposal);
+        // Automatic authority deliberately suppresses every authored/fallback
+        // weapon coordinate. Keeping the base selection here would retain its
+        // lane, rank, or explicit-rank authority and recreate hybrid behavior.
+        return new EffectiveSelection(Selection.NONE, proposal);
+    }
+
+    private static boolean usesAutomaticAuthority(
+            BlueprintResearchSnapshot snapshot,
+            ResourceLocation treeId) {
+        return snapshot != null
+                && treeId != null
+                && Optional.ofNullable(snapshot.techTrees().get(treeId))
+                        .filter(ResearchTechTreeDefinition::usesAutomaticWeaponPlacement)
+                        .isPresent();
     }
 
     private static PlacementOrigin originFor(
@@ -213,12 +239,53 @@ public final class ResearchTechTreePlacementResolver {
         };
     }
 
-    private static List<MatchedBinding> matches(
+    /**
+     * Selects static exact/tag authority with the same fallback semantics as the
+     * catalog-aware resolver. Static progression has no BlueprintData with which
+     * to evaluate selectors, so its caller supplies only already-expanded matches.
+     */
+    static Optional<TechTreeEntryBinding> selectStaticBinding(
+            List<TechTreeEntryBinding> exact,
+            List<TechTreeEntryBinding> tags) {
+        return orderedMatches(exact, tags, List.of()).stream()
+                .findFirst()
+                .map(MatchedBinding::binding);
+    }
+
+    private static List<MatchedBinding> orderedMatches(
+            List<TechTreeEntryBinding> exact,
+            List<TechTreeEntryBinding> tags,
+            List<TechTreeEntryBinding> selectors) {
+        Map<TechTreeEntryBinding, MatchedBinding> strongestMatches =
+                new LinkedHashMap<>();
+        addMatches(strongestMatches, exact, MatchSpecificity.EXACT);
+        addMatches(strongestMatches, tags, MatchSpecificity.TAG);
+        addMatches(strongestMatches, selectors, MatchSpecificity.SELECTOR);
+        List<MatchedBinding> ordered = new ArrayList<>(strongestMatches.values());
+        ordered.sort(MATCH_ORDER);
+        return ordered;
+    }
+
+    private static void addMatches(
+            Map<TechTreeEntryBinding, MatchedBinding> matches,
             List<TechTreeEntryBinding> bindings,
             MatchSpecificity specificity) {
-        return bindings.stream()
-                .map(binding -> new MatchedBinding(binding, specificity))
-                .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+        if (bindings == null) {
+            return;
+        }
+        for (TechTreeEntryBinding binding : bindings) {
+            if (binding == null) {
+                throw new IllegalArgumentException(
+                        "Research Tech Tree match list cannot contain null entries");
+            }
+            matches.merge(
+                    binding,
+                    new MatchedBinding(binding, specificity),
+                    (left, right) -> left.specificity().rank()
+                                    >= right.specificity().rank()
+                            ? left
+                            : right);
+        }
     }
 
     private static void validateKind(

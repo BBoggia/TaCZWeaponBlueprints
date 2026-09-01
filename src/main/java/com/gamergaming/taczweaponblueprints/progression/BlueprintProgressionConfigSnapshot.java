@@ -22,12 +22,15 @@ public record BlueprintProgressionConfigSnapshot(
         int pointCap,
         boolean creativeBypassesResearchCost,
         ResourceLocation activeProfileId,
-        TreeResearchResultMode treeResearchResultMode) {
+        TreeResearchResultMode treeResearchResultMode,
+        ResearchCostMode researchCostMode,
+        FoundWeaponRecoveryMode foundWeaponRecoveryMode) {
     public static final int DEFAULT_POINT_CAP = 1_000_000;
 
     public BlueprintProgressionConfigSnapshot {
         if (maximumUndiscoveredVisibility == null || duplicatePolicy == null
-                || activeProfileId == null || treeResearchResultMode == null) {
+                || activeProfileId == null || treeResearchResultMode == null
+                || researchCostMode == null || foundWeaponRecoveryMode == null) {
             throw new IllegalArgumentException("progression configuration contains null required state");
         }
         if (pointCap < 0 || pointCap > PlayerProgressionLimits.MAX_RESEARCH_POINTS) {
@@ -64,7 +67,38 @@ public record BlueprintProgressionConfigSnapshot(
                 pointCap,
                 creativeBypassesResearchCost,
                 activeProfileId,
-                TreeResearchResultMode.DIRECT_LEARN);
+                TreeResearchResultMode.DIRECT_LEARN,
+                ResearchCostMode.POINTS_AND_ITEMS,
+                FoundWeaponRecoveryMode.PROTECTED_BLUEPRINT_ONLY);
+    }
+
+    /** Compatibility constructor retaining the pre-cost-mode runtime defaults. */
+    public BlueprintProgressionConfigSnapshot(
+            boolean blueprintsEnabled,
+            boolean discoveryTrackingEnabled,
+            boolean journalEnabled,
+            JournalVisibility maximumUndiscoveredVisibility,
+            boolean researchEnabled,
+            DuplicateBlueprintPolicy duplicatePolicy,
+            boolean allowUnlearnedRecycling,
+            int pointCap,
+            boolean creativeBypassesResearchCost,
+            ResourceLocation activeProfileId,
+            TreeResearchResultMode treeResearchResultMode) {
+        this(
+                blueprintsEnabled,
+                discoveryTrackingEnabled,
+                journalEnabled,
+                maximumUndiscoveredVisibility,
+                researchEnabled,
+                duplicatePolicy,
+                allowUnlearnedRecycling,
+                pointCap,
+                creativeBypassesResearchCost,
+                activeProfileId,
+                treeResearchResultMode,
+                ResearchCostMode.POINTS_AND_ITEMS,
+                FoundWeaponRecoveryMode.PROTECTED_BLUEPRINT_ONLY);
     }
 
     public static BlueprintProgressionConfigSnapshot from(BlueprintConfig config) {
@@ -86,7 +120,9 @@ public record BlueprintProgressionConfigSnapshot(
                 config.researchPointCap.get(),
                 config.creativeBypassesResearchCost.get(),
                 profileId,
-                config.treeResearchResultMode.get());
+                config.treeResearchResultMode.get(),
+                config.researchCostMode.get(),
+                config.foundWeaponRecoveryMode.get());
     }
 
     public BlueprintResearchPolicy apply(BlueprintResearchPolicy policy) {
@@ -113,6 +149,6 @@ public record BlueprintProgressionConfigSnapshot(
                         && researchEnabled
                         && creativeBypassesResearchCost
                         && policy.creativeBypassesCost(),
-                pointCap);
+                pointCap).withResearchCost(researchCostMode.apply(policy.researchCost()));
     }
 }

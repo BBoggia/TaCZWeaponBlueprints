@@ -46,7 +46,11 @@ class ResearchWorkstationsPhaseFiveTest {
                 "outputSpace",
                 "researchable",
                 "creativeBypass",
-                "ingredients"), fields);
+                "ingredients",
+                "unlockCount",
+                "ingredientTypeCount",
+                "pathPlanningState",
+                "costMode"), fields);
         assertFalse(fields.contains("recycling"));
         assertFalse(fields.contains("researchData"));
     }
@@ -56,7 +60,7 @@ class ResearchWorkstationsPhaseFiveTest {
         assertTrue(Arrays.stream(ResearchBenchMenu.class.getDeclaredFields())
                 .noneMatch(field -> SimpleContainer.class.isAssignableFrom(field.getType())));
         assertEquals(
-                Set.of("RECYCLE", "REDEEM", "REDEEM_STACK", "REVERSE_ENGINEER"),
+                Set.of("RECYCLE", "REDEEM", "REDEEM_STACK", "REVERSE_ENGINEER", "RECOVER_POINTS"),
                 Arrays.stream(BlueprintRecyclerActionContract.Action.values())
                         .map(Enum::name)
                         .collect(Collectors.toSet()));
@@ -64,6 +68,6 @@ class ResearchWorkstationsPhaseFiveTest {
 
     @Test
     void destructiveWireCleanupUsesANewExactProtocol() {
-        assertEquals("36", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("40", NetworkHandler.PROTOCOL_VERSION);
     }
 }

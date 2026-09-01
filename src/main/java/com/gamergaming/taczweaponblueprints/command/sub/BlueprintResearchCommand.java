@@ -14,8 +14,13 @@ import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeAuthoringReport;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeEconomyAudit;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeTopologyAudit;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchGroupedRouteBaselineAudit;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchGroupedRouteMotifAssessment;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchGroupedRouteQualityAudit;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePublication;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementDiagnostics;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementProposal;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPolicy.PrerequisiteStrategy;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponCandidateClassification;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponEvidenceManager;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponPlacementCandidateManager;
@@ -89,7 +94,17 @@ public final class BlueprintResearchCommand {
                                 catalog.blueprints(), research.snapshot()),
                         profileId);
         ResearchTechTreeEconomyAudit.Audit economy = ResearchTechTreeEconomyAudit.audit(
-                tree.graph(), tree.techTree(), pointIncome);
+                tree.graph(), tree.techTree(), pointIncome,
+                manager.progressionConfig().researchCostMode());
+        ResearchGroupedRouteBaselineAudit.Audit groupedRouteBaseline =
+                ResearchGroupedRouteBaselineAudit.audit(
+                        tree.graph(), tree.techTree(), automatic.orElse(null), pointIncome);
+        ResearchGroupedRouteQualityAudit.Audit groupedRouteQuality =
+                ResearchGroupedRouteQualityAudit.audit(
+                        tree.graph(), tree.techTree(), automatic.orElse(null), pointIncome);
+        ResearchGroupedRouteMotifAssessment.Assessment motifAssessment =
+                ResearchGroupedRouteMotifAssessment.assess(
+                        groupedRouteQuality, topology);
         context.getSource().sendSuccess(() -> Component.translatable(
                 "commands.taczweaponblueprints.research.status",
                 profileId,
@@ -121,11 +136,18 @@ public final class BlueprintResearchCommand {
                 context.getSource().sendSuccess(() -> Component.translatable(
                         "commands.taczweaponblueprints.research.automatic",
                         diagnostics.mode().name().toLowerCase(java.util.Locale.ROOT),
+                        research.snapshot().automaticPlacementProfileForTree(
+                                diagnostics.treeId())
+                                .map(value -> value.scoringModel().serializedName())
+                                .orElse("unknown"),
                         diagnostics.reviewHandling().serializedName(),
+                        diagnostics.prerequisiteStrategy().serializedName(),
                         diagnostics.treeId(),
                         diagnostics.count(AutomaticWeaponPlacementDiagnostics.State.AUTOMATIC),
                         diagnostics.excludedAutomaticCount(),
                         diagnostics.generatedPrerequisiteCount(),
+                        diagnostics.generatedRequirementGroupCount(),
+                        diagnostics.generatedAlternativeGroupCount(),
                         diagnostics.entries().values().stream()
                                 .filter(entry -> entry.state()
                                         == AutomaticWeaponPlacementDiagnostics.State.AUTOMATIC)
@@ -133,10 +155,21 @@ public final class BlueprintResearchCommand {
                                 .count(),
                         diagnostics.topologyWeaponCount(),
                         diagnostics.resolvedNodesPerLayer(),
+                        diagnostics.mergeInterval(),
+                        diagnostics.mergeIntervalBehavior().serializedName(),
+                        diagnostics.generatedParentCostGuard(),
                         diagnostics.catalogRevision(),
                         diagnostics.researchRevision()), false),
                 () -> context.getSource().sendSuccess(() -> Component.translatable(
                         "commands.taczweaponblueprints.research.automatic.unavailable"), false));
+        automatic.filter(diagnostics -> diagnostics.prerequisiteStrategy()
+                        == PrerequisiteStrategy.HYBRID_ROUTES_V1)
+                .ifPresent(diagnostics -> context.getSource().sendSuccess(() ->
+                        Component.translatable(
+                                "commands.taczweaponblueprints.research.automatic.hybrid",
+                                diagnostics.generatedAlternativeRouteDecisionCount(),
+                                diagnostics.generatedMandatoryConvergenceCount(),
+                                diagnostics.generatedMixedRequirementCount()), false));
         if (automatic.isEmpty()) {
             var automaticPublication =
                     AutomaticWeaponPlacementCandidateManager.INSTANCE.publication();
@@ -171,6 +204,9 @@ public final class BlueprintResearchCommand {
                                 branches.depthShortcutCount(),
                                 branches.terminalPeerCount(),
                                 branches.closureInflationRejectionCount(),
+                                branches.alternativeRouteReviewCount(),
+                                branches.acceptedAlternativeRouteCount(),
+                                branches.rejectedAlternativeRouteCostImbalanceCount(),
                                 branches.maximumFanOut()), false));
         automatic.map(AutomaticWeaponPlacementDiagnostics::publicationSummary)
                 .filter(AutomaticWeaponPlacementDiagnostics.PublicationSummary::applicable)
@@ -222,17 +258,123 @@ public final class BlueprintResearchCommand {
                         domain.crossBranchMergeCount(),
                         domain.approximateEdgeCrossingCount(),
                         domain.totalEdgeRankSpan()), false));
+        context.getSource().sendSuccess(() -> Component.translatable(
+                "commands.taczweaponblueprints.research.cost_mode",
+                Component.translatable(
+                        economy.researchCostMode().translationKey())), false);
         economy.domain(com.gamergaming.taczweaponblueprints.research.tree
                         .ResearchTechTreeContract.Domain.WEAPONS)
-                .ifPresent(domain -> context.getSource().sendSuccess(() -> Component.translatable(
-                        "commands.taczweaponblueprints.research.economy",
-                        domain.fullTreeCost(),
-                        domain.minimumLeafUnlockClosureCost(),
-                        domain.maximumLeafUnlockClosureCost(),
-                        pointIncome.maximumFinitePoints(),
-                        domain.finiteIncomeCoverageBasisPoints() / 100.0,
-                        domain.andMergeCount(),
-                        economy.costAuthority()), false));
+                .ifPresent(domain -> context.getSource().sendSuccess(() ->
+                        economy.pointCoverageApplicable()
+                                ? Component.translatable(
+                                        "commands.taczweaponblueprints.research.economy",
+                                        domain.fullTreeCost(),
+                                        domain.minimumLeafUnlockClosureCost(),
+                                        domain.maximumLeafUnlockClosureCost(),
+                                        pointIncome.maximumFinitePoints(),
+                                        domain.finiteIncomeCoverageBasisPoints() / 100.0,
+                                        domain.andMergeCount(),
+                                        economy.costAuthority())
+                                : Component.translatable(
+                                        "commands.taczweaponblueprints.research.economy.items_only",
+                                        domain.andMergeCount(),
+                                        economy.costAuthority()), false));
+        if (groupedRouteBaseline.available()) {
+            context.getSource().sendSuccess(() -> Component.translatable(
+                    "commands.taczweaponblueprints.research.automatic.grouped_baseline",
+                    groupedRouteBaseline.automaticTargetCount(),
+                    groupedRouteBaseline.matchedGeneratedTargetCount(),
+                    groupedRouteBaseline.unmatchedGeneratedTargetCount(),
+                    groupedRouteBaseline.generatedReferenceCount(),
+                    groupedRouteBaseline.alternativeGroupCandidateCount(),
+                    groupedRouteBaseline.pairGroupCandidateCount(),
+                    groupedRouteBaseline.largerGroupCandidateCount(),
+                    groupedRouteBaseline.maximumAlternativeCount(),
+                    groupedRouteBaseline.maximumSingleParentChain(),
+                    String.format(
+                            java.util.Locale.ROOT,
+                            "%.2f",
+                            groupedRouteBaseline.alternativeEvidence()
+                                    .sharedAncestryBasisPoints().median() / 100.0)), false);
+            var routes = groupedRouteBaseline.routeCosts();
+            context.getSource().sendSuccess(() -> Component.translatable(
+                    "commands.taczweaponblueprints.research.automatic.grouped_economy",
+                    routes.currentMandatoryClosureCosts().minimum(),
+                    routes.currentMandatoryClosureCosts().maximum(),
+                    routes.counterfactualMinimumRouteEstimates().minimum(),
+                    routes.counterfactualMinimumRouteEstimates().maximum(),
+                    routes.counterfactualMaximumRouteEstimates().minimum(),
+                    routes.counterfactualMaximumRouteEstimates().maximum(),
+                    routes.currentAffordableLeafCount(),
+                    routes.leafCount(),
+                    routes.counterfactualAffordableLeafCount(),
+                    routes.leafCount(),
+                    routes.estimateExact()), false);
+        }
+        if (groupedRouteQuality.available()) {
+            context.getSource().sendSuccess(() -> Component.translatable(
+                    "commands.taczweaponblueprints.research.automatic.grouped_quality",
+                    groupedRouteQuality.effectiveAlternativeGroupCount(),
+                    groupedRouteQuality.alternativeGroupCount(),
+                    String.format(
+                            java.util.Locale.ROOT,
+                            "%.2f",
+                            groupedRouteQuality.alternatives()
+                                    .routeCostRatioUpperBoundBasisPoints()
+                                    .median() / 100.0),
+                    String.format(
+                            java.util.Locale.ROOT,
+                            "%.2f",
+                            groupedRouteQuality.mandatoryAncestorSharesBasisPoints()
+                                    .median() / 100.0),
+                    groupedRouteQuality.singleRouteChainLengths().percentile95(),
+                    groupedRouteQuality.singleRouteChainLengths().maximum(),
+                    groupedRouteQuality.affordableTerminalCount(),
+                    groupedRouteQuality.terminalRoutes().size(),
+                    groupedRouteQuality.unaffordableTerminalCount(),
+                    groupedRouteQuality.indeterminateTerminalCount(),
+                    groupedRouteQuality.warningOccurrenceCount()), false);
+            groupedRouteQuality.phases().forEach(phase ->
+                    context.getSource().sendSuccess(() -> Component.translatable(
+                            "commands.taczweaponblueprints.research.automatic.grouped_quality_phase",
+                            phase.phase().serializedName(),
+                            phase.effectiveAlternativeGroupCount(),
+                            phase.alternativeGroupCount(),
+                            phase.targetCount(),
+                            phase.sameFamilyAlternativeGroupCount(),
+                            phase.crossFamilyAlternativeGroupCount(),
+                            phase.parentFanOut().percentile95(),
+                            phase.parentFanOut().maximum()), false));
+        }
+        if (groupedRouteQuality.available()) {
+            context.getSource().sendSuccess(() -> Component.translatable(
+                    "commands.taczweaponblueprints.research.automatic.motif_assessment",
+                    motifAssessment.decision().serializedName(),
+                    motifAssessment.decisiveSignalCount(),
+                    motifAssessment.recommendedMotifs().isEmpty()
+                            ? "-"
+                            : motifAssessment.recommendedMotifs().stream()
+                                    .map(ResearchGroupedRouteMotifAssessment.Motif::serializedName)
+                                    .collect(java.util.stream.Collectors.joining(",")),
+                    motifAssessment.signal(
+                            ResearchGroupedRouteMotifAssessment.SignalCode
+                                    .SINGLE_ROUTE_LADDER_P95).observed(),
+                    motifAssessment.ladderP95ReviewLimit(),
+                    String.format(
+                            java.util.Locale.ROOT,
+                            "%.2f",
+                            motifAssessment.signal(
+                                    ResearchGroupedRouteMotifAssessment.SignalCode
+                                            .ROUTE_COST_RATIO_P95).observed() / 10_000.0),
+                    String.format(
+                            java.util.Locale.ROOT,
+                            "%.2f",
+                            motifAssessment.routeCostRatioP95ReviewLimitBasisPoints()
+                                    / 10_000.0),
+                    motifAssessment.visualEvidence()
+                            .preJunctionApproximateCrossingCount(),
+                    motifAssessment.visualEvidence().manualReviewRequired()), false);
+        }
         return Command.SINGLE_SUCCESS;
     }
 
@@ -260,8 +402,20 @@ public final class BlueprintResearchCommand {
                 policy.researchEnabled(),
                 policy.researchCost().points(),
                 policy.researchCost().ingredients().size(),
-                policy.prerequisites().size(),
+                policy.requirements().allOf().size(),
                 selection.tiedRuleIds().size()), false);
+        for (int groupIndex = 0;
+                groupIndex < policy.requirements().allOf().size();
+                groupIndex++) {
+            int displayedGroup = groupIndex + 1;
+            String alternatives = policy.requirements().allOf().get(groupIndex).anyOf()
+                    .stream().map(ResourceLocation::toString)
+                    .collect(java.util.stream.Collectors.joining(" OR "));
+            context.getSource().sendSuccess(() -> Component.translatable(
+                    "commands.taczweaponblueprints.research.inspect.requirement_group",
+                    displayedGroup,
+                    alternatives), false);
+        }
         java.util.Optional<ResearchTreeGroupPlacement> placement = research.snapshot()
                 .placementFor(profileId, blueprintId);
         boolean includedInOverview = placement
@@ -270,7 +424,7 @@ public final class BlueprintResearchCommand {
                 .orElse(placement.isPresent());
         context.getSource().sendSuccess(() -> Component.translatable(
                 "commands.taczweaponblueprints.research.inspect.presentation",
-                placement.map(value -> value.groupId().toString()).orElse("automatic fallback"),
+                placement.map(value -> value.groupId().toString()).orElse("automatic grouping"),
                 placement.map(value -> Integer.toString(value.rank())).orElse("-"),
                 placement.map(value -> Integer.toString(value.orderInRank())).orElse("-"),
                 includedInOverview), false);
@@ -296,12 +450,17 @@ public final class BlueprintResearchCommand {
                                     : entry.generatedPrerequisites().stream()
                                             .map(ResourceLocation::toString)
                                             .collect(java.util.stream.Collectors.joining(",")),
-                            entry.reason().orElse("-"));
+                            entry.reason().orElse("-"),
+                            proposal.map(AutomaticWeaponPlacementProposal::formulaVersion)
+                                    .orElse("-"),
+                            proposal.map(AutomaticWeaponPlacementProposal::referenceVersion)
+                                    .orElse("-"));
                     }, false);
-                    entry.prerequisiteDecision().ifPresent(decision ->
-                            context.getSource().sendSuccess(() -> Component.translatable(
+                    entry.prerequisiteDecision().ifPresent(decision -> {
+                        context.getSource().sendSuccess(() -> Component.translatable(
                                     "commands.taczweaponblueprints.research.inspect.prerequisite",
                                     decision.strategy().serializedName(),
+                                    decision.generatedRequirementShape().serializedName(),
                                     decision.branchIndex().map(String::valueOf).orElse("-"),
                                     decision.rankIndex(),
                                     decision.publishedRank().map(String::valueOf).orElse("-"),
@@ -312,7 +471,34 @@ public final class BlueprintResearchCommand {
                                     decision.sameFamilyParentCount(),
                                     decision.crossFamilyParentCount(),
                                     decision.depthShortcut(),
-                                    decision.terminalPeer()), false));
+                                    decision.terminalPeer()), false);
+                        decision.alternativeRouteReview().ifPresent(review ->
+                                context.getSource().sendSuccess(() -> Component.translatable(
+                                        "commands.taczweaponblueprints.research.inspect.route_review",
+                                        review.parentId(),
+                                        review.outcome().serializedName(),
+                                        review.existingRouteCostLowerBound(),
+                                        review.existingRouteCostUpperBound(),
+                                        review.candidateRouteCostLowerBound(),
+                                        review.candidateRouteCostUpperBound(),
+                                        String.format(
+                                                java.util.Locale.ROOT,
+                                                "%.2f",
+                                                review.routeCostRatioLowerBoundBasisPoints()
+                                                        / 10_000.0),
+                                        String.format(
+                                                java.util.Locale.ROOT,
+                                                "%.2f",
+                                                review.routeCostRatioUpperBoundBasisPoints()
+                                                        / 10_000.0),
+                                        String.format(
+                                                java.util.Locale.ROOT,
+                                                "%.2f",
+                                                review.mandatoryAncestryOverlapBasisPoints()
+                                                        / 100.0),
+                                        review.divergentMandatoryNodeCount(),
+                                        review.exact()), false));
+                    });
                 });
         automaticClassification(research, catalog, profileId).ifPresent(classification -> {
             var role = classification.roleSignature(blueprintId)
@@ -401,7 +587,14 @@ public final class BlueprintResearchCommand {
                                 catalog.blueprints(), research.snapshot()),
                         profileId);
         ResearchTechTreeEconomyAudit.Audit economy = ResearchTechTreeEconomyAudit.audit(
-                tree.graph(), tree.techTree(), pointIncome);
+                tree.graph(), tree.techTree(), pointIncome,
+                manager.progressionConfig().researchCostMode());
+        ResearchGroupedRouteQualityAudit.Audit groupedRouteQuality =
+                ResearchGroupedRouteQualityAudit.audit(
+                        tree.graph(), tree.techTree(), automatic.orElse(null), pointIncome);
+        ResearchGroupedRouteMotifAssessment.Assessment motifAssessment =
+                ResearchGroupedRouteMotifAssessment.assess(
+                        groupedRouteQuality, topology);
         ResearchTechTreeAuthoringReport authoring = ResearchTechTreeAuthoringReport.create(
                 research.snapshot(),
                 catalog.blueprints(),
@@ -416,7 +609,9 @@ public final class BlueprintResearchCommand {
                 automatic.orElse(null),
                 authoring,
                 topology,
-                economy);
+                economy,
+                groupedRouteQuality,
+                motifAssessment);
         try {
             Files.createDirectories(directory);
             Files.writeString(temporary, json, StandardCharsets.UTF_8);

@@ -79,25 +79,19 @@ public final class ResearchTechTreeProjectionBuilder {
             }
         }
         Set<ResourceLocation> localNodeIds = placements.keySet();
-        Map<ResourceLocation, Integer> internalPrerequisiteCounts = new LinkedHashMap<>();
-        localNodeIds.forEach(nodeId -> internalPrerequisiteCounts.put(nodeId, 0));
-        List<ResearchTreeGraph.Edge> internalEdges = new ArrayList<>();
         List<ResearchTechTreeProjection.BoundaryLink> boundaryLinks = new ArrayList<>();
         for (ResearchTreeGraph.Edge edge : sourceGraph.edges()) {
             Domain prerequisiteDomain = domainsByNode.get(edge.prerequisiteId());
             Domain dependentDomain = domainsByNode.get(edge.dependentId());
-            if (prerequisiteDomain == domain.domain() && dependentDomain == domain.domain()) {
-                internalEdges.add(edge);
-                internalPrerequisiteCounts.compute(
-                        edge.dependentId(),
-                        (ignored, count) -> count == null ? 1 : count + 1);
-            } else if (prerequisiteDomain == domain.domain() && dependentDomain != null) {
+            if (prerequisiteDomain == domain.domain() && dependentDomain != null
+                    && dependentDomain != domain.domain()) {
                 boundaryLinks.add(new ResearchTechTreeProjection.BoundaryLink(
                         edge.prerequisiteId(),
                         edge.dependentId(),
                         dependentDomain,
                         ResearchTechTreeProjection.Direction.UNLOCK));
-            } else if (dependentDomain == domain.domain() && prerequisiteDomain != null) {
+            } else if (dependentDomain == domain.domain() && prerequisiteDomain != null
+                    && prerequisiteDomain != domain.domain()) {
                 boundaryLinks.add(new ResearchTechTreeProjection.BoundaryLink(
                         edge.dependentId(),
                         edge.prerequisiteId(),
@@ -106,46 +100,16 @@ public final class ResearchTechTreeProjectionBuilder {
             }
         }
 
-        List<ResearchTreeGraph.Node> nodes = new ArrayList<>(placements.size());
-        for (ResourceLocation nodeId : placements.keySet()) {
-            ResearchTreeGraph.Node source = sourceGraph.node(nodeId).orElseThrow(() ->
-                    new IllegalArgumentException(
-                            "Research Tech Tree projection references an unknown graph node"));
-            nodes.add(copyNode(
-                    source,
-                    nodes.size(),
-                    internalPrerequisiteCounts.getOrDefault(nodeId, 0)));
-        }
+        ResearchTreeGraph graph = sourceGraph.orderedInducedSubgraph(
+                List.copyOf(placements.keySet()));
         return new ResearchTechTreeProjection(
                 domain.domain(),
                 domain,
-                new ResearchTreeGraph(nodes, internalEdges),
+                graph,
                 placements,
                 boundaryLinks,
                 bands,
                 maxNodesPerLayer);
-    }
-
-    private static ResearchTreeGraph.Node copyNode(
-            ResearchTreeGraph.Node node,
-            int ordinal,
-            int prerequisiteCount) {
-        return new ResearchTreeGraph.Node(
-                ordinal,
-                node.sourceOrdinal(),
-                node.blueprintId(),
-                node.nameKey(),
-                node.itemType(),
-                node.displaySlotId(),
-                node.visibility(),
-                node.learned(),
-                node.discovered(),
-                node.policyEligible(),
-                node.pointCost(),
-                node.ingredientTypeCount(),
-                prerequisiteCount,
-                0,
-                node.availability());
     }
 
     private static void validateBoundaryLinks(

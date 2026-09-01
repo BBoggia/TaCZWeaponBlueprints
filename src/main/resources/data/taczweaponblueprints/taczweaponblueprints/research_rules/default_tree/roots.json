@@ -8,9 +8,9 @@
   "visibility": "full",
   "tree_enabled": true,
   "research_cost": {
-    "points": 2,
+    "points": 4,
     "ingredients": [
-      { "items": ["minecraft:paper"], "count": 1 },
+      { "items": ["minecraft:paper"], "count": 2 },
       { "items": ["minecraft:iron_ingot"], "count": 1 }
     ]
   }

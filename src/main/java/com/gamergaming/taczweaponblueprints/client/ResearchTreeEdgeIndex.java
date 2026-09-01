@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayout;
@@ -15,7 +16,8 @@ import net.minecraft.resources.ResourceLocation;
 
 /** Spatial index that avoids scanning every authored prerequisite edge each frame. */
 public final class ResearchTreeEdgeIndex {
-    public static final ResearchTreeEdgeIndex EMPTY = new ResearchTreeEdgeIndex(null);
+    public static final ResearchTreeEdgeIndex EMPTY = new ResearchTreeEdgeIndex(
+            null, List.of(), Map.of(), Set.of());
 
     /**
      * Explicit connector policy. Visual layout metadata must not silently decide
@@ -31,9 +33,28 @@ public final class ResearchTreeEdgeIndex {
     }
 
     private final IntervalNode root;
+    private final JunctionIntervalNode junctionRoot;
+    private final List<PositionedRequirementGroup> requirementJunctions;
+    private final Map<ResearchTreeGraph.Edge, List<PositionedRequirementGroup>>
+            requirementJunctionsByEdge;
+    private final Set<ResearchTreeGraph.Edge> directArrowEdges;
 
-    private ResearchTreeEdgeIndex(IntervalNode root) {
+    private ResearchTreeEdgeIndex(
+            IntervalNode root,
+            List<PositionedRequirementGroup> requirementJunctions,
+            Map<ResearchTreeGraph.Edge, List<PositionedRequirementGroup>>
+                    requirementJunctionsByEdge,
+            Set<ResearchTreeGraph.Edge> directArrowEdges) {
         this.root = root;
+        this.requirementJunctions = List.copyOf(requirementJunctions);
+        this.junctionRoot = JunctionIntervalNode.build(
+                this.requirementJunctions, 0, this.requirementJunctions.size());
+        Map<ResearchTreeGraph.Edge, List<PositionedRequirementGroup>> junctionIndex =
+                new LinkedHashMap<>();
+        requirementJunctionsByEdge.forEach((edge, junctions) ->
+                junctionIndex.put(edge, List.copyOf(junctions)));
+        this.requirementJunctionsByEdge = Map.copyOf(junctionIndex);
+        this.directArrowEdges = Set.copyOf(directArrowEdges);
     }
 
     public static ResearchTreeEdgeIndex create(ResearchTreeGraph graph, ResearchTreeLayout layout) {
@@ -103,7 +124,158 @@ public final class ResearchTreeEdgeIndex {
                 .thenComparingInt(PositionedEdge::maximumY)
                 .thenComparing(value -> value.edge().prerequisiteId().toString())
                 .thenComparing(value -> value.edge().dependentId().toString()));
-        return new ResearchTreeEdgeIndex(IntervalNode.build(edges, 0, edges.size()));
+        RequirementJunctionIndex junctionIndex = positionRequirementJunctions(
+                graph, layout, edges);
+        return new ResearchTreeEdgeIndex(
+                IntervalNode.build(edges, 0, edges.size()),
+                junctionIndex.junctions(),
+                junctionIndex.byEdge(),
+                junctionIndex.directArrowEdges());
+    }
+
+    /** Stable OR-junction geometry. Live satisfaction remains owned by the graph. */
+    public List<PositionedRequirementGroup> requirementJunctions() {
+        return requirementJunctions;
+    }
+
+    public List<PositionedRequirementGroup> requirementJunctions(
+            ResearchTreeGraph.Edge edge) {
+        return edge == null
+                ? List.of()
+                : requirementJunctionsByEdge.getOrDefault(edge, List.of());
+    }
+
+    public List<PositionedRequirementGroup> visibleRequirementJunctions(
+            double minimumX,
+            double minimumY,
+            double maximumX,
+            double maximumY) {
+        if (junctionRoot == null || maximumX < minimumX || maximumY < minimumY) {
+            return List.of();
+        }
+        List<PositionedRequirementGroup> matches = new ArrayList<>();
+        junctionRoot.collect(
+                minimumX, minimumY, maximumX, maximumY, matches);
+        return List.copyOf(matches);
+    }
+
+    /** A direct arrow remains only for a mandatory singleton representation. */
+    public boolean drawsDirectArrow(ResearchTreeGraph.Edge edge) {
+        return edge != null && directArrowEdges.contains(edge);
+    }
+
+    private static RequirementJunctionIndex positionRequirementJunctions(
+            ResearchTreeGraph graph,
+            ResearchTreeLayout layout,
+            List<PositionedEdge> positionedEdges) {
+        Map<ResearchTreeGraph.Edge, PositionedEdge> routesByEdge = new LinkedHashMap<>();
+        positionedEdges.forEach(route -> routesByEdge.put(route.edge(), route));
+        Map<ResourceLocation, List<ResearchTreeGraph.RequirementGroup>> groupsByDependent =
+                new LinkedHashMap<>();
+        graph.requirementGroups().forEach(group -> groupsByDependent
+                .computeIfAbsent(group.dependentId(), ignored -> new ArrayList<>())
+                .add(group));
+
+        Map<ResearchTreeGraph.Edge, Boolean> multiMembership = new LinkedHashMap<>();
+        Map<ResearchTreeGraph.Edge, Boolean> singletonMembership = new LinkedHashMap<>();
+        Map<ResearchTreeGraph.Edge, List<PositionedRequirementGroup>> byEdge =
+                new LinkedHashMap<>();
+        List<PositionedRequirementGroup> junctions = new ArrayList<>();
+        for (Map.Entry<ResourceLocation, List<ResearchTreeGraph.RequirementGroup>> entry
+                : groupsByDependent.entrySet()) {
+            ResearchTreeLayout.PositionedNode dependent = layout.position(entry.getKey())
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "requirement-group dependent is absent from layout"));
+            List<ResearchTreeGraph.RequirementGroup> groups = entry.getValue();
+            List<ResearchTreeGraph.RequirementGroup> drawableAlternativeGroups = groups.stream()
+                    .filter(group -> group.visibleAlternativeIds().size()
+                            + group.hiddenAlternativeCount()
+                            + group.externalAlternativeCount() > 1)
+                    .filter(group -> !group.visibleAlternativeIds().isEmpty())
+                    .toList();
+            int baseApproachY = dependent.y() + ResearchTreeLayout.NODE_HEIGHT + 8;
+            int minimumSourceExitY = drawableAlternativeGroups.stream()
+                    .flatMap(group -> group.visibleAlternativeIds().stream()
+                            .map(alternative -> routesByEdge.get(
+                                    new ResearchTreeGraph.Edge(
+                                            alternative, group.dependentId()))))
+                    .filter(java.util.Objects::nonNull)
+                    .mapToInt(PositionedEdge::sourceExitY)
+                    .min()
+                    .orElse(baseApproachY);
+            int junctionSpacing = drawableAlternativeGroups.size() <= 1
+                    ? 0
+                    : Math.min(
+                            ResearchTechTreeLayoutPolicy.REQUIREMENT_JUNCTION_SPACING,
+                            Math.max(0, minimumSourceExitY - baseApproachY - 5)
+                                    / (drawableAlternativeGroups.size() - 1));
+            int drawableGroupIndex = 0;
+            for (ResearchTreeGraph.RequirementGroup group : groups) {
+                int alternativeCount = group.visibleAlternativeIds().size()
+                        + group.hiddenAlternativeCount()
+                        + group.externalAlternativeCount();
+                List<PositionedEdge> members = group.visibleAlternativeIds().stream()
+                        .map(alternative -> routesByEdge.get(new ResearchTreeGraph.Edge(
+                                alternative, group.dependentId())))
+                        .filter(java.util.Objects::nonNull)
+                        .toList();
+                for (PositionedEdge member : members) {
+                    (alternativeCount > 1 ? multiMembership : singletonMembership)
+                            .put(member.edge(), true);
+                }
+                if (alternativeCount <= 1 || members.isEmpty()) {
+                    continue;
+                }
+                int junctionX = groupPortX(dependent, group.ordinal(), groups.size());
+                int approachY = members.get(0).targetApproachY();
+                if (members.stream().anyMatch(member ->
+                        member.targetApproachY() != approachY)) {
+                    throw new IllegalArgumentException(
+                            "requirement-group alternatives do not share an approach row");
+                }
+                int junctionY = approachY + drawableGroupIndex++ * junctionSpacing;
+                PositionedRequirementGroup positioned = new PositionedRequirementGroup(
+                        new RequirementGroupKey(group.dependentId(), group.ordinal()),
+                        junctionX,
+                        junctionY,
+                        dependent.y() + ResearchTreeLayout.NODE_HEIGHT,
+                        members.stream().map(member -> new JunctionBranch(
+                                member.edge(), member.endX(), member.targetApproachY())).toList(),
+                        Math.min(junctionX - 4,
+                                members.stream().mapToInt(PositionedEdge::endX)
+                                        .min().orElseThrow() - 1),
+                        dependent.y() + ResearchTreeLayout.NODE_HEIGHT,
+                        Math.max(junctionX + 4,
+                                members.stream().mapToInt(PositionedEdge::endX)
+                                        .max().orElseThrow() + 1),
+                        Math.max(approachY, junctionY + 4));
+                junctions.add(positioned);
+                positioned.branches().forEach(branch -> byEdge
+                        .computeIfAbsent(branch.edge(), ignored -> new ArrayList<>())
+                        .add(positioned));
+            }
+        }
+        junctions.sort(Comparator
+                .comparingInt(PositionedRequirementGroup::minimumY)
+                .thenComparingInt(PositionedRequirementGroup::minimumX)
+                .thenComparing(junction -> junction.key().dependentId().toString())
+                .thenComparingInt(junction -> junction.key().ordinal()));
+        Set<ResearchTreeGraph.Edge> directArrows = positionedEdges.stream()
+                .map(PositionedEdge::edge)
+                .filter(edge -> !multiMembership.getOrDefault(edge, false)
+                        || singletonMembership.getOrDefault(edge, false))
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        return new RequirementJunctionIndex(junctions, byEdge, directArrows);
+    }
+
+    private static int groupPortX(
+            ResearchTreeLayout.PositionedNode node,
+            int ordinal,
+            int count) {
+        int usableWidth = ResearchTreeLayout.NODE_WIDTH - 8;
+        int offset = 4 + (int) Math.round(
+                (ordinal + 1) * usableWidth / (double) (count + 1));
+        return node.x() + offset;
     }
 
     private static Map<ResearchTreeGraph.Edge, Port> indexPorts(
@@ -202,6 +374,65 @@ public final class ResearchTreeEdgeIndex {
                     && edge.minimumX() <= maximumX
                     && edge.maximumX() >= minimumX) {
                 matches.add(edge);
+            }
+            if (right != null) {
+                right.collect(minimumX, minimumY, maximumX, maximumY, matches);
+            }
+        }
+    }
+
+    private static final class JunctionIntervalNode {
+        private final PositionedRequirementGroup junction;
+        private final JunctionIntervalNode left;
+        private final JunctionIntervalNode right;
+        private final int subtreeMinimumY;
+        private final int subtreeMaximumY;
+
+        private JunctionIntervalNode(
+                PositionedRequirementGroup junction,
+                JunctionIntervalNode left,
+                JunctionIntervalNode right) {
+            this.junction = junction;
+            this.left = left;
+            this.right = right;
+            subtreeMinimumY = Math.min(
+                    junction.minimumY(),
+                    Math.min(left == null ? Integer.MAX_VALUE : left.subtreeMinimumY,
+                            right == null ? Integer.MAX_VALUE : right.subtreeMinimumY));
+            subtreeMaximumY = Math.max(
+                    junction.maximumY(),
+                    Math.max(left == null ? Integer.MIN_VALUE : left.subtreeMaximumY,
+                            right == null ? Integer.MIN_VALUE : right.subtreeMaximumY));
+        }
+
+        private static JunctionIntervalNode build(
+                List<PositionedRequirementGroup> junctions,
+                int start,
+                int end) {
+            if (start >= end) {
+                return null;
+            }
+            int middle = start + (end - start) / 2;
+            return new JunctionIntervalNode(
+                    junctions.get(middle),
+                    build(junctions, start, middle),
+                    build(junctions, middle + 1, end));
+        }
+
+        private void collect(
+                double minimumX,
+                double minimumY,
+                double maximumX,
+                double maximumY,
+                List<PositionedRequirementGroup> matches) {
+            if (subtreeMaximumY < minimumY || subtreeMinimumY > maximumY) {
+                return;
+            }
+            if (left != null) {
+                left.collect(minimumX, minimumY, maximumX, maximumY, matches);
+            }
+            if (junction.intersects(minimumX, minimumY, maximumX, maximumY)) {
+                matches.add(junction);
             }
             if (right != null) {
                 right.collect(minimumX, minimumY, maximumX, maximumY, matches);
@@ -544,6 +775,69 @@ public final class ResearchTreeEdgeIndex {
     }
 
     public record RoutePoint(int x, int y) {
+    }
+
+    public record RequirementGroupKey(ResourceLocation dependentId, int ordinal) {
+        public RequirementGroupKey {
+            if (dependentId == null || ordinal < 0
+                    || ordinal >= com.gamergaming.taczweaponblueprints.resource.research
+                            .ResearchRequirements.MAX_GROUPS) {
+                throw new IllegalArgumentException("invalid requirement-group key");
+            }
+        }
+    }
+
+    public record PositionedRequirementGroup(
+            RequirementGroupKey key,
+            int x,
+            int y,
+            int dependentBottomY,
+            List<JunctionBranch> branches,
+            int minimumX,
+            int minimumY,
+            int maximumX,
+            int maximumY) {
+        public PositionedRequirementGroup {
+            branches = branches == null ? List.of() : List.copyOf(branches);
+            if (key == null || x < 0 || y < 0 || dependentBottomY < 0
+                    || y <= dependentBottomY
+                    || branches.isEmpty()
+                    || branches.stream().anyMatch(java.util.Objects::isNull)
+                    || branches.stream().anyMatch(branch ->
+                            !branch.edge().dependentId().equals(key.dependentId()))
+                    || minimumX > maximumX || minimumY > maximumY
+                    || x < minimumX || x > maximumX
+                    || dependentBottomY < minimumY || y > maximumY) {
+                throw new IllegalArgumentException(
+                        "invalid positioned requirement-group junction");
+            }
+        }
+
+        public boolean intersects(
+                double visibleLeft,
+                double visibleTop,
+                double visibleRight,
+                double visibleBottom) {
+            return maximumX >= visibleLeft && minimumX <= visibleRight
+                    && maximumY >= visibleTop && minimumY <= visibleBottom;
+        }
+    }
+
+    public record JunctionBranch(
+            ResearchTreeGraph.Edge edge,
+            int approachX,
+            int approachY) {
+        public JunctionBranch {
+            if (edge == null || approachX < 0 || approachY < 0) {
+                throw new IllegalArgumentException("invalid requirement-junction branch");
+            }
+        }
+    }
+
+    private record RequirementJunctionIndex(
+            List<PositionedRequirementGroup> junctions,
+            Map<ResearchTreeGraph.Edge, List<PositionedRequirementGroup>> byEdge,
+            Set<ResearchTreeGraph.Edge> directArrowEdges) {
     }
 
     /** Precomputes only the track coordinates the unified router can request. */

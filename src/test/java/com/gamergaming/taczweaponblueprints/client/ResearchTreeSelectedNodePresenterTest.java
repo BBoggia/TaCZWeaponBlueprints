@@ -5,11 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
 import com.gamergaming.taczweaponblueprints.menu.ResearchSelectionPreview;
+import com.gamergaming.taczweaponblueprints.progression.ResearchCostMode;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
 
 import net.minecraft.resources.ResourceLocation;
@@ -120,6 +122,149 @@ class ResearchTreeSelectedNodePresenterTest {
     }
 
     @Test
+    void authoritativePathPreviewCanMakeAHigherLockedNodeActionable() {
+        ResourceLocation nodeId = new ResourceLocation("test:path_target");
+        ResearchSelectionPreview preview = new ResearchSelectionPreview(
+                Optional.of(nodeId),
+                24,
+                30,
+                true,
+                true,
+                true,
+                true,
+                false,
+                List.of(),
+                4,
+                0);
+
+        ResearchTreeSelectedNodePresenter.Presentation presentation =
+                ResearchTreeSelectedNodePresenter.present(input(
+                        node(nodeId, ResearchTreeGraph.Availability.PREREQUISITES_REQUIRED),
+                        false,
+                        Optional.of(nodeId),
+                        preview));
+
+        assertEquals(ResearchTreeSelectedNodePresenter.Message.READY, presentation.message());
+        assertTrue(presentation.pathPurchase());
+        assertEquals(4, presentation.unlockCount());
+        assertTrue(presentation.actionEnabled());
+    }
+
+    @Test
+    void authoritativePreviewExplainsBoundedPlannerFailures() {
+        ResourceLocation nodeId = new ResourceLocation("test:complex_path_target");
+        for (ResearchSelectionPreview.PathPlanningState state : List.of(
+                ResearchSelectionPreview.PathPlanningState.PATH_TOO_LARGE,
+                ResearchSelectionPreview.PathPlanningState.ROUTE_TOO_COMPLEX)) {
+            ResearchSelectionPreview preview = new ResearchSelectionPreview(
+                    Optional.of(nodeId),
+                    0,
+                    30,
+                    false,
+                    true,
+                    true,
+                    false,
+                    false,
+                    List.of(),
+                    1,
+                    0,
+                    state);
+
+            ResearchTreeSelectedNodePresenter.Presentation presentation =
+                    ResearchTreeSelectedNodePresenter.present(input(
+                            node(
+                                    nodeId,
+                                    ResearchTreeGraph.Availability.PREREQUISITES_REQUIRED),
+                            true,
+                            Optional.of(nodeId),
+                            preview));
+
+            assertEquals(
+                    state == ResearchSelectionPreview.PathPlanningState.PATH_TOO_LARGE
+                            ? ResearchTreeSelectedNodePresenter.Message.PATH_TOO_LARGE
+                            : ResearchTreeSelectedNodePresenter.Message.ROUTE_TOO_COMPLEX,
+                    presentation.message());
+            assertTrue(presentation.actionVisible());
+            assertFalse(presentation.actionEnabled());
+            assertFalse(presentation.pointsSatisfied());
+            assertFalse(presentation.materialsSatisfied());
+            assertTrue(presentation.pathPlanningFailed());
+        }
+    }
+
+    @Test
+    void authoritativePreviewCarriesTheEffectiveCostChannels() {
+        ResourceLocation nodeId = new ResourceLocation("test:materials_only");
+        ResearchSelectionPreview preview = new ResearchSelectionPreview(
+                Optional.of(nodeId),
+                0,
+                0,
+                true,
+                true,
+                true,
+                true,
+                false,
+                List.of(new ResearchSelectionPreview.IngredientPreview(
+                        List.of(new ResourceLocation("minecraft:paper")),
+                        Optional.empty(),
+                        2,
+                        2)),
+                1,
+                1,
+                ResearchSelectionPreview.PathPlanningState.NONE,
+                ResearchCostMode.ITEMS_ONLY);
+
+        ResearchTreeSelectedNodePresenter.Presentation presentation =
+                ResearchTreeSelectedNodePresenter.present(input(
+                        availableNode(nodeId), true, Optional.of(nodeId), preview));
+
+        assertFalse(presentation.pointsEnabled());
+        assertTrue(presentation.materialsEnabled());
+        assertEquals(ResearchCostMode.ITEMS_ONLY, presentation.costMode());
+        assertEquals(ResearchTreeSelectedNodePresenter.Message.READY, presentation.message());
+    }
+
+    @Test
+    void publishedPresentationCarriesMaterialsOnlyModeBeforeExactPreviewArrives() {
+        ResourceLocation nodeId = new ResourceLocation("test:published_materials_only");
+        ResearchTreeGraph.Node node = new ResearchTreeGraph.Node(
+                0,
+                nodeId,
+                "fixture.materials_only",
+                "rifle",
+                new ResourceLocation("minecraft:paper"),
+                com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility.FULL,
+                false,
+                true,
+                true,
+                0,
+                2,
+                0,
+                0,
+                ResearchTreeGraph.Availability.AVAILABLE);
+
+        ResearchTreeSelectedNodePresenter.Presentation presentation =
+                ResearchTreeSelectedNodePresenter.present(
+                        new ResearchTreeSelectedNodePresenter.Input(
+                                node,
+                                false,
+                                Optional.empty(),
+                                ResearchTreeUxPhaseZeroFixture.readyPreview(),
+                                1,
+                                2,
+                                ResearchCostMode.ITEMS_ONLY));
+
+        assertFalse(presentation.exactPreview());
+        assertEquals(ResearchCostMode.ITEMS_ONLY, presentation.costMode());
+        assertEquals(0, presentation.pointCost());
+        assertEquals(2, presentation.ingredientTypeCount());
+        assertTrue(presentation.pointsSatisfied());
+        assertEquals(
+                ResearchTreeSelectedNodePresenter.Message.CHECKING_REQUIREMENTS,
+                presentation.message());
+    }
+
+    @Test
     void invalidInputsFailClosed() {
         assertThrows(
                 IllegalArgumentException.class,
@@ -133,7 +278,8 @@ class ResearchTreeSelectedNodePresenterTest {
                         Optional.empty(),
                         preview,
                         -1,
-                        0));
+                        0,
+                        ResearchCostMode.POINTS_AND_ITEMS));
     }
 
     private static void assertAuthoritative(
@@ -162,7 +308,13 @@ class ResearchTreeSelectedNodePresenterTest {
             Optional<ResourceLocation> selection,
             ResearchSelectionPreview preview) {
         return new ResearchTreeSelectedNodePresenter.Input(
-                node, canAfford, selection, preview, 2, 3);
+                node,
+                canAfford,
+                selection,
+                preview,
+                2,
+                3,
+                ResearchCostMode.POINTS_AND_ITEMS);
     }
 
     private static ResearchTreeGraph.Node availableNode(ResourceLocation id) {

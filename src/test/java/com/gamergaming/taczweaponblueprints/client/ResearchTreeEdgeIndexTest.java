@@ -20,6 +20,111 @@ import net.minecraft.resources.ResourceLocation;
 
 class ResearchTreeEdgeIndexTest {
     @Test
+    void anyOfAlternativesConvergeThroughOneStableJunctionAndOneArrow() {
+        ResearchTreeGraph graph = ResearchTreeGraph.withRequirementGroups(
+                List.of(
+                        node(0, "test:a", 0),
+                        node(1, "test:b", 0),
+                        node(2, "test:target", 2)),
+                List.of(new ResearchTreeGraph.RequirementGroup(
+                        id("test:target"),
+                        0,
+                        List.of(id("test:a"), id("test:b")),
+                        0,
+                        true,
+                        false)));
+        ResearchTreeLayout layout = ResearchTreeLayoutEngine.layout(graph);
+
+        ResearchTreeEdgeIndex index = ResearchTreeEdgeIndex.create(graph, layout);
+        ResearchTreeEdgeIndex.PositionedRequirementGroup junction =
+                index.requirementJunctions().get(0);
+
+        assertEquals(1, index.requirementJunctions().size());
+        assertEquals(2, junction.branches().size());
+        assertEquals(id("test:target"), junction.key().dependentId());
+        assertEquals(0, junction.key().ordinal());
+        assertTrue(junction.branches().stream().noneMatch(branch ->
+                index.drawsDirectArrow(branch.edge())));
+        ResearchTreeLayout.PositionedNode target =
+                layout.position(id("test:target")).orElseThrow();
+        assertTrue(junction.x() > target.x());
+        assertTrue(junction.x() < target.x() + ResearchTreeLayout.NODE_WIDTH);
+        assertEquals(target.y() + ResearchTreeLayout.NODE_HEIGHT,
+                junction.dependentBottomY());
+        assertEquals(
+                List.of(junction),
+                index.visibleRequirementJunctions(
+                        junction.x(), junction.y(), junction.x(), junction.y()));
+        assertTrue(index.visibleRequirementJunctions(
+                layout.width() + 1,
+                layout.height() + 1,
+                layout.width() + 2,
+                layout.height() + 2).isEmpty());
+    }
+
+    @Test
+    void singletonRequirementsKeepDirectArrowsWithoutSyntheticJunctions() {
+        ResearchTreeGraph graph = new ResearchTreeGraph(
+                List.of(node(0, "test:a", 0), node(1, "test:b", 1)),
+                List.of(edge("test:a", "test:b")));
+        ResearchTreeLayout layout = ResearchTreeLayoutEngine.layout(graph);
+        ResearchTreeEdgeIndex index = ResearchTreeEdgeIndex.create(graph, layout);
+
+        assertTrue(index.requirementJunctions().isEmpty());
+        assertTrue(index.drawsDirectArrow(edge("test:a", "test:b")));
+    }
+
+    @Test
+    void partiallyVisibleChoiceStillUsesAJunctionWithoutInventingAHiddenNode() {
+        ResearchTreeGraph graph = ResearchTreeGraph.withRequirementGroups(
+                List.of(
+                        node(0, "test:visible", 0),
+                        node(1, "test:target", 1, 1)),
+                List.of(new ResearchTreeGraph.RequirementGroup(
+                        id("test:target"),
+                        0,
+                        List.of(id("test:visible")),
+                        1,
+                        true,
+                        false)));
+        ResearchTreeEdgeIndex index = ResearchTreeEdgeIndex.create(
+                graph, ResearchTreeLayoutEngine.layout(graph));
+
+        assertEquals(1, index.requirementJunctions().size());
+        assertEquals(1, index.requirementJunctions().get(0).branches().size());
+        assertTrue(!index.drawsDirectArrow(edge("test:visible", "test:target")));
+    }
+
+    @Test
+    void oneAlternativeMayTruthfullyFeedTwoIndependentAnyOfGroups() {
+        ResearchTreeGraph graph = ResearchTreeGraph.withRequirementGroups(
+                List.of(
+                        node(0, "test:a", 0),
+                        node(1, "test:b", 0),
+                        node(2, "test:c", 0),
+                        node(3, "test:target", 3)),
+                List.of(
+                        new ResearchTreeGraph.RequirementGroup(
+                                id("test:target"), 0,
+                                List.of(id("test:a"), id("test:b")),
+                                0, true, false),
+                        new ResearchTreeGraph.RequirementGroup(
+                                id("test:target"), 1,
+                                List.of(id("test:a"), id("test:c")),
+                                0, true, false)));
+        ResearchTreeEdgeIndex index = ResearchTreeEdgeIndex.create(
+                graph, ResearchTreeLayoutEngine.layout(graph));
+
+        assertEquals(2, index.requirementJunctions().size());
+        assertEquals(2, index.requirementJunctions(
+                edge("test:a", "test:target")).size());
+        assertEquals(2L, index.requirementJunctions().stream()
+                .map(ResearchTreeEdgeIndex.PositionedRequirementGroup::y)
+                .distinct()
+                .count());
+    }
+
+    @Test
     void returnsOnlyEdgesThatIntersectTheVisibleCanvas() {
         ResearchTreeGraph graph = new ResearchTreeGraph(
                 List.of(
@@ -440,6 +545,14 @@ class ResearchTreeEdgeIndexTest {
     }
 
     private static ResearchTreeGraph.Node node(int ordinal, String raw, int prerequisites) {
+        return node(ordinal, raw, prerequisites, 0);
+    }
+
+    private static ResearchTreeGraph.Node node(
+            int ordinal,
+            String raw,
+            int prerequisites,
+            int hiddenPrerequisites) {
         ResourceLocation id = id(raw);
         return new ResearchTreeGraph.Node(
                 ordinal,
@@ -450,12 +563,12 @@ class ResearchTreeEdgeIndexTest {
                 JournalVisibility.FULL,
                 false,
                 false,
-                prerequisites == 0,
+                prerequisites == 0 && hiddenPrerequisites == 0,
                 4,
                 0,
                 prerequisites,
-                0,
-                prerequisites == 0
+                hiddenPrerequisites,
+                prerequisites == 0 && hiddenPrerequisites == 0
                         ? ResearchTreeGraph.Availability.AVAILABLE
                         : ResearchTreeGraph.Availability.PREREQUISITES_REQUIRED);
     }

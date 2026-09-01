@@ -288,6 +288,62 @@ class SyncResearchTreePacketTest {
     }
 
     @Test
+    void groupedRequirementIdentityAndHiddenCountsRoundTrip() {
+        List<ResearchTreeGraph.Node> nodes = List.of(
+                node(0, "test:a", "name.a", 0),
+                node(1, "test:b", "name.b", 0),
+                new ResearchTreeGraph.Node(
+                        2,
+                        id("test:c"),
+                        "name.c",
+                        "rifle",
+                        id("test:slot/c"),
+                        JournalVisibility.FULL,
+                        false,
+                        false,
+                        false,
+                        8,
+                        0,
+                        2,
+                        1,
+                        ResearchTreeGraph.Availability.PREREQUISITES_REQUIRED));
+        List<ResearchTreeGraph.RequirementGroup> groups = List.of(
+                new ResearchTreeGraph.RequirementGroup(
+                        id("test:c"),
+                        0,
+                        List.of(id("test:a"), id("test:b")),
+                        0,
+                        true),
+                new ResearchTreeGraph.RequirementGroup(
+                        id("test:c"),
+                        1,
+                        List.of(),
+                        1,
+                        false));
+        ResearchTreeGraph graph = ResearchTreeGraph.withRequirementGroups(nodes, groups);
+        ResearchTreePublication publication = publication(graph);
+        SyncResearchTreePacket.ClientAccumulator accumulator =
+                new SyncResearchTreePacket.ClientAccumulator();
+        ResearchTreePublication decoded = null;
+        for (SyncResearchTreePacket packet : SyncResearchTreePacket.split(publication, 91L)) {
+            FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+            try {
+                packet.toBytes(buffer);
+                Optional<ResearchTreePublication> accepted = accumulator.accept(
+                        new SyncResearchTreePacket(buffer));
+                if (accepted.isPresent()) {
+                    decoded = accepted.orElseThrow();
+                }
+            } finally {
+                buffer.release();
+            }
+        }
+
+        assertEquals(publication, decoded);
+        assertEquals(groups, decoded.graph().requirementGroupsOf(id("test:c")));
+    }
+
+    @Test
     void maximumGroupTableFitsAndAssignsEveryPublicNodeExactlyOnce() {
         List<ResearchTreeGraph.Node> nodes = new ArrayList<>();
         List<ResearchTreePresentation.Group> groups = new ArrayList<>();
@@ -438,6 +494,7 @@ class SyncResearchTreePacketTest {
             buffer.writeVarInt(1);
             buffer.writeVarInt(1);
             buffer.writeVarInt(0);
+            buffer.writeVarInt(0);
             buffer.writeVarInt(1);
             buffer.writeVarInt(1);
             buffer.writeVarInt(1);
@@ -520,6 +577,7 @@ class SyncResearchTreePacketTest {
         buffer.writeVarInt(1);
         buffer.writeVarInt(totalNodes);
         buffer.writeVarInt(totalEdges);
+        buffer.writeVarInt(0);
         buffer.writeVarInt(totalNodes == 0 ? 0 : 1);
         buffer.writeVarInt(totalNodes);
         buffer.writeVarInt(0);
@@ -540,6 +598,7 @@ class SyncResearchTreePacketTest {
             buffer.writeVarInt(chunkCount);
             buffer.writeVarInt(totalNodes);
             buffer.writeVarInt(totalEdges);
+            buffer.writeVarInt(0);
             buffer.writeVarInt(totalNodes == 0 ? 0 : 1);
             buffer.writeVarInt(totalNodes);
             buffer.writeVarInt(0);
@@ -552,6 +611,7 @@ class SyncResearchTreePacketTest {
                 buffer.writeVarInt(edge[0]);
                 buffer.writeVarInt(edge[1]);
             });
+            buffer.writeVarInt(0);
             if (totalNodes == 0 || chunkCount > 1) {
                 buffer.writeVarInt(0);
             } else {
@@ -570,6 +630,7 @@ class SyncResearchTreePacketTest {
         writeHeader(buffer, 1, 0);
         buffer.writeVarInt(1);
         writeNode(buffer, node(0, "test:a", "name.a", 0));
+        buffer.writeVarInt(0);
         buffer.writeVarInt(0);
         buffer.writeVarInt(1);
         return buffer;

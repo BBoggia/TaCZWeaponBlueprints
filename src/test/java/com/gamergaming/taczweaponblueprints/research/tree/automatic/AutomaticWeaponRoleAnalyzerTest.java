@@ -139,6 +139,31 @@ class AutomaticWeaponRoleAnalyzerTest {
                 .contains("unscored_authored_role_evidence"));
     }
 
+    @Test
+    void capabilityRolesIncludeAreaControlEvidenceMissingFromMechanicalV2() {
+        WeaponStatEvidence narrow = explosiveWeapon("test:narrow_role", 2.0);
+        WeaponStatEvidence wide = explosiveWeapon("test:wide_role", 8.0);
+        WeaponCapabilityReference reference = WeaponCapabilityReference.fromEvidence(
+                ResearchTechTreeContract.CAPABILITY_REFERENCE_VERSION,
+                List.of(narrow, wide));
+        WeaponCapabilityScorer scorer = new WeaponCapabilityScorer();
+        Map<String, WeaponCapabilityScore> scores = Map.of(
+                narrow.blueprintId(), scorer.score(narrow, reference),
+                wide.blueprintId(), scorer.score(wide, reference));
+        var plan = new AutomaticWeaponPlacementPlanner().planCapabilities(
+                scores, scores.keySet(), AutomaticWeaponPlacementPolicy.DEFAULT);
+        Map<String, AutomaticWeaponRoleSignature> signatures =
+                new AutomaticWeaponRoleAnalyzer().analyzeCapabilities(
+                        plan.proposals(), scores,
+                        Map.of(narrow.blueprintId(), "rpg", wide.blueprintId(), "rpg"));
+
+        assertNotEquals(
+                signatures.get(narrow.blueprintId()).relativeMetricOffsets(),
+                signatures.get(wide.blueprintId()).relativeMetricOffsets());
+        assertTrue(signatures.get(narrow.blueprintId())
+                .similarityTo(signatures.get(wide.blueprintId())).orElseThrow() < 100);
+    }
+
     private static Map<String, AutomaticWeaponRoleSignature> analyze(
             List<WeaponMechanicalScore> original,
             boolean reverse) {
@@ -209,5 +234,13 @@ class AutomaticWeaponRoleAnalyzerTest {
 
     private static List<WeaponMechanicalScore> cases(String name) {
         return AutomaticWeaponTopologyPhaseZeroFixture.mechanicalCases().get(name);
+    }
+
+    private static WeaponStatEvidence explosiveWeapon(String id, double radius) {
+        return new WeaponStatEvidence(
+                id, "rpg", 10.0, 50.0, 60.0, 1, 3.0, 60.0, 100.0,
+                0.1, 1.0, 0, 0.2, 1.0, 4.0, 0.3, 2.0, -0.2,
+                1, 0, null, "magazine", true, false, 1, 1.0, radius, 30.0,
+                true, false, null, 0.1, 2.5, 1, null, null, 0.0, List.of());
     }
 }

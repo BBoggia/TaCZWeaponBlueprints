@@ -14,6 +14,7 @@ import java.util.Set;
 
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
 import com.gamergaming.taczweaponblueprints.item.BlueprintKind;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.AutomaticPlacementMode;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.PlacementOrigin;
@@ -23,10 +24,15 @@ import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWea
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponBranchAnalyzer;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementDiagnostics;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPlanner;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPolicy;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponScoringModel;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPolicy.ReviewHandling;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPolicy.PrerequisiteStrategy;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPrerequisitePlanner;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.WeaponMechanicalReferenceCatalog;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.WeaponMechanicalScorer;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.WeaponCapabilityReferenceCatalog;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.WeaponCapabilityScorer;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.WeaponStatEvidence;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponEvidenceSnapshot;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponCandidatePositioner;
@@ -34,6 +40,7 @@ import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.Automat
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponPlacementCandidateSnapshot;
 import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintCatalogSelector;
 import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintLootTag;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchTarget.MatchSpecificity;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.JsonOps;
@@ -266,6 +273,8 @@ class ResearchTechTreeDataTest {
         assertEquals(2, autoProfile.maxGeneratedPrerequisites());
         assertEquals(4, autoProfile.mergeInterval());
         assertEquals(2, autoProfile.foundationCount());
+        assertEquals(AutomaticWeaponScoringModel.MECHANICAL_V2,
+                autoProfile.scoringModel());
 
         ResearchAutomaticPlacementProfile connectedReviews = decode(
                 ResearchAutomaticPlacementProfile.CODEC,
@@ -303,10 +312,61 @@ class ResearchTechTreeDataTest {
                         }
                         """);
         assertTrue(dynamic.placementPolicy().usesDynamicLayers());
+        assertEquals(PrerequisiteStrategy.LEGACY_AND, dynamic.prerequisiteStrategy());
         assertEquals(9, dynamic.maxNodesPerRank());
         assertEquals(3, dynamic.foundationCount());
         assertEquals(List.of(id("test:early"), id("test:late")),
                 dynamic.progressionBands().stream().map(value -> value.id()).toList());
+
+        ResearchAutomaticPlacementProfile grouped = decode(
+                ResearchAutomaticPlacementProfile.CODEC,
+                """
+                        {
+                          "format": 3,
+                          "tree": "test:progression",
+                          "mode": "connected",
+                          "review_handling": "place_connected",
+                          "max_prerequisites": 2,
+                          "prerequisite_strategy": "grouped_routes_v1"
+                        }
+                        """);
+        assertEquals(
+                PrerequisiteStrategy.GROUPED_ROUTES_V1,
+                grouped.placementPolicy().prerequisiteStrategy());
+
+        ResearchAutomaticPlacementProfile hybrid = decode(
+                ResearchAutomaticPlacementProfile.CODEC,
+                """
+                        {
+                          "format": 3,
+                          "tree": "test:progression",
+                          "mode": "connected",
+                          "review_handling": "place_connected",
+                          "max_prerequisites": 3,
+                          "merge_interval": 3,
+                          "prerequisite_strategy": "hybrid_routes_v1"
+                        }
+                        """);
+        assertEquals(PrerequisiteStrategy.HYBRID_ROUTES_V1,
+                hybrid.placementPolicy().prerequisiteStrategy());
+        assertEquals(3, hybrid.maxGeneratedPrerequisites());
+        assertEquals(
+                AutomaticWeaponPlacementPolicy.MergeIntervalBehavior
+                        .HYBRID_MANDATORY_GATEWAY_SCHEDULE,
+                hybrid.placementPolicy().mergeIntervalBehavior());
+
+        ResearchAutomaticPlacementProfile capability = decode(
+                ResearchAutomaticPlacementProfile.CODEC,
+                """
+                        {
+                          "format": 4,
+                          "tree": "test:progression",
+                          "mode": "connected",
+                          "scoring_model": "capability_v3"
+                        }
+                        """);
+        assertEquals(AutomaticWeaponScoringModel.CAPABILITY_V3,
+                capability.scoringModel());
 
         assertDecodeFails(
                 ResearchAutomaticPlacementProfile.CODEC,
@@ -341,34 +401,101 @@ class ResearchTechTreeDataTest {
         assertDecodeFails(
                 ResearchAutomaticPlacementProfile.CODEC,
                 "{\"format\":2,\"tree\":\"test:progression\",\"mode\":\"connected\",\"bands\":[{\"id\":\"test:partial\",\"maximum_score\":99,\"title\":\"Partial\"}]}");
+        assertDecodeFails(
+                ResearchAutomaticPlacementProfile.CODEC,
+                "{\"format\":2,\"tree\":\"test:progression\",\"mode\":\"connected\",\"prerequisite_strategy\":\"grouped_routes_v1\"}");
+        assertDecodeFails(
+                ResearchAutomaticPlacementProfile.CODEC,
+                "{\"format\":3,\"tree\":\"test:progression\",\"mode\":\"distributed\",\"prerequisite_strategy\":\"grouped_routes_v1\"}");
+        assertDecodeFails(
+                ResearchAutomaticPlacementProfile.CODEC,
+                "{\"format\":3,\"tree\":\"test:progression\",\"mode\":\"connected\",\"max_prerequisites\":3,\"prerequisite_strategy\":\"grouped_routes_v1\"}");
+        assertDecodeFails(
+                ResearchAutomaticPlacementProfile.CODEC,
+                "{\"format\":2,\"tree\":\"test:progression\",\"mode\":\"connected\",\"prerequisite_strategy\":\"hybrid_routes_v1\"}");
+        assertDecodeFails(
+                ResearchAutomaticPlacementProfile.CODEC,
+                "{\"format\":3,\"tree\":\"test:progression\",\"mode\":\"distributed\",\"prerequisite_strategy\":\"hybrid_routes_v1\"}");
+        assertDecodeFails(
+                ResearchAutomaticPlacementProfile.CODEC,
+                "{\"format\":3,\"tree\":\"test:progression\",\"mode\":\"connected\",\"prerequisite_strategy\":\"unsafe\"}");
+        assertDecodeFails(
+                ResearchAutomaticPlacementProfile.CODEC,
+                "{\"format\":3,\"tree\":\"test:progression\",\"mode\":\"connected\",\"scoring_model\":\"capability_v3\"}");
+        assertDecodeFails(
+                ResearchAutomaticPlacementProfile.CODEC,
+                "{\"format\":4,\"tree\":\"test:progression\",\"mode\":\"connected\",\"scoring_model\":\"unknown\"}");
 
         BlueprintResearchSnapshot snapshot = BlueprintResearchSnapshot.create(
                 Map.of(),
                 Map.of(PROFILE, profile(TREE)),
                 Map.of(),
                 Map.of(),
-                Map.of(TREE, tree()),
+                Map.of(TREE, automaticTree(tree())),
                 Map.of(),
-                Map.of(id("test:auto"), autoProfile));
-        assertEquals(autoProfile, snapshot.automaticPlacementProfileForTree(TREE).orElseThrow());
+                Map.of(id("test:auto"), connectedReviews));
+        assertEquals(connectedReviews, snapshot.automaticPlacementProfileForTree(TREE).orElseThrow());
 
         assertThrows(IllegalArgumentException.class, () -> BlueprintResearchSnapshot.create(
                 Map.of(),
                 Map.of(PROFILE, profile(TREE)),
                 Map.of(),
                 Map.of(),
-                Map.of(TREE, tree()),
+                Map.of(TREE, automaticTree(tree())),
                 Map.of(),
-                Map.of(id("test:auto_a"), autoProfile, id("test:auto_b"), autoProfile)));
+                Map.of(
+                        id("test:auto_a"), connectedReviews,
+                        id("test:auto_b"), connectedReviews)));
         assertThrows(IllegalArgumentException.class, () -> BlueprintResearchSnapshot.create(
                 Map.of(),
                 Map.of(PROFILE, profile(TREE)),
                 Map.of(),
                 Map.of(),
-                Map.of(TREE, tree()),
+                Map.of(TREE, automaticTree(tree())),
                 Map.of(),
                 Map.of(id("test:auto"), new ResearchAutomaticPlacementProfile(
                         1, id("test:missing"), AutomaticPlacementMode.INDEPENDENT, 3, 60))));
+    }
+
+    @Test
+    void groupedRouteDefaultRolloutKeepsExplicitLegacyMigrationFallback() {
+        ResearchAutomaticPlacementProfile omittedStrategy = decode(
+                ResearchAutomaticPlacementProfile.CODEC,
+                """
+                        {
+                          "format": 3,
+                          "tree": "test:progression",
+                          "mode": "connected"
+                        }
+                        """);
+        ResearchAutomaticPlacementProfile explicitLegacy = decode(
+                ResearchAutomaticPlacementProfile.CODEC,
+                """
+                        {
+                          "format": 3,
+                          "tree": "test:progression",
+                          "mode": "connected",
+                          "prerequisite_strategy": "legacy_and"
+                        }
+                        """);
+        ResearchAutomaticPlacementProfile explicitGrouped = decode(
+                ResearchAutomaticPlacementProfile.CODEC,
+                """
+                        {
+                          "format": 3,
+                          "tree": "test:progression",
+                          "mode": "connected",
+                          "max_prerequisites": 2,
+                          "prerequisite_strategy": "grouped_routes_v1"
+                        }
+                        """);
+
+        assertEquals(PrerequisiteStrategy.LEGACY_AND,
+                omittedStrategy.prerequisiteStrategy());
+        assertEquals(PrerequisiteStrategy.LEGACY_AND,
+                explicitLegacy.prerequisiteStrategy());
+        assertEquals(PrerequisiteStrategy.GROUPED_ROUTES_V1,
+                explicitGrouped.prerequisiteStrategy());
     }
 
     @Test
@@ -521,7 +648,7 @@ class ResearchTechTreeDataTest {
     }
 
     @Test
-    void fallbackMarkersAreExplicitBoundedAndWeakerThanAuthoredSelectors() {
+    void fallbackMarkersAreExplicitBoundedAndSupportSafeSingleExactTargets() {
         ResourceLocation weapon = id("test:addon_weapon");
         ResearchTechTreeEntryBundle authoredSelector = bundle(
                 TREE,
@@ -576,8 +703,8 @@ class ResearchTechTreeDataTest {
 
         assertThrows(IllegalArgumentException.class,
                 () -> bundle(TREE, 1, fallbackEntry));
-        assertThrows(IllegalArgumentException.class,
-                () -> new ResearchTechTreeEntryBundle.Entry(
+        ResearchTechTreeEntryBundle.Entry exactFallbackEntry =
+                new ResearchTechTreeEntryBundle.Entry(
                         exactTarget("test:addon_weapon"),
                         Domain.WEAPONS,
                         WEAPONS_LANE,
@@ -585,11 +712,100 @@ class ResearchTechTreeDataTest {
                         10,
                         Optional.empty(),
                         Optional.empty(),
+                        true);
+        ResearchTechTreeEntryBundle exactFallback = bundle(TREE, 0, exactFallbackEntry);
+        ResearchTechTreePlacementResolver.Placement exactPlacement =
+                ResearchTechTreePlacementResolver.resolve(
+                                snapshot(Map.of(), Map.of(), exactFallback),
+                                TREE,
+                                weapon,
+                                data(weapon, BlueprintKind.GUN))
+                        .placement()
+                        .orElseThrow();
+        assertEquals(MatchSpecificity.EXACT, exactPlacement.specificity());
+        assertEquals(PlacementOrigin.LEGACY_FALLBACK, exactPlacement.origin());
+
+        BlueprintResearchSnapshot exactFallbackWithSelector = snapshot(
+                Map.of(),
+                Map.of(id("test:selector_weapon_rule"),
+                        rule(weapon.toString(), List.of())),
+                exactFallback,
+                authoredSelector);
+        ResearchTechTreePlacementResolver.Placement selectorOverride =
+                ResearchTechTreePlacementResolver.resolve(
+                                exactFallbackWithSelector,
+                                TREE,
+                                weapon,
+                                data(weapon, BlueprintKind.GUN))
+                        .placement()
+                        .orElseThrow();
+        assertEquals(PlacementOrigin.SELECTOR, selectorOverride.origin());
+        assertEquals(Tier.ADVANCED, selectorOverride.tier());
+        ResearchTechTreePlacementResolver.Placement profileSelectorOverride =
+                ResearchTechTreePlacementResolver.resolveForProfile(
+                                exactFallbackWithSelector,
+                                PROFILE,
+                                TREE,
+                                weapon,
+                                data(weapon, BlueprintKind.GUN))
+                        .placement()
+                        .orElseThrow();
+        assertEquals(
+                ResearchTechTreeContract.legacyProgressionCoordinate(
+                        new ResearchTechTreeContract.ProgressionPosition(
+                                Tier.ADVANCED, 0, 10)),
+                profileSelectorOverride.progressionCoordinate());
+
+        ResourceLocation tagId = id("test:authored_weapons");
+        ResearchTechTreeEntryBundle authoredTag = bundle(
+                TREE,
+                0,
+                entry(
+                        new BlueprintResearchTarget(
+                                List.of(), List.of(tagId), Optional.empty()),
+                        WEAPONS_LANE,
+                        Tier.ELITE,
+                        40));
+        BlueprintResearchSnapshot exactFallbackWithTag = snapshot(
+                Map.of(tagId, new BlueprintLootTag(1, List.of(weapon))),
+                Map.of(id("test:weapon_rule"), rule(weapon.toString(), List.of())),
+                exactFallback,
+                authoredTag);
+        ResearchTechTreePlacementResolver.Placement tagOverride =
+                ResearchTechTreePlacementResolver.resolveForProfile(
+                                exactFallbackWithTag,
+                                PROFILE,
+                                TREE,
+                                weapon,
+                                data(weapon, BlueprintKind.GUN))
+                        .placement()
+                        .orElseThrow();
+        assertEquals(PlacementOrigin.TAG, tagOverride.origin());
+        assertEquals(Tier.ELITE, tagOverride.tier());
+        assertEquals(
+                ResearchTechTreeContract.legacyProgressionCoordinate(
+                        new ResearchTechTreeContract.ProgressionPosition(
+                                Tier.ELITE, 0, 40)),
+                tagOverride.progressionCoordinate());
+
+        BlueprintResearchTarget multiExact = new BlueprintResearchTarget(
+                List.of(weapon, id("test:second_weapon")), List.of(), Optional.empty());
+        assertThrows(IllegalArgumentException.class,
+                () -> new ResearchTechTreeEntryBundle.Entry(
+                        multiExact,
+                        Domain.WEAPONS,
+                        WEAPONS_LANE,
+                        Tier.BASIC,
+                        10,
+                        Optional.empty(),
+                        Optional.empty(),
                         true));
+        assertThrows(IllegalArgumentException.class,
+                () -> bundle(TREE, 1, exactFallbackEntry));
     }
 
     @Test
-    void automaticEligibilityCannotReplaceAuthoredPlacement() {
+    void automaticAuthorityReplacesAuthoredPlacementAndFallback() {
         ResourceLocation authoredId = id("test:authored");
         ResourceLocation addOnId = id("test:addon_weapon");
         ResearchTechTreeEntryBundle authored = bundle(
@@ -606,8 +822,8 @@ class ResearchTechTreeDataTest {
                 Optional.empty(),
                 true);
         ResearchTechTreeEntryBundle fallback = bundle(TREE, 0, fallbackEntry);
-        ResearchAutomaticPlacementProfile autoProfile = new ResearchAutomaticPlacementProfile(
-                1, TREE, AutomaticPlacementMode.DISTRIBUTED, 4, 0);
+        ResearchAutomaticPlacementProfile autoProfile = completeAutomaticProfile(
+                AutomaticPlacementMode.DISTRIBUTED, 4);
         BlueprintResearchSnapshot research = snapshotWithAutomaticProfile(
                 autoProfile, authored, fallback);
         Map<ResourceLocation, BlueprintData> catalog = Map.of(
@@ -617,45 +833,29 @@ class ResearchTechTreeDataTest {
 
         var candidates = positionedCandidates(
                 research, 7L, catalog, 11L, evidence, autoProfile);
-        assertEquals(Set.of(authoredId.toString()), candidates.authoredBlueprintIds());
         assertEquals(
-                Set.of(addOnId.toString()),
+                Set.of(authoredId.toString(), addOnId.toString()),
                 candidates.eligibleProposals().keySet(),
                 candidates.excludedAutomaticCandidates().toString());
-        assertEquals(1, candidates.automaticCandidateCount());
+        assertTrue(candidates.authoredBlueprintIds().isEmpty());
+        assertEquals(2, candidates.automaticCandidateCount());
 
-        var effective = ResearchTechTreePlacementResolver.resolveWithAutomatic(
-                research, TREE, addOnId, catalog.get(addOnId), candidates);
-        assertEquals(PlacementOrigin.LEGACY_FALLBACK,
-                effective.base().placement().orElseThrow().origin());
-        assertEquals(PlacementOrigin.AUTOMATIC, effective.effectiveOrigin().orElseThrow());
-        assertEquals(4, effective.automaticProposal().orElseThrow().levelsPerTier());
-
-        ResearchAutomaticPlacementProfile independent = new ResearchAutomaticPlacementProfile(
-                1, TREE, AutomaticPlacementMode.INDEPENDENT, 4, 0);
-        BlueprintResearchSnapshot independentResearch = snapshotWithAutomaticProfile(
-                independent, authored, fallback);
-        var independentCandidates = positionedCandidates(
-                independentResearch, 8L, catalog, 11L, evidence, independent);
-        assertTrue(independentCandidates.eligibleProposals().isEmpty());
-        assertEquals("mode_independent",
-                independentCandidates.excludedAutomaticCandidates().get(addOnId.toString()));
-        assertEquals(PlacementOrigin.LEGACY_FALLBACK,
-                ResearchTechTreePlacementResolver.resolveWithAutomatic(
-                        independentResearch,
-                        TREE,
-                        addOnId,
-                        catalog.get(addOnId),
-                        independentCandidates)
-                        .effectiveOrigin().orElseThrow());
+        for (ResourceLocation weaponId : List.of(authoredId, addOnId)) {
+            var effective = ResearchTechTreePlacementResolver.resolveWithAutomatic(
+                    research, TREE, weaponId, catalog.get(weaponId), candidates);
+            assertTrue(effective.base().placement().isEmpty());
+            assertEquals(PlacementOrigin.AUTOMATIC,
+                    effective.effectiveOrigin().orElseThrow());
+            assertEquals(4, effective.automaticProposal().orElseThrow().levelsPerTier());
+        }
     }
 
     @Test
     void scoredGunWithoutAnyEntryBecomesAnAutomaticCandidate() {
         ResourceLocation addOnId = id("orphan:scored_weapon");
         ResourceLocation ammoId = id("orphan:ammo");
-        ResearchAutomaticPlacementProfile profile = new ResearchAutomaticPlacementProfile(
-                1, TREE, AutomaticPlacementMode.DISTRIBUTED, 4, 0);
+        ResearchAutomaticPlacementProfile profile = completeAutomaticProfile(
+                AutomaticPlacementMode.DISTRIBUTED, 4);
         BlueprintResearchSnapshot research = snapshotWithAutomaticProfile(profile);
         Map<ResourceLocation, BlueprintData> catalog = Map.of(
                 addOnId, data(addOnId, BlueprintKind.GUN),
@@ -680,6 +880,46 @@ class ResearchTechTreeDataTest {
         assertTrue(effective.base().placement().isEmpty());
         assertTrue(effective.automaticProposal().isPresent());
         assertEquals(PlacementOrigin.AUTOMATIC, effective.effectiveOrigin().orElseThrow());
+    }
+
+    @Test
+    void capabilityV3ProfileUsesCapabilityScoreForPlacementAndRoleEvidence() {
+        ResourceLocation addOnId = id("addon:capability_weapon");
+        ResearchAutomaticPlacementProfile profile = new ResearchAutomaticPlacementProfile(
+                4,
+                TREE,
+                AutomaticPlacementMode.DISTRIBUTED,
+                3,
+                0,
+                ReviewHandling.PLACE_CONNECTED,
+                2,
+                4,
+                9,
+                List.of(),
+                2,
+                PrerequisiteStrategy.LEGACY_AND,
+                AutomaticWeaponScoringModel.CAPABILITY_V3);
+        BlueprintResearchSnapshot research = snapshotWithAutomaticProfile(profile);
+        AutomaticWeaponEvidenceSnapshot evidence = evidence(addOnId.toString(), profile);
+
+        var candidates = AutomaticWeaponPlacementCandidateClassifier.classify(
+                research,
+                7L,
+                Map.of(addOnId, data(addOnId, BlueprintKind.GUN)),
+                11L,
+                evidence,
+                profile);
+        var proposal = candidates.eligibleProposals().get(addOnId.toString());
+        var capability = evidence.capabilityScoresByBlueprint().get(addOnId.toString());
+
+        assertEquals(capability.progressionScore(), proposal.mechanicalScore());
+        assertEquals(capability.confidence(), proposal.confidence());
+        assertEquals(ResearchTechTreeContract.CAPABILITY_FORMULA_VERSION,
+                proposal.formulaVersion());
+        assertEquals(ResearchTechTreeContract.CAPABILITY_REFERENCE_VERSION,
+                proposal.referenceVersion());
+        assertEquals(proposal.mechanicalScore(),
+                candidates.roleSignatures().get(addOnId.toString()).mechanicalScore());
     }
 
     @Test
@@ -723,7 +963,8 @@ class ResearchTechTreeDataTest {
                 .getAsJsonObject("automatic_placement");
         var presentationExport = JsonParser.parseString(exported).getAsJsonObject()
                 .getAsJsonObject("tech_tree_presentation");
-        assertEquals(12, JsonParser.parseString(exported).getAsJsonObject()
+        assertEquals(BlueprintResearchCatalogExporter.CURRENT_FORMAT,
+                JsonParser.parseString(exported).getAsJsonObject()
                 .get("format").getAsInt());
         assertEquals(TREE.toString(), presentationExport.get("tree").getAsString());
         assertEquals("none", presentationExport.get("band_mode").getAsString());
@@ -793,8 +1034,8 @@ class ResearchTechTreeDataTest {
         var candidates = AutomaticWeaponCandidatePositioner.position(
                 classification, research.techTrees().get(TREE));
 
-        assertEquals(144, candidates.eligibleProposals().size());
-        assertEquals(Set.of(authored.toString()), candidates.authoredBlueprintIds());
+        assertEquals(145, candidates.eligibleProposals().size());
+        assertTrue(candidates.authoredBlueprintIds().isEmpty());
         assertEquals(14, candidates.policy().maxNodesPerRank());
         assertTrue(candidates.eligibleProposals().values().stream()
                 .collect(java.util.stream.Collectors.groupingBy(
@@ -844,11 +1085,9 @@ class ResearchTechTreeDataTest {
         var positioned = AutomaticWeaponCandidatePositioner.position(
                 classification, research.techTrees().get(TREE));
 
-        assertEquals(234, classification.eligibleProposals().size());
-        assertEquals(53, classification.authoredBlueprintIds().size());
-        assertEquals(53, classification.authoredRoleSignatures().size());
-        assertTrue(classification.authoredRoleSignatures().values().stream()
-                .allMatch(value -> value.scoredEvidence() && value.maySeedBranch()));
+        assertEquals(287, classification.eligibleProposals().size());
+        assertTrue(classification.authoredBlueprintIds().isEmpty());
+        assertTrue(classification.authoredRoleSignatures().isEmpty());
         assertEquals(10, classification.branchModel().branchLimit());
         assertEquals(7, classification.branchModel().branchCapacity());
         assertTrue(classification.branchModel().matches(
@@ -865,8 +1104,8 @@ class ResearchTechTreeDataTest {
     @Test
     void nonAuthoredReferenceWeaponRemainsEligibleForAnAutomaticOnlyTree() {
         ResourceLocation referenceId = id("tacz:glock_17");
-        ResearchAutomaticPlacementProfile profile = new ResearchAutomaticPlacementProfile(
-                1, TREE, AutomaticPlacementMode.DISTRIBUTED, 4, 0);
+        ResearchAutomaticPlacementProfile profile = completeAutomaticProfile(
+                AutomaticPlacementMode.DISTRIBUTED, 4);
         BlueprintResearchSnapshot research = snapshotWithAutomaticProfile(profile);
         Map<ResourceLocation, BlueprintData> catalog = Map.of(
                 referenceId, data(referenceId, BlueprintKind.GUN));
@@ -973,15 +1212,8 @@ class ResearchTechTreeDataTest {
 
         ResearchAutomaticPlacementProfile safeDefault = new ResearchAutomaticPlacementProfile(
                 1, TREE, AutomaticPlacementMode.CONNECTED, 3, 0);
-        BlueprintResearchSnapshot safeResearch = snapshotWithAutomaticProfile(
-                safeDefault, fallback);
-        var excluded = positionedCandidates(
-                safeResearch, 8L, catalog, 11L, evidence, safeDefault);
-        assertTrue(excluded.eligibleProposals().isEmpty());
-        assertTrue(excluded.excludedAutomaticCandidates().get(reviewedId.toString())
-                .startsWith("review_required:"));
-        assertTrue(excluded.excludedAutomaticCandidates().get(unscoreableId.toString())
-                .startsWith("evidence_rejected:"));
+        assertThrows(IllegalArgumentException.class, () ->
+                snapshotWithAutomaticProfile(safeDefault, fallback));
     }
 
     @Test
@@ -1094,7 +1326,7 @@ class ResearchTechTreeDataTest {
                 Map.of(PROFILE, profile(TREE)),
                 Map.of(),
                 Map.of(),
-                Map.of(TREE, tree),
+                Map.of(TREE, automaticTree(tree)),
                 indexed,
                 Map.of(id("test:auto_profile"), automaticProfile));
     }
@@ -1112,6 +1344,8 @@ class ResearchTechTreeDataTest {
         WeaponStatEvidence raw = weaponEvidence(blueprintId, 0, scriptControlled);
         WeaponMechanicalReferenceCatalog references = WeaponMechanicalReferenceCatalog.bundled();
         var score = new WeaponMechanicalScorer().score(raw, references.reference());
+        var capabilityScore = new WeaponCapabilityScorer().score(
+                raw, WeaponCapabilityReferenceCatalog.bundled().reference());
         Map<String, com.gamergaming.taczweaponblueprints.research.tree.automatic.WeaponMechanicalScore> scores =
                 Map.of(blueprintId, score);
         var plan = new AutomaticWeaponPlacementPlanner().plan(
@@ -1126,6 +1360,7 @@ class ResearchTechTreeDataTest {
                 Set.of(),
                 Map.of(blueprintId, raw),
                 scores,
+                Map.of(blueprintId, capabilityScore),
                 Map.of(),
                 plan);
     }
@@ -1137,12 +1372,17 @@ class ResearchTechTreeDataTest {
         Map<String, WeaponStatEvidence> evidence = new java.util.LinkedHashMap<>();
         Map<String, com.gamergaming.taczweaponblueprints.research.tree.automatic
                 .WeaponMechanicalScore> scores = new java.util.LinkedHashMap<>();
+        Map<String, com.gamergaming.taczweaponblueprints.research.tree.automatic
+                .WeaponCapabilityScore> capabilityScores = new java.util.LinkedHashMap<>();
         for (int index = 0; index < blueprintIds.size(); index++) {
             String blueprintId = blueprintIds.get(index);
             WeaponStatEvidence raw = weaponEvidence(blueprintId, index, false);
             evidence.put(blueprintId, raw);
             scores.put(blueprintId,
                     new WeaponMechanicalScorer().score(raw, references.reference()));
+            capabilityScores.put(blueprintId,
+                    new WeaponCapabilityScorer().score(
+                            raw, WeaponCapabilityReferenceCatalog.bundled().reference()));
         }
         var plan = new AutomaticWeaponPlacementPlanner().plan(
                 scores, blueprintIds, profile.placementPolicy());
@@ -1156,6 +1396,7 @@ class ResearchTechTreeDataTest {
                 Set.of(),
                 evidence,
                 scores,
+                capabilityScores,
                 Map.of(),
                 plan);
     }
@@ -1256,6 +1497,40 @@ class ResearchTechTreeDataTest {
                         maximum),
                 legacy.tiers(),
                 legacy.domains());
+    }
+
+    private static ResearchTechTreeDefinition automaticTree(
+            ResearchTechTreeDefinition definition) {
+        return new ResearchTechTreeDefinition(
+                ResearchTechTreeDefinition.CURRENT_FORMAT,
+                definition.title(),
+                definition.translationKey(),
+                definition.icon(),
+                ResearchTechTreeDefinition.WeaponPlacementMode.AUTOMATIC,
+                definition.format() == ResearchTechTreeDefinition.CURRENT_FORMAT
+                        ? definition.layout()
+                        : new ResearchTechTreeDefinition.LayoutDefinition(9),
+                definition.format() == ResearchTechTreeDefinition.CURRENT_FORMAT
+                        ? definition.bandPolicy()
+                        : ResearchTechTreeDefinition.BandPolicyDefinition.NONE,
+                definition.tiers(),
+                definition.domains());
+    }
+
+    private static ResearchAutomaticPlacementProfile completeAutomaticProfile(
+            AutomaticPlacementMode mode,
+            int levelsPerTier) {
+        return new ResearchAutomaticPlacementProfile(
+                2,
+                TREE,
+                mode,
+                levelsPerTier,
+                0,
+                ReviewHandling.PLACE_CONNECTED,
+                2,
+                4,
+                9,
+                List.of());
     }
 
     private static ResearchTechTreeEntryBundle bundle(

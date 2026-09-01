@@ -2,6 +2,7 @@ package com.gamergaming.taczweaponblueprints.research.tree;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -473,6 +474,20 @@ final class ResearchTechTreePresentationBuilder {
                 .flatMap(domain -> domain.lanes().stream())
                 .flatMap(lane -> lane.members().stream())
                 .forEach(member -> members.put(member.nodeId(), member));
+        List<Integer> automaticRanks = members.values().stream()
+                .filter(member -> member.origin() == PlacementOrigin.AUTOMATIC)
+                .map(ResearchTechTreePresentation.Member::rank)
+                .distinct()
+                .sorted()
+                .toList();
+        Map<Integer, Integer> automaticRankIndexes = new HashMap<>();
+        for (int index = 0; index < automaticRanks.size(); index++) {
+            automaticRankIndexes.put(automaticRanks.get(index), index);
+        }
+        int maximumAutomaticEdgeSpan = ResearchTechTreeContract.automaticEdgeRankSpanLimit(
+                automaticRanks.size(),
+                com.gamergaming.taczweaponblueprints.resource.research
+                        .BlueprintResearchSnapshot.MAX_PREREQUISITE_DEPTH);
         for (ResearchTreeGraph.Edge edge : graph.edges()) {
             ResearchTechTreePresentation.Member prerequisite = members.get(edge.prerequisiteId());
             ResearchTechTreePresentation.Member dependent = members.get(edge.dependentId());
@@ -482,7 +497,22 @@ final class ResearchTechTreePresentationBuilder {
             if (!ResearchTechTreeContract.progressionTransitionAllowed(
                     prerequisite.position(), dependent.position())) {
                 throw new IllegalArgumentException(
-                        "Public Research Tech Tree placement contradicts prerequisite order");
+                        "Public Research Tech Tree placement contradicts prerequisite order: "
+                                + edge.prerequisiteId() + " at rank "
+                                + prerequisite.rank() + " -> " + edge.dependentId()
+                                + " at rank " + dependent.rank());
+            }
+            if (prerequisite.origin() == PlacementOrigin.AUTOMATIC
+                    && dependent.origin() == PlacementOrigin.AUTOMATIC
+                    && automaticRankIndexes.get(dependent.rank())
+                            - automaticRankIndexes.get(prerequisite.rank())
+                            > maximumAutomaticEdgeSpan) {
+                throw new IllegalArgumentException(
+                        "Public automatic Research Tech Tree edge spans more than "
+                                + maximumAutomaticEdgeSpan
+                                + " occupied ranks: " + edge.prerequisiteId() + " at rank "
+                                + prerequisite.rank() + " -> " + edge.dependentId()
+                                + " at rank " + dependent.rank());
             }
         }
     }
@@ -506,6 +536,16 @@ final class ResearchTechTreePresentationBuilder {
             Map<ResourceLocation, MemberDraft> drafts,
             Map<ResourceLocation, ProgressionCoordinate> normalized,
             int capacity) {
+        // The automatic rank finalizer has already packed its coordinates around
+        // authored occupancy. Preserve that authoritative result when the public
+        // graph's prerequisite normalization did not introduce a real overflow.
+        // Re-batching those nodes by their older planned rank can move an automatic
+        // prerequisite above a fixed authored dependent and invalidate an otherwise
+        // sound publication.
+        if (mixedRankWidthsFit(drafts, normalized, capacity)) {
+            return Map.copyOf(normalized);
+        }
+
         Map<ResourceLocation, ProgressionCoordinate> result = new LinkedHashMap<>();
         Map<Integer, Integer> widths = new LinkedHashMap<>();
         drafts.values().stream()
@@ -527,7 +567,7 @@ final class ResearchTechTreePresentationBuilder {
                                 normalized.get(draft.nodeId()).siblingOrder())
                         .thenComparing(draft -> draft.nodeId().toString()))
                 .toList();
-        List<List<MemberDraft>> batches = automaticBatches(graph, automatic);
+        List<List<MemberDraft>> batches = automaticRankCohorts(automatic, normalized);
         for (List<MemberDraft> batch : batches) {
             int rank = batch.stream()
                     .map(MemberDraft::nodeId)
@@ -543,58 +583,75 @@ final class ResearchTechTreePresentationBuilder {
                     }
                 }
             }
-            while (Math.addExact(widths.getOrDefault(rank, 0), batch.size()) > capacity) {
-                rank = Math.addExact(rank, 1);
-            }
-            if (rank > ResearchTechTreeContract.MAX_PROGRESSION_RANK) {
-                throw new IllegalArgumentException(
-                        "Public Research Tech Tree exceeds the supported rank range");
-            }
-            for (MemberDraft draft : batch) {
-                result.put(
-                        draft.nodeId(),
-                        normalized.get(draft.nodeId()).withRank(rank));
-            }
-            widths.merge(rank, batch.size(), Math::addExact);
+            placeAutomaticCohort(batch, rank, capacity, widths, normalized, result);
         }
         return Map.copyOf(result);
     }
 
-    private static List<List<MemberDraft>> automaticBatches(
-            ResearchTreeGraph graph,
-            List<MemberDraft> automatic) {
-        Map<Integer, List<MemberDraft>> byPlannedRank = new LinkedHashMap<>();
-        Map<ResourceLocation, Integer> stableIndexes = new LinkedHashMap<>();
-        List<List<MemberDraft>> result = new ArrayList<>();
-        for (int index = 0; index < automatic.size(); index++) {
-            MemberDraft draft = automatic.get(index);
-            stableIndexes.put(draft.nodeId(), index);
-            if (draft.automaticBranch().isPresent()) {
-                byPlannedRank.computeIfAbsent(
-                        draft.automaticBranch().orElseThrow().rankIndex(),
-                        ignored -> new ArrayList<>()).add(draft);
-            } else {
-                result.add(List.of(draft));
+    private static boolean mixedRankWidthsFit(
+            Map<ResourceLocation, MemberDraft> drafts,
+            Map<ResourceLocation, ProgressionCoordinate> coordinates,
+            int capacity) {
+        Map<Integer, Integer> widths = new LinkedHashMap<>();
+        for (MemberDraft draft : drafts.values()) {
+            ProgressionCoordinate coordinate = coordinates.get(draft.nodeId());
+            if (coordinate == null
+                    || coordinate.rank() > ResearchTechTreeContract.MAX_PROGRESSION_RANK) {
+                return false;
+            }
+            if (draft.domain() == Domain.WEAPONS
+                    && widths.merge(coordinate.rank(), 1, Math::addExact) > capacity) {
+                return false;
             }
         }
-        byPlannedRank.values().forEach(batch -> {
-            Set<ResourceLocation> ids = batch.stream()
-                    .map(MemberDraft::nodeId)
-                    .collect(java.util.stream.Collectors.toSet());
-            boolean internalEdge = batch.stream().anyMatch(draft ->
-                    graph.prerequisitesOf(draft.nodeId()).stream().anyMatch(ids::contains));
-            if (internalEdge) {
-                batch.forEach(draft -> result.add(List.of(draft)));
-            } else {
-                result.add(List.copyOf(batch));
+        return true;
+    }
+
+    private static List<List<MemberDraft>> automaticRankCohorts(
+            List<MemberDraft> automatic,
+            Map<ResourceLocation, ProgressionCoordinate> normalized) {
+        Map<Integer, List<MemberDraft>> byPublishedRank = new LinkedHashMap<>();
+        for (MemberDraft draft : automatic) {
+            byPublishedRank.computeIfAbsent(
+                    normalized.get(draft.nodeId()).rank(),
+                    ignored -> new ArrayList<>()).add(draft);
+        }
+        return byPublishedRank.values().stream()
+                .map(List::copyOf)
+                .toList();
+    }
+
+    private static void placeAutomaticCohort(
+            List<MemberDraft> cohort,
+            int startingRank,
+            int capacity,
+            Map<Integer, Integer> widths,
+            Map<ResourceLocation, ProgressionCoordinate> normalized,
+            Map<ResourceLocation, ProgressionCoordinate> result) {
+        int rank = startingRank;
+        int offset = 0;
+        while (offset < cohort.size()) {
+            if (rank > ResearchTechTreeContract.MAX_PROGRESSION_RANK) {
+                throw new IllegalArgumentException(
+                        "Public Research Tech Tree exceeds the supported rank range");
             }
-        });
-        result.sort(Comparator
-                .comparingInt((List<MemberDraft> batch) -> batch.stream()
-                        .mapToInt(draft -> stableIndexes.get(draft.nodeId()))
-                        .min().orElseThrow())
-                .thenComparing(batch -> batch.get(0).nodeId().toString()));
-        return List.copyOf(result);
+            int available = Math.subtractExact(capacity, widths.getOrDefault(rank, 0));
+            if (available <= 0) {
+                rank = Math.addExact(rank, 1);
+                continue;
+            }
+            int end = Math.min(cohort.size(), Math.addExact(offset, available));
+            for (MemberDraft draft : cohort.subList(offset, end)) {
+                result.put(
+                        draft.nodeId(),
+                        normalized.get(draft.nodeId()).withRank(rank));
+            }
+            widths.merge(rank, end - offset, Math::addExact);
+            offset = end;
+            if (offset < cohort.size()) {
+                rank = Math.addExact(rank, 1);
+            }
+        }
     }
 
     private static ProgressionCoordinate normalizeRank(

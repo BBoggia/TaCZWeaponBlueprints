@@ -2,9 +2,12 @@ package com.gamergaming.taczweaponblueprints.research.tree.automatic;
 
 import java.util.function.Predicate;
 import java.util.List;
+import java.util.Map;
 
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchPolicy;
+import com.gamergaming.taczweaponblueprints.resource.research.ResearchPrerequisiteGroup;
+import com.gamergaming.taczweaponblueprints.resource.research.ResearchRequirements;
 
 import net.minecraft.resources.ResourceLocation;
 
@@ -50,7 +53,8 @@ public final class AutomaticWeaponPrerequisiteOverlay {
                 blockedPredicate,
                 unlearnedPrerequisiteSelectable,
                 knownPrerequisite,
-                ignored -> false);
+                ignored -> false,
+                Map.of());
     }
 
     public static BlueprintResearchPolicy apply(
@@ -61,15 +65,62 @@ public final class AutomaticWeaponPrerequisiteOverlay {
             boolean unlearnedPrerequisiteSelectable,
             Predicate<ResourceLocation> knownPrerequisite,
             Predicate<ResourceLocation> accessibleWithoutLearning) {
+        return apply(
+                policy,
+                plan,
+                playerData,
+                blockedPredicate,
+                unlearnedPrerequisiteSelectable,
+                knownPrerequisite,
+                accessibleWithoutLearning,
+                Map.of());
+    }
+
+    public static BlueprintResearchPolicy apply(
+            BlueprintResearchPolicy policy,
+            AutomaticWeaponPrerequisitePlan plan,
+            IPlayerRecipeData playerData,
+            Predicate<String> blockedPredicate,
+            boolean unlearnedPrerequisiteSelectable,
+            Predicate<ResourceLocation> knownPrerequisite,
+            Predicate<ResourceLocation> accessibleWithoutLearning,
+            Map<ResourceLocation, ResourceLocation> prerequisiteReplacements) {
+        return apply(
+                policy,
+                plan,
+                playerData,
+                blockedPredicate,
+                unlearnedPrerequisiteSelectable,
+                knownPrerequisite,
+                accessibleWithoutLearning,
+                prerequisiteReplacements,
+                false);
+    }
+
+    public static BlueprintResearchPolicy apply(
+            BlueprintResearchPolicy policy,
+            AutomaticWeaponPrerequisitePlan plan,
+            IPlayerRecipeData playerData,
+            Predicate<String> blockedPredicate,
+            boolean unlearnedPrerequisiteSelectable,
+            Predicate<ResourceLocation> knownPrerequisite,
+            Predicate<ResourceLocation> accessibleWithoutLearning,
+            Map<ResourceLocation, ResourceLocation> prerequisiteReplacements,
+            boolean replaceAuthoredRequirements) {
         if (policy == null) {
             throw new IllegalArgumentException(
                     "automatic prerequisite policy cannot be null");
         }
         if (plan == null || !plan.profileId().equals(policy.profileId())) {
-            return policy;
+            return replaceAuthoredRequirements
+                    ? policy.withRequirements(ResearchRequirements.EMPTY, true)
+                    : policy;
         }
-        List<ResourceLocation> prerequisites = plan.prerequisitesFor(policy.blueprintId());
-        if (prerequisites.isEmpty() || !policy.prerequisites().isEmpty()) {
+        ResearchRequirements requirements = plan.requirementsFor(policy.blueprintId());
+        if (!replaceAuthoredRequirements
+                && (!policy.automaticPrerequisitesAllowed()
+                        || requirements.allOf().isEmpty()
+                        || !policy.requirements().allOf().isEmpty())) {
             return policy;
         }
         Predicate<String> blocked = blockedPredicate == null
@@ -81,25 +132,47 @@ public final class AutomaticWeaponPrerequisiteOverlay {
         Predicate<ResourceLocation> accessible = accessibleWithoutLearning == null
                 ? ignored -> false
                 : accessibleWithoutLearning;
-        List<ResourceLocation> safe = prerequisites.stream()
-                .filter(known)
-                .filter(prerequisite -> !blocked.test(prerequisite.toString()))
-                .filter(prerequisite -> !accessible.test(prerequisite))
-                .filter(prerequisite -> unlearnedPrerequisiteSelectable
-                        || playerData != null
-                                && playerData.hasBlueprint(prerequisite.toString()))
-                .toList();
-        // Fail open when every proposed anchor is blocked or hidden by the active
-        // selection ceiling. A partial safe set remains useful and reachable.
-        if (safe.isEmpty()) {
-            return policy;
+        Map<ResourceLocation, ResourceLocation> replacements;
+        try {
+            replacements = prerequisiteReplacements == null
+                    ? Map.of()
+                    : Map.copyOf(prerequisiteReplacements);
+        } catch (NullPointerException exception) {
+            throw new IllegalArgumentException(
+                    "automatic prerequisite replacements cannot contain nulls",
+                    exception);
         }
-        BlueprintResearchPolicy result = policy;
-        for (ResourceLocation prerequisite : safe) {
-            boolean satisfied = playerData != null
-                    && (playerData.hasBlueprint(prerequisite.toString())
-                            || accessible.test(prerequisite));
-            result = result.withAdditionalPrerequisite(prerequisite, satisfied);
+        BlueprintResearchPolicy result = replaceAuthoredRequirements
+                ? policy.withRequirements(ResearchRequirements.EMPTY, true)
+                : policy;
+        for (ResearchPrerequisiteGroup group : requirements.allOf()) {
+            List<ResourceLocation> rebased = group.anyOf().stream()
+                    .map(prerequisite -> replacements.getOrDefault(
+                            prerequisite, prerequisite))
+                    .filter(prerequisite -> !prerequisite.equals(policy.blueprintId()))
+                    .distinct()
+                    .toList();
+            if (rebased.stream().anyMatch(accessible)) {
+                continue;
+            }
+            List<ResourceLocation> safe = rebased.stream()
+                    .filter(known)
+                    .filter(prerequisite -> !blocked.test(prerequisite.toString()))
+                    .filter(prerequisite -> unlearnedPrerequisiteSelectable
+                            || playerData != null
+                                    && playerData.hasBlueprint(prerequisite.toString()))
+                    .toList();
+            // Generated groups fail open independently. Removing one unsafe
+            // alternative must not discard another safe route in the same group.
+            if (safe.isEmpty()) {
+                continue;
+            }
+            ResearchPrerequisiteGroup filtered = new ResearchPrerequisiteGroup(safe);
+            boolean satisfied = playerData != null && filtered.anyOf().stream()
+                    .anyMatch(prerequisite ->
+                            playerData.hasBlueprint(prerequisite.toString())
+                                    || accessible.test(prerequisite));
+            result = result.withAdditionalRequirementGroup(filtered, satisfied);
         }
         return result;
     }

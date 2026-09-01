@@ -8,6 +8,7 @@ import java.util.function.Supplier;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
 import com.gamergaming.taczweaponblueprints.menu.ResearchSelectionPreview;
+import com.gamergaming.taczweaponblueprints.progression.ResearchCostMode;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCost;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchIngredient;
 
@@ -41,6 +42,17 @@ public final class SyncResearchBenchPreviewPacket {
         boolean outputSpace = buffer.readBoolean();
         boolean researchable = buffer.readBoolean();
         boolean creativeBypass = buffer.readBoolean();
+        int unlockCount = buffer.readVarInt();
+        int totalIngredientTypes = buffer.readVarInt();
+        int pathPlanningStateOrdinal = buffer.readVarInt();
+        ResearchSelectionPreview.PathPlanningState[] pathPlanningStates =
+                ResearchSelectionPreview.PathPlanningState.values();
+        if (pathPlanningStateOrdinal < 0
+                || pathPlanningStateOrdinal >= pathPlanningStates.length) {
+            throw new IllegalArgumentException("invalid Research Bench path-planning state");
+        }
+        ResearchSelectionPreview.PathPlanningState pathPlanningState =
+                pathPlanningStates[pathPlanningStateOrdinal];
         int ingredientCount = buffer.readVarInt();
         if (ingredientCount < 0 || ingredientCount > BlueprintResearchCost.MAX_INGREDIENT_TYPES) {
             throw new IllegalArgumentException("invalid Research Bench ingredient count");
@@ -60,10 +72,17 @@ public final class SyncResearchBenchPreviewPacket {
             ingredients.add(new ResearchSelectionPreview.IngredientPreview(
                     items, tag, buffer.readVarInt(), buffer.readVarInt()));
         }
+        int costModeOrdinal = buffer.readVarInt();
+        ResearchCostMode[] costModes = ResearchCostMode.values();
+        if (costModeOrdinal < 0 || costModeOrdinal >= costModes.length) {
+            throw new IllegalArgumentException("invalid Research Bench cost mode");
+        }
         this.preview = new ResearchSelectionPreview(
                 blueprintId, pointCost, pointBalance,
                 policyEligible, ingredientsSatisfied, outputSpace,
-                researchable, creativeBypass, ingredients);
+                researchable, creativeBypass, ingredients,
+                unlockCount, totalIngredientTypes, pathPlanningState,
+                costModes[costModeOrdinal]);
     }
 
     public void toBytes(FriendlyByteBuf buffer) {
@@ -76,6 +95,9 @@ public final class SyncResearchBenchPreviewPacket {
         buffer.writeBoolean(preview.outputSpace());
         buffer.writeBoolean(preview.researchable());
         buffer.writeBoolean(preview.creativeBypass());
+        buffer.writeVarInt(preview.unlockCount());
+        buffer.writeVarInt(preview.ingredientTypeCount());
+        buffer.writeVarInt(preview.pathPlanningState().ordinal());
         buffer.writeVarInt(preview.ingredients().size());
         for (ResearchSelectionPreview.IngredientPreview ingredient : preview.ingredients()) {
             buffer.writeVarInt(ingredient.items().size());
@@ -84,6 +106,7 @@ public final class SyncResearchBenchPreviewPacket {
             buffer.writeVarInt(ingredient.required());
             buffer.writeVarInt(ingredient.inventoryAvailable());
         }
+        buffer.writeVarInt(preview.costMode().ordinal());
     }
 
     public void handle(Supplier<NetworkEvent.Context> contextSupplier) {

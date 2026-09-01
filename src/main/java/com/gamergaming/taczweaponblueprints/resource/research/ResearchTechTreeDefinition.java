@@ -21,17 +21,20 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * Server-authored shell for one Research Tech Tree presentation.
+ * Server-authored shell for one Research Tech Tree.
  *
  * <p>This definition owns labels, domains, tiers, lanes, and bounded layout
- * policy only. Research prerequisites and costs continue to come exclusively
- * from research rules.
+ * policy. Its weapon placement mode also chooses whether weapon placement and
+ * prerequisite topology come from authored resources or the automatic
+ * generator. Research costs and non-weapon prerequisites continue to come from
+ * research rules.
  */
 public record ResearchTechTreeDefinition(
         int format,
         String title,
         Optional<String> translationKey,
         Optional<ResourceLocation> icon,
+        WeaponPlacementMode weaponPlacementMode,
         LayoutDefinition layout,
         BandPolicyDefinition bandPolicy,
         List<TierDefinition> tiers,
@@ -72,6 +75,8 @@ public record ResearchTechTreeDefinition(
             enumCodec(BandBasis.class, "Research Tech Tree band basis");
     private static final Codec<WidthMode> WIDTH_MODE_CODEC =
             enumCodec(WidthMode.class, "Research Tech Tree width mode");
+    private static final Codec<WeaponPlacementMode> WEAPON_PLACEMENT_MODE_CODEC =
+            enumCodec(WeaponPlacementMode.class, "Research Tech Tree weapon placement mode");
     private static final Codec<Integer> BAND_COLOR_CODEC = Codec.intRange(0, 0xFFFFFF);
     private static final Codec<Integer> BAND_MAXIMUM_CODEC = Codec.intRange(
             0,
@@ -242,6 +247,14 @@ public record ResearchTechTreeDefinition(
                             .forGetter(ResearchTechTreeDefinition::translationKey),
                     new StrictOptionalFieldCodec<>("icon", BlueprintResearchCodecs.RESOURCE_LOCATION)
                             .forGetter(ResearchTechTreeDefinition::icon),
+                    new StrictOptionalFieldCodec<>(
+                            "weapon_placement_mode", WEAPON_PLACEMENT_MODE_CODEC)
+                            .xmap(
+                                    value -> value.orElse(WeaponPlacementMode.AUTHORED_ONLY),
+                                    value -> value == WeaponPlacementMode.AUTHORED_ONLY
+                                            ? Optional.empty()
+                                            : Optional.of(value))
+                            .forGetter(ResearchTechTreeDefinition::weaponPlacementMode),
                     new StrictOptionalFieldCodec<>("layout", LAYOUT_DEFINITION_CODEC)
                             .forGetter(definition -> definition.format() == CURRENT_FORMAT
                                     ? Optional.of(definition.layout())
@@ -267,6 +280,7 @@ public record ResearchTechTreeDefinition(
             "title",
             "translation_key",
             "icon",
+            "weapon_placement_mode",
             "layout",
             "bands",
             "tiers",
@@ -285,6 +299,7 @@ public record ResearchTechTreeDefinition(
                 title,
                 translationKey,
                 icon,
+                WeaponPlacementMode.AUTHORED_ONLY,
                 LayoutDefinition.DEFAULT,
                 format == LEGACY_FORMAT
                         ? BandPolicyDefinition.LEGACY
@@ -307,6 +322,7 @@ public record ResearchTechTreeDefinition(
                 title,
                 translationKey,
                 icon,
+                WeaponPlacementMode.AUTHORED_ONLY,
                 layout,
                 format == LEGACY_FORMAT
                         ? BandPolicyDefinition.LEGACY
@@ -315,9 +331,34 @@ public record ResearchTechTreeDefinition(
                 domains);
     }
 
+    /** Compatibility constructor for definitions predating exclusive weapon authority. */
+    public ResearchTechTreeDefinition(
+            int format,
+            String title,
+            Optional<String> translationKey,
+            Optional<ResourceLocation> icon,
+            LayoutDefinition layout,
+            BandPolicyDefinition bandPolicy,
+            List<TierDefinition> tiers,
+            List<DomainDefinition> domains) {
+        this(
+                format,
+                title,
+                translationKey,
+                icon,
+                WeaponPlacementMode.AUTHORED_ONLY,
+                layout,
+                bandPolicy,
+                tiers,
+                domains);
+    }
+
     public ResearchTechTreeDefinition {
         translationKey = translationKey == null ? Optional.empty() : translationKey;
         icon = icon == null ? Optional.empty() : icon;
+        weaponPlacementMode = weaponPlacementMode == null
+                ? WeaponPlacementMode.AUTHORED_ONLY
+                : weaponPlacementMode;
         layout = layout == null ? LayoutDefinition.DEFAULT : layout;
         bandPolicy = bandPolicy == null
                 ? (format == LEGACY_FORMAT
@@ -327,7 +368,8 @@ public record ResearchTechTreeDefinition(
         tiers = tiers == null ? List.of() : List.copyOf(tiers);
         domains = domains == null ? List.of() : List.copyOf(domains);
         validateProgrammatic(
-                format, title, translationKey, icon, layout, bandPolicy, tiers, domains);
+                format, title, translationKey, icon, weaponPlacementMode,
+                layout, bandPolicy, tiers, domains);
 
         tiers = tiers.stream()
                 .sorted(Comparator.comparingInt(value -> value.tier().ordinal()))
@@ -355,9 +397,20 @@ public record ResearchTechTreeDefinition(
                 || tiers.stream().anyMatch(value -> value.tier() == tier));
     }
 
+    public boolean usesAutomaticWeaponPlacement() {
+        return weaponPlacementMode == WeaponPlacementMode.AUTOMATIC;
+    }
+
     void validateForSnapshot() {
         validateProgrammatic(
-                format, title, translationKey, icon, layout, bandPolicy, tiers, domains);
+                format, title, translationKey, icon, weaponPlacementMode,
+                layout, bandPolicy, tiers, domains);
+    }
+
+    /** Exclusive authority for the weapon population of one Tech Tree. */
+    public enum WeaponPlacementMode {
+        AUTHORED_ONLY,
+        AUTOMATIC
     }
 
     /** Width policy shared by automatic rank generation and later client layout. */
@@ -613,6 +666,7 @@ public record ResearchTechTreeDefinition(
             String title,
             Optional<String> translationKey,
             Optional<ResourceLocation> icon,
+            WeaponPlacementMode weaponPlacementMode,
             LayoutDefinition layout,
             BandPolicyDefinition bandPolicy,
             List<TierDefinition> tiers,
@@ -620,7 +674,7 @@ public record ResearchTechTreeDefinition(
         if (format < LEGACY_FORMAT || format > CURRENT_FORMAT) {
             throw new IllegalArgumentException("unsupported Research Tech Tree format " + format);
         }
-        if (layout == null || bandPolicy == null
+        if (weaponPlacementMode == null || layout == null || bandPolicy == null
                 || format == LEGACY_FORMAT && !layout.equals(LayoutDefinition.DEFAULT)) {
             throw new IllegalArgumentException(
                     "Research Tech Tree format 1 must use the default layout policy");
@@ -629,6 +683,11 @@ public record ResearchTechTreeDefinition(
                 || format == CURRENT_FORMAT && bandPolicy.mode() == BandMode.LEGACY) {
             throw new IllegalArgumentException(
                     "Research Tech Tree band policy does not match its format");
+        }
+        if (format == LEGACY_FORMAT
+                && weaponPlacementMode != WeaponPlacementMode.AUTHORED_ONLY) {
+            throw new IllegalArgumentException(
+                    "Research Tech Tree format 1 cannot use automatic weapon placement");
         }
         validateText(title, translationKey, "Research Tech Tree");
         validateOptionalId(icon, "Research Tech Tree icon");
@@ -689,6 +748,7 @@ public record ResearchTechTreeDefinition(
             String title,
             Optional<String> translationKey,
             Optional<ResourceLocation> icon,
+            WeaponPlacementMode weaponPlacementMode,
             Optional<LayoutDefinition> layout,
             Optional<BandPolicyDefinition> bandPolicy,
             Optional<List<TierDefinition>> tiers,
@@ -710,6 +770,7 @@ public record ResearchTechTreeDefinition(
                 title,
                 translationKey,
                 icon,
+                weaponPlacementMode,
                 layout.orElse(LayoutDefinition.DEFAULT),
                 bandPolicy.orElse(format == LEGACY_FORMAT
                         ? BandPolicyDefinition.LEGACY

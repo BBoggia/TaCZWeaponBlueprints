@@ -2,6 +2,7 @@ package com.gamergaming.taczweaponblueprints.client;
 
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayout;
+import com.gamergaming.taczweaponblueprints.resource.research.ResearchRequirements;
 import com.gamergaming.taczweaponblueprints.resource.research.ResearchTechTreeDefinition;
 
 /** Immutable, bounded single-canvas geometry policy for Tech Tree domains. */
@@ -16,11 +17,13 @@ public record ResearchTechTreeLayoutPolicy(
         int compactionSweeps) {
     public static final int MAX_SPACING = 220;
     public static final int MAX_SWEEPS = 32;
+    /** Minimum center-to-center separation for sibling any-of junction diamonds. */
+    public static final int REQUIREMENT_JUNCTION_SPACING = 10;
     /**
-     * A half-scale node remains backed by the canvas' 16-pixel minimum hit
-     * target while keeping the normal compact canvas above overview zoom.
+     * One-third scale keeps a full landscape rank usable in portrait windows;
+     * the canvas' 16-pixel minimum hit target preserves interaction accuracy.
      */
-    public static final double RESPONSIVE_TARGET_SCALE = 0.5D;
+    public static final double RESPONSIVE_TARGET_SCALE = 1.0D / 3.0D;
     public static final int MAXIMUM_NODES_PER_ROW = 28;
     public static final ResearchTechTreeLayoutPolicy DEFAULT =
             new ResearchTechTreeLayoutPolicy(
@@ -90,8 +93,8 @@ public record ResearchTechTreeLayoutPolicy(
 
     /**
      * Applies the tree-owned 8-28 cap and only wraps more aggressively when a
-     * viewport cannot show the row near half scale. The result can never widen
-     * a tree beyond its authored maximum.
+     * viewport cannot show the row near one-third scale. The result can never
+     * widen a tree beyond its authored maximum.
      */
     public int effectiveNodesPerRow(int treeMaximum, int viewportWidth) {
         if (treeMaximum < 1 || treeMaximum > MAXIMUM_NODES_PER_ROW
@@ -110,6 +113,17 @@ public record ResearchTechTreeLayoutPolicy(
                 (usableWidth + nodeGap)
                         / (ResearchTreeLayout.NODE_WIDTH + (long) nodeGap))));
         return Math.min(configured, responsive);
+    }
+
+    /** Additional row clearance beyond the first drawable any-of junction. */
+    static int requirementJunctionClearance(int drawableGroupCount) {
+        if (drawableGroupCount < 0 || drawableGroupCount > ResearchRequirements.MAX_GROUPS) {
+            throw new IllegalArgumentException(
+                    "Research Tech Tree drawable requirement-group count is invalid");
+        }
+        return Math.multiplyExact(
+                Math.max(0, drawableGroupCount - 1),
+                REQUIREMENT_JUNCTION_SPACING);
     }
 
     private static void ensureWorstCaseWidthFits(
@@ -163,13 +177,18 @@ public record ResearchTechTreeLayoutPolicy(
         long portalEnvelope = Math.multiplyExact(
                 2L * ResearchTreeGraph.MAX_NODES,
                 portalClearance(portalPadding));
+        long requirementJunctionEnvelope = Math.multiplyExact(
+                (long) ResearchTreeGraph.MAX_EDGES,
+                REQUIREMENT_JUNCTION_SPACING);
         long extent = Math.addExact(
                 2L * canvasPadding,
                 Math.addExact(
                         nodeRows,
                         Math.addExact(
                                 Math.addExact(rowGaps, bandGapPremium),
-                                portalEnvelope)));
+                                Math.addExact(
+                                        portalEnvelope,
+                                        requirementJunctionEnvelope))));
         if (extent > ResearchTreeLayout.MAX_DIMENSION) {
             throw new IllegalArgumentException(
                     "Research Tech Tree layout policy can exceed the canvas height");

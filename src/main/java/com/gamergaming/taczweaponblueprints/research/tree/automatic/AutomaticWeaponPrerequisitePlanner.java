@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -27,12 +28,15 @@ import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchP
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchPolicyResolver;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchProfile;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchSnapshot;
+import com.gamergaming.taczweaponblueprints.resource.research.ResearchPrerequisiteGroup;
+import com.gamergaming.taczweaponblueprints.resource.research.ResearchRequirements;
 import com.gamergaming.taczweaponblueprints.resource.research.ResearchTechTreePlacementResolver;
 
 import net.minecraft.resources.ResourceLocation;
 
 /** Pure, deterministic connector for the explicitly enabled connected mode. */
 public final class AutomaticWeaponPrerequisitePlanner {
+    private static final int DENSE_LEGACY_PARENT_CATALOG_LIMIT = 1_024;
     static final int BRANCH_TRANSITION_END_NUMERATOR = 3;
     static final int BRANCH_TRANSITION_END_DENOMINATOR = 4;
     static final int FULL_SECOND_PARENT_QUOTA_BASIS_POINTS = 10_000;
@@ -104,6 +108,12 @@ public final class AutomaticWeaponPrerequisitePlanner {
             throw new IllegalArgumentException(
                     "Automatic prerequisite profile does not select the candidate tree");
         }
+        boolean automaticAuthority = java.util.Optional.ofNullable(
+                        research.techTrees().get(candidates.treeId()))
+                .filter(com.gamergaming.taczweaponblueprints.resource.research
+                        .ResearchTechTreeDefinition::usesAutomaticWeaponPlacement)
+                .isPresent()
+                && candidates.authoredBlueprintIds().isEmpty();
 
         List<ResourceLocation> eligibleIds = candidates.eligibleProposals().keySet().stream()
                 .map(ResourceLocation::tryParse)
@@ -129,8 +139,9 @@ public final class AutomaticWeaponPrerequisitePlanner {
                         research, catalog, profileId, id, null, ignored -> false)));
         Map<ResourceLocation, List<ResourceLocation>> basePrerequisites =
                 new LinkedHashMap<>();
-        policies.forEach((id, policy) ->
-                basePrerequisites.put(id, policy.prerequisites()));
+        policies.forEach((id, policy) -> basePrerequisites.put(
+                id,
+                automaticAuthority ? List.of() : policy.prerequisites()));
         long authoredPrerequisiteCount = basePrerequisites.values().stream()
                 .mapToLong(List::size)
                 .sum();
@@ -151,7 +162,8 @@ public final class AutomaticWeaponPrerequisitePlanner {
                     positioned,
                     remainingPrerequisiteBudget,
                     omitted,
-                    classification);
+                    classification,
+                    automaticAuthority);
         }
         AnchorIndex anchorIndex = AnchorIndex.create(
                 positioned, policies, candidates);
@@ -162,6 +174,8 @@ public final class AutomaticWeaponPrerequisitePlanner {
                         .thenComparing(ResourceLocation::toString))
                 .toList();
         Map<ResourceLocation, List<ResourceLocation>> generated = new LinkedHashMap<>();
+        Map<ResourceLocation, ResearchRequirements> generatedRequirements =
+                new LinkedHashMap<>();
         Map<ResourceLocation, Integer> prerequisiteDepths = new LinkedHashMap<>();
         Map<ResourceLocation, Set<ResourceLocation>> prerequisiteClosures =
                 new LinkedHashMap<>();
@@ -183,7 +197,11 @@ public final class AutomaticWeaponPrerequisitePlanner {
                 omitted.put(target, "target_not_selectable");
                 continue;
             }
-            if (!targetPolicy.prerequisites().isEmpty()) {
+            if (!automaticAuthority && !targetPolicy.automaticPrerequisitesAllowed()) {
+                omitted.put(target, "entry_point");
+                continue;
+            }
+            if (!automaticAuthority && !targetPolicy.prerequisites().isEmpty()) {
                 omitted.put(target, "authored_prerequisites");
                 continue;
             }
@@ -194,30 +212,38 @@ public final class AutomaticWeaponPrerequisitePlanner {
                     targetWeapon.position().tier(), 0);
             boolean tierGateway = targetWeapon.position().tier() != Tier.STARTER
                     && connectedInTier == 0;
-            boolean periodicMerge = candidates.policy().mergeInterval() > 0
+            boolean periodicMerge = candidates.policy().schedulesPeriodicMerge()
                     && (connectedInTier + 1) % candidates.policy().mergeInterval() == 0;
             int desiredCount = 1;
             if (tierGateway) {
                 desiredCount = Math.min(
-                        candidates.policy().maxGeneratedPrerequisites(), 2);
+                        maximumGeneratedParentCount(candidates), 2);
             } else if (periodicMerge) {
-                desiredCount = candidates.policy().maxGeneratedPrerequisites();
+                desiredCount = maximumGeneratedParentCount(candidates);
             }
             if (remainingPrerequisiteBudget == 0) {
                 omitted.put(target, "maximum_total_prerequisites");
                 continue;
             }
+            AutomaticWeaponPrerequisiteDecision.GeneratedRequirementShape
+                    requirementShape = defaultRequirementShape(
+                            candidates.policy().prerequisiteStrategy(),
+                            desiredCount > 1);
             List<ResourceLocation> selected = selectDepthSafeAnchors(
                     target,
                     anchors,
                     Math.min(desiredCount, remainingPrerequisiteBudget),
                     basePrerequisites,
                     generated,
+                    generatedRequirements,
                     prerequisiteDepths,
                     prerequisiteClosures,
                     positioned,
                     policies,
+                    candidates.policy().prerequisiteStrategy(),
+                    requirementShape,
                     false,
+                    automaticAuthority,
                     false,
                     false).selected();
             if (selected.isEmpty()) {
@@ -227,12 +253,21 @@ public final class AutomaticWeaponPrerequisitePlanner {
                 continue;
             }
             generated.put(target, selected);
+            generatedRequirements.put(
+                    target, requirementsForShape(requirementShape, selected));
             remainingPrerequisiteBudget = Math.subtractExact(
                     remainingPrerequisiteBudget, selected.size());
             connectedByTier.put(targetWeapon.position().tier(), connectedInTier + 1);
         }
         validateGeneratedPositions(generated, positioned, false);
-        return result(profileId, candidates, generated, omitted);
+        return result(
+                profileId,
+                candidates,
+                generated,
+                generatedRequirements,
+                omitted,
+                Map.of(),
+                Map.of());
     }
 
     private static boolean classificationMatches(
@@ -294,7 +329,13 @@ public final class AutomaticWeaponPrerequisitePlanner {
             Map<ResourceLocation, String> omitted,
             Map<ResourceLocation, AutomaticWeaponPrerequisiteDecision> decisions) {
         return result(
-                profileId, candidates, generated, omitted, decisions, Map.of());
+                profileId,
+                candidates,
+                generated,
+                requirementsForStrategy(candidates, generated, decisions),
+                omitted,
+                decisions,
+                Map.of());
     }
 
     private static AutomaticWeaponPrerequisitePlan result(
@@ -305,17 +346,138 @@ public final class AutomaticWeaponPrerequisitePlanner {
             Map<ResourceLocation, AutomaticWeaponPrerequisiteDecision> decisions,
             Map<ResourceLocation, AutomaticWeaponPrerequisitePlan.BranchCoordinate>
                     branchCoordinates) {
+        return result(
+                profileId,
+                candidates,
+                generated,
+                requirementsForStrategy(candidates, generated, decisions),
+                omitted,
+                decisions,
+                branchCoordinates);
+    }
+
+    private static AutomaticWeaponPrerequisitePlan result(
+            ResourceLocation profileId,
+            AutomaticWeaponPlacementCandidateSnapshot candidates,
+            Map<ResourceLocation, List<ResourceLocation>> generated,
+            Map<ResourceLocation, ResearchRequirements> generatedRequirements,
+            Map<ResourceLocation, String> omitted,
+            Map<ResourceLocation, AutomaticWeaponPrerequisiteDecision> decisions,
+            Map<ResourceLocation, AutomaticWeaponPrerequisitePlan.BranchCoordinate>
+                    branchCoordinates) {
         return new AutomaticWeaponPrerequisitePlan(
                 profileId,
                 candidates.treeId(),
                 candidates.mode(),
+                candidates.policy().prerequisiteStrategy(),
                 candidates.catalogRevision(),
                 candidates.researchRevision(),
                 candidates.eligibleProposals().size(),
                 generated,
+                generatedRequirements,
                 omitted,
                 decisions,
                 branchCoordinates);
+    }
+
+    private static Map<ResourceLocation, ResearchRequirements> requirementsForStrategy(
+            AutomaticWeaponPlacementCandidateSnapshot candidates,
+            Map<ResourceLocation, List<ResourceLocation>> generated,
+            Map<ResourceLocation, AutomaticWeaponPrerequisiteDecision> decisions) {
+        LinkedHashMap<ResourceLocation, ResearchRequirements> result =
+                new LinkedHashMap<>();
+        generated.forEach((target, parents) -> result.put(target, switch (
+                candidates.policy().prerequisiteStrategy()) {
+            case LEGACY_AND -> ResearchRequirements.fromLegacy(parents);
+            case GROUPED_ROUTES_V1 -> new ResearchRequirements(List.of(
+                    new ResearchPrerequisiteGroup(parents)));
+            case HYBRID_ROUTES_V1 -> requirementsForShape(
+                    Optional.ofNullable(decisions.get(target))
+                            .map(AutomaticWeaponPrerequisiteDecision
+                                    ::generatedRequirementShape)
+                            .orElseThrow(() -> new IllegalArgumentException(
+                                    "Hybrid prerequisite target has no relationship intent")),
+                    parents);
+        }));
+        return result;
+    }
+
+    private static ResearchRequirements requirementsForShape(
+            AutomaticWeaponPrerequisiteDecision.GeneratedRequirementShape shape,
+            List<ResourceLocation> parents) {
+        if (shape == null || parents == null || parents.size() > 3
+                || parents.stream().anyMatch(java.util.Objects::isNull)) {
+            throw new IllegalArgumentException(
+                    "Generated prerequisite relationship intent is invalid");
+        }
+        if (parents.isEmpty()) {
+            return ResearchRequirements.EMPTY;
+        }
+        return switch (shape) {
+            case MANDATORY_SINGLETONS -> ResearchRequirements.fromLegacy(parents);
+            case ALTERNATIVE_ROUTES -> new ResearchRequirements(List.of(
+                    new ResearchPrerequisiteGroup(parents)));
+            case ALTERNATIVE_ROUTES_WITH_MANDATORY_GATEWAY -> {
+                int alternativeCount = Math.min(2, parents.size());
+                List<ResearchPrerequisiteGroup> groups = new ArrayList<>();
+                groups.add(new ResearchPrerequisiteGroup(
+                        parents.subList(0, alternativeCount)));
+                parents.subList(alternativeCount, parents.size()).stream()
+                        .map(ResearchPrerequisiteGroup::singleton)
+                        .forEach(groups::add);
+                yield new ResearchRequirements(groups);
+            }
+        };
+    }
+
+    private static AutomaticWeaponPrerequisiteDecision.GeneratedRequirementShape
+            defaultRequirementShape(
+                    AutomaticWeaponPlacementPolicy.PrerequisiteStrategy strategy,
+                    boolean multipleParents) {
+        return switch (strategy) {
+            case LEGACY_AND -> AutomaticWeaponPrerequisiteDecision
+                    .GeneratedRequirementShape.MANDATORY_SINGLETONS;
+            case GROUPED_ROUTES_V1 -> AutomaticWeaponPrerequisiteDecision
+                    .GeneratedRequirementShape.ALTERNATIVE_ROUTES;
+            case HYBRID_ROUTES_V1 -> multipleParents
+                    ? AutomaticWeaponPrerequisiteDecision.GeneratedRequirementShape
+                            .ALTERNATIVE_ROUTES
+                    : AutomaticWeaponPrerequisiteDecision.GeneratedRequirementShape
+                            .MANDATORY_SINGLETONS;
+        };
+    }
+
+    private static AutomaticWeaponPrerequisiteDecision.GeneratedRequirementShape
+            effectiveRequirementShape(
+                    AutomaticWeaponPrerequisiteDecision.GeneratedRequirementShape shape,
+                    int parentCount) {
+        if (shape == null || parentCount < 0
+                || parentCount
+                        > AutomaticWeaponPlacementPolicy.MAX_GENERATED_PREREQUISITES) {
+            throw new IllegalArgumentException(
+                    "Generated prerequisite relationship outcome is invalid");
+        }
+        if (parentCount <= 1) {
+            return AutomaticWeaponPrerequisiteDecision.GeneratedRequirementShape
+                    .MANDATORY_SINGLETONS;
+        }
+        if (shape == AutomaticWeaponPrerequisiteDecision.GeneratedRequirementShape
+                .ALTERNATIVE_ROUTES_WITH_MANDATORY_GATEWAY
+                && parentCount < 3) {
+            return AutomaticWeaponPrerequisiteDecision.GeneratedRequirementShape
+                    .ALTERNATIVE_ROUTES;
+        }
+        return shape;
+    }
+
+    private static int maximumGeneratedParentCount(
+            AutomaticWeaponPlacementCandidateSnapshot candidates) {
+        return switch (candidates.policy().prerequisiteStrategy()) {
+            case LEGACY_AND -> candidates.policy().maxGeneratedPrerequisites();
+            case GROUPED_ROUTES_V1 -> Math.min(
+                    2, candidates.policy().maxGeneratedPrerequisites());
+            case HYBRID_ROUTES_V1 -> candidates.policy().maxGeneratedPrerequisites();
+        };
     }
 
     /**
@@ -337,7 +499,8 @@ public final class AutomaticWeaponPrerequisitePlanner {
             Map<ResourceLocation, PositionedWeapon> positioned,
             int remainingPrerequisiteBudget,
             Map<ResourceLocation, String> omitted,
-            AutomaticWeaponCandidateClassification classification) {
+            AutomaticWeaponCandidateClassification classification,
+            boolean automaticAuthority) {
         NavigableMap<Integer, List<ResourceLocation>> automaticByRank = new TreeMap<>();
         NavigableMap<Integer, List<ResourceLocation>> authoredByRank = new TreeMap<>();
         positioned.forEach((id, weapon) -> {
@@ -416,7 +579,7 @@ public final class AutomaticWeaponPrerequisitePlanner {
             }
         }
         Set<ResourceLocation> scheduledSecondParents = branchContext == null
-                || candidates.policy().maxGeneratedPrerequisites() < 2
+                || maximumGeneratedParentCount(candidates) < 2
                         ? Set.of()
                         : secondParentSchedule(
                                 automaticByRank,
@@ -425,10 +588,22 @@ public final class AutomaticWeaponPrerequisitePlanner {
                                 branchTransitionEnd,
                                 policies,
                                 branchContext);
+        Set<ResourceLocation> scheduledHybridGateways = branchContext == null
+                ? Set.of()
+                : hybridGatewaySchedule(
+                        automaticByRank,
+                        rankIndexes,
+                        branchTransitionEnd,
+                        scheduledSecondParents,
+                        candidates,
+                        policies,
+                        branchContext);
         List<ResourceLocation> orderedTargets = eligibleIds.stream()
                 .sorted(coordinateOrder)
                 .toList();
         Map<ResourceLocation, List<ResourceLocation>> generated = new LinkedHashMap<>();
+        Map<ResourceLocation, ResearchRequirements> generatedRequirements =
+                new LinkedHashMap<>();
         Map<ResourceLocation, Integer> prerequisiteDepths = new LinkedHashMap<>();
         Map<ResourceLocation, Set<ResourceLocation>> prerequisiteClosures =
                 new LinkedHashMap<>();
@@ -470,7 +645,24 @@ public final class AutomaticWeaponPrerequisitePlanner {
                             foundationLayer,
                             candidates,
                             branchContext,
-                            scheduledSecondParents.contains(target));
+                            scheduledSecondParents.contains(target),
+                            scheduledHybridGateways.contains(target));
+            if (automaticAuthority) {
+                int maximumParentSpan = ResearchTechTreeContract.automaticEdgeRankSpanLimit(
+                        automaticRanks.size(),
+                        BlueprintResearchSnapshot.MAX_PREREQUISITE_DEPTH);
+                selection = constrainAutomaticParentSpan(
+                        target,
+                        targetRank,
+                        rankIndex,
+                        maximumParentSpan,
+                        selection,
+                        candidates.policy().prerequisiteStrategy(),
+                        automaticByRank,
+                        rankIndexes,
+                        positioned,
+                        branchContext);
+            }
             if (proposal.reviewRequired()
                     && !candidates.policy().reviewHandling().createsPrerequisite()) {
                 omitted.put(target, "review_policy_independent");
@@ -486,7 +678,14 @@ public final class AutomaticWeaponPrerequisitePlanner {
                         AnchorSelection.EMPTY, branchContext);
                 continue;
             }
-            if (!targetPolicy.prerequisites().isEmpty()) {
+            if (!automaticAuthority && !targetPolicy.automaticPrerequisitesAllowed()) {
+                omitted.put(target, "entry_point");
+                recordBranchDecision(
+                        decisions, target, targetRank, selection,
+                        AnchorSelection.EMPTY, branchContext);
+                continue;
+            }
+            if (!automaticAuthority && !targetPolicy.prerequisites().isEmpty()) {
                 omitted.put(target, "authored_prerequisites");
                 recordBranchDecision(
                         decisions, target, targetRank, selection,
@@ -515,36 +714,278 @@ public final class AutomaticWeaponPrerequisitePlanner {
                     Math.min(selection.desiredCount(), remainingPrerequisiteBudget),
                     basePrerequisites,
                     generated,
+                    generatedRequirements,
                     prerequisiteDepths,
                     prerequisiteClosures,
                     positioned,
                     policies,
+                    candidates.policy().prerequisiteStrategy(),
+                    selection.requirementShape(),
                     true,
+                    automaticAuthority,
                     branchContext != null,
                     foundationLayer);
+            boolean pointCostFallbackAttempted = anchorSelection.selected().isEmpty()
+                    && automaticAuthority
+                    && !foundationLayer
+                    && anchors.stream().anyMatch(anchor ->
+                            generatedPointCostInverts(target, anchor, policies));
+            if (pointCostFallbackAttempted) {
+                // Stat authority and datapack cost authority are intentionally
+                // independent. If every otherwise valid local parent is more
+                // expensive than this node, preserve connected topology by
+                // selecting one parent from the exact same bounded candidate
+                // list. Depth, rank direction, acyclicity, and edge-span
+                // validation remain authoritative.
+                anchorSelection = selectDepthSafeAnchors(
+                        target,
+                        anchors,
+                        1,
+                        basePrerequisites,
+                        generated,
+                        generatedRequirements,
+                        prerequisiteDepths,
+                        prerequisiteClosures,
+                        positioned,
+                        policies,
+                        candidates.policy().prerequisiteStrategy(),
+                        AutomaticWeaponPrerequisiteDecision.GeneratedRequirementShape
+                                .MANDATORY_SINGLETONS,
+                        true,
+                        false,
+                        branchContext != null,
+                        false);
+            }
             List<ResourceLocation> selected = anchorSelection.selected();
             if (selected.isEmpty()) {
-                omitted.put(target, "maximum_prerequisite_depth");
+                omitted.put(
+                        target,
+                        pointCostFallbackAttempted
+                                ? "no_depth_safe_local_parent"
+                                : anchors.stream().allMatch(anchor ->
+                                        generatedPointCostInverts(
+                                                target, anchor, policies))
+                                                ? "point_cost_inversion_exhausted"
+                                                : "maximum_prerequisite_depth");
                 recordBranchDecision(
                         decisions, target, targetRank, selection,
                         anchorSelection, branchContext);
                 continue;
             }
             generated.put(target, selected);
+            generatedRequirements.put(
+                    target,
+                    requirementsForShape(
+                            effectiveRequirementShape(
+                                    selection.requirementShape(), selected.size()),
+                            selected));
             recordBranchDecision(
                     decisions, target, targetRank, selection,
                     anchorSelection, branchContext);
             remainingPrerequisiteBudget = Math.subtractExact(
                     remainingPrerequisiteBudget, selected.size());
         }
+        connectGeneratedFoundationRootsToEntryPoint(
+                generated,
+                generatedRequirements,
+                omitted,
+                decisions,
+                basePrerequisites,
+                positioned,
+                branchContext,
+                remainingPrerequisiteBudget);
         validateGeneratedPositions(generated, positioned, true);
         return result(
                 profileId,
                 candidates,
                 generated,
+                generatedRequirements,
                 omitted,
                 decisions,
                 branchCoordinates);
+    }
+
+    /**
+     * Keeps generated automatic edges local to recent semantic ranks: two for
+     * normal catalogs, relaxed only when the graph depth ceiling makes that
+     * impossible. Older foundation shortcuts used to improve ancestry overlap,
+     * but produced visually disruptive lines spanning much of a large tree. If
+     * a branch has no recent local anchor, use a recent global rank instead of
+     * retaining the old shortcut or manufacturing a new long edge.
+     */
+    private static ParentSelection constrainAutomaticParentSpan(
+            ResourceLocation target,
+            int targetRank,
+            int targetRankIndex,
+            int maximumParentSpan,
+            ParentSelection selection,
+            AutomaticWeaponPlacementPolicy.PrerequisiteStrategy prerequisiteStrategy,
+            NavigableMap<Integer, List<ResourceLocation>> automaticByRank,
+            Map<Integer, Integer> rankIndexes,
+            Map<ResourceLocation, PositionedWeapon> positioned,
+            BranchTopologyContext branchContext) {
+        LinkedHashSet<ResourceLocation> recent = selection.anchors().stream()
+                .filter(parent -> withinAutomaticParentSpan(
+                        parent,
+                        targetRankIndex,
+                        maximumParentSpan,
+                        rankIndexes,
+                        positioned))
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        if (targetRankIndex == 0) {
+            return selection.withAnchors(List.copyOf(recent));
+        }
+
+        // Always append recent global candidates. A branch-local immediate parent
+        // may already sit at the depth ceiling; the second preceding rank then
+        // provides a local, depth-safe alternative instead of creating a root.
+        Map.Entry<Integer, List<ResourceLocation>> rank =
+                automaticByRank.lowerEntry(targetRank);
+        int visitedRanks = 0;
+        int candidatesPerRank = Math.max(4, selection.desiredCount() * 2);
+        OptionalInt separatedBranch = selection.branchBasis()
+                .filter(basis -> basis.rankIndex() > basis.transitionEndIndex())
+                .map(basis -> OptionalInt.of(basis.branchIndex()))
+                .orElseGet(OptionalInt::empty);
+        while (rank != null
+                && visitedRanks++ < maximumParentSpan) {
+            rotated(target, rank.getValue()).stream()
+                    .filter(candidate -> separatedBranch.isEmpty()
+                            || branchContext != null
+                                    && branchContext.branchIndexOrDefault(
+                                            candidate, separatedBranch.getAsInt())
+                                            == separatedBranch.getAsInt())
+                    .limit(candidatesPerRank)
+                    .forEach(recent::add);
+            rank = automaticByRank.lowerEntry(rank.getKey());
+        }
+        if (recent.isEmpty() && separatedBranch.isPresent()) {
+            rank = automaticByRank.lowerEntry(targetRank);
+            visitedRanks = 0;
+            while (rank != null && visitedRanks++ < maximumParentSpan) {
+                rotated(target, rank.getValue()).stream()
+                        .limit(candidatesPerRank)
+                        .forEach(recent::add);
+                rank = automaticByRank.lowerEntry(rank.getKey());
+            }
+        }
+        recent.remove(target);
+        if (positioned.size() > DENSE_LEGACY_PARENT_CATALOG_LIMIT
+                && prerequisiteStrategy
+                        == AutomaticWeaponPlacementPolicy.PrerequisiteStrategy.LEGACY_AND
+                && selection.requirementShape()
+                        == AutomaticWeaponPrerequisiteDecision.GeneratedRequirementShape
+                                .MANDATORY_SINGLETONS) {
+            return selection.withAnchors(recent.stream()
+                    .min(Comparator
+                            .comparingInt((ResourceLocation candidate) -> rankIndexes.get(
+                                    positioned.get(candidate).coordinate().rank()))
+                            .thenComparing(ResourceLocation::toString))
+                    .stream()
+                    .toList());
+        }
+        return selection.withAnchors(List.copyOf(recent));
+    }
+
+    private static boolean withinAutomaticParentSpan(
+            ResourceLocation parent,
+            int targetRankIndex,
+            int maximumParentSpan,
+            Map<Integer, Integer> rankIndexes,
+            Map<ResourceLocation, PositionedWeapon> positioned) {
+        PositionedWeapon parentWeapon = positioned.get(parent);
+        if (parentWeapon == null) {
+            return false;
+        }
+        Integer parentRankIndex = rankIndexes.get(
+                parentWeapon.coordinate().rank());
+        return parentRankIndex != null
+                && parentRankIndex < targetRankIndex
+                && targetRankIndex - parentRankIndex
+                        <= maximumParentSpan;
+    }
+
+    /**
+     * A missing preferred authored root can promote one automatic fallback to
+     * entry-point authority while leaving its provisional foundation peers as
+     * generated roots. Connect those peers to the one promoted entry point so
+     * the published graph retains a single free starting route. Trees without a
+     * configured automatic entry point intentionally retain multiple roots.
+     */
+    private static void connectGeneratedFoundationRootsToEntryPoint(
+            Map<ResourceLocation, List<ResourceLocation>> generated,
+            Map<ResourceLocation, ResearchRequirements> generatedRequirements,
+            Map<ResourceLocation, String> omitted,
+            Map<ResourceLocation, AutomaticWeaponPrerequisiteDecision> decisions,
+            Map<ResourceLocation, List<ResourceLocation>> basePrerequisites,
+            Map<ResourceLocation, PositionedWeapon> positioned,
+            BranchTopologyContext branchContext,
+            int remainingPrerequisiteBudget) {
+        if (remainingPrerequisiteBudget <= 0 || positioned.isEmpty()) {
+            return;
+        }
+        int foundationRank = positioned.values().stream()
+                .filter(value -> !value.authored())
+                .mapToInt(value -> value.coordinate().rank())
+                .min()
+                .orElse(Integer.MAX_VALUE);
+        List<ResourceLocation> entryPoints = omitted.entrySet().stream()
+                .filter(entry -> "entry_point".equals(entry.getValue()))
+                .map(Map.Entry::getKey)
+                .filter(id -> {
+                    PositionedWeapon value = positioned.get(id);
+                    return value != null
+                            && !value.authored()
+                            && value.coordinate().rank() == foundationRank;
+                })
+                .sorted(Comparator.comparing(ResourceLocation::toString))
+                .toList();
+        if (entryPoints.size() != 1) {
+            return;
+        }
+        ResourceLocation entryPoint = entryPoints.get(0);
+        List<ResourceLocation> generatedRoots = omitted.entrySet().stream()
+                .filter(entry -> "generated_root".equals(entry.getValue()))
+                .map(Map.Entry::getKey)
+                .filter(id -> {
+                    PositionedWeapon value = positioned.get(id);
+                    return value != null
+                            && !value.authored()
+                            && value.coordinate().rank() == foundationRank;
+                })
+                .sorted(Comparator.comparing(ResourceLocation::toString))
+                .limit(remainingPrerequisiteBudget)
+                .toList();
+        for (ResourceLocation generatedRoot : generatedRoots) {
+            generated.put(generatedRoot, List.of(entryPoint));
+            Map<ResourceLocation, Integer> depths = new LinkedHashMap<>();
+            boolean depthSafe = positioned.keySet().stream().allMatch(id ->
+                    prerequisiteDepth(
+                            id,
+                            basePrerequisites,
+                            generated,
+                            depths,
+                            new LinkedHashSet<>())
+                            <= BlueprintResearchSnapshot.MAX_PREREQUISITE_DEPTH);
+            if (!depthSafe) {
+                generated.remove(generatedRoot);
+                continue;
+            }
+            generatedRequirements.put(
+                    generatedRoot,
+                    ResearchRequirements.fromLegacy(List.of(entryPoint)));
+            omitted.remove(generatedRoot);
+            AutomaticWeaponPrerequisiteDecision decision = decisions.get(generatedRoot);
+            if (decision != null) {
+                AutomaticWeaponPrerequisiteDecision.ParentRelation relation =
+                        branchContext == null
+                                ? AutomaticWeaponPrerequisiteDecision.ParentRelation.UNCLASSIFIED
+                                : branchContext.parentRelation(generatedRoot, entryPoint);
+                decisions.put(
+                        generatedRoot,
+                        decision.withSingleSelectedParent(entryPoint, relation));
+            }
+        }
     }
 
     private static void recordBranchDecision(
@@ -579,7 +1020,11 @@ public final class AutomaticWeaponPrerequisitePlanner {
                         relations,
                         anchorSelection.mergeRejection(),
                         depthShortcut,
-                        basis.terminalPeer());
+                        basis.terminalPeer(),
+                        Optional.empty(),
+                        anchorSelection.alternativeRouteReview(),
+                        effectiveRequirementShape(
+                                selection.requirementShape(), selected.size()));
         if (decisions.put(target, decision) != null) {
             throw new IllegalStateException(
                     "Automatic prerequisite decision was recorded twice");
@@ -609,19 +1054,24 @@ public final class AutomaticWeaponPrerequisitePlanner {
         int lowerInterconnectionTransitions =
                 ResearchTechTreeContract.sharedMeshTransitionCount(occupiedRankCount);
         boolean interconnectedBase = rankIndex <= lowerInterconnectionTransitions;
-        boolean periodicMerge = candidates.policy().mergeInterval() > 0
+        boolean periodicMerge = candidates.policy().schedulesPeriodicMerge()
                 && interconnectedBase
                 && rankIndex > 0
                 && rankIndex % candidates.policy().mergeInterval() == 0;
         int desiredCount = foundationLayer
                 ? 1
                 : interconnectedBase
-                        ? Math.min(candidates.policy().maxGeneratedPrerequisites(), 2)
+                        ? Math.min(maximumGeneratedParentCount(candidates), 2)
                         : 1;
         if (!foundationLayer && periodicMerge) {
-            desiredCount = candidates.policy().maxGeneratedPrerequisites();
+            desiredCount = maximumGeneratedParentCount(candidates);
         }
-        return new ParentSelection(anchors, desiredCount);
+        return new ParentSelection(
+                anchors,
+                desiredCount,
+                defaultRequirementShape(
+                        candidates.policy().prerequisiteStrategy(),
+                        desiredCount > 1));
     }
 
     private static ParentSelection branchAwareSelection(
@@ -634,15 +1084,19 @@ public final class AutomaticWeaponPrerequisitePlanner {
             boolean foundationLayer,
             AutomaticWeaponPlacementCandidateSnapshot candidates,
             BranchTopologyContext context,
-            boolean secondParentScheduled) {
+            boolean secondParentScheduled,
+            boolean hybridGatewayScheduled) {
         if (foundationLayer) {
             int quota = context.matchingFoundationAnchorCount(target, targetRank) >= 2
                     ? FOUNDATION_SECOND_PARENT_QUOTA_BASIS_POINTS : 0;
-            boolean secondParent = candidates.policy().maxGeneratedPrerequisites() >= 2
+            boolean secondParent = maximumGeneratedParentCount(candidates) >= 2
                     && secondParentScheduled;
             return new ParentSelection(
                     context.foundationAnchors(target, targetRank),
                     secondParent ? 2 : 1,
+                    defaultRequirementShape(
+                            candidates.policy().prerequisiteStrategy(),
+                            secondParent),
                     context.basis(
                             target,
                             AutomaticWeaponPrerequisiteDecision.Strategy.FOUNDATION,
@@ -657,14 +1111,35 @@ public final class AutomaticWeaponPrerequisitePlanner {
         boolean transition = !trunk && rankIndex <= transitionEnd;
         int secondParentQuota = secondParentQuotaBasisPoints(
                 rankIndex, familyStart, transitionEnd);
-        boolean secondParent = candidates.policy().maxGeneratedPrerequisites() >= 2
+        boolean secondParent = maximumGeneratedParentCount(candidates) >= 2
                 && secondParentScheduled;
-        boolean periodicThirdParent = candidates.policy().maxGeneratedPrerequisites() >= 3
+        boolean periodicThirdParent = candidates.policy().prerequisiteStrategy()
+                == AutomaticWeaponPlacementPolicy.PrerequisiteStrategy.LEGACY_AND
+                && maximumGeneratedParentCount(candidates) >= 3
                 && secondParent
-                && candidates.policy().mergeInterval() > 0
+                && candidates.policy().schedulesPeriodicMerge()
                 && rankIndex > 0
                 && rankIndex % candidates.policy().mergeInterval() == 0;
-        int desiredCount = periodicThirdParent ? 3 : secondParent ? 2 : 1;
+        boolean hybridGateway = candidates.policy().prerequisiteStrategy()
+                == AutomaticWeaponPlacementPolicy.PrerequisiteStrategy.HYBRID_ROUTES_V1
+                && hybridGatewayScheduled
+                && secondParent
+                && rankIndex <= transitionEnd;
+        int desiredCount = hybridGateway
+                && maximumGeneratedParentCount(candidates) >= 3
+                        ? 3
+                        : periodicThirdParent ? 3 : secondParent ? 2 : 1;
+        AutomaticWeaponPrerequisiteDecision.GeneratedRequirementShape requirementShape =
+                hybridGateway
+                        ? desiredCount >= 3
+                                ? AutomaticWeaponPrerequisiteDecision
+                                        .GeneratedRequirementShape
+                                        .ALTERNATIVE_ROUTES_WITH_MANDATORY_GATEWAY
+                                : AutomaticWeaponPrerequisiteDecision
+                                        .GeneratedRequirementShape.MANDATORY_SINGLETONS
+                        : defaultRequirementShape(
+                                candidates.policy().prerequisiteStrategy(),
+                                secondParent);
         boolean crossFamilyMerge = false;
         if (trunk) {
             crossFamilyMerge = secondParent;
@@ -684,6 +1159,7 @@ public final class AutomaticWeaponPrerequisitePlanner {
         return new ParentSelection(
                 context.anchors(target, targetRank, trunk, crossFamilyMerge),
                 desiredCount,
+                requirementShape,
                 context.basis(
                         target,
                         strategy,
@@ -744,6 +1220,47 @@ public final class AutomaticWeaponPrerequisitePlanner {
             Map<ResourceLocation, Integer> branches = new LinkedHashMap<>();
             eligible.forEach(target -> branches.put(target, context.branchIndex(target)));
             result.addAll(stratifiedQuotaSelection(eligible, branches, quota));
+        });
+        return Set.copyOf(result);
+    }
+
+    /**
+     * Selects at most one deliberate mandatory convergence per scheduled lower
+     * rank. Hybrid gates stop at the transition boundary, so specialization and
+     * terminal cohorts cannot silently become mandatory cross-branch ladders.
+     */
+    private static Set<ResourceLocation> hybridGatewaySchedule(
+            NavigableMap<Integer, List<ResourceLocation>> automaticByRank,
+            Map<Integer, Integer> rankIndexes,
+            int transitionEnd,
+            Set<ResourceLocation> scheduledSecondParents,
+            AutomaticWeaponPlacementCandidateSnapshot candidates,
+            Map<ResourceLocation, BlueprintResearchPolicy> policies,
+            BranchTopologyContext context) {
+        if (candidates.policy().prerequisiteStrategy()
+                        != AutomaticWeaponPlacementPolicy.PrerequisiteStrategy
+                                .HYBRID_ROUTES_V1
+                || candidates.policy().mergeInterval() == 0
+                || maximumGeneratedParentCount(candidates) < 2) {
+            return Set.of();
+        }
+        LinkedHashSet<ResourceLocation> result = new LinkedHashSet<>();
+        automaticByRank.forEach((rank, targets) -> {
+            int rankIndex = rankIndexes.getOrDefault(rank, 0);
+            if (rankIndex <= 0 || rankIndex > transitionEnd
+                    || rankIndex % candidates.policy().mergeInterval() != 0) {
+                return;
+            }
+            List<ResourceLocation> eligible = targets.stream()
+                    .filter(scheduledSecondParents::contains)
+                    .filter(target -> policies.get(target).prerequisites().isEmpty())
+                    .sorted(Comparator
+                            .comparingInt(context::branchIndex)
+                            .thenComparing(ResourceLocation::toString))
+                    .toList();
+            if (!eligible.isEmpty()) {
+                result.add(eligible.get(Math.floorMod(rankIndex, eligible.size())));
+            }
         });
         return Set.copyOf(result);
     }
@@ -991,17 +1508,31 @@ public final class AutomaticWeaponPrerequisitePlanner {
             int desiredCount,
             Map<ResourceLocation, List<ResourceLocation>> basePrerequisites,
             Map<ResourceLocation, List<ResourceLocation>> generated,
+            Map<ResourceLocation, ResearchRequirements> generatedRequirements,
             Map<ResourceLocation, Integer> prerequisiteDepths,
             Map<ResourceLocation, Set<ResourceLocation>> prerequisiteClosures,
             Map<ResourceLocation, PositionedWeapon> positioned,
             Map<ResourceLocation, BlueprintResearchPolicy> policies,
+            AutomaticWeaponPlacementPolicy.PrerequisiteStrategy prerequisiteStrategy,
+            AutomaticWeaponPrerequisiteDecision.GeneratedRequirementShape
+                    requirementShape,
             boolean rankAuthoritative,
+            boolean pointCostAware,
             boolean economyAware,
             boolean directNodeGraceAllowed) {
+        if (generatedRequirements == null || requirementShape == null) {
+            throw new IllegalArgumentException(
+                    "Automatic prerequisite relationship authority is invalid");
+        }
         List<ResourceLocation> selected = new ArrayList<>();
         Optional<AutomaticWeaponPrerequisiteDecision.MergeRejection> mergeRejection =
                 Optional.empty();
+        Optional<AutomaticWeaponPrerequisiteDecision.AlternativeRouteReview>
+                alternativeRouteReview = Optional.empty();
         for (ResourceLocation anchor : anchors) {
+            if (pointCostAware && generatedPointCostInverts(target, anchor, policies)) {
+                continue;
+            }
             int anchorDepth = prerequisiteDepth(
                     anchor,
                     basePrerequisites,
@@ -1019,20 +1550,59 @@ public final class AutomaticWeaponPrerequisitePlanner {
             if (anchorDepth < BlueprintResearchSnapshot.MAX_PREREQUISITE_DEPTH
                     && !redundant) {
                 if (economyAware && !selected.isEmpty()) {
-                    Optional<AutomaticWeaponPrerequisiteDecision.MergeRejection> rejected =
-                            closureInflationRejection(
-                                    anchor,
-                                    selected,
-                                    basePrerequisites,
-                                    generated,
-                                    prerequisiteClosures,
-                                    policies,
-                                    directNodeGraceAllowed);
-                    if (rejected.isPresent()) {
-                        if (mergeRejection.isEmpty()) {
-                            mergeRejection = rejected;
+                    AutomaticWeaponPrerequisiteDecision.ParentIntent intent =
+                            requirementShape.intentForSelectedIndex(selected.size());
+                    if (intent == AutomaticWeaponPrerequisiteDecision.ParentIntent
+                            .ALTERNATIVE) {
+                        List<ResourceLocation> alternatives = new ArrayList<>();
+                        for (int index = 0; index < selected.size(); index++) {
+                            if (requirementShape.intentForSelectedIndex(index)
+                                    == AutomaticWeaponPrerequisiteDecision.ParentIntent
+                                            .ALTERNATIVE) {
+                                alternatives.add(selected.get(index));
+                            }
                         }
-                        continue;
+                        AutomaticWeaponPrerequisiteDecision.AlternativeRouteReview review =
+                                AutomaticWeaponAlternativeRouteGuard.review(
+                                        alternatives,
+                                        anchor,
+                                        generated,
+                                        generatedRequirements,
+                                        policies);
+                        if (!review.accepted()) {
+                            if (alternativeRouteReview.isEmpty()) {
+                                alternativeRouteReview = Optional.of(review);
+                            }
+                            continue;
+                        }
+                        alternativeRouteReview = Optional.of(review);
+                    } else {
+                        Optional<AutomaticWeaponPrerequisiteDecision.MergeRejection> rejected =
+                                prerequisiteStrategy
+                                                == AutomaticWeaponPlacementPolicy
+                                                        .PrerequisiteStrategy
+                                                        .HYBRID_ROUTES_V1
+                                        ? routeAwareClosureInflationRejection(
+                                                anchor,
+                                                selected,
+                                                generated,
+                                                generatedRequirements,
+                                                policies,
+                                                directNodeGraceAllowed)
+                                        : closureInflationRejection(
+                                                anchor,
+                                                selected,
+                                                basePrerequisites,
+                                                generated,
+                                                prerequisiteClosures,
+                                                policies,
+                                                directNodeGraceAllowed);
+                        if (rejected.isPresent()) {
+                            if (mergeRejection.isEmpty()) {
+                                mergeRejection = rejected;
+                            }
+                            continue;
+                        }
                     }
                 }
                 selected.add(anchor);
@@ -1041,7 +1611,72 @@ public final class AutomaticWeaponPrerequisitePlanner {
                 }
             }
         }
-        return new AnchorSelection(selected, mergeRejection);
+        return new AnchorSelection(
+                selected, mergeRejection, alternativeRouteReview);
+    }
+
+    /**
+     * Generated progression prefers not to make a cheaper node depend on a
+     * costlier one. Connected automatic authority may relax this preference for
+     * one bounded parent rather than publishing a non-foundation root.
+     */
+    private static boolean generatedPointCostInverts(
+            ResourceLocation target,
+            ResourceLocation anchor,
+            Map<ResourceLocation, BlueprintResearchPolicy> policies) {
+        BlueprintResearchPolicy targetPolicy = policies.get(target);
+        BlueprintResearchPolicy anchorPolicy = policies.get(anchor);
+        return targetPolicy != null
+                && anchorPolicy != null
+                && anchorPolicy.researchCost().points()
+                        > targetPolicy.researchCost().points();
+    }
+
+    private static Optional<AutomaticWeaponPrerequisiteDecision.MergeRejection>
+            routeAwareClosureInflationRejection(
+                    ResourceLocation candidate,
+                    List<ResourceLocation> selected,
+                    Map<ResourceLocation, List<ResourceLocation>> generated,
+                    Map<ResourceLocation, ResearchRequirements> generatedRequirements,
+                    Map<ResourceLocation, BlueprintResearchPolicy> policies,
+                    boolean directNodeGraceAllowed) {
+        AutomaticWeaponAlternativeRouteGuard.RouteCostBounds existing =
+                AutomaticWeaponAlternativeRouteGuard.alternativeCostBounds(
+                        selected,
+                        generated,
+                        generatedRequirements,
+                        policies);
+        AutomaticWeaponAlternativeRouteGuard.RouteCostBounds proposed =
+                AutomaticWeaponAlternativeRouteGuard.alternativeCostBounds(
+                        List.of(candidate),
+                        generated,
+                        generatedRequirements,
+                        policies);
+        long existingCost = existing.upperBound();
+        long candidateCost = proposed.upperBound();
+        long unionCost = existingCost > Long.MAX_VALUE - candidateCost
+                ? Long.MAX_VALUE : existingCost + candidateCost;
+        long directNodeGrace = directNodeGraceAllowed
+                ? Math.max(
+                        selected.stream()
+                                .mapToLong(parent -> pointCost(parent, policies))
+                                .max()
+                                .orElse(0L),
+                        pointCost(candidate, policies))
+                : 0L;
+        if (closureInflationAllowed(
+                existingCost, candidateCost, unionCost, directNodeGrace)) {
+            return Optional.empty();
+        }
+        return Optional.of(new AutomaticWeaponPrerequisiteDecision.MergeRejection(
+                candidate,
+                AutomaticWeaponPrerequisiteDecision.MergeRejectionReason
+                        .CLOSURE_INFLATION,
+                existingCost,
+                candidateCost,
+                unionCost,
+                maximumAllowedClosureCost(
+                        existingCost, candidateCost, directNodeGrace)));
     }
 
     private static Optional<AutomaticWeaponPrerequisiteDecision.MergeRejection>
@@ -1273,6 +1908,9 @@ public final class AutomaticWeaponPrerequisitePlanner {
                                         || authoredFoundationBridgeAllowed(
                                                 prerequisitePosition,
                                                 dependentPosition)
+                                        || automaticFoundationBridgeAllowed(
+                                                prerequisitePosition,
+                                                dependentPosition)
                                 : ResearchTechTreeContract.progressionTransitionAllowed(
                                         prerequisitePosition.position(),
                                         dependentPosition.position()));
@@ -1290,6 +1928,15 @@ public final class AutomaticWeaponPrerequisitePlanner {
         return prerequisite.authored()
                 && !dependent.authored()
                 && prerequisite.coordinate().rank() == dependent.coordinate().rank();
+    }
+
+    private static boolean automaticFoundationBridgeAllowed(
+            PositionedWeapon prerequisite,
+            PositionedWeapon dependent) {
+        return !prerequisite.authored()
+                && !dependent.authored()
+                && prerequisite.coordinate().rank()
+                        == dependent.coordinate().rank();
     }
 
     private static boolean usable(BlueprintResearchPolicy policy) {
@@ -1330,18 +1977,24 @@ public final class AutomaticWeaponPrerequisitePlanner {
 
     private record AnchorSelection(
             List<ResourceLocation> selected,
-            Optional<AutomaticWeaponPrerequisiteDecision.MergeRejection> mergeRejection) {
+            Optional<AutomaticWeaponPrerequisiteDecision.MergeRejection> mergeRejection,
+            Optional<AutomaticWeaponPrerequisiteDecision.AlternativeRouteReview>
+                    alternativeRouteReview) {
         private static final AnchorSelection EMPTY =
-                new AnchorSelection(List.of(), Optional.empty());
+                new AnchorSelection(List.of(), Optional.empty(), Optional.empty());
 
         private AnchorSelection {
             selected = selected == null ? List.of() : List.copyOf(selected);
             mergeRejection = mergeRejection == null ? Optional.empty() : mergeRejection;
+            alternativeRouteReview = alternativeRouteReview == null
+                    ? Optional.empty() : alternativeRouteReview;
             List<ResourceLocation> stableSelected = selected;
             if (selected.stream().anyMatch(java.util.Objects::isNull)
                     || selected.stream().distinct().count() != selected.size()
                     || mergeRejection.filter(value -> stableSelected.contains(
-                            value.parentId())).isPresent()) {
+                            value.parentId())).isPresent()
+                    || alternativeRouteReview.filter(value -> value.accepted()
+                            != stableSelected.contains(value.parentId())).isPresent()) {
                 throw new IllegalArgumentException(
                         "Automatic prerequisite anchor result is invalid");
             }
@@ -1351,23 +2004,30 @@ public final class AutomaticWeaponPrerequisitePlanner {
     private record ParentSelection(
             List<ResourceLocation> anchors,
             int desiredCount,
+            AutomaticWeaponPrerequisiteDecision.GeneratedRequirementShape
+                    requirementShape,
             Optional<BranchSelectionBasis> branchBasis) {
         private ParentSelection(
                 List<ResourceLocation> anchors,
-                int desiredCount) {
-            this(anchors, desiredCount, Optional.empty());
+                int desiredCount,
+                AutomaticWeaponPrerequisiteDecision.GeneratedRequirementShape
+                        requirementShape) {
+            this(anchors, desiredCount, requirementShape, Optional.empty());
         }
 
         private ParentSelection(
                 List<ResourceLocation> anchors,
                 int desiredCount,
+                AutomaticWeaponPrerequisiteDecision.GeneratedRequirementShape
+                        requirementShape,
                 BranchSelectionBasis branchBasis) {
-            this(anchors, desiredCount, Optional.of(branchBasis));
+            this(anchors, desiredCount, requirementShape, Optional.of(branchBasis));
         }
 
         private ParentSelection {
             branchBasis = branchBasis == null ? Optional.empty() : branchBasis;
-            if (anchors == null || anchors.stream().anyMatch(java.util.Objects::isNull)
+            if (anchors == null || requirementShape == null
+                    || anchors.stream().anyMatch(java.util.Objects::isNull)
                     || desiredCount < 1
                     || desiredCount
                             > AutomaticWeaponPlacementPolicy.MAX_GENERATED_PREREQUISITES) {
@@ -1376,6 +2036,15 @@ public final class AutomaticWeaponPrerequisitePlanner {
             }
             anchors = List.copyOf(new LinkedHashSet<>(anchors));
         }
+
+        private ParentSelection withAnchors(List<ResourceLocation> replacement) {
+            return new ParentSelection(
+                    replacement,
+                    desiredCount,
+                    requirementShape,
+                    branchBasis);
+        }
+
     }
 
     private record BranchSelectionBasis(

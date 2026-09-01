@@ -37,9 +37,21 @@ class ResearchTechTreeLayoutPolicyTest {
         assertEquals(16, policy.effectiveNodesPerRow(16, 480));
         assertEquals(20, policy.effectiveNodesPerRow(20, 600));
         assertEquals(28, policy.effectiveNodesPerRow(28, 840));
+        assertEquals(20, policy.effectiveNodesPerRow(20, 360),
+                "portrait-width canvases should keep the normal landscape row intact");
         assertTrue(policy.effectiveNodesPerRow(20, 120) < 8);
         assertThrows(IllegalArgumentException.class, () ->
                 policy.effectiveNodesPerRow(10, 0));
+    }
+
+    @Test
+    void multipleAnyOfJunctionsReceiveBoundedNonOverlappingClearance() {
+        assertEquals(0, ResearchTechTreeLayoutPolicy.requirementJunctionClearance(0));
+        assertEquals(0, ResearchTechTreeLayoutPolicy.requirementJunctionClearance(1));
+        assertEquals(10, ResearchTechTreeLayoutPolicy.requirementJunctionClearance(2));
+        assertEquals(70, ResearchTechTreeLayoutPolicy.requirementJunctionClearance(8));
+        assertThrows(IllegalArgumentException.class, () ->
+                ResearchTechTreeLayoutPolicy.requirementJunctionClearance(65));
     }
 
     @Test

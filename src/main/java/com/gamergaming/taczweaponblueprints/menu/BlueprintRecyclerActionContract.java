@@ -5,6 +5,7 @@ import java.util.Optional;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintRecyclingService;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintReverseEngineeringService;
+import com.gamergaming.taczweaponblueprints.progression.FoundWeaponRecoveryService;
 import com.gamergaming.taczweaponblueprints.progression.ResearchDataRedemptionService;
 
 import net.minecraft.resources.ResourceLocation;
@@ -18,7 +19,8 @@ public final class BlueprintRecyclerActionContract {
         RECYCLE,
         REDEEM,
         REDEEM_STACK,
-        REVERSE_ENGINEER
+        REVERSE_ENGINEER,
+        RECOVER_POINTS
     }
 
     public enum ResultCode {
@@ -55,6 +57,9 @@ public final class BlueprintRecyclerActionContract {
         POINTS_REQUIRED,
         INGREDIENTS_REQUIRED,
         OUTPUT_OCCUPIED,
+        NOT_A_WEAPON,
+        VERIFIED_LOOT_REQUIRED,
+        RECOVERY_DISABLED,
         ROLLBACK_FAILED;
 
         public static ResultCode from(BlueprintRecyclingService.Status status) {
@@ -119,8 +124,34 @@ public final class BlueprintRecyclerActionContract {
                 case POINTS_REQUIRED -> POINTS_REQUIRED;
                 case INGREDIENTS_REQUIRED -> INGREDIENTS_REQUIRED;
                 case OUTPUT_OCCUPIED -> OUTPUT_OCCUPIED;
+                case RECOVERY_MODE_DISABLED -> RECOVERY_DISABLED;
                 case STALE_INPUT -> STALE_INPUT;
                 case STALE_POLICY -> STALE_POLICY;
+                case TRANSACTION_FAILED, READY -> TRANSACTION_FAILED;
+                case ROLLBACK_FAILED -> ROLLBACK_FAILED;
+            };
+        }
+
+        public static ResultCode from(FoundWeaponRecoveryService.Status status) {
+            if (status == null) {
+                return TRANSACTION_FAILED;
+            }
+            return switch (status) {
+                case SUCCESS -> SUCCESS;
+                case INVALID_INPUT -> INVALID_INPUT;
+                case INVALID_PLAYER -> INVALID_PLAYER;
+                case PLAYER_DATA_UNAVAILABLE -> PLAYER_DATA_UNAVAILABLE;
+                case REVERSE_ENGINEERING_INELIGIBLE -> POLICY_INELIGIBLE;
+                case NOT_A_WEAPON -> NOT_A_WEAPON;
+                case VERIFIED_LOOT_REQUIRED -> VERIFIED_LOOT_REQUIRED;
+                case RECOVERY_DISABLED -> RECOVERY_DISABLED;
+                case POLICY_UNAVAILABLE -> POLICY_UNAVAILABLE;
+                case STALE_POLICY -> STALE_POLICY;
+                case POLICY_INELIGIBLE -> POLICY_INELIGIBLE;
+                case RECYCLING_DISABLED -> RECYCLING_DISABLED;
+                case NO_VALUE -> NO_VALUE;
+                case POINT_CAP_REACHED -> POINT_CAP_REACHED;
+                case STALE_INPUT -> STALE_INPUT;
                 case TRANSACTION_FAILED, READY -> TRANSACTION_FAILED;
                 case ROLLBACK_FAILED -> ROLLBACK_FAILED;
             };

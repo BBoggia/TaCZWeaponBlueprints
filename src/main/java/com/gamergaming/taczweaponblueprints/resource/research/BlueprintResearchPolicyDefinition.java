@@ -1,5 +1,6 @@
 package com.gamergaming.taczweaponblueprints.resource.research;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,6 +18,7 @@ public record BlueprintResearchPolicyDefinition(
         int recyclingValue,
         BlueprintResearchCost researchCost,
         boolean requiresDiscovery,
+        ResearchRequirements requirements,
         List<ResourceLocation> prerequisites,
         boolean creativeBypassesCost,
         Optional<ResourceLocation> ruleId,
@@ -25,13 +27,14 @@ public record BlueprintResearchPolicyDefinition(
         BlueprintReverseEngineeringPolicy reverseEngineering) {
 
     public BlueprintResearchPolicyDefinition {
-        if (visibility == null || researchCost == null || specificity == null
+        if (visibility == null || researchCost == null || requirements == null
+                || prerequisites == null || specificity == null
                 || reverseEngineering == null) {
             throw new IllegalArgumentException(
                     "policy visibility, costs, specificity, and reverse-engineering policy cannot be null");
         }
-        prerequisites = prerequisites == null ? List.of() : List.copyOf(prerequisites);
         ruleId = ruleId == null ? Optional.empty() : ruleId;
+        prerequisites = validatePrerequisiteOrder(requirements, prerequisites);
         if (recyclingValue < 0 || recyclingValue > PlayerProgressionLimits.MAX_RESEARCH_POINTS) {
             throw new IllegalArgumentException("policy recycling value is outside the supported range");
         }
@@ -39,6 +42,81 @@ public record BlueprintResearchPolicyDefinition(
         validateReverseEngineeringEconomy(
                 recyclingEnabled,
                 recyclingValue,
+                reverseEngineering);
+    }
+
+    /** Canonical constructor using deterministic order for the flat compatibility view. */
+    public BlueprintResearchPolicyDefinition(
+            boolean journalEnabled,
+            boolean treeEnabled,
+            JournalVisibility visibility,
+            boolean researchEnabled,
+            boolean recyclingEnabled,
+            boolean allowUnlearnedRecycling,
+            int recyclingValue,
+            BlueprintResearchCost researchCost,
+            boolean requiresDiscovery,
+            ResearchRequirements requirements,
+            boolean creativeBypassesCost,
+            Optional<ResourceLocation> ruleId,
+            BlueprintResearchTarget.MatchSpecificity specificity,
+            boolean visibilityRestricted,
+            BlueprintReverseEngineeringPolicy reverseEngineering) {
+        this(
+                journalEnabled,
+                treeEnabled,
+                visibility,
+                researchEnabled,
+                recyclingEnabled,
+                allowUnlearnedRecycling,
+                recyclingValue,
+                researchCost,
+                requiresDiscovery,
+                requirements,
+                requirements == null
+                        ? null
+                        : requirements.conservativeAlternatives(),
+                creativeBypassesCost,
+                ruleId,
+                specificity,
+                visibilityRestricted,
+                reverseEngineering);
+    }
+
+    /** Compatibility constructor for callers that still supply mandatory flat parents. */
+    public BlueprintResearchPolicyDefinition(
+            boolean journalEnabled,
+            boolean treeEnabled,
+            JournalVisibility visibility,
+            boolean researchEnabled,
+            boolean recyclingEnabled,
+            boolean allowUnlearnedRecycling,
+            int recyclingValue,
+            BlueprintResearchCost researchCost,
+            boolean requiresDiscovery,
+            List<ResourceLocation> prerequisites,
+            boolean creativeBypassesCost,
+            Optional<ResourceLocation> ruleId,
+            BlueprintResearchTarget.MatchSpecificity specificity,
+            boolean visibilityRestricted,
+            BlueprintReverseEngineeringPolicy reverseEngineering) {
+        this(
+                journalEnabled,
+                treeEnabled,
+                visibility,
+                researchEnabled,
+                recyclingEnabled,
+                allowUnlearnedRecycling,
+                recyclingValue,
+                researchCost,
+                requiresDiscovery,
+                ResearchRequirements.fromLegacy(
+                        prerequisites == null ? List.of() : prerequisites),
+                prerequisites == null ? List.of() : prerequisites,
+                creativeBypassesCost,
+                ruleId,
+                specificity,
+                visibilityRestricted,
                 reverseEngineering);
     }
 
@@ -75,7 +153,12 @@ public record BlueprintResearchPolicyDefinition(
                 rule.recyclingValue().orElse(recyclingValue),
                 rule.researchCost().orElse(researchCost),
                 rule.requiresDiscovery().orElse(requiresDiscovery),
-                rule.prerequisites().orElse(prerequisites),
+                rule.prerequisiteRequirements().orElse(requirements),
+                rule.prerequisiteRequirements().isEmpty()
+                        ? prerequisites
+                        : rule.prerequisites().orElseGet(() ->
+                                rule.prerequisiteRequirements().orElseThrow()
+                                        .conservativeAlternatives()),
                 rule.creativeBypassesCost().orElse(creativeBypassesCost),
                 Optional.of(selectedRuleId),
                 selectedSpecificity,
@@ -88,6 +171,23 @@ public record BlueprintResearchPolicyDefinition(
     }
 
     public BlueprintResearchPolicyDefinition withPrerequisites(List<ResourceLocation> effectivePrerequisites) {
+        return withRequirements(
+                ResearchRequirements.fromLegacy(effectivePrerequisites),
+                effectivePrerequisites);
+    }
+
+    public BlueprintResearchPolicyDefinition withRequirements(
+            ResearchRequirements effectiveRequirements) {
+        return withRequirements(
+                effectiveRequirements,
+                effectiveRequirements == null
+                        ? null
+                        : effectiveRequirements.conservativeAlternatives());
+    }
+
+    BlueprintResearchPolicyDefinition withRequirements(
+            ResearchRequirements effectiveRequirements,
+            List<ResourceLocation> effectivePrerequisiteOrder) {
         return new BlueprintResearchPolicyDefinition(
                 journalEnabled,
                 treeEnabled,
@@ -98,7 +198,8 @@ public record BlueprintResearchPolicyDefinition(
                 recyclingValue,
                 researchCost,
                 requiresDiscovery,
-                effectivePrerequisites,
+                effectiveRequirements,
+                effectivePrerequisiteOrder,
                 creativeBypassesCost,
                 ruleId,
                 specificity,
@@ -122,12 +223,27 @@ public record BlueprintResearchPolicyDefinition(
                 recyclingValue,
                 researchCost,
                 requiresDiscovery,
+                requirements,
                 prerequisites,
                 creativeBypassesCost,
                 ruleId,
                 specificity,
                 visibilityRestricted,
                 reverseEngineering);
+    }
+
+    private static List<ResourceLocation> validatePrerequisiteOrder(
+            ResearchRequirements requirements,
+            List<ResourceLocation> prerequisiteOrder) {
+        List<ResourceLocation> copy = List.copyOf(prerequisiteOrder);
+        if (copy.stream().anyMatch(java.util.Objects::isNull)
+                || new LinkedHashSet<>(copy).size() != copy.size()
+                || !new LinkedHashSet<>(copy).equals(new LinkedHashSet<>(
+                        requirements.conservativeAlternatives()))) {
+            throw new IllegalArgumentException(
+                    "flat prerequisite compatibility order does not match canonical requirements");
+        }
+        return copy;
     }
 
     private static void validateEconomy(

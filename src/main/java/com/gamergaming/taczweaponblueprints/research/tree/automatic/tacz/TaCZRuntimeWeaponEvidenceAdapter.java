@@ -11,10 +11,13 @@ import java.util.function.Function;
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
 import com.gamergaming.taczweaponblueprints.item.BlueprintKind;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.WeaponMechanicalReferenceCatalog;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.WeaponFireModeEvidence;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.WeaponStatEvidence;
 import com.tacz.guns.resource.CommonAssetsManager;
 import com.tacz.guns.resource.index.CommonGunIndex;
 import com.tacz.guns.resource.pojo.data.gun.BulletData;
+import com.tacz.guns.resource.pojo.data.gun.BurstData;
+import com.tacz.guns.resource.pojo.data.gun.ChargeData;
 import com.tacz.guns.resource.pojo.data.gun.ExplosionData;
 import com.tacz.guns.resource.pojo.data.gun.ExtraDamage;
 import com.tacz.guns.resource.pojo.data.gun.FeedType;
@@ -24,6 +27,10 @@ import com.tacz.guns.resource.pojo.data.gun.GunRecoilKeyFrame;
 import com.tacz.guns.resource.pojo.data.gun.GunReloadData;
 import com.tacz.guns.resource.pojo.data.gun.GunReloadTime;
 import com.tacz.guns.resource.pojo.data.gun.InaccuracyType;
+import com.tacz.guns.resource.pojo.data.gun.GunHeatData;
+import com.tacz.guns.resource.pojo.data.gun.GunFireModeAdjustData;
+import com.tacz.guns.api.item.gun.FireMode;
+import com.tacz.guns.resource.pojo.data.gun.ChargeType;
 
 import net.minecraft.resources.ResourceLocation;
 
@@ -103,6 +110,21 @@ public final class TaCZRuntimeWeaponEvidenceAdapter {
         if (boltAction == null) {
             boltAction = positiveOrNull(number(gun.getScriptParam(), "bolt_time"));
         }
+        BurstData burst = gun.getBurstData();
+        boolean hasBurstMode = gun.getFireModeSet() != null
+                && gun.getFireModeSet().contains(FireMode.BURST);
+        Integer burstCount = hasBurstMode && burst != null && burst.getCount() > 0
+                ? burst.getCount()
+                : 1;
+        Double burstRoundsPerMinute = hasBurstMode && burst != null
+                ? positiveOrNull(burst.getBpm())
+                : null;
+        GunHeatData heat = gun.getHeatData();
+        Double heatCapacityShots = heat == null
+                ? null
+                : positiveRatio(heat.getHeatMax(), heat.getHeatPerShot());
+        boolean ignitesEntities = bullet.getIgnite() != null
+                && bullet.getIgnite().isIgniteEntity();
         return new WeaponStatEvidence(
                 blueprintId,
                 runtime.archetype(),
@@ -130,7 +152,35 @@ public final class TaCZRuntimeWeaponEvidenceAdapter {
                 reloadType(gun.getReloadData()),
                 explosive,
                 script != null,
+                Math.max(1, bullet.getBulletAmount()),
+                damageRetention(extraDamage),
+                explosive ? nonNegativeOrNull(explosion.getRadius()) : null,
+                explosive ? nonNegativeOrNull(explosion.getDelay()) : null,
+                explosive && explosion.isKnockback(),
+                ignitesEntities,
+                ignitesEntities ? nonNegativeOrNull(bullet.getIgniteEntityTime()) : null,
+                nonNegativeOrNull(bullet.getGravity()),
+                tacticalReloadSeconds(gun, script, warnings),
+                burstCount,
+                burstRoundsPerMinute,
+                heatCapacityShots,
+                chargeSeconds(gun),
+                fireModes(gun, bullet, extraDamage, explosion, aimedInaccuracy(gun, warnings),
+                        warnings),
+                heatRecoverySeconds(heat),
+                heat == null ? null : positiveOrNull(heat.getMinRpmMod()),
+                heat == null ? null : positiveOrNull(heat.getMaxRpmMod()),
+                heat == null ? null : positiveOrNull(heat.getMinInaccuracy()),
+                heat == null ? null : positiveOrNull(heat.getMaxInaccuracy()),
                 warnings);
+    }
+
+    /** Shared normalization entry point used by the offline reference generator. */
+    public WeaponStatEvidence normalize(
+            String blueprintId,
+            String archetype,
+            GunData gun) {
+        return normalize(blueprintId, new RuntimeGun(archetype, gun));
     }
 
     private static RuntimeGun runtimeGun(CommonGunIndex index) {
@@ -163,6 +213,32 @@ public final class TaCZRuntimeWeaponEvidenceAdapter {
         }
         warnings.add("effective_range");
         return null;
+    }
+
+    /**
+     * Mean retained damage across TaCZ's declared distance samples. A missing
+     * distance curve means the base damage remains constant for the bullet's life.
+     */
+    private static Double damageRetention(ExtraDamage extraDamage) {
+        if (extraDamage == null || extraDamage.getDamageAdjust() == null
+                || extraDamage.getDamageAdjust().isEmpty()) {
+            return 1.0;
+        }
+        double total = 0.0;
+        double maximum = 0.0;
+        int count = 0;
+        for (ExtraDamage.DistanceDamagePair pair : extraDamage.getDamageAdjust()) {
+            if (pair == null || !Float.isFinite(pair.getDamage()) || pair.getDamage() < 0) {
+                continue;
+            }
+            total += pair.getDamage();
+            maximum = Math.max(maximum, pair.getDamage());
+            count++;
+        }
+        if (count == 0) {
+            return null;
+        }
+        return maximum == 0.0 ? 1.0 : total / count / maximum;
     }
 
     /** TaCZ applies the first distance curve entry at point-blank range. */
@@ -228,6 +304,149 @@ public final class TaCZRuntimeWeaponEvidenceAdapter {
         }
         warnings.add("reload.duration");
         return null;
+    }
+
+    private static Double tacticalReloadSeconds(
+            GunData gun,
+            ResourceLocation script,
+            List<String> warnings) {
+        GunReloadData reload = gun.getReloadData();
+        if (reload == null) {
+            return null;
+        }
+        if (script != null && isTubeReloadScript(script.toString())) {
+            warnings.add("scripted_tactical_reload_duration:" + script);
+            return null;
+        }
+        Double tactical = tactical(reload.getCooldown());
+        if (tactical != null) {
+            return tactical;
+        }
+        tactical = tactical(reload.getFeed());
+        if (tactical != null) {
+            warnings.add("reload.cooldown.tactical (used feed fallback)");
+        }
+        return tactical;
+    }
+
+    private static Double chargeSeconds(GunData gun) {
+        if (gun.getFireModeSet() == null || gun.getFireModeSet().isEmpty()) {
+            return 0.0;
+        }
+        Double minimum = null;
+        for (FireMode mode : gun.getFireModeSet()) {
+            ChargeData charge = gun.getChargeData(mode);
+            if (charge == null) {
+                return 0.0;
+            }
+            double increase = charge.getIncreasePerTick();
+            double threshold = chargeTarget(charge);
+            if (!Double.isFinite(increase) || increase <= 0.0
+                    || !Double.isFinite(threshold) || threshold < 0.0) {
+                return null;
+            }
+            double seconds = threshold / increase / 20.0;
+            minimum = minimum == null ? seconds : Math.min(minimum, seconds);
+        }
+        return minimum == null ? 0.0 : minimum;
+    }
+
+    private static List<WeaponFireModeEvidence> fireModes(
+            GunData gun,
+            BulletData bullet,
+            ExtraDamage extraDamage,
+            ExplosionData explosion,
+            Double baseAimedInaccuracy,
+            List<String> warnings) {
+        if (gun.getFireModeSet() == null || gun.getFireModeSet().isEmpty()) {
+            warnings.add("fire_mode (no normalized modes)");
+            return List.of();
+        }
+        Double directDamage = directDamage(bullet, extraDamage, warnings);
+        Double armorIgnore = extraDamage == null
+                ? null
+                : finite(extraDamage.getArmorIgnore());
+        Double headshot = extraDamage == null
+                ? null
+                : finite(extraDamage.getHeadShotMultiplier());
+        Double speed = finite(bullet.getSpeed());
+        double explosionDamage = explosion != null && explosion.isExplode()
+                ? explosion.getDamage()
+                : 0.0;
+        List<WeaponFireModeEvidence> result = new ArrayList<>();
+        for (FireMode mode : gun.getFireModeSet()) {
+            if (mode == null) {
+                continue;
+            }
+            GunFireModeAdjustData adjust = gun.getFireModeAdjustData(mode);
+            BurstData burst = mode == FireMode.BURST ? gun.getBurstData() : null;
+            ChargeProfile charge = chargeProfile(gun.getChargeData(mode));
+            result.add(new WeaponFireModeEvidence(
+                    mode.name().toLowerCase(Locale.ROOT),
+                    addAndClamp(directDamage,
+                            adjust == null ? 0.0 : adjust.getDamageAmount(),
+                            explosionDamage),
+                    (double) gun.getRoundsPerMinute(mode),
+                    burst == null ? 1 : Math.max(1, burst.getCount()),
+                    burst == null ? null : positiveOrNull(burst.getBpm()),
+                    burst == null ? null : nonNegativeOrNull(burst.getMinInterval()),
+                    charge.initialSeconds(),
+                    charge.repeatSeconds(),
+                    charge.duringCooldown(),
+                    addAndClamp(speed, adjust == null ? 0.0 : adjust.getSpeed(), 0.0),
+                    addAndClamp(armorIgnore,
+                            adjust == null ? 0.0 : adjust.getArmorIgnore(), 0.0),
+                    addAndClamp(headshot,
+                            adjust == null ? 0.0 : adjust.getHeadShotMultiplier(), 0.0),
+                    addAndClamp(baseAimedInaccuracy,
+                            adjust == null ? 0.0 : adjust.getAimInaccuracy(), 0.0)));
+        }
+        return List.copyOf(result);
+    }
+
+    private static ChargeProfile chargeProfile(ChargeData charge) {
+        if (charge == null) {
+            return new ChargeProfile(0.0, 0.0, true);
+        }
+        double increase = charge.getIncreasePerTick();
+        double target = chargeTarget(charge);
+        if (!Double.isFinite(increase) || increase <= 0.0
+                || !Double.isFinite(target) || target < 0.0) {
+            return new ChargeProfile(null, null, charge.isChargeDuringCooldown());
+        }
+        double initial = target / increase / 20.0;
+        double remaining = charge.getChargeType() == ChargeType.DELAY
+                ? 0.0
+                : Math.max(0.0, target - charge.getDecreaseOnFire());
+        double repeat = Math.max(0.0, target - remaining) / increase / 20.0;
+        return new ChargeProfile(initial, repeat, charge.isChargeDuringCooldown());
+    }
+
+    private static double chargeTarget(ChargeData charge) {
+        return charge.getChargeType() == ChargeType.HOLD
+                ? Math.min(charge.getFireThreshold(), charge.getMaxCharge())
+                : charge.getMaxCharge();
+    }
+
+    private static Double heatRecoverySeconds(GunHeatData heat) {
+        if (heat == null) {
+            return null;
+        }
+        Double maximum = positiveOrNull(heat.getHeatMax());
+        Double cooling = positiveOrNull(heat.getCoolingMultiplier());
+        Double lock = nonNegativeOrNull(heat.getOverHeatTime());
+        if (maximum == null || cooling == null || lock == null) {
+            return null;
+        }
+        // TaCZ documents cumulative cooling as cooling_multiplier * seconds^2.
+        return lock / 1000.0 + Math.sqrt(maximum / cooling);
+    }
+
+    private static Double addAndClamp(Double base, double adjustment, double extra) {
+        if (base == null || !Double.isFinite(adjustment) || !Double.isFinite(extra)) {
+            return null;
+        }
+        return Math.max(0.0, base + adjustment + extra);
     }
 
     private static String reloadType(GunReloadData reload) {
@@ -307,6 +526,20 @@ public final class TaCZRuntimeWeaponEvidenceAdapter {
         return value.doubleValue();
     }
 
+    private static Double nonNegativeOrNull(Number value) {
+        if (value == null || !Double.isFinite(value.doubleValue())
+                || value.doubleValue() < 0.0) {
+            return null;
+        }
+        return value.doubleValue();
+    }
+
+    private static Double positiveRatio(Number numerator, Number denominator) {
+        Double first = positiveOrNull(numerator);
+        Double second = positiveOrNull(denominator);
+        return first == null || second == null ? null : first / second;
+    }
+
     private static Double finite(Number value) {
         if (value == null || !Double.isFinite(value.doubleValue())) {
             return null;
@@ -325,6 +558,12 @@ public final class TaCZRuntimeWeaponEvidenceAdapter {
                 throw new IllegalArgumentException("TaCZ runtime gun fields are invalid");
             }
         }
+    }
+
+    private record ChargeProfile(
+            Double initialSeconds,
+            Double repeatSeconds,
+            boolean duringCooldown) {
     }
 
     public record Capture(

@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.compat.fzzy_config.BlueprintConfig;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCost;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchIngredient;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchPolicy;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchTarget.MatchSpecificity;
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
@@ -47,6 +48,10 @@ class BlueprintProgressionConfigSnapshotTest {
         assertTrue(snapshot.journalEnabled());
         assertTrue(snapshot.researchEnabled());
         assertEquals(TreeResearchResultMode.DIRECT_LEARN, snapshot.treeResearchResultMode());
+        assertEquals(ResearchCostMode.POINTS_AND_ITEMS, snapshot.researchCostMode());
+        assertEquals(
+                FoundWeaponRecoveryMode.PROTECTED_BLUEPRINT_ONLY,
+                snapshot.foundWeaponRecoveryMode());
         assertEquals(JournalVisibility.FULL, snapshot.maximumUndiscoveredVisibility());
         assertEquals(DuplicateBlueprintPolicy.MANUAL_RECYCLING, snapshot.duplicatePolicy());
         assertFalse(snapshot.allowUnlearnedRecycling());
@@ -157,6 +162,36 @@ class BlueprintProgressionConfigSnapshotTest {
                 false,
                 PROFILE);
         assertFalse(learnedOnly.apply(base).allowUnlearnedRecycling());
+    }
+
+    @Test
+    void researchCostModesMaskOnlyTheSelectedRuntimeChannels() {
+        BlueprintResearchCost authored = new BlueprintResearchCost(
+                8,
+                List.of(new BlueprintResearchIngredient(
+                        List.of(new ResourceLocation("minecraft:paper")),
+                        Optional.empty(),
+                        4)));
+        BlueprintResearchPolicy base = basePolicy(10, 8).withResearchCost(authored);
+
+        BlueprintProgressionConfigSnapshot pointsOnly = new BlueprintProgressionConfigSnapshot(
+                true, true, true, JournalVisibility.FULL, true,
+                DuplicateBlueprintPolicy.MANUAL_RECYCLING, true, 100, false, PROFILE,
+                TreeResearchResultMode.DIRECT_LEARN,
+                ResearchCostMode.POINTS_ONLY,
+                FoundWeaponRecoveryMode.PROTECTED_BLUEPRINT_ONLY);
+        BlueprintProgressionConfigSnapshot itemsOnly = new BlueprintProgressionConfigSnapshot(
+                true, true, true, JournalVisibility.FULL, true,
+                DuplicateBlueprintPolicy.MANUAL_RECYCLING, true, 100, false, PROFILE,
+                TreeResearchResultMode.DIRECT_LEARN,
+                ResearchCostMode.ITEMS_ONLY,
+                FoundWeaponRecoveryMode.PROTECTED_BLUEPRINT_ONLY);
+
+        assertEquals(8, pointsOnly.apply(base).researchCost().points());
+        assertTrue(pointsOnly.apply(base).researchCost().ingredients().isEmpty());
+        assertEquals(0, itemsOnly.apply(base).researchCost().points());
+        assertEquals(authored.ingredients(), itemsOnly.apply(base).researchCost().ingredients());
+        assertEquals(authored, base.researchCost(), "runtime masking must not rewrite authored cost");
     }
 
     private static BlueprintProgressionConfigSnapshot config(

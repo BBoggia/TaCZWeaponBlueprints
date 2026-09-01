@@ -2,8 +2,272 @@
 
 ## Unreleased
 
+### Changed
+
+- Research prerequisites now require root-connected knowledge rather than only
+  direct ownership of the immediately preceding blueprint. Weapons learned out
+  of order through loot, reverse engineering, starting grants, migration, or
+  administrator actions remain learned and usable, but cannot unlock research
+  above themselves until a complete required route reaches a tree root. AND
+  groups require every group to be connected, OR groups require one connected
+  alternative, and shortest-path purchases can repair missing ancestry without
+  charging for or relearning already-owned support nodes. Journal, tree group
+  indicators, Bench previews, and server transactions share the same derived,
+  memoized rule; player saves require no migration.
+- Simplified weapon-tree authority into two explicit, mutually exclusive modes.
+  An `automatic` format-2 tree now scores and places every catalog weapon and
+  exclusively owns generated weapon prerequisites; authored weapon coordinates
+  and prerequisites cannot leak into it. An `authored_only` tree publishes only
+  non-fallback exact, tag, or selector placements and omits every unspecified
+  weapon. Automatic profiles are required exactly once for automatic trees and
+  forbidden for authored-only trees. Ammo and attachment authoring is unchanged.
+- Migrated the bundled tree to full automatic authority with one generated
+  foundation, aligned the packaged weapon costs with capability tiers, and
+  updated topology fingerprints, release metadata, examples, diagnostics, and
+  migration guidance. Missing or stale automatic plans now fail closed instead
+  of silently restoring the former hybrid graph.
+- Bounded generated automatic prerequisite edges to the preceding two occupied
+  ranks for normal catalogs, removing disruptive foundation shortcuts such as
+  low-row weapons connecting directly into the upper tree. Sparse branches use
+  a nearby cross-family bridge only when neither preceding row contains a local
+  parent. Extremely tall catalogs relax the span only as far as required by the
+  global 64-node prerequisite-depth limit, with a bounded legacy-AND fallback
+  that preserves reload performance at the 4,096-weapon ceiling.
+
+## 1.3.0 - 2026-08-31
+
 ### Added
 
+- Migrated 49 of the 53 bundled TaCZ weapons from legacy authored ranks and
+  prerequisite chains to the same `capability_v3` automatic placement and
+  grouped-route pipeline used for add-on guns. Glock 17 remains the shared
+  entry and M320, RPG-7, and Minigun retain reviewed exceptions. Priority-zero
+  single-exact fallback entries preserve safe coordinates when evidence is not
+  ready, automatic tier bands now own the matching RP costs, and generated
+  prerequisites rebase with live entry-point fallbacks when the preferred root
+  is missing, blocked, or progression-exempt.
+
+- Added the versioned `capability_v3` automatic weapon scoring model and made it
+  explicit in the packaged format-4 automatic-placement profile. V3 captures
+  projectile, falloff, explosive, burst, heat, charge, and tactical-reload
+  evidence; scores six explainable capability packages; calibrates the result
+  across the full progression range; and uses matching normalized role evidence
+  for branch formation. Shotgun pellets no longer risk multiplying total TaCZ
+  damage, launchers receive area-control credit, scripted/missing evidence stays
+  review-marked, and the 53-gun reference is SHA-256 pinned. Existing custom
+  profiles remain on `mechanical_v2` unless they opt into format 4. Status,
+  inspection, comparison reports, and catalog exports expose model/version and
+  authored-tier divergence without changing research authority or player saves.
+  The bundled M320 is deliberately migrated from the opening Basic branch root
+  to Advanced rank 5 behind the AUG and M870, with its RP/material cost raised
+  to the matching authored band. The final scoring audit now shares TaCZ's
+  deserialized defaults between runtime and offline extraction, evaluates real
+  per-mode adjustments and burst trigger intervals, models charge overlap and
+  heat recovery, separates armor bypass from multi-target pierce, treats
+  explosion delay as an unscored seconds-based fuse, includes the expanded v3
+  evidence in branch identity, and isolates v3 scoring failures from the v2
+  rollback publication. Capability reports now identify formula and reference
+  versions separately and replace outputs atomically.
+
+- Added synchronized `POINTS_AND_ITEMS`, `POINTS_ONLY`, and `ITEMS_ONLY`
+  Research Tree cost modes. Effective costs are masked non-destructively across
+  single-node and shortest-path research, previews, operator economy output,
+  and catalog exports, while authored datapack costs remain intact and the
+  combined mode remains the default.
+- Added versioned physical-gun origin tracking and configurable found-weapon
+  recovery. New TaCZ survival crafts are marked crafted, generated loot guns
+  are marked with their loot table, and unknown or legacy guns fail closed.
+  Verified found guns can retain protected blueprint extraction, create a
+  recyclable blueprint, convert directly to the existing recycling RP value,
+  or offer both actions. Direct recovery pays current reverse-engineering
+  costs, respects recycling policy and the RP cap, requires confirmation for
+  an unlearned weapon, and commits or rolls back atomically. Matching clients
+  and servers advance to protocol 40; player saves and existing items require
+  no migration.
+
+- Added atomic shortest-path Research Tree purchases for the packaged
+  `DIRECT_LEARN` mode. Selecting a higher locked node now resolves every
+  mandatory prerequisite group, retains a bounded nondominated route frontier,
+  and chooses a globally fewest-new-node closure. Among equally short closures,
+  an affordable route is preferred before RP, material-burden, and canonical-ID
+  tie breaks. The Bench previews the full distinct-node RP/material cost and
+  unlocks the complete prerequisite-first closure in one transaction. Shared
+  prerequisites are charged once, already learned or progression-exempt
+  prerequisites are free, invalid or undisclosed alternatives are not silently
+  traversed, and any commit failure restores RP, inventory, blueprint
+  knowledge, discovery, and legacy recipe aliases. Protocol 39 adds bounded
+  unlock and total-material-type counts, explicit oversized/complex planning
+  states, and append-only matching route results to the authoritative Bench
+  preview. Path awards are dispatched
+  as one ordered post-commit batch with correct intermediate milestone counts;
+  `CREATE_BLUEPRINT` keeps its compatibility-safe single-node behavior.
+- Completed grouped-prerequisite Phase 12 with bounded branch-aware visual
+  refinement. Responsive wrapping now uses the minimum required row count while
+  rejecting severely underfilled rows before preferring boundaries between
+  mature weapon families; oversized families split only when capacity requires
+  it and the shared base remains densely balanced. Partition state is bounded
+  by row count times row capacity, a lone mature family remains coherent around
+  authored nodes even with zero ordering sweeps, and responsive family wrapping
+  is covered end to end. Multiple drawable any-of groups receive dedicated
+  connector lanes, including the maximum valid 32-group stack, and
+  alternative-route pressure can open one small capped branch seam. These
+  client-only changes preserve node order, semantic ranks, canonical AND-of-OR
+  authority, dynamic width, the 15% zoom floor, protocol 37, export format 18,
+  and default-disabled Ammo and Attachment research.
+  `verifyGroupedVisualRefinementContract` pins
+  `branch-aware-visual-refinement-v1`, covers the 287- and 4,096-node fixtures,
+  and records the remaining in-client screenshot comparison as a manual release
+  gate.
+- Completed grouped-prerequisite Phase 11 with the opt-in
+  `hybrid_routes_v1` generator. It publishes explicit mandatory, alternate-route,
+  or alternate-route-plus-gateway requirement shapes; schedules at most one
+  deliberate gateway per eligible shared/transition rank; prices hybrid
+  ancestry from canonical AND-of-OR groups; preserves ancestor, depth, cost,
+  authored-authority, and specialization/terminal safeguards; and retains the
+  packaged `grouped_routes_v1` default. Status, inspect, and deterministic
+  export format 18 expose relationship identity and aggregate counts.
+  `verifyHybridRouteGenerationContract` pins
+  `deliberate-hybrid-generation-v1` without changing protocol 37, player
+  knowledge, or the default-disabled Ammo and Attachment domains.
+- Completed grouped-prerequisite Phase 10 with the release-blocking
+  `default-rollout-migration-v1` stabilization contract. The packaged format-3
+  automatic profile is certified as `grouped_routes_v1` by default while
+  explicit and omitted `legacy_and` remain the migration-safe compatibility
+  path; grouped failures never silently change semantics. The aggregate gate
+  consumes the Phase 7–9 evidence and adds exact save-compatibility,
+  disclosure, packet-bound, cache-invalidation, 53/287/4,096-scale, and
+  viewport checks. It writes
+  `build/reports/grouped-route-stabilization.json`, records the required manual
+  visual acceptance boundary, and pins the contract in the JAR and release
+  report without changing protocol 37, export format 17, player knowledge, or
+  the default-disabled Ammo and Attachment domains.
+- Completed grouped-prerequisite Phase 9 with strategy-correct automatic
+  route selection. `grouped_routes_v1` now evaluates a proposed second parent
+  by bounded individual-route cost and mandatory-ancestry diversity instead of
+  pricing the mandatory union of both closures; only a proven cost ratio above
+  the 8.0x extreme-review ceiling is rejected (4.0x remains a p95 warning),
+  while uncertain authored AND-of-OR ancestry remains
+  eligible with explicit bounds. Legacy AND retains its former union guard.
+  Status, authoring evidence, and export format 17 expose review outcomes,
+  exactness, cost bounds, ancestry overlap, divergence, and aggregate counts.
+  `verifyGroupedRouteSelectionContract` binds 12 exact invariants and writes
+  `build/reports/grouped-route-selection.json`; protocol 37, RP authority, and
+  default-disabled Ammo and Attachment research remain unchanged.
+- Completed grouped-prerequisite Phase 8 with the release-blocking
+  `grouped-routes-v1-rollout-v1` contract. The planner now explicitly ignores
+  `merge_interval` for `grouped_routes_v1` instead of relying on the current
+  two-parent ceiling to make it inert; legacy second/third-parent scheduling is
+  preserved and classified separately. Operator status reports that behavior
+  and labels the retained generated-parent cost check as the conservative
+  legacy-AND union-closure guard. `verifyGroupedRouteRolloutContract` requires
+  20 exact invariants across strategy validation, deterministic parent/rank
+  planning, authored authority, server/public/network/UI/export truth, client
+  routes and recommendations, group-aware economy, and packaged domain
+  defaults, then writes `build/reports/grouped-route-rollout.json`. The release
+  manifest/report pin the contract; protocol 37, export format 16, RP authority,
+  and default-disabled Ammo and Attachment research are unchanged.
+- Completed grouped-prerequisite Phase 7 with a release-blocking semantic and
+  integration acceptance matrix. Direct tests now freeze legacy two-parent AND,
+  single-group inclusive OR (including ownership of both alternatives), and
+  AND-across-groups truth tables; legacy JSON decoding into singleton groups;
+  malformed/cyclic rejection; safe generated filtering; authored authority;
+  disclosure-safe cardinality; server/network group identity; the grouped
+  two-parent ceiling; legacy topology compatibility; and repeated-run
+  determinism. `verifyGroupedPrerequisiteAcceptanceContract` requires the exact
+  20 clean JUnit cases and writes a machine-readable report. The release
+  manifest/report pin `truth-tables-integration-v1`; gameplay, protocol 37,
+  export format 16, and default-disabled Ammo and Attachment research are
+  unchanged.
+- Added the grouped-route Phase 6 motif decision gate. It consumes the live
+  Phase 5 semantic-quality and topology audits, deterministically retains the
+  current grouped routes when evidence is healthy, names only bounded motif
+  prototypes when ineffective alternatives, branch bottlenecks, long ladders,
+  or route-cost imbalance warrant them, and refuses to recommend changes from
+  incomplete authority. Pre-junction crossing estimates remain explicit manual
+  visual evidence and cannot mutate prerequisites. Sparse branches are measured
+  at their earliest actual post-split cohort rather than disappearing when the
+  global family-start row is empty. `/gg research status` and
+  deterministic export format 16 expose the `evidence-gate-v1` assessment;
+  gameplay, protocol 37, placement version, and default-disabled Ammo and
+  Attachment research are unchanged.
+- Added the live grouped-route Phase 5 quality audit. Revision-matched
+  `grouped_routes_v1` trees now report structurally effective alternatives,
+  requirement-aware mandatory ancestry, route-cost balance, branch-entry
+  redundancy/overlap, single-route chains, same/cross-family OR density,
+  phase fan-out, and bounded minimum-route affordability for every terminal.
+  The audit uses bitset ancestry at the 4,096-node ceiling and reports safe
+  lower/upper bounds for authored multi-group routes instead of claiming a
+  greedy estimate is exact. `/gg research status` exposes the live summaries;
+  deterministic export format 15 adds full distributions, terminal evidence,
+  and machine-readable warnings. Warning counts remain observational and do
+  not become catalog-size-independent release gates. The manifest and release
+  report pin `distributions-warnings-v1`; protocol 37 and gameplay authority
+  are unchanged.
+- Completed the truthful grouped-route Phase 4 client rollout. Inclusive
+  any-of requirements now converge through disclosure-safe diamond junctions
+  with one outgoing arrow, live disclosed satisfaction fill, spatially indexed
+  culling, and support for separate AND-combined groups; singleton mandatory
+  requirements retain direct arrows. Focus styling distinguishes alternative
+  legs from mandatory edges, while selected-node summaries and tooltips say
+  `Requires one of`, name only published alternatives, and report hidden or
+  outside-view members as bounded anonymous counts. Existing group-aware layout
+  cache comparison invalidates geometry on boundary changes but reuses it for
+  satisfaction-only updates. Protocol 37 and export format 14 already carry the
+  required canonical identity, so neither format changes.
+- Activated automatic grouped routes in Phase 3. Automatic-placement profile
+  format 3 adds the versioned `prerequisite_strategy`; `grouped_routes_v1`
+  reuses the current branch/layer parent selection but publishes a selected pair
+  as one inclusive any-of group, keeps singleton and generated-root behavior,
+  and prohibits generated third alternatives. The packaged connected profile
+  enables it while `legacy_and` and all older profiles remain compatible.
+  Strategy identity now participates in atomic plan matching, diagnostics,
+  status, the release manifest/report, and deterministic format-14 export.
+  Authored requirements still win, rank reconciliation preserves canonical
+  groups, either generated route satisfies research, and the obsolete Phase-0
+  counterfactual is suppressed when grouped routes are already authoritative.
+- Hardened the grouped-route rollout after its post-implementation audit.
+  Resolved Tech Tree entry points now explicitly suppress generated
+  prerequisites in both planning and live fallback resolution; diagnostic
+  entries retain the exact canonical requirement groups used at runtime;
+  format-14 export writes those groups without reconstructing their order; and
+  future prerequisite strategies are forced through exhaustive planner,
+  validation, and diagnostic handling. Format-3 compatibility is pinned to its
+  actual introduction version rather than the moving current-format constant.
+  Operator output now calls multi-parent selections what they are under both
+  AND and OR strategies while legacy export field names remain available.
+- Completed grouped-prerequisite Phase 2 across the live research pipeline.
+  Research-rule format 2 now accepts strict, mutually exclusive
+  `prerequisite_groups` with AND semantics across groups and inclusive OR
+  semantics within each `any_of` group; legacy `prerequisites` retains authored
+  order and mandatory singleton-AND behavior. Canonical groups now survive
+  policy resolution, entry-point rebasing, automatic-plan adapters, per-group
+  fail-open filtering, disclosure-safe public graphs, projections, protocol 37
+  synchronization, client summaries, Journal counts, inspect output, and
+  deterministic format-13 exports. Public groups retain stable ordinals,
+  visible alternatives, hidden counts, and satisfaction only when the
+  dependent's visibility permits exact policy disclosure. Topology and economy
+  audits now distinguish real AND merges from OR choices while the existing
+  singleton automatic trees retain their Phase-0 topology and fingerprints.
+- Added the behavior-neutral grouped-prerequisite Phase 1 model.
+  `ResearchRequirements` now represents AND across strict
+  `ResearchPrerequisiteGroup` any-of groups with deterministic codecs,
+  ordering, union-edge cycle validation, and bounded duplicate/self-reference
+  checks. Existing rules, resolved policies, and generated plans expose their
+  flat prerequisites as singleton groups, and the resolver evaluates that
+  canonical singleton model without changing the current mandatory-AND truth
+  table. That phase deliberately deferred grouped datapack authoring, public
+  graph identity, protocol, layout, and gameplay to the end-to-end Phase 2
+  migration above.
+- Added the behavior-neutral grouped-prerequisite Phase 0 baseline. A new
+  read-only audit compares current mandatory generated parent closures with a
+  counterfactual in which each matched generated multi-parent set is one
+  inclusive any-of group. It reports phase-specific parent density, fan-out,
+  branch entries, single-parent chains, ancestry overlap, deterministic route
+  estimates, finite-income affordability, and an input fingerprint without
+  changing policy resolution, automatic placement, published edges, layout,
+  protocol, datapacks, or saves. `/gg research status` labels both new evidence
+  lines as diagnostic-only; 53- and 287-weapon fixtures freeze the results while
+  the existing 4,096-node boundary remains intact.
 - Rebalanced mixed authored/automatic trees after large-catalog visual QA.
   Automatic shared-trunk members now consume residual capacity beside authored
   nodes instead of lifting an otherwise full generated row into an empty upper
@@ -11,7 +275,10 @@
   multi-node tapers and terminal peer cohorts. Upper family boundaries now grow
   from a clearly visible initial gutter to a modest overview-scale branch
   envelope. Automatic topology `tacz-gun-placement-v12` identifies the changed
-  mixed-rank finalization; protocol 36 and export format 12 are unchanged.
+  mixed-rank finalization. Responsive wrapping now preserves a complete
+  landscape row down to roughly one-third scale, preventing portrait windows
+  from turning healthy 20-node semantic ranks into unnecessarily tall stacks.
+  Protocol 36 and export format 12 are unchanged.
 - Hardened large-catalog automatic trees after the tapered-branch review.
   Current dynamic connected publications now retain canonical decision evidence
   even when a candidate intentionally remains independent, authored
@@ -182,6 +449,14 @@
 
 ### Fixed
 
+- Corrected crafted-gun provenance stamping to target TaCZ's actual
+  compiler-generated crafting lambda, with a bytecode contract test that pins
+  the external call site. Non-learning found-weapon recovery is now independent
+  from physical-blueprint learning permission while retaining every content,
+  equipment, cost, recycling, and RP-cap gate.
+- Made Research Tree selected-node summaries, recommendations, tracked-plan
+  summaries, tooltips, and narration respect `POINTS_ONLY`, `ITEMS_ONLY`, and
+  `POINTS_AND_ITEMS` before an exact server preview arrives.
 - Completed the post-Phase-4 automatic-tree compatibility audit: non-authored
   bundled reference guns now remain eligible for automatic-only trees,
   catalog-resolved format-2 selector ranks are validated before their
@@ -248,6 +523,16 @@
   the Research Bench earning-help list and refresh that list when claims commit.
 
 ### Changed
+
+- Made Tech Tree the sole player-facing Research Bench view. Branches and All
+  Weapons remain dormant compatibility projections but their compact selector
+  and fullscreen rail action are hidden. Tech Tree is now the default and
+  authoritative destination, including across reloads, search, recommendations,
+  and restored client state.
+- Removed the silent automatic-to-legacy presentation fallback. A failed Tech
+  Tree publication now stays on an explicit unavailable Tech Tree screen and
+  emits a server error instead of hiding the intended view or presenting a
+  smaller legacy tree as though generation succeeded.
 
 - Added strict research-profile format 2 domain policies. The packaged profile
   now publishes and researches Weapons only by default while retaining all

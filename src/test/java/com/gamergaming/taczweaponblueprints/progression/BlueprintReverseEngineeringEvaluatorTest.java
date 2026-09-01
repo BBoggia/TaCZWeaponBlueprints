@@ -212,6 +212,77 @@ class BlueprintReverseEngineeringEvaluatorTest {
     }
 
     @Test
+    void nonLearningRecoveryIsIndependentFromPhysicalBlueprintLearning() {
+        ResourceLocation gunId = id("tacz:found_rifle");
+        ItemStack gun = new ItemStack(Items.IRON_INGOT);
+        PlayerRecipeData playerData = new PlayerRecipeData();
+        BlueprintReverseEngineeringPolicy protectedOutput = new BlueprintReverseEngineeringPolicy(
+                true,
+                Optional.empty(),
+                new BlueprintResearchCost(0, List.of()),
+                true,
+                true,
+                PhysicalBlueprintLearningMode.DISABLED,
+                false,
+                false);
+
+        BlueprintReverseEngineeringEvaluator.Evaluation ordinaryExtraction =
+                BlueprintReverseEngineeringEvaluator.evaluate(
+                        gun,
+                        snapshot(protectedOutput),
+                        Map.of(gunId, data(gunId, BlueprintKind.GUN, "rifle", 1)),
+                        PROFILE,
+                        playerData,
+                        ignored -> false,
+                        ignored -> false,
+                        ignored -> identity(gunId, BlueprintKind.GUN, false, false, false));
+        BlueprintReverseEngineeringEvaluator.Evaluation directRecovery =
+                BlueprintReverseEngineeringEvaluator.evaluate(
+                        gun,
+                        snapshot(protectedOutput),
+                        Map.of(gunId, data(gunId, BlueprintKind.GUN, "rifle", 1)),
+                        PROFILE,
+                        playerData,
+                        ignored -> false,
+                        ignored -> false,
+                        ignored -> identity(gunId, BlueprintKind.GUN, false, false, false),
+                        true);
+
+        assertEquals(
+                BlueprintReverseEngineeringEvaluator.Status.REVERSE_ENGINEERING_DISABLED,
+                ordinaryExtraction.status());
+        assertTrue(directRecovery.ready());
+    }
+
+    @Test
+    void recyclableOnlyOutputRemainsAvailableWhenPhysicalLearningIsDisabled() {
+        ResourceLocation gunId = id("tacz:recyclable_rifle");
+        BlueprintReverseEngineeringPolicy recyclableOutput =
+                new BlueprintReverseEngineeringPolicy(
+                        true,
+                        Optional.empty(),
+                        new BlueprintResearchCost(1, List.of()),
+                        false,
+                        true,
+                        PhysicalBlueprintLearningMode.DISABLED,
+                        true,
+                        false);
+
+        BlueprintReverseEngineeringEvaluator.Evaluation evaluation =
+                BlueprintReverseEngineeringEvaluator.evaluate(
+                        new ItemStack(Items.IRON_INGOT),
+                        snapshot(recyclableOutput),
+                        Map.of(gunId, data(gunId, BlueprintKind.GUN, "rifle", 1)),
+                        PROFILE,
+                        new PlayerRecipeData(),
+                        ignored -> false,
+                        ignored -> false,
+                        ignored -> identity(gunId, BlueprintKind.GUN, false, false, false));
+
+        assertTrue(evaluation.ready());
+    }
+
+    @Test
     void provenanceIsAdditiveAndMalformedProtectedTagsFailClosed() {
         CompoundTag legacy = new CompoundTag();
         assertTrue(BlueprintProvenance.allowsRecycling(legacy));

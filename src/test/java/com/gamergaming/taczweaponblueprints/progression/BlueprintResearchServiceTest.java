@@ -19,11 +19,14 @@ import com.gamergaming.taczweaponblueprints.progression.BlueprintResearchService
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.AutomaticPlacementMode;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPrerequisiteOverlay;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPrerequisitePlan;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPolicy.PrerequisiteStrategy;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCost;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchIngredient;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchPolicy;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchTarget.MatchSpecificity;
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
+import com.gamergaming.taczweaponblueprints.resource.research.ResearchPrerequisiteGroup;
+import com.gamergaming.taczweaponblueprints.resource.research.ResearchRequirements;
 
 import net.minecraft.SharedConstants;
 import net.minecraft.resources.ResourceLocation;
@@ -418,6 +421,250 @@ class BlueprintResearchServiceTest {
         assertTrue(accepted.successful());
     }
 
+    @Test
+    void automaticWeaponAuthorityClearsAuthoredRequirementsEvenWithoutALivePlan() {
+        PlayerRecipeData data = data(5, true);
+        BlueprintResearchPolicy authored = policy(
+                data,
+                new BlueprintResearchCost(0, List.of()),
+                true, false, true, true, false, false);
+
+        BlueprintResearchPolicy withoutPlan = AutomaticWeaponPrerequisiteOverlay.apply(
+                authored,
+                null,
+                data,
+                ignored -> false,
+                true,
+                ignored -> true,
+                ignored -> false,
+                Map.of(),
+                true);
+
+        assertTrue(withoutPlan.requirements().allOf().isEmpty(),
+                "automatic weapon authority must not leak authored prerequisites while a plan is unavailable");
+
+        AutomaticWeaponPrerequisitePlan otherProfile = new AutomaticWeaponPrerequisitePlan(
+                id("test:other_profile"),
+                id("test:tree"),
+                AutomaticPlacementMode.CONNECTED,
+                5L,
+                7L,
+                1,
+                Map.of(BLUEPRINT, List.of(id("test:auto_anchor"))),
+                Map.of());
+        BlueprintResearchPolicy mismatchedPlan = AutomaticWeaponPrerequisiteOverlay.apply(
+                authored,
+                otherProfile,
+                data,
+                ignored -> false,
+                true,
+                ignored -> true,
+                ignored -> false,
+                Map.of(),
+                true);
+
+        assertTrue(mismatchedPlan.requirements().allOf().isEmpty(),
+                "a stale plan from another profile must not restore authored weapon prerequisites");
+    }
+
+    @Test
+    void groupedAutomaticRouteAcceptsEitherAlternativeButNotNeither() {
+        ResourceLocation routeA = id("test:route_a");
+        ResourceLocation routeB = id("test:route_b");
+        AutomaticWeaponPrerequisitePlan plan = new AutomaticWeaponPrerequisitePlan(
+                PROFILE,
+                id("test:tree"),
+                AutomaticPlacementMode.CONNECTED,
+                PrerequisiteStrategy.GROUPED_ROUTES_V1,
+                5L,
+                7L,
+                1,
+                Map.of(BLUEPRINT, List.of(routeA, routeB)),
+                Map.of(BLUEPRINT, new ResearchRequirements(List.of(
+                        new ResearchPrerequisiteGroup(List.of(routeA, routeB))))),
+                Map.of(),
+                Map.of(),
+                Map.of());
+
+        PlayerRecipeData lockedData = data(5, true);
+        BlueprintResearchPolicy locked = AutomaticWeaponPrerequisiteOverlay.apply(
+                policy(lockedData, new BlueprintResearchCost(0, List.of())),
+                plan,
+                lockedData,
+                ignored -> false);
+        assertEquals(
+                Status.PREREQUISITES_REQUIRED,
+                research(lockedData, input(ItemStack.EMPTY), locked, false).status());
+
+        for (ResourceLocation learnedRoute : List.of(routeA, routeB)) {
+            PlayerRecipeData unlockedData = data(5, true);
+            unlockedData.addBlueprint(learnedRoute.toString());
+            BlueprintResearchPolicy unlocked = AutomaticWeaponPrerequisiteOverlay.apply(
+                    policy(unlockedData, new BlueprintResearchCost(0, List.of())),
+                    plan,
+                    unlockedData,
+                    ignored -> false);
+            assertEquals(1, unlocked.requirements().allOf().size());
+            assertTrue(research(
+                    unlockedData,
+                    input(ItemStack.EMPTY),
+                    unlocked,
+                    false).successful());
+        }
+    }
+
+    @Test
+    void directEntryPointOwnershipSuppressesAutomaticRequirements() {
+        ResourceLocation route = id("test:route");
+        AutomaticWeaponPrerequisitePlan plan = new AutomaticWeaponPrerequisitePlan(
+                PROFILE,
+                id("test:tree"),
+                AutomaticPlacementMode.CONNECTED,
+                5L,
+                7L,
+                1,
+                Map.of(BLUEPRINT, List.of(route)),
+                Map.of());
+        PlayerRecipeData data = data(5, true);
+        BlueprintResearchPolicy directEntry = policy(
+                data,
+                new BlueprintResearchCost(0, List.of()),
+                true,
+                false,
+                true,
+                true,
+                true,
+                false,
+                false);
+
+        BlueprintResearchPolicy resolved = AutomaticWeaponPrerequisiteOverlay.apply(
+                directEntry,
+                plan,
+                data,
+                ignored -> false);
+
+        assertFalse(resolved.automaticPrerequisitesAllowed());
+        assertTrue(resolved.requirements().allOf().isEmpty());
+        assertTrue(research(
+                data,
+                input(ItemStack.EMPTY),
+                resolved,
+                false).successful());
+    }
+
+    @Test
+    void groupedOverlayFiltersAlternativesIndependentlyAndFailsOpenSafely() {
+        ResourceLocation routeA = id("test:route_a");
+        ResourceLocation routeB = id("test:route_b");
+        AutomaticWeaponPrerequisitePlan plan = new AutomaticWeaponPrerequisitePlan(
+                PROFILE,
+                id("test:tree"),
+                AutomaticPlacementMode.CONNECTED,
+                PrerequisiteStrategy.GROUPED_ROUTES_V1,
+                5L,
+                7L,
+                1,
+                Map.of(BLUEPRINT, List.of(routeA, routeB)),
+                Map.of(BLUEPRINT, new ResearchRequirements(List.of(
+                        new ResearchPrerequisiteGroup(List.of(routeA, routeB))))),
+                Map.of(),
+                Map.of(),
+                Map.of());
+
+        PlayerRecipeData filteredData = data(5, true);
+        BlueprintResearchPolicy filtered = AutomaticWeaponPrerequisiteOverlay.apply(
+                policy(filteredData, new BlueprintResearchCost(0, List.of())),
+                plan,
+                filteredData,
+                routeA.toString()::equals,
+                true,
+                id -> id.equals(routeA) || id.equals(routeB),
+                ignored -> false);
+        assertEquals(
+                List.of(routeB),
+                filtered.requirements().allOf().get(0).anyOf());
+        filteredData.addBlueprint(routeB.toString());
+        BlueprintResearchPolicy filteredUnlocked = AutomaticWeaponPrerequisiteOverlay.apply(
+                policy(filteredData, new BlueprintResearchCost(0, List.of())),
+                plan,
+                filteredData,
+                routeA.toString()::equals,
+                true,
+                id -> id.equals(routeA) || id.equals(routeB),
+                ignored -> false);
+        assertTrue(research(
+                filteredData,
+                input(ItemStack.EMPTY),
+                filteredUnlocked,
+                false).successful());
+
+        PlayerRecipeData exemptData = data(5, true);
+        BlueprintResearchPolicy exemptRoute = AutomaticWeaponPrerequisiteOverlay.apply(
+                policy(exemptData, new BlueprintResearchCost(0, List.of())),
+                plan,
+                exemptData,
+                ignored -> false,
+                true,
+                id -> id.equals(routeA) || id.equals(routeB),
+                routeA::equals);
+        assertTrue(exemptRoute.requirements().allOf().isEmpty(),
+                "an accessible-without-learning alternative satisfies the generated group");
+
+        PlayerRecipeData unsafeData = data(5, true);
+        BlueprintResearchPolicy allUnsafe = AutomaticWeaponPrerequisiteOverlay.apply(
+                policy(unsafeData, new BlueprintResearchCost(0, List.of())),
+                plan,
+                unsafeData,
+                ignored -> false,
+                true,
+                ignored -> false,
+                ignored -> false);
+        assertTrue(allUnsafe.requirements().allOf().isEmpty(),
+                "a generated group with no safe alternative must fail open");
+    }
+
+    @Test
+    void automaticOverlayRebasesAnUnavailableFoundationToTheLiveEntryPoint() {
+        ResourceLocation preferred = id("test:preferred_root");
+        ResourceLocation fallback = id("test:fallback_root");
+        AutomaticWeaponPrerequisitePlan plan = new AutomaticWeaponPrerequisitePlan(
+                PROFILE,
+                id("test:tree"),
+                AutomaticPlacementMode.CONNECTED,
+                5L,
+                7L,
+                1,
+                Map.of(BLUEPRINT, List.of(preferred)),
+                Map.of());
+        PlayerRecipeData data = data(5, true);
+
+        BlueprintResearchPolicy rebased = AutomaticWeaponPrerequisiteOverlay.apply(
+                policy(data, new BlueprintResearchCost(0, List.of())),
+                plan,
+                data,
+                preferred.toString()::equals,
+                true,
+                fallback::equals,
+                ignored -> false,
+                Map.of(preferred, fallback));
+
+        assertEquals(List.of(fallback), rebased.prerequisites());
+        assertEquals(
+                Status.PREREQUISITES_REQUIRED,
+                research(data, input(ItemStack.EMPTY), rebased, false).status());
+        data.addBlueprint(fallback.toString());
+        BlueprintResearchPolicy unlocked = AutomaticWeaponPrerequisiteOverlay.apply(
+                policy(data, new BlueprintResearchCost(0, List.of())),
+                plan,
+                data,
+                preferred.toString()::equals,
+                true,
+                fallback::equals,
+                ignored -> false,
+                Map.of(preferred, fallback));
+        assertTrue(research(data, input(ItemStack.EMPTY), unlocked, false).successful());
+    }
+
     private static void assertAtomicFailure(
             Status expected,
             java.util.function.Function<PlayerRecipeData, BlueprintResearchPolicy> policyFactory) {
@@ -498,6 +745,31 @@ class BlueprintResearchServiceTest {
             boolean discovered,
             boolean prerequisites,
             boolean creativeBypass) {
+        return policy(
+                data,
+                cost,
+                available,
+                blocked,
+                researchEnabled,
+                discovered,
+                prerequisites,
+                creativeBypass,
+                true);
+    }
+
+    private static BlueprintResearchPolicy policy(
+            PlayerRecipeData data,
+            BlueprintResearchCost cost,
+            boolean available,
+            boolean blocked,
+            boolean researchEnabled,
+            boolean discovered,
+            boolean prerequisites,
+            boolean creativeBypass,
+            boolean automaticPrerequisitesAllowed) {
+        ResearchRequirements requirements = prerequisites
+                ? ResearchRequirements.EMPTY
+                : ResearchRequirements.fromLegacy(List.of(id("test:required")));
         return new BlueprintResearchPolicy(
                 BLUEPRINT,
                 PROFILE,
@@ -510,6 +782,7 @@ class BlueprintResearchServiceTest {
                 100,
                 prerequisites,
                 true,
+                true,
                 JournalVisibility.FULL,
                 researchEnabled,
                 true,
@@ -517,7 +790,9 @@ class BlueprintResearchServiceTest {
                 1,
                 cost,
                 !discovered,
-                prerequisites ? List.of() : List.of(id("test:required")),
+                requirements,
+                requirements.conservativeAlternatives(),
+                automaticPrerequisitesAllowed,
                 creativeBypass,
                 Optional.empty(),
                 MatchSpecificity.NONE);

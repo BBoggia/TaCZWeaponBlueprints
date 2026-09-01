@@ -44,6 +44,8 @@ public final class BlueprintRecyclerScreen
     private Button secondaryButton;
     private Optional<BlueprintRecyclerActionContract.Action> primaryAction = Optional.empty();
     private Optional<BlueprintRecyclerActionContract.Action> secondaryAction = Optional.empty();
+    private Optional<BlueprintRecyclerActionContract.Action> confirmationAction = Optional.empty();
+    private int confirmationTicks;
     private BlueprintRecyclerPreview observedPreview = BlueprintRecyclerPreview.EMPTY;
 
     public BlueprintRecyclerScreen(
@@ -92,6 +94,7 @@ public final class BlueprintRecyclerScreen
         super.containerTick();
         BlueprintRecyclerPreview currentPreview = menu.preview();
         if (!currentPreview.equals(observedPreview)) {
+            clearConfirmation();
             feedback.reconcile(currentPreview);
             observedPreview = currentPreview;
             triggerImmediateNarration(true);
@@ -104,6 +107,9 @@ public final class BlueprintRecyclerScreen
         } else if (feedback.tick()) {
             triggerImmediateNarration(true);
         }
+        if (confirmationTicks > 0 && --confirmationTicks == 0) {
+            confirmationAction = Optional.empty();
+        }
         updateControls();
     }
 
@@ -111,6 +117,7 @@ public final class BlueprintRecyclerScreen
     public void onClose() {
         requests.clear();
         feedback.clear();
+        clearConfirmation();
         super.onClose();
     }
 
@@ -128,6 +135,16 @@ public final class BlueprintRecyclerScreen
 
     private void request(BlueprintRecyclerActionContract.Action action) {
         BlueprintRecyclerPreview preview = menu.preview();
+        if (action == BlueprintRecyclerActionContract.Action.RECOVER_POINTS
+                && !preview.alreadyKnown()
+                && confirmationAction.filter(action::equals).isEmpty()) {
+            confirmationAction = Optional.of(action);
+            confirmationTicks = 100;
+            updateControls();
+            triggerImmediateNarration(true);
+            return;
+        }
+        clearConfirmation();
         ResourceLocation inputId = preview.inputId().orElse(null);
         Optional<BlueprintRecyclerRequestTracker.Request> started =
                 requests.begin(
@@ -178,22 +195,22 @@ public final class BlueprintRecyclerScreen
         primaryButton.active = primaryButton.visible && model.controlsEnabled();
         primaryButton.setMessage(primaryAction
                 .map(action -> Component.translatable(
-                        BlueprintRecyclerScreenModel.actionKey(action)))
+                        actionMessageKey(action)))
                 .orElse(Component.empty()));
         primaryButton.setTooltip(primaryAction
                 .map(action -> Tooltip.create(Component.translatable(
-                        BlueprintRecyclerScreenModel.actionKey(action) + ".tooltip")))
+                        actionTooltipKey(action))))
                 .orElse(null));
 
         secondaryButton.visible = secondaryAction.isPresent();
         secondaryButton.active = secondaryButton.visible && model.controlsEnabled();
         secondaryButton.setMessage(secondaryAction
                 .map(action -> Component.translatable(
-                        BlueprintRecyclerScreenModel.actionKey(action)))
+                        actionMessageKey(action)))
                 .orElse(Component.empty()));
         secondaryButton.setTooltip(secondaryAction
                 .map(action -> Tooltip.create(Component.translatable(
-                        BlueprintRecyclerScreenModel.actionKey(action) + ".tooltip")))
+                        actionTooltipKey(action))))
                 .orElse(null));
         if (getFocused() == primaryButton && !primaryButton.visible
                 || getFocused() == secondaryButton && !secondaryButton.visible) {
@@ -424,6 +441,16 @@ public final class BlueprintRecyclerScreen
 
     private Component summary(BlueprintRecyclerPreview preview) {
         if (preview.inputKind() == BlueprintRecyclerPreview.InputKind.PHYSICAL_ITEM) {
+            if (preview.recoveryPointValue() > 0) {
+                return Component.translatable(
+                        preview.customizationWillBeLost()
+                                ? "gui.taczweaponblueprints.blueprint_recycler.reverse.summary_recovery_modified"
+                                : "gui.taczweaponblueprints.blueprint_recycler.reverse.summary_recovery",
+                        preview.pointCost(),
+                        preview.recoveryPointValue(),
+                        preview.pointBalance(),
+                        preview.pointCap());
+            }
             return Component.translatable(
                     preview.customizationWillBeLost()
                             ? "gui.taczweaponblueprints.blueprint_recycler.reverse.summary_modified"
@@ -471,8 +498,36 @@ public final class BlueprintRecyclerScreen
                         ingredient.inventoryAvailable(),
                         ingredient.required()));
             }
+            details.append("\n").append(Component.translatable(
+                    "gui.taczweaponblueprints.blueprint_recycler.reverse.origin."
+                            + preview.weaponOrigin().name().toLowerCase(java.util.Locale.ROOT)));
+            if (confirmationAction.isPresent()) {
+                details.append("\n").append(Component.translatable(
+                        "gui.taczweaponblueprints.blueprint_recycler.action.recover_points.confirm_hint"));
+            }
         }
         return details;
+    }
+
+    private String actionMessageKey(BlueprintRecyclerActionContract.Action action) {
+        String base = BlueprintRecyclerScreenModel.actionKey(action);
+        return confirmationAction.filter(action::equals).isPresent()
+                ? base + ".confirm"
+                : base;
+    }
+
+    private String actionTooltipKey(BlueprintRecyclerActionContract.Action action) {
+        String base = BlueprintRecyclerScreenModel.actionKey(action);
+        if (action == BlueprintRecyclerActionContract.Action.RECOVER_POINTS
+                && !menu.preview().alreadyKnown()) {
+            return base + ".warning";
+        }
+        return base + ".tooltip";
+    }
+
+    private void clearConfirmation() {
+        confirmationAction = Optional.empty();
+        confirmationTicks = 0;
     }
 
     private Component ingredientLabel(

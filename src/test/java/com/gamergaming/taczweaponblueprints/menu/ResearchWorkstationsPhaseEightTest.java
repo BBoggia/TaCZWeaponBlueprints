@@ -49,7 +49,7 @@ class ResearchWorkstationsPhaseEightTest {
         assertEquals(RECYCLER, ModItems.BLUEPRINT_RECYCLER_ITEM.getId());
         assertEquals(RECYCLER, ModMenus.BLUEPRINT_RECYCLER.getId());
         assertTrue(ResearchBenchPresentationPolicy.permanentFullscreen());
-        assertEquals("36", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("40", NetworkHandler.PROTOCOL_VERSION);
     }
 
     @Test
@@ -58,7 +58,7 @@ class ResearchWorkstationsPhaseEightTest {
                 List.of("SELECT", "RESEARCH"),
                 Arrays.stream(ResearchBenchResearchAction.values()).map(Enum::name).toList());
         assertEquals(
-                Set.of("RECYCLE", "REDEEM", "REDEEM_STACK", "REVERSE_ENGINEER"),
+                Set.of("RECYCLE", "REDEEM", "REDEEM_STACK", "REVERSE_ENGINEER", "RECOVER_POINTS"),
                 Arrays.stream(BlueprintRecyclerActionContract.Action.values())
                         .map(Enum::name)
                         .collect(Collectors.toSet()));

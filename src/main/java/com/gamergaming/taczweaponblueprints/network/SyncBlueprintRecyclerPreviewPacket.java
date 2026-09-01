@@ -10,6 +10,7 @@ import com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerMenuBridge;
 import com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerPreview;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintRecyclingService;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintReverseEngineeringService;
+import com.gamergaming.taczweaponblueprints.progression.FoundWeaponRecoveryService;
 import com.gamergaming.taczweaponblueprints.progression.ResearchDataRedemptionService;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCost;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchIngredient;
@@ -65,6 +66,9 @@ public final class SyncBlueprintRecyclerPreviewPacket {
             buffer.writeVarInt(ingredient.required());
             buffer.writeVarInt(ingredient.inventoryAvailable());
         }
+        buffer.writeVarInt(preview.weaponOrigin().ordinal());
+        buffer.writeVarInt(preview.recoveryPointValue());
+        writeOptionalEnum(buffer, preview.recoveryStatus());
     }
 
     public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
@@ -135,6 +139,15 @@ public final class SyncBlueprintRecyclerPreviewPacket {
                     buffer.readVarInt(),
                     buffer.readVarInt()));
         }
+        BlueprintRecyclerPreview.WeaponOrigin weaponOrigin = readEnum(
+                buffer,
+                BlueprintRecyclerPreview.WeaponOrigin.values(),
+                "weapon origin");
+        int recoveryPointValue = buffer.readVarInt();
+        Optional<FoundWeaponRecoveryService.Status> recoveryStatus = readOptionalEnum(
+                buffer,
+                FoundWeaponRecoveryService.Status.values(),
+                "found-weapon recovery status");
         return new BlueprintRecyclerPreview(
                 inputKind,
                 inputId,
@@ -153,7 +166,10 @@ public final class SyncBlueprintRecyclerPreviewPacket {
                 customizationWillBeLost,
                 alreadyKnown,
                 reverseStatus,
-                ingredients);
+                ingredients,
+                weaponOrigin,
+                recoveryPointValue,
+                recoveryStatus);
     }
 
     private static int readContainerId(FriendlyByteBuf buffer) {

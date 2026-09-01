@@ -24,6 +24,7 @@ import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWea
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPolicy;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.WeaponMechanicalReferenceCatalog;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.WeaponStatEvidence;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.WeaponFireModeEvidence;
 import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintCatalogSelector;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCost;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchProfile;
@@ -66,8 +67,15 @@ class AutomaticWeaponEvidenceManagerTest {
         assertFalse(snapshot.placementPlan().proposals()
                 .containsKey("tacz:glock_17"));
         assertEquals(3, snapshot.placementPlan().levelsPerTier());
+        assertEquals(1, snapshot.capabilityPlacementPlan().candidateCount());
+        assertEquals(List.of("addon:service_pistol"),
+                snapshot.capabilityPlacementPlan().proposals().keySet().stream().toList());
         assertEquals(snapshot.evidenceByBlueprint().keySet(),
                 snapshot.scoresByBlueprint().keySet());
+        assertEquals(snapshot.evidenceByBlueprint().keySet(),
+                snapshot.capabilityScoresByBlueprint().keySet());
+        assertEquals(snapshot.evidenceByBlueprint().keySet(),
+                snapshot.capabilityComparisons().keySet());
         assertTrue(snapshot.scoresByBlueprint().values().stream().allMatch(score ->
                 score.rating().referenceVersion().equals(snapshot.referenceVersion())));
         assertThrows(IllegalArgumentException.class,
@@ -98,6 +106,29 @@ class AutomaticWeaponEvidenceManagerTest {
         manager.clear();
         assertEquals(0, manager.revision());
         assertEquals(AutomaticWeaponEvidenceSnapshot.EMPTY, manager.snapshot());
+    }
+
+    @Test
+    void capabilityFailureDoesNotInvalidateMechanicalRollbackEvidence() {
+        AutomaticWeaponEvidenceManager manager = new AutomaticWeaponEvidenceManager();
+        WeaponStatEvidence normal = weapon("tacz:glock_17", 6.0);
+        WeaponStatEvidence capabilityOverflow = capabilityOverflowWeapon();
+        var capture = new TaCZRuntimeWeaponEvidenceAdapter.Capture(
+                2,
+                Map.of(
+                        normal.blueprintId(), normal,
+                        capabilityOverflow.blueprintId(), capabilityOverflow),
+                Map.of());
+
+        assertTrue(manager.publish(capture, WeaponMechanicalReferenceCatalog.bundled()));
+
+        AutomaticWeaponEvidenceSnapshot snapshot = manager.snapshot();
+        assertEquals(2, snapshot.acceptedCount());
+        assertEquals(2, snapshot.scoresByBlueprint().size());
+        assertEquals(java.util.Set.of("tacz:glock_17"),
+                snapshot.capabilityScoresByBlueprint().keySet());
+        assertEquals(1, snapshot.placementPlan().candidateCount());
+        assertEquals(0, snapshot.capabilityPlacementPlan().candidateCount());
     }
 
     @Test
@@ -362,6 +393,19 @@ class AutomaticWeaponEvidenceManagerTest {
                 List.of());
     }
 
+    private static WeaponStatEvidence capabilityOverflowWeapon() {
+        return new WeaponStatEvidence(
+                "addon:overflow", "pistol", 8.0, 0.0, 500.0, 15, 2.0,
+                100.0, 50.0, 0.1, 1.5, 1, 0.2, 0.3, 2.0, 0.2, 0.4,
+                -0.2, 1, 2, null, "magazine", false, false, 1, 1.0,
+                null, null, false, false, null, 0.0, 2.0, 1, null, null,
+                0.0,
+                List.of(new WeaponFireModeEvidence(
+                        "semi", Double.MAX_VALUE, Double.MAX_VALUE, 1, null, null,
+                        0.0, 0.0, true, 100.0, 0.1, 1.5, 0.2)),
+                null, null, null, null, null, List.of());
+    }
+
     private static BlueprintResearchSnapshot nonemptyResearch() {
         ResourceLocation profileId = id("test:profile");
         ResourceLocation treeId = id("test:tree");
@@ -381,10 +425,13 @@ class AutomaticWeaponEvidenceManagerTest {
                 List.of(),
                 Optional.of(treeId));
         ResearchTechTreeDefinition tree = new ResearchTechTreeDefinition(
-                1,
+                ResearchTechTreeDefinition.CURRENT_FORMAT,
                 "Test",
                 Optional.empty(),
                 Optional.empty(),
+                ResearchTechTreeDefinition.WeaponPlacementMode.AUTOMATIC,
+                new ResearchTechTreeDefinition.LayoutDefinition(9),
+                ResearchTechTreeDefinition.BandPolicyDefinition.NONE,
                 Arrays.stream(Tier.values())
                         .map(tier -> new ResearchTechTreeDefinition.TierDefinition(
                                 tier, tier.name(), Optional.empty()))

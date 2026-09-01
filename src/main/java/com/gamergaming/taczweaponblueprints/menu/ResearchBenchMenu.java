@@ -1,8 +1,10 @@
 package com.gamergaming.taczweaponblueprints.menu;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.init.ModBlocks;
@@ -14,6 +16,7 @@ import com.gamergaming.taczweaponblueprints.progression.BlueprintUnlockOrigin;
 import com.gamergaming.taczweaponblueprints.progression.PhysicalBlueprintLearningMode;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintResearchService;
 import com.gamergaming.taczweaponblueprints.progression.ResearchIngredientPlanner;
+import com.gamergaming.taczweaponblueprints.progression.ResearchPathUnlockPlanner;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchDataManager;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchIngredient;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchPolicy;
@@ -141,7 +144,12 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
                                 .map(data -> data.getResearchPoints()).orElse(0),
                         false);
         player.displayClientMessage(
-                Component.translatable(researchMessage(transaction.status())), true);
+                transaction.successful() && transaction.transitions().size() > 1
+                        ? Component.translatable(
+                                "message.taczweaponblueprints.research.success_path",
+                                transaction.transitions().size())
+                        : Component.translatable(researchMessage(transaction.status())),
+                true);
         if (transaction.successful()) {
             selectedBlueprint = null;
         }
@@ -197,15 +205,59 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
         List<ItemStack> inventoryStacks = playerInventory.items.stream()
                 .map(ItemStack::copy)
                 .toList();
+        var config = ModConfigs.BLUEPRINT.progressionSnapshot();
+        int pointCost = policy.researchCost().points();
+        int unlockCount = 1;
+        boolean bypass = player.isCreative() && policy.creativeBypassesCost();
+        boolean policyEligible = policy.researchable();
+        ResearchSelectionPreview.PathPlanningState pathPlanningState =
+                ResearchSelectionPreview.PathPlanningState.NONE;
+        List<ResearchIngredientPlanner.Requirement> combinedIngredients =
+                policy.researchCost().ingredients().stream()
+                        .map(ingredient -> new ResearchIngredientPlanner.Requirement(
+                                ingredient.items(), ingredient.tag(), ingredient.count()))
+                        .toList();
+        ResearchPathUnlockPlanner.Plan path = null;
+        if (config.treeResearchResultMode().learnsDirectly()) {
+            ResearchPathUnlockPlanner.Result planned = ResearchPathUnlockPlanner.plan(
+                    selectedBlueprint,
+                    data,
+                    BlueprintResearchDataManager.INSTANCE.policyResolverFor(data),
+                    com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionAccess
+                            ::isProgressionExempt,
+                    player.isCreative(),
+                    inventoryStacks);
+            if (planned.successful() && config.blueprintsEnabled()) {
+                path = planned.plan().orElseThrow();
+                pointCost = path.pointCost();
+                unlockCount = path.unlockCount();
+                bypass = path.costBypassed();
+                combinedIngredients = path.ingredients();
+                policyEligible = true;
+            } else {
+                policyEligible = false;
+                pathPlanningState = ResearchSelectionPreview.PathPlanningState.fromStatus(
+                        planned.status());
+                if (pathPlanningState != ResearchSelectionPreview.PathPlanningState.NONE) {
+                    pointCost = 0;
+                    unlockCount = 1;
+                    bypass = false;
+                    combinedIngredients = List.of();
+                }
+            }
+        }
         ResearchIngredientPlanner.Allocation inventoryAllocation =
                 ResearchIngredientPlanner.allocation(
-                        inventoryStacks, policy.researchCost()).orElseThrow();
+                        inventoryStacks, combinedIngredients).orElseThrow();
         List<ResearchSelectionPreview.IngredientPreview> ingredients = new ArrayList<>();
         for (int ingredientIndex = 0;
-                ingredientIndex < policy.researchCost().ingredients().size();
+                ingredientIndex < Math.min(
+                        combinedIngredients.size(),
+                        com.gamergaming.taczweaponblueprints.resource.research
+                                .BlueprintResearchCost.MAX_INGREDIENT_TYPES);
                 ingredientIndex++) {
-            BlueprintResearchIngredient ingredient =
-                    policy.researchCost().ingredients().get(ingredientIndex);
+            ResearchIngredientPlanner.Requirement ingredient =
+                    combinedIngredients.get(ingredientIndex);
             List<ResourceLocation> items = ingredient.items();
             if (items.isEmpty() && ingredient.tag().isPresent()) {
                 items = ForgeRegistries.ITEMS.tags()
@@ -223,12 +275,11 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
                     ingredient.count(),
                     inventoryAllocation.allocatedForIngredient(ingredientIndex)));
         }
-        boolean bypass = player.isCreative() && policy.creativeBypassesCost();
         boolean ingredientsSatisfied = bypass || inventoryAllocation.complete();
-        boolean policyEligible = policy.researchable();
         boolean transactionCapacityAvailable = true;
-        var config = ModConfigs.BLUEPRINT.progressionSnapshot();
-        if (policyEligible && config.treeResearchResultMode().learnsDirectly()) {
+        if (policyEligible && path != null) {
+            transactionCapacityAvailable = pathCapacityAvailable(data, path);
+        } else if (policyEligible && config.treeResearchResultMode().learnsDirectly()) {
             BlueprintLearningService.Preparation preparation =
                     BlueprintLearningService.prepare(
                             new BlueprintLearningService.Request(
@@ -247,8 +298,8 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
                         .orElseThrow().status();
                 if (failure == BlueprintLearningService.Status
                         .PROGRESSION_CAPACITY_EXHAUSTED) {
-                    // The legacy field remains on the unchanged protocol-25
-                    // preview wire. In direct mode it represents capacity for
+                    // The legacy field name remains on the preview wire for
+                    // compatibility. In direct mode it represents capacity for
                     // the transaction's non-economic result rather than a
                     // physical output slot.
                     transactionCapacityAvailable = false;
@@ -258,19 +309,63 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
             }
         }
         boolean ready = policyEligible
-                && (bypass || policy.canAffordPoints())
+                && (bypass || data.getResearchPoints() >= pointCost)
                 && ingredientsSatisfied
                 && transactionCapacityAvailable;
         return new ResearchSelectionPreview(
                 Optional.of(selectedBlueprint),
-                policy.researchCost().points(),
+                pointCost,
                 data.getResearchPoints(),
                 policyEligible,
                 ingredientsSatisfied,
                 transactionCapacityAvailable,
                 ready,
                 bypass,
-                ingredients);
+                ingredients,
+                unlockCount,
+                combinedIngredients.size(),
+                pathPlanningState,
+                config.researchCostMode());
+    }
+
+    private static boolean pathCapacityAvailable(
+            com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData data,
+            ResearchPathUnlockPlanner.Plan path) {
+        if (data.getLearnedBlueprints().size() + path.unlockCount()
+                        > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION) {
+            return false;
+        }
+        Set<String> discoveries = new LinkedHashSet<>(data.getDiscoveredBlueprints());
+        Set<String> recipes = new LinkedHashSet<>(data.getLearnedRecipes());
+        for (ResearchPathUnlockPlanner.PlannedNode node : path.nodes()) {
+            BlueprintLearningService.LearningTarget target;
+            com.gamergaming.taczweaponblueprints.capabilities.BlueprintLearningMutation.Result
+                    preflight;
+            try {
+                target = BlueprintLearningService.targetFromCatalog(
+                        BlueprintDataManager.SERVER, node.blueprintId());
+                if (target == null || !node.blueprintId().equals(target.blueprintId())) {
+                    return false;
+                }
+                preflight = data.applyBlueprintLearning(
+                        com.gamergaming.taczweaponblueprints.capabilities.BlueprintLearningMutation
+                                .Request.preflight(
+                                        target.blueprintId().toString(),
+                                        target.legacyRecipeId().toString()));
+            } catch (RuntimeException exception) {
+                return false;
+            }
+            if (!preflight.ready()) {
+                return false;
+            }
+            discoveries.add(target.blueprintId().toString());
+            recipes.add(target.legacyRecipeId().toString());
+            if (discoveries.size() > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION
+                    || recipes.size() > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static Optional<BlueprintResearchPolicy> resolvePolicy(
@@ -325,7 +420,9 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
         POLICY_INELIGIBLE,
         TRANSACTION_FAILED,
         PROGRESSION_CAPACITY_EXHAUSTED,
-        ROLLBACK_FAILED
+        ROLLBACK_FAILED,
+        PATH_TOO_LARGE,
+        ROUTE_TOO_COMPLEX
     }
 
     public record ActionResult(

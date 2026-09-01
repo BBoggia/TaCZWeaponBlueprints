@@ -25,7 +25,9 @@ public record AutomaticWeaponPrerequisiteDecision(
         Optional<MergeRejection> mergeRejection,
         boolean depthShortcut,
         boolean terminalPeer,
-        Optional<Integer> publishedRank) {
+        Optional<Integer> publishedRank,
+        Optional<AlternativeRouteReview> alternativeRouteReview,
+        GeneratedRequirementShape generatedRequirementShape) {
     /** Compatibility constructor for decisions recorded before rank publication. */
     public AutomaticWeaponPrerequisiteDecision(
             ResourceLocation blueprintId,
@@ -55,7 +57,44 @@ public record AutomaticWeaponPrerequisiteDecision(
                 mergeRejection,
                 depthShortcut,
                 terminalPeer,
-                Optional.empty());
+                Optional.empty(),
+                Optional.empty(),
+                GeneratedRequirementShape.MANDATORY_SINGLETONS);
+    }
+
+    /** Compatibility constructor for decisions carrying a published rank. */
+    public AutomaticWeaponPrerequisiteDecision(
+            ResourceLocation blueprintId,
+            Strategy strategy,
+            Optional<Integer> branchIndex,
+            int rankIndex,
+            int familyStartIndex,
+            int transitionEndIndex,
+            int desiredParentCount,
+            int secondParentQuotaBasisPoints,
+            boolean secondParentEligible,
+            Map<ResourceLocation, ParentRelation> selectedParentRelations,
+            Optional<MergeRejection> mergeRejection,
+            boolean depthShortcut,
+            boolean terminalPeer,
+            Optional<Integer> publishedRank) {
+        this(
+                blueprintId,
+                strategy,
+                branchIndex,
+                rankIndex,
+                familyStartIndex,
+                transitionEndIndex,
+                desiredParentCount,
+                secondParentQuotaBasisPoints,
+                secondParentEligible,
+                selectedParentRelations,
+                mergeRejection,
+                depthShortcut,
+                terminalPeer,
+                publishedRank,
+                Optional.empty(),
+                GeneratedRequirementShape.MANDATORY_SINGLETONS);
     }
 
     /** Compatibility constructor for decision fixtures predating Phase 8 evidence. */
@@ -84,14 +123,54 @@ public record AutomaticWeaponPrerequisiteDecision(
                 Optional.empty(),
                 depthShortcut,
                 terminalPeer,
-                Optional.empty());
+                Optional.empty(),
+                Optional.empty(),
+                GeneratedRequirementShape.MANDATORY_SINGLETONS);
+    }
+
+    /** Compatibility constructor for decisions created before explicit relationship intent. */
+    public AutomaticWeaponPrerequisiteDecision(
+            ResourceLocation blueprintId,
+            Strategy strategy,
+            Optional<Integer> branchIndex,
+            int rankIndex,
+            int familyStartIndex,
+            int transitionEndIndex,
+            int desiredParentCount,
+            int secondParentQuotaBasisPoints,
+            boolean secondParentEligible,
+            Map<ResourceLocation, ParentRelation> selectedParentRelations,
+            Optional<MergeRejection> mergeRejection,
+            boolean depthShortcut,
+            boolean terminalPeer,
+            Optional<Integer> publishedRank,
+            Optional<AlternativeRouteReview> alternativeRouteReview) {
+        this(
+                blueprintId,
+                strategy,
+                branchIndex,
+                rankIndex,
+                familyStartIndex,
+                transitionEndIndex,
+                desiredParentCount,
+                secondParentQuotaBasisPoints,
+                secondParentEligible,
+                selectedParentRelations,
+                mergeRejection,
+                depthShortcut,
+                terminalPeer,
+                publishedRank,
+                alternativeRouteReview,
+                GeneratedRequirementShape.MANDATORY_SINGLETONS);
     }
 
     public AutomaticWeaponPrerequisiteDecision {
         branchIndex = branchIndex == null ? Optional.empty() : branchIndex;
         mergeRejection = mergeRejection == null ? Optional.empty() : mergeRejection;
         publishedRank = publishedRank == null ? Optional.empty() : publishedRank;
-        if (blueprintId == null || strategy == null
+        alternativeRouteReview = alternativeRouteReview == null
+                ? Optional.empty() : alternativeRouteReview;
+        if (blueprintId == null || strategy == null || generatedRequirementShape == null
                 || branchIndex.filter(value -> value < 0
                         || value >= AutomaticWeaponBranchAnalyzer.MAX_BRANCHES).isPresent()
                 || rankIndex < 0
@@ -125,10 +204,26 @@ public record AutomaticWeaponPrerequisiteDecision(
                     parents.put(entry.getKey(), entry.getValue());
         });
         selectedParentRelations = Collections.unmodifiableMap(parents);
+        if (generatedRequirementShape == GeneratedRequirementShape.ALTERNATIVE_ROUTES
+                    && parents.size() > 2
+                || generatedRequirementShape
+                                == GeneratedRequirementShape
+                                        .ALTERNATIVE_ROUTES_WITH_MANDATORY_GATEWAY
+                        && parents.size() != 3) {
+            throw new IllegalArgumentException(
+                    "Automatic prerequisite relationship shape is inconsistent");
+        }
         if (mergeRejection.filter(value -> value.parentId().equals(blueprintId)
                 || parents.containsKey(value.parentId())).isPresent()) {
             throw new IllegalArgumentException(
                     "Automatic prerequisite merge rejection is inconsistent");
+        }
+        if (alternativeRouteReview.filter(value ->
+                value.parentId().equals(blueprintId)
+                        || value.accepted()
+                                != parents.containsKey(value.parentId())).isPresent()) {
+            throw new IllegalArgumentException(
+                    "Automatic prerequisite alternative-route review is inconsistent");
         }
         boolean rankMatchesStrategy = switch (strategy) {
             case FOUNDATION -> rankIndex == 0;
@@ -160,7 +255,42 @@ public record AutomaticWeaponPrerequisiteDecision(
                 mergeRejection,
                 depthShortcut,
                 terminalPeer,
-                Optional.of(rank));
+                Optional.of(rank),
+                alternativeRouteReview,
+                generatedRequirementShape);
+    }
+
+    /**
+     * Connects a provisional generated foundation to its one resolved automatic
+     * entry point. Rank finalization subsequently lifts the dependent above the
+     * shared provisional row.
+     */
+    public AutomaticWeaponPrerequisiteDecision withSingleSelectedParent(
+            ResourceLocation parent,
+            ParentRelation relation) {
+        if (parent == null || relation == null
+                || parent.equals(blueprintId)
+                || !selectedParentRelations.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Automatic prerequisite foundation parent is invalid");
+        }
+        return new AutomaticWeaponPrerequisiteDecision(
+                blueprintId,
+                strategy,
+                branchIndex,
+                rankIndex,
+                familyStartIndex,
+                transitionEndIndex,
+                desiredParentCount,
+                secondParentQuotaBasisPoints,
+                secondParentEligible,
+                Map.of(parent, relation),
+                Optional.empty(),
+                false,
+                terminalPeer,
+                publishedRank,
+                Optional.empty(),
+                GeneratedRequirementShape.MANDATORY_SINGLETONS);
     }
 
     public int sameFamilyParentCount() {
@@ -181,6 +311,82 @@ public record AutomaticWeaponPrerequisiteDecision(
     public boolean mergeRejectedForClosureInflation() {
         return mergeRejection.filter(value -> value.reason()
                 == MergeRejectionReason.CLOSURE_INFLATION).isPresent();
+    }
+
+    public boolean alternativeRouteAccepted() {
+        return alternativeRouteReview.filter(AlternativeRouteReview::accepted).isPresent();
+    }
+
+    public boolean alternativeRouteRejectedForCostImbalance() {
+        return alternativeRouteReview.filter(value -> value.outcome()
+                == AlternativeRouteOutcome.REJECTED_PROVEN_COST_IMBALANCE).isPresent();
+    }
+
+    public boolean generatedMandatoryConvergence() {
+        return switch (generatedRequirementShape) {
+            case MANDATORY_SINGLETONS -> selectedParentRelations.size() > 1;
+            case ALTERNATIVE_ROUTES -> false;
+            case ALTERNATIVE_ROUTES_WITH_MANDATORY_GATEWAY ->
+                    selectedParentRelations.size() == 3;
+        };
+    }
+
+    public boolean generatedAlternativeRoutes() {
+        return generatedRequirementShape.hasAlternativeRoutes()
+                && selectedParentRelations.size() > 1;
+    }
+
+    /** Explicit relationship intent selected before generated parents are materialized. */
+    public enum GeneratedRequirementShape {
+        MANDATORY_SINGLETONS("mandatory_singletons", false, true),
+        ALTERNATIVE_ROUTES("alternative_routes", true, false),
+        ALTERNATIVE_ROUTES_WITH_MANDATORY_GATEWAY(
+                "alternative_routes_with_mandatory_gateway", true, true);
+
+        private final String serializedName;
+        private final boolean alternativeRoutes;
+        private final boolean mandatoryConvergence;
+
+        GeneratedRequirementShape(
+                String serializedName,
+                boolean alternativeRoutes,
+                boolean mandatoryConvergence) {
+            this.serializedName = serializedName;
+            this.alternativeRoutes = alternativeRoutes;
+            this.mandatoryConvergence = mandatoryConvergence;
+        }
+
+        public String serializedName() {
+            return serializedName;
+        }
+
+        public boolean hasAlternativeRoutes() {
+            return alternativeRoutes;
+        }
+
+        public boolean hasMandatoryConvergence() {
+            return mandatoryConvergence;
+        }
+
+        public ParentIntent intentForSelectedIndex(int index) {
+            if (index < 0
+                    || this == ALTERNATIVE_ROUTES_WITH_MANDATORY_GATEWAY
+                            && index > 2) {
+                throw new IllegalArgumentException(
+                        "Generated requirement parent index is invalid");
+            }
+            return switch (this) {
+                case MANDATORY_SINGLETONS -> ParentIntent.MANDATORY;
+                case ALTERNATIVE_ROUTES -> ParentIntent.ALTERNATIVE;
+                case ALTERNATIVE_ROUTES_WITH_MANDATORY_GATEWAY ->
+                        index < 2 ? ParentIntent.ALTERNATIVE : ParentIntent.MANDATORY;
+            };
+        }
+    }
+
+    public enum ParentIntent {
+        MANDATORY,
+        ALTERNATIVE
     }
 
     public enum Strategy {
@@ -260,6 +466,70 @@ public record AutomaticWeaponPrerequisiteDecision(
         private final String serializedName;
 
         MergeRejectionReason(String serializedName) {
+            this.serializedName = serializedName;
+        }
+
+        public String serializedName() {
+            return serializedName;
+        }
+    }
+
+    /** Bounded evidence used to accept or decline one generated OR parent. */
+    public record AlternativeRouteReview(
+            ResourceLocation parentId,
+            AlternativeRouteOutcome outcome,
+            long existingRouteCostLowerBound,
+            long existingRouteCostUpperBound,
+            long candidateRouteCostLowerBound,
+            long candidateRouteCostUpperBound,
+            long routeCostRatioLowerBoundBasisPoints,
+            long routeCostRatioUpperBoundBasisPoints,
+            int mandatoryAncestryOverlapBasisPoints,
+            int divergentMandatoryNodeCount,
+            boolean exact) {
+        public AlternativeRouteReview {
+            boolean provenImbalance = routeCostRatioLowerBoundBasisPoints
+                    > AutomaticWeaponAlternativeRouteGuard
+                            .MAXIMUM_PROVEN_ROUTE_COST_RATIO_BASIS_POINTS;
+            AlternativeRouteOutcome expectedOutcome = provenImbalance
+                    ? AlternativeRouteOutcome.REJECTED_PROVEN_COST_IMBALANCE
+                    : exact
+                            ? AlternativeRouteOutcome.ACCEPTED_EXACT
+                            : AlternativeRouteOutcome.ACCEPTED_BOUNDED;
+            if (parentId == null || outcome == null
+                    || existingRouteCostLowerBound < 0L
+                    || existingRouteCostUpperBound < existingRouteCostLowerBound
+                    || candidateRouteCostLowerBound < 0L
+                    || candidateRouteCostUpperBound < candidateRouteCostLowerBound
+                    || routeCostRatioLowerBoundBasisPoints < 10_000L
+                    || routeCostRatioUpperBoundBasisPoints
+                            < routeCostRatioLowerBoundBasisPoints
+                    || mandatoryAncestryOverlapBasisPoints < 0
+                    || mandatoryAncestryOverlapBasisPoints > 10_000
+                    || divergentMandatoryNodeCount < 0
+                    || exact != (existingRouteCostLowerBound
+                            == existingRouteCostUpperBound
+                            && candidateRouteCostLowerBound
+                                    == candidateRouteCostUpperBound)
+                    || outcome != expectedOutcome) {
+                throw new IllegalArgumentException(
+                        "Automatic alternative-route review is invalid");
+            }
+        }
+
+        public boolean accepted() {
+            return outcome != AlternativeRouteOutcome.REJECTED_PROVEN_COST_IMBALANCE;
+        }
+    }
+
+    public enum AlternativeRouteOutcome {
+        ACCEPTED_EXACT("accepted_exact"),
+        ACCEPTED_BOUNDED("accepted_bounded"),
+        REJECTED_PROVEN_COST_IMBALANCE("rejected_proven_cost_imbalance");
+
+        private final String serializedName;
+
+        AlternativeRouteOutcome(String serializedName) {
             this.serializedName = serializedName;
         }
 

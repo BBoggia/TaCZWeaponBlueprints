@@ -57,30 +57,56 @@ public final class ResearchTreeFullscreenRailLayout {
             int visibleEntryCount,
             int groupScroll,
             int groupCount) {
-        validateWindowInputs(visibleEntryCount, groupScroll, groupCount);
+        return entryIndexForSlot(
+                slot, visibleEntryCount, groupScroll, groupCount, true);
+    }
+
+    /**
+     * Maps rail slots while optionally omitting the pinned view-switch action.
+     * Item indexes remain one-based so existing group/domain presentation code
+     * does not need a second indexing convention.
+     */
+    public static int entryIndexForSlot(
+            int slot,
+            int visibleEntryCount,
+            int groupScroll,
+            int groupCount,
+            boolean viewActionVisible) {
+        validateWindowInputs(
+                visibleEntryCount, groupScroll, groupCount, viewActionVisible);
         if (slot < 0 || slot >= visibleEntryCount) {
             return -1;
         }
-        if (slot == 0) {
+        if (viewActionVisible && slot == 0) {
             return 0;
         }
-        int groupIndex = groupScroll + slot - 1;
+        int groupIndex = groupScroll + slot - (viewActionVisible ? 1 : 0);
         return groupIndex < groupCount ? groupIndex + 1 : -1;
     }
 
     public static int maximumGroupScroll(int visibleEntryCount, int groupCount) {
+        return maximumGroupScroll(visibleEntryCount, groupCount, true);
+    }
+
+    public static int maximumGroupScroll(
+            int visibleEntryCount,
+            int groupCount,
+            boolean viewActionVisible) {
         if (visibleEntryCount < 1 || groupCount < 0) {
             throw new IllegalArgumentException("invalid fullscreen rail window");
         }
-        return Math.max(0, groupCount - Math.max(0, visibleEntryCount - 1));
+        int itemSlots = Math.max(0, visibleEntryCount - (viewActionVisible ? 1 : 0));
+        return Math.max(0, groupCount - itemSlots);
     }
 
     private static void validateWindowInputs(
             int visibleEntryCount,
             int groupScroll,
-            int groupCount) {
+            int groupCount,
+            boolean viewActionVisible) {
         if (visibleEntryCount < 1 || groupScroll < 0 || groupCount < 0
-                || groupScroll > maximumGroupScroll(visibleEntryCount, groupCount)) {
+                || groupScroll > maximumGroupScroll(
+                        visibleEntryCount, groupCount, viewActionVisible)) {
             throw new IllegalArgumentException("invalid fullscreen rail window");
         }
     }

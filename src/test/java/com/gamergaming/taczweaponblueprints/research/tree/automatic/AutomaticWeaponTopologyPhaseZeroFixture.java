@@ -27,11 +27,16 @@ import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContra
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.ProgressionPosition;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Tier;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeEconomyAudit;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchGroupedRouteBaselineAudit;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchGroupedRouteQualityAudit;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreePresentation;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeTopologyAudit;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponCandidateClassification;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponPlacementCandidateSnapshot;
 import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintCatalogSelector;
+import com.gamergaming.taczweaponblueprints.resource.award.ResearchPointAwardEconomyProjection;
+import com.gamergaming.taczweaponblueprints.resource.award.ResearchPointAwardTrigger;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCost;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchProfile;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchSnapshot;
@@ -57,6 +62,7 @@ final class AutomaticWeaponTopologyPhaseZeroFixture {
     private static final long CATALOG_REVISION = 5L;
     private static final long RESEARCH_REVISION = 7L;
     private static final int POINT_COST = 8;
+    private static final int FINITE_POINT_INCOME = 128;
 
     private AutomaticWeaponTopologyPhaseZeroFixture() {
     }
@@ -67,6 +73,11 @@ final class AutomaticWeaponTopologyPhaseZeroFixture {
 
     static Scenario medium() {
         return new Scenario("medium", 74, 9, 2);
+    }
+
+    /** Matches the packaged TaCZ weapon-population scale. */
+    static Scenario packagedScale() {
+        return new Scenario("packaged_scale", 53, 14, 2);
     }
 
     /** Matches the reported 287-node visible weapon population. */
@@ -145,6 +156,203 @@ final class AutomaticWeaponTopologyPhaseZeroFixture {
                 layout.graphLayout().height(),
                 layout.diagnostics().maximumNodesInRow(),
                 signature(candidates, prerequisites));
+    }
+
+    static GroupedRouteBaseline groupedRouteBaseline(Scenario scenario) {
+        return groupedRouteBaseline(scenario, false);
+    }
+
+    static GroupedRouteBaseline groupedRouteBaseline(
+            Scenario scenario,
+            boolean reverseInput) {
+        ResearchGroupedRouteBaselineAudit.Audit audit = groupedRouteAudit(
+                scenario, reverseInput);
+        return new GroupedRouteBaseline(
+                scenario.name(),
+                audit.automaticTargetCount(),
+                audit.generatedReferenceCount(),
+                audit.singleParentTargetCount(),
+                audit.alternativeGroupCandidateCount(),
+                audit.pairGroupCandidateCount(),
+                audit.largerGroupCandidateCount(),
+                audit.maximumAlternativeCount(),
+                audit.maximumSingleParentChain(),
+                audit.generatedFanOut(),
+                audit.alternativeEvidence(),
+                audit.routeCosts(),
+                audit.inputFingerprint());
+    }
+
+    static ResearchGroupedRouteBaselineAudit.Audit groupedRouteAudit(
+            Scenario scenario,
+            boolean reverseInput) {
+        AutomaticWeaponPlacementPolicy policy = policy(
+                scenario.maximumNodesPerRank(), scenario.foundationCount());
+        Map<String, AutomaticWeaponPlacementProposal> raw = proposals(
+                scenario, reverseInput);
+        AutomaticWeaponCandidateClassification classification =
+                classification(scenario, raw, policy);
+        Map<String, AutomaticWeaponPlacementProposal> assigned =
+                new AutomaticWeaponBranchLayerPlanner().assign(
+                        raw,
+                        classification.roleSignatures(),
+                        classification.authoredRoleSignatures(),
+                        classification.branchModel(),
+                        policy);
+        AutomaticWeaponPlacementCandidateSnapshot candidates =
+                new AutomaticWeaponPlacementCandidateSnapshot(
+                        TREE,
+                        AutomaticPlacementMode.CONNECTED,
+                        policy,
+                        CATALOG_REVISION,
+                        RESEARCH_REVISION,
+                        scenario.weaponCount(),
+                        assigned,
+                        Map.of(),
+                        Set.of(),
+                        Set.of());
+        AutomaticWeaponPrerequisitePlan prerequisites =
+                new AutomaticWeaponPrerequisitePlanner().plan(
+                        research(scenario.maximumNodesPerRank()),
+                        catalog(scenario),
+                        PROFILE,
+                        candidates,
+                        classification);
+        Published published = publish(candidates, prerequisites);
+        AutomaticWeaponPlacementDiagnostics diagnostics =
+                AutomaticWeaponPlacementDiagnostics.create(
+                        PROFILE, candidates, prerequisites);
+        return ResearchGroupedRouteBaselineAudit.audit(
+                published.graph(),
+                published.presentation(),
+                diagnostics,
+                new ResearchPointAwardEconomyProjection.Projection(
+                        1,
+                        0,
+                        FINITE_POINT_INCOME,
+                        Map.of(
+                                ResearchPointAwardTrigger.Type.INTEGRATION,
+                                FINITE_POINT_INCOME)));
+    }
+
+    static ResearchGroupedRouteQualityAudit.Audit groupedRouteQualityAudit(
+            Scenario scenario,
+            boolean reverseInput) {
+        return groupedRouteEvidence(scenario, reverseInput).quality();
+    }
+
+    static GroupedRouteEvidence groupedRouteEvidence(
+            Scenario scenario,
+            boolean reverseInput) {
+        AutomaticWeaponPlacementPolicy policy = policy(
+                scenario.maximumNodesPerRank(),
+                scenario.foundationCount(),
+                AutomaticWeaponPlacementPolicy.PrerequisiteStrategy.GROUPED_ROUTES_V1);
+        Map<String, AutomaticWeaponPlacementProposal> raw = proposals(
+                scenario, reverseInput);
+        AutomaticWeaponCandidateClassification classification =
+                classification(scenario, raw, policy);
+        Map<String, AutomaticWeaponPlacementProposal> assigned =
+                new AutomaticWeaponBranchLayerPlanner().assign(
+                        raw,
+                        classification.roleSignatures(),
+                        classification.authoredRoleSignatures(),
+                        classification.branchModel(),
+                        policy);
+        AutomaticWeaponPlacementCandidateSnapshot candidates =
+                new AutomaticWeaponPlacementCandidateSnapshot(
+                        TREE,
+                        AutomaticPlacementMode.CONNECTED,
+                        policy,
+                        CATALOG_REVISION,
+                        RESEARCH_REVISION,
+                        scenario.weaponCount(),
+                        assigned,
+                        Map.of(),
+                        Set.of(),
+                        Set.of());
+        AutomaticWeaponPrerequisitePlan prerequisites =
+                new AutomaticWeaponPrerequisitePlanner().plan(
+                        research(scenario.maximumNodesPerRank()),
+                        catalog(scenario),
+                        PROFILE,
+                        candidates,
+                        classification);
+        Published published = publish(candidates, prerequisites);
+        AutomaticWeaponPlacementDiagnostics diagnostics =
+                AutomaticWeaponPlacementDiagnostics.create(
+                        PROFILE, candidates, prerequisites);
+        ResearchGroupedRouteQualityAudit.Audit quality =
+                ResearchGroupedRouteQualityAudit.audit(
+                published.graph(),
+                published.presentation(),
+                diagnostics,
+                new ResearchPointAwardEconomyProjection.Projection(
+                        1,
+                        0,
+                        FINITE_POINT_INCOME,
+                        Map.of(
+                                ResearchPointAwardTrigger.Type.INTEGRATION,
+                                FINITE_POINT_INCOME)));
+        ResearchTechTreeTopologyAudit.Audit topology =
+                ResearchTechTreeTopologyAudit.audit(
+                        published.graph(), published.presentation(), diagnostics);
+        return new GroupedRouteEvidence(quality, topology);
+    }
+
+    /**
+     * Builds the same branch evidence consumed by runtime prerequisite planning.
+     * The six deterministic role families keep the scale fixture representative
+     * without tying its baseline to a particular external weapon pack.
+     */
+    private static AutomaticWeaponCandidateClassification classification(
+            Scenario scenario,
+            Map<String, AutomaticWeaponPlacementProposal> proposals,
+            AutomaticWeaponPlacementPolicy policy) {
+        Map<String, WeaponMechanicalScore> scores = new LinkedHashMap<>();
+        Map<String, String> archetypes = new LinkedHashMap<>();
+        proposals.values().stream()
+                .sorted(Comparator.comparing(AutomaticWeaponPlacementProposal::blueprintId))
+                .forEach(proposal -> {
+                    int index = Integer.parseInt(proposal.blueprintId().substring(
+                            proposal.blueprintId().lastIndexOf('_') + 1));
+                    SyntheticRole role = SyntheticRole.values()[
+                            index % SyntheticRole.values().length];
+                    scores.put(proposal.blueprintId(), score(
+                            proposal.blueprintId(),
+                            role.archetype,
+                            proposal.mechanicalScore(),
+                            proposal.mechanicalScore(),
+                            proposal.confidence(),
+                            metricScores(
+                                    role.damage,
+                                    role.range,
+                                    role.magazine,
+                                    role.handling)));
+                    archetypes.put(proposal.blueprintId(), role.archetype);
+                });
+        Map<String, AutomaticWeaponRoleSignature> signatures =
+                new AutomaticWeaponRoleAnalyzer().analyze(
+                        proposals, scores, archetypes);
+        int branchLimit = AutomaticWeaponBranchAnalyzer.branchLimitForLayerWidth(
+                policy.maxNodesPerRank());
+        AutomaticWeaponBranchModel branchModel =
+                new AutomaticWeaponBranchAnalyzer().discover(
+                        signatures, Map.of(), branchLimit);
+        return new AutomaticWeaponCandidateClassification(
+                TREE,
+                AutomaticPlacementMode.CONNECTED,
+                policy,
+                CATALOG_REVISION,
+                RESEARCH_REVISION,
+                scenario.weaponCount(),
+                proposals,
+                signatures,
+                Map.of(),
+                branchModel,
+                Map.of(),
+                Set.of(),
+                Set.of());
     }
 
     static LayerBaseline maximumLayerBaseline(boolean reverseInput) {
@@ -269,6 +477,16 @@ final class AutomaticWeaponTopologyPhaseZeroFixture {
     private static AutomaticWeaponPlacementPolicy policy(
             int width,
             int foundationCount) {
+        return policy(
+                width,
+                foundationCount,
+                AutomaticWeaponPlacementPolicy.PrerequisiteStrategy.LEGACY_AND);
+    }
+
+    private static AutomaticWeaponPlacementPolicy policy(
+            int width,
+            int foundationCount,
+            AutomaticWeaponPlacementPolicy.PrerequisiteStrategy strategy) {
         return new AutomaticWeaponPlacementPolicy(
                 3,
                 0,
@@ -278,7 +496,8 @@ final class AutomaticWeaponTopologyPhaseZeroFixture {
                 AutomaticWeaponPlacementPolicy.LayeringStrategy.DYNAMIC_STAT_LAYERS,
                 width,
                 List.of(),
-                foundationCount);
+                foundationCount,
+                strategy);
     }
 
     private static Map<String, AutomaticWeaponPlacementProposal> proposals(
@@ -412,10 +631,13 @@ final class AutomaticWeaponTopologyPhaseZeroFixture {
 
     private static ResearchTechTreeDefinition tree() {
         return new ResearchTechTreeDefinition(
-                1,
+                ResearchTechTreeDefinition.CURRENT_FORMAT,
                 "Phase zero",
                 Optional.empty(),
                 Optional.empty(),
+                ResearchTechTreeDefinition.WeaponPlacementMode.AUTOMATIC,
+                new ResearchTechTreeDefinition.LayoutDefinition(20),
+                ResearchTechTreeDefinition.BandPolicyDefinition.NONE,
                 Arrays.stream(Tier.values())
                         .map(tier -> new ResearchTechTreeDefinition.TierDefinition(
                                 tier, tier.name(), Optional.empty()))
@@ -485,11 +707,19 @@ final class AutomaticWeaponTopologyPhaseZeroFixture {
                     PlacementOrigin.AUTOMATIC,
                     Optional.empty()));
         }
-        List<ResearchTreeGraph.Edge> edges = prerequisites.prerequisites().entrySet().stream()
-                .flatMap(entry -> entry.getValue().stream().map(parent ->
-                        new ResearchTreeGraph.Edge(parent, entry.getKey())))
-                .toList();
-        ResearchTreeGraph graph = new ResearchTreeGraph(nodes, edges);
+        List<ResearchTreeGraph.RequirementGroup> requirementGroups = new ArrayList<>();
+        prerequisites.requirementGroups().forEach((dependent, requirements) -> {
+            for (int ordinal = 0; ordinal < requirements.allOf().size(); ordinal++) {
+                requirementGroups.add(new ResearchTreeGraph.RequirementGroup(
+                        dependent,
+                        ordinal,
+                        requirements.allOf().get(ordinal).anyOf(),
+                        0,
+                        false));
+            }
+        });
+        ResearchTreeGraph graph = ResearchTreeGraph.withRequirementGroups(
+                nodes, requirementGroups);
         ResearchTechTreePresentation.DomainView domain =
                 new ResearchTechTreePresentation.DomainView(
                         Domain.WEAPONS,
@@ -658,6 +888,34 @@ final class AutomaticWeaponTopologyPhaseZeroFixture {
         return new ResourceLocation(value);
     }
 
+    private enum SyntheticRole {
+        RIFLE("rifle", 82, 58, 66, 62),
+        SMG("smg", 64, 24, 86, 82),
+        SNIPER("sniper", 76, 96, 18, 34),
+        SHOTGUN("shotgun", 92, 28, 32, 46),
+        LMG("lmg", 80, 54, 96, 22),
+        LAUNCHER("launcher", 100, 42, 8, 14);
+
+        private final String archetype;
+        private final int damage;
+        private final int range;
+        private final int magazine;
+        private final int handling;
+
+        SyntheticRole(
+                String archetype,
+                int damage,
+                int range,
+                int magazine,
+                int handling) {
+            this.archetype = archetype;
+            this.damage = damage;
+            this.range = range;
+            this.magazine = magazine;
+            this.handling = handling;
+        }
+    }
+
     record Scenario(
             String name,
             int weaponCount,
@@ -689,8 +947,8 @@ final class AutomaticWeaponTopologyPhaseZeroFixture {
             long approximateCrossingCount,
             long totalEdgeRankSpan,
             int leafCount,
-            int maximumLeafSinglePathCost,
-            int maximumLeafUnlockClosureCost,
+            long maximumLeafSinglePathCost,
+            long maximumLeafUnlockClosureCost,
             int layoutWidth,
             int layoutHeight,
             int maximumVisualRowPopulation,
@@ -706,6 +964,27 @@ final class AutomaticWeaponTopologyPhaseZeroFixture {
             int maximumRankWidth,
             int finalRankWidth,
             String placementSignature) {
+    }
+
+    record GroupedRouteBaseline(
+            String scenario,
+            int automaticTargetCount,
+            int generatedReferenceCount,
+            int singleParentTargetCount,
+            int alternativeGroupCandidateCount,
+            int pairGroupCandidateCount,
+            int largerGroupCandidateCount,
+            int maximumAlternativeCount,
+            int maximumSingleParentChain,
+            ResearchGroupedRouteBaselineAudit.IntDistribution generatedFanOut,
+            ResearchGroupedRouteBaselineAudit.AlternativeEvidence alternativeEvidence,
+            ResearchGroupedRouteBaselineAudit.RouteCostComparison routeCosts,
+            String inputFingerprint) {
+    }
+
+    record GroupedRouteEvidence(
+            ResearchGroupedRouteQualityAudit.Audit quality,
+            ResearchTechTreeTopologyAudit.Audit topology) {
     }
 
     private record Published(

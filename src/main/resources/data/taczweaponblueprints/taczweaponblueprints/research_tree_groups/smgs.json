@@ -6,11 +6,6 @@
   "icon": "tacz:uzi",
   "order": 20,
   "ranks": [
-    [],
-    ["tacz:uzi"],
-    ["tacz:hk_mp5a5"],
-    ["tacz:ump45"],
-    ["tacz:p90"],
-    ["tacz:vector45"]
+    ["tacz:uzi", "tacz:hk_mp5a5", "tacz:ump45", "tacz:p90", "tacz:vector45"]
   ]
 }

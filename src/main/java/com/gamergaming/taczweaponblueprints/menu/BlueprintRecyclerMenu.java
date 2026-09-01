@@ -12,6 +12,7 @@ import com.gamergaming.taczweaponblueprints.item.BlueprintProvenance;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintRecyclingService;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintReverseEngineeringService;
+import com.gamergaming.taczweaponblueprints.progression.FoundWeaponRecoveryService;
 import com.gamergaming.taczweaponblueprints.progression.ResearchIngredientPlanner;
 import com.gamergaming.taczweaponblueprints.progression.ResearchDataRedemptionService;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
@@ -206,6 +207,16 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
             } finally {
                 mutationInProgress = false;
             }
+        } else if (action == BlueprintRecyclerActionContract.Action.RECOVER_POINTS) {
+            mutationInProgress = true;
+            try {
+                FoundWeaponRecoveryService.Result result =
+                        FoundWeaponRecoveryService.recover(
+                                player, workstationTransaction());
+                resultCode = BlueprintRecyclerActionContract.ResultCode.from(result.status());
+            } finally {
+                mutationInProgress = false;
+            }
         } else if (blueprintId.isPresent()) {
             BlueprintRecyclingService.Result result =
                     BlueprintRecyclingService.recycle(player, physicalInput);
@@ -350,6 +361,8 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
         BlueprintReverseEngineeringService.Evaluation reverse =
                 BlueprintReverseEngineeringService.evaluate(player, workstationTransaction());
         if (reverse.blueprintId().isPresent()) {
+            FoundWeaponRecoveryService.Evaluation recovery =
+                    FoundWeaponRecoveryService.evaluate(player, workstationTransaction());
             List<BlueprintRecyclerPreview.IngredientPreview> ingredients =
                     reverseIngredients(reverse);
             return new BlueprintRecyclerPreview(
@@ -370,7 +383,10 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
                     reverse.customizationWillBeLost(),
                     reverse.alreadyKnown(),
                     Optional.of(reverse.status()),
-                    ingredients);
+                    ingredients,
+                    BlueprintRecyclerPreview.WeaponOrigin.from(physicalInput),
+                    recovery.pointValue(),
+                    Optional.of(recovery.status()));
         }
         if (researchData.matchedInput()) {
             return new BlueprintRecyclerPreview(

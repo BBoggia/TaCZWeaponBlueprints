@@ -12,6 +12,7 @@ import com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerActionContract
 import com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerPreview;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintRecyclingService;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintReverseEngineeringService;
+import com.gamergaming.taczweaponblueprints.progression.FoundWeaponRecoveryService;
 import com.gamergaming.taczweaponblueprints.progression.ResearchDataRedemptionService;
 
 import io.netty.buffer.Unpooled;
@@ -89,7 +90,10 @@ class BlueprintRecyclerPacketTest {
                                 List.of(new ResourceLocation("minecraft:iron_ingot")),
                                 Optional.empty(),
                                 2,
-                                3)))
+                                3)),
+                        BlueprintRecyclerPreview.WeaponOrigin.LOOT_GENERATED,
+                        3,
+                        Optional.of(FoundWeaponRecoveryService.Status.READY))
         };
 
         for (BlueprintRecyclerPreview preview : previews) {

@@ -17,6 +17,7 @@ import com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerActionContract
 import com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerPreview;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintRecyclingService;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintReverseEngineeringService;
+import com.gamergaming.taczweaponblueprints.progression.FoundWeaponRecoveryService;
 import com.gamergaming.taczweaponblueprints.progression.ResearchDataRedemptionService;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -133,6 +134,38 @@ class BlueprintRecyclerScreenModelTest {
     }
 
     @Test
+    void verifiedFoundWeaponsExposeChoiceDirectAndFailureStates() {
+        BlueprintRecyclerScreenModel choice = BlueprintRecyclerScreenModel.from(
+                physicalRecovery(
+                        BlueprintReverseEngineeringService.Status.READY,
+                        FoundWeaponRecoveryService.Status.READY),
+                false);
+        assertEquals(Optional.of(BlueprintRecyclerActionContract.Action.REVERSE_ENGINEER),
+                choice.primaryAction());
+        assertEquals(Optional.of(BlueprintRecyclerActionContract.Action.RECOVER_POINTS),
+                choice.secondaryAction());
+        assertTrue(choice.statusKey().endsWith("choice_ready"));
+
+        BlueprintRecyclerScreenModel direct = BlueprintRecyclerScreenModel.from(
+                physicalRecovery(
+                        BlueprintReverseEngineeringService.Status.RECOVERY_MODE_DISABLED,
+                        FoundWeaponRecoveryService.Status.READY),
+                false);
+        assertEquals(Optional.of(BlueprintRecyclerActionContract.Action.RECOVER_POINTS),
+                direct.primaryAction());
+        assertTrue(direct.secondaryAction().isEmpty());
+        assertTrue(direct.statusKey().endsWith("direct_ready"));
+
+        BlueprintRecyclerScreenModel capped = BlueprintRecyclerScreenModel.from(
+                physicalRecovery(
+                        BlueprintReverseEngineeringService.Status.RECOVERY_MODE_DISABLED,
+                        FoundWeaponRecoveryService.Status.POINT_CAP_REACHED),
+                false);
+        assertTrue(capped.primaryAction().isEmpty());
+        assertTrue(capped.statusKey().endsWith("recovery.status.point_cap_reached"));
+    }
+
+    @Test
     void everyGeneratedStatusActionAndResultKeyIsLocalized() throws IOException {
         JsonObject language;
         try (InputStreamReader reader = new InputStreamReader(
@@ -155,6 +188,14 @@ class BlueprintRecyclerScreenModelTest {
                 : BlueprintReverseEngineeringService.Status.values()) {
             assertTrue(language.has(BlueprintRecyclerScreenModel.from(
                     physical(status), false).statusKey()));
+        }
+        for (FoundWeaponRecoveryService.Status status
+                : FoundWeaponRecoveryService.Status.values()) {
+            assertTrue(language.has(BlueprintRecyclerScreenModel.from(
+                    physicalRecovery(
+                            BlueprintReverseEngineeringService.Status.RECOVERY_MODE_DISABLED,
+                            status),
+                    false).statusKey()));
         }
         for (BlueprintRecyclerActionContract.Action action
                 : BlueprintRecyclerActionContract.Action.values()) {
@@ -239,5 +280,32 @@ class BlueprintRecyclerScreenModelTest {
                 alreadyKnown,
                 Optional.of(status),
                 List.of());
+    }
+
+    private static BlueprintRecyclerPreview physicalRecovery(
+            BlueprintReverseEngineeringService.Status reverseStatus,
+            FoundWeaponRecoveryService.Status recoveryStatus) {
+        return new BlueprintRecyclerPreview(
+                BlueprintRecyclerPreview.InputKind.PHYSICAL_ITEM,
+                Optional.of(BLUEPRINT),
+                1,
+                0,
+                4,
+                100,
+                Optional.empty(),
+                Optional.empty(),
+                5L,
+                Optional.of(BLUEPRINT),
+                1,
+                0,
+                true,
+                true,
+                false,
+                false,
+                Optional.of(reverseStatus),
+                List.of(),
+                BlueprintRecyclerPreview.WeaponOrigin.LOOT_GENERATED,
+                3,
+                Optional.of(recoveryStatus));
     }
 }

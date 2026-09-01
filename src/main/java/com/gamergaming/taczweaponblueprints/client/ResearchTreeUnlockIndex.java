@@ -1,8 +1,7 @@
 package com.gamergaming.taczweaponblueprints.client;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -11,8 +10,8 @@ import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * Immutable AND-aware counts of dependents that are, or would become,
- * researchable after one prerequisite is learned.
+ * Immutable AND-of-OR-aware counts of dependents that are, or would become,
+ * researchable after one published alternative is learned.
  */
 public final class ResearchTreeUnlockIndex {
     public static final ResearchTreeUnlockIndex EMPTY = new ResearchTreeUnlockIndex(
@@ -39,46 +38,44 @@ public final class ResearchTreeUnlockIndex {
             return EMPTY;
         }
         Map<ResourceLocation, ResearchTreeGraph.Node> nodes = new LinkedHashMap<>();
-        Map<ResourceLocation, List<ResourceLocation>> requirements = new LinkedHashMap<>();
         Map<ResourceLocation, Integer> future = new LinkedHashMap<>();
         Map<ResourceLocation, Integer> available = new LinkedHashMap<>();
-        java.util.LinkedHashSet<ResourceLocation> learned = new java.util.LinkedHashSet<>();
+        LinkedHashSet<ResourceLocation> learned = new LinkedHashSet<>();
         for (ResearchTreeGraph.Node node : graph.nodes()) {
             nodes.put(node.blueprintId(), node);
-            requirements.put(node.blueprintId(), new ArrayList<>());
             future.put(node.blueprintId(), 0);
             available.put(node.blueprintId(), 0);
             if (node.learned()) {
                 learned.add(node.blueprintId());
             }
         }
-        for (ResearchTreeGraph.Edge edge : graph.edges()) {
-            requirements.get(edge.dependentId()).add(edge.prerequisiteId());
-        }
         for (ResearchTreeGraph.Node dependent : graph.nodes()) {
             if (dependent.learned() || !dependent.visibility().revealsIdentity()) {
                 continue;
             }
-            List<ResourceLocation> prerequisites = requirements.get(dependent.blueprintId());
+            var groups = graph.requirementGroupsOf(dependent.blueprintId());
             if (dependent.availability()
                     == ResearchTreeGraph.Availability.PREREQUISITES_REQUIRED) {
-                ResourceLocation onlyUnlearned = null;
-                int unlearnedCount = 0;
-                for (ResourceLocation prerequisite : prerequisites) {
-                    if (!nodes.get(prerequisite).learned()) {
-                        onlyUnlearned = prerequisite;
-                        unlearnedCount++;
+                LinkedHashSet<ResourceLocation> candidates = new LinkedHashSet<>();
+                groups.forEach(group -> group.visibleAlternativeIds().stream()
+                        .filter(id -> !nodes.get(id).learned())
+                        .forEach(candidates::add));
+                for (ResourceLocation candidate : candidates) {
+                    boolean unlocks = groups.stream().allMatch(group ->
+                            isSatisfied(group, nodes)
+                                    || group.visibleAlternativeIds().contains(candidate));
+                    if (unlocks) {
+                        increment(future, candidate);
                     }
-                }
-                if (unlearnedCount == 1) {
-                    increment(future, onlyUnlearned);
                 }
             } else if (dependent.availability()
                     == ResearchTreeGraph.Availability.AVAILABLE) {
-                for (ResourceLocation prerequisite : prerequisites) {
-                    if (nodes.get(prerequisite).learned()) {
-                        increment(available, prerequisite);
-                    }
+                LinkedHashSet<ResourceLocation> contributors = new LinkedHashSet<>();
+                groups.forEach(group -> group.visibleAlternativeIds().stream()
+                        .filter(id -> nodes.get(id).learned())
+                        .forEach(contributors::add));
+                for (ResourceLocation contributor : contributors) {
+                    increment(available, contributor);
                 }
             }
         }
@@ -97,6 +94,14 @@ public final class ResearchTreeUnlockIndex {
         return learnedBlueprints.contains(blueprintId)
                 ? availableDependents.getOrDefault(blueprintId, 0)
                 : unlocksAfterLearning.getOrDefault(blueprintId, 0);
+    }
+
+    private static boolean isSatisfied(
+            ResearchTreeGraph.RequirementGroup group,
+            Map<ResourceLocation, ResearchTreeGraph.Node> nodes) {
+        return group.satisfactionDisclosed() && group.satisfied()
+                || group.visibleAlternativeIds().stream()
+                        .anyMatch(id -> nodes.get(id).learned());
     }
 
     public int unlocksAfterLearning(ResourceLocation blueprintId) {

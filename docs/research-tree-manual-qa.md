@@ -55,18 +55,16 @@ scales 1, 2, 3, 4, and Auto where the display supports them. Include 320x240,
   extract-only output, and player inventory.
 - [ ] Fullscreen is a translucent world-backed overlay at every supported size and reserves no permanent right, bottom, or drawer details panel.
 - [ ] Opening, resizing, and closing the permanent Research Tree preserve a valid focus without exposing inactive inventory slots.
-- [ ] Search text and the independent Tech Tree, All Weapons, and per-branch pan and zoom positions survive repeated view and domain changes.
+- [ ] Search text and independent per-domain Tech Tree pan and zoom positions survive repeated domain changes.
 - [ ] Fullscreen controls remain readable over bright and dark world backgrounds.
 - [ ] The pinned context card fully covers every graph edge, label, badge, and item model behind it; only the card's own icons and widgets render above its background.
 - [ ] Selected, focused, and hovered rail labels avoid the pinned context card; if space is exhausted, the conflicting label stays hidden and never claims clicks through the card.
-- [ ] Changing Research Tree Settings spacing, wrapping, and pass settings while the bench is open refreshes Tech Tree, Branches, and All Weapons geometry once without changing the server tree or entering a rebuild loop.
-- [ ] A large content-pack catalog with many independent entries in the same
-  group and progression level keeps its multiple rows in All Weapons; no nodes
-  overlap and opening the bench does not produce an empty first publication.
-- [ ] If the polished All Weapons composer is deliberately fault-injected, the
-  same-publication bounded fallback keeps All Weapons and Branches usable. If
-  both composers are fault-injected, the screen reports a display failure
-  instead of claiming that no blueprints exist.
+- [ ] Changing Research Tree Settings spacing, wrapping, and pass settings while the bench is open refreshes Tech Tree geometry once without changing the server tree or entering a rebuild loop.
+- [ ] A large content-pack catalog with many entries at the same progression
+  level wraps into multiple Tech Tree rows without overlap or an empty first publication.
+- [ ] If Tech Tree publication is deliberately fault-injected, the Bench stays
+  in Tech Tree and reports that it is unavailable; it never opens Branches or
+  All Weapons and the server log records the generation failure.
 - [ ] Reduce Motion applies immediately in an open bench: any active transition
   completes once, and focus, Fit, wheel, search, and sidebar camera changes are
   immediate afterward without changing saved camera targets.
@@ -80,7 +78,7 @@ scales 1, 2, 3, 4, and Auto where the display supports them. Include 320x240,
 - [ ] Dragging empty canvas space pans smoothly and remains bounded.
 - [ ] Wheel, `+`, `-`, and Fit operate at both zoom limits in the permanent Research Tree.
 - [ ] Search highlights matches, and committing the active result centers it.
-- [ ] Typing a search query updates highlights and result count without panning, changing the focused node, or switching Branches; Up/Down changes the active result and Enter or a result click navigates exactly once.
+- [ ] Typing a search query updates highlights and result count without panning, changing the focused node, or changing domains; Up/Down changes the active result and Enter or a result click navigates exactly once.
 - [ ] Closing and reopening search preserves a valid query and active result without changing the authoritative research selection.
 - [ ] Hovering an ordinary node shows only its published name and one concise status line; it never exposes selected-card cost, inventory, or readiness details.
 - [ ] Clicking a node shows one clear next step plus direct requirement and immediate unlock counts; the pinned card exposes exact RP and inventory materials.
@@ -114,27 +112,26 @@ scales 1, 2, 3, 4, and Auto where the display supports them. Include 320x240,
 - [ ] A tracked goal survives closing and reopening the Research Bench during the
   same connection, clears on logout, and clears safely if a reload removes or
   redacts the target.
-- [ ] The tracked prerequisite route remains highlighted when switching Branch,
-  All Weapons, and Tech Tree domain projections; only route
-  nodes present in the active projection are drawn.
+- [ ] The tracked prerequisite route remains highlighted when switching Tech
+  Tree domains; only route nodes present in the active domain are drawn.
 - [ ] While a goal is active, `Next` only recommends an available step on that
-  goal's prerequisite closure. Untracking restores the global recommendation.
+  goal's selected AND-of-OR route. An unsatisfied any-of group contributes one
+  alternative rather than every member. Untracking restores the global recommendation.
 - [ ] Plan tooltips show the exact total of published RP and material requirement
   entries, label totals as partial when Preview or anonymous steps withhold exact
   policy, and never reveal hidden item IDs, quantities, names, or availability.
 - [ ] A fresh client sees exactly three short tree-help instructions; `Got it` survives a restart, and the rail `?` button reopens help.
 - [ ] The help panel blocks underlying node clicks, dragging, scrolling, hover highlighting, and tooltips only inside its own bounds.
-- [ ] Compact branch selection cycles every published branch without clipping or overlapping the search field.
-- [ ] The fullscreen Weapon Trees sidebar begins with a permanently visible stateful view action: it shows `A` / Show All Weapons in Branches and `B` / Back to Branches in All Weapons, even after scrolling to the last published group.
-- [ ] Repeated fullscreen Branches/All Weapons toggles preserve the independent overview and per-branch cameras.
+- [ ] The compact browse-view selector is hidden and no keyboard, search,
+  recommendation, portal, or restored-state path can enter Branches or All Weapons.
+- [ ] The fullscreen Research Trees sidebar begins with the first Tech Tree
+  domain; it contains no Branches/All Weapons view action or dead leading slot.
 - [ ] After the sidebar has been used, it collapses to a narrow edge affordance; moving onto that edge reliably reopens it without stealing clicks elsewhere on the graph.
 - [ ] Pinning the fullscreen sidebar prevents auto-hide, survives closing and reopening Minecraft, and unpinning restores normal auto-hide behavior.
 - [ ] Fullscreen Help reopens the same non-blocking first-visit coachmark after it has been dismissed.
-- [ ] Selecting an overview-included sidebar branch focuses its nodes without filtering the unified tree; selecting an explicitly excluded branch opens its Branches projection.
-- [ ] The default All Weapons overview includes generated identity-visible gun-pack fallback groups, while Undisclosed overflow remains reachable only through Branches and search.
-- [ ] Fit keeps the complete visible-weapon overview at a readable scale and remains pannable when the whole graph cannot fit readably.
-- [ ] With an empty publication or a search returning no matching blueprints, opening the Bench and switching between Branches and All Weapons shows a stable empty state without crashing.
-- [ ] All Weapons uses one prerequisite-driven canvas without category columns or separate group rectangles; disconnected components remain compact and clearly separate.
+- [ ] Selecting an available domain opens its Tech Tree projection and disabled Ammo or Attachment domains cannot be selected.
+- [ ] Fit keeps the complete visible Tech Tree domain at a readable scale and remains pannable when the whole graph cannot fit readably.
+- [ ] An empty or failed Tech Tree publication shows a stable, explicit unavailable state without crashing or revealing a legacy projection.
 - [ ] Forks and merges are centered around their connected nodes, avoid avoidable crossings, and preserve bottom-to-top direction at every supported GUI scale.
 - [ ] Anonymous nodes appear only in the disclosure-safe Undisclosed branch and never reveal their actual type or identity.
 - [ ] Node status remains understandable without relying on color.
@@ -222,7 +219,7 @@ scales 1, 2, 3, 4, and Auto where the display supports them. Include 320x240,
   cannot recycle the protected output for RP under the packaged policy. Using
   that physical blueprint later learns the recipe according to its provenance.
 
-- [ ] A fresh player sees all 53 recipe-backed default TaCZ weapons in one connected weakest-to-strongest overview while the seven class groups remain directly accessible in Branches.
+- [ ] A fresh player sees all 53 recipe-backed default TaCZ weapons in one connected weakest-to-strongest Tech Tree without a legacy view selector.
 - [ ] Glock 17 is the normal shared entry; in a test datapack that removes or blacklists it, M9A4 becomes the selectable root and every class starter points to it instead of remaining locked behind Glock.
 - [ ] Every ordinary overview connector corresponds to a prerequisite actually enforced by the server.
 - [ ] A weapon learned before the connected default-tree update remains learned even when its newly authored prerequisite is not present in that save.
@@ -257,7 +254,7 @@ These checks cover the optional third view from its original acceptance
 contract through the current unified-domain implementation. Leave a box
 unchecked until that behavior has been confirmed in a real client/server run.
 
-- [ ] Branches, All Weapons, and Tech Tree are three explicit choices; Tech Tree never replaces or silently changes the two existing projections.
+- [ ] Tech Tree is the sole player-facing choice; the dormant Branches and All Weapons projections never appear in compact or fullscreen navigation.
 - [ ] With the packaged profile, Tech Tree opens Weapons and shows Attachment and Ammo domain slots as disabled/empty without publishing their nodes.
 - [ ] Compact Tech Tree mode shows three direct domain icons in stable Weapons, Attachments, Ammo order; hover/narration identifies the domain and visible blueprint count, and a domain with no visible publication is disabled rather than opening a stale tree.
 - [ ] Compact and fullscreen show the same three stable domain slots after removing one domain during `/reload`; the missing slot is disabled, Page Up/Page Down skips it in both directions, and restoring the domain makes the same slot usable again.
@@ -285,16 +282,30 @@ unchecked until that behavior has been confirmed in a real client/server run.
 - [ ] An add-on gun with no usable TaCZ runtime evidence receives a deterministic conservative, review-marked placement; restart and catalog discovery order do not move it, and export identifies `unscored_fallback` plus the evidence failure.
 - [ ] `place_independent` publishes the same reviewed placement without a generated prerequisite; returning to `exclude` restores its legacy fallback position without changing learned or discovered state.
 - [ ] With the automatic-placement profile set to `distributed`, eligible add-on guns move to stable stat-sorted ranks after `/reload`, no generated rank exceeds the tree's `layout.max_nodes_per_layer`, and RP costs, materials, availability, and prerequisite connectors remain unchanged.
+- [ ] The packaged format-4 automatic profile reports `scoring model=capability_v3`; inspecting the M320 reports formula `tacz-gun-capability-v3`, reference `tacz-1.1.8-capability-v3`, and an Advanced suggestion matching its authored rank-5 placement behind the AUG and M870.
+- [ ] Override the same profile with `scoring_model: mechanical_v2`, reload, and confirm generated positions revert without changing learned blueprints, RP, authored placements, costs, or prerequisite authority. Restore `capability_v3` and confirm the prior v3 topology returns deterministically.
 - [ ] Returning the profile to `independent` restores the legacy fallback position after `/reload`; learned/discovered state and the current research graph remain unchanged.
 - [ ] If one automatic proposal would appear before an authored prerequisite, the publication uses the complete authored/legacy layout rather than hiding the Tech Tree or applying only some proposals.
 - [ ] With the profile set to `connected`, the lower automatic ranks form a dense shared box, the transition retains a deterministic taper of cross-family and then same-family simultaneous parents, and the upper paths become family-local without forcing every apex to a single node; no edge remains within a rank, and the tree, Journal, preview, and Research action agree.
 - [ ] In a deep connected tree, family separation begins around the lower third while merge density tapers through roughly the lower three quarters; periodic merges do not reconnect mature specialization ranks across families.
 - [ ] At full-tree Fit on a large add-on catalog, sparse outer branches remain within two ordinary node gaps of the dense tree envelope, lower shared ranks retain normal compact spacing, and small branch-family gutters appear at the first family rank and widen toward the top. High-fan-out or crossing-heavy first splits should receive visibly more initial clearance without reaching a huge empty corridor.
-- [ ] Learning a connected add-on gun's generated anchor immediately makes the gun researchable, while blocking or removing that anchor suppresses the generated lock instead of stranding the gun.
+- [ ] With `prerequisite_strategy: grouped_routes_v1`, a connected add-on gun with two generated alternatives is blocked while neither route is learned, becomes researchable after either route is learned, and still shows both conservative layout connectors. A one-parent selection remains a singleton requirement and a generated root remains directly available.
+- [ ] With a temporary format-3 `prerequisite_strategy: hybrid_routes_v1` profile using `max_prerequisites: 3`, confirm the lower body remains densely connected, branch separation is gradual, and occasional mixed `[[A,B],[C]]` nodes require one of A/B plus C. No mandatory gateway should first appear in specialization or a terminal cohort, and no eligible rank should contain more than one scheduled gateway.
+- [ ] Inspect representative pure-OR, mandatory, and mixed hybrid targets. `/gg research inspect` must report the exact relationship shape, learning either OR alternative must satisfy only that group, and the mandatory gateway must remain required. Restore the packaged grouped profile afterward and confirm learned knowledge is unchanged.
+- [ ] Learning a connected add-on gun's only generated anchor immediately makes the gun researchable, while blocking or removing that anchor suppresses the generated lock instead of stranding the gun.
 - [ ] A datapack-authored prerequisite remains the complete effective prerequisite list for that gun and is never replaced or extended by the connected-mode heuristic.
-- [ ] `/gg research status` reports the selected automatic mode, tree, eligible/excluded counts, planned edges/omissions, branch boundaries, same/cross-family edges and merges, maximum fan-out, the current catalog/research revision pair, and complete candidate/branch-coordinate/decision/finalized-rank counts; a stale publication reports `awaiting_rebuild`, a failed rebuild reports its exact stage and bounded reason, and a later revision clears that stale failure.
-- [ ] `/gg research inspect <blueprint>` explains an add-on gun's automatic state, score, confidence, generated rank, optional band, stable sibling order, planned prerequisite or omission, exact branch strategy, parent-family counts, and terminal/depth flags without adding a line for attachment/ammo entries.
-- [ ] `/gg research export` writes format 12 deterministically and its tree-owned band policy, configured/effective layer width, topology population, branch-prerequisite and publication-completeness summaries, planned and published ranks, topology/economy sections, second-parent quotas, closure-rejection evidence, and per-weapon decision/parent relationships agree with status/inspect for representative authored, automatic, excluded, and unplaced weapons.
+- [ ] A legacy rule with `prerequisites: [A, B]` still requires both A and B. A format-2 rule with one `prerequisite_groups` entry containing `any_of: [A, B]` becomes researchable after learning either A or B, while a second singleton group remains independently mandatory.
+- [ ] A partially disclosed any-of group shows its visible alternatives and a bounded hidden-choice count without exposing hidden IDs. Preview/name/silhouette visibility must not reveal whether the group is satisfied; full visibility may show the current satisfaction count.
+- [ ] A client or server still using protocol 37 is rejected cleanly. Matching protocol-38 peers reconstruct identical group ordinals, alternatives, hidden counts, disclosure state, and aggregate path-purchase previews even when chunks arrive out of order.
+- [ ] `/gg research status` reports the selected automatic mode and prerequisite strategy, tree, eligible/excluded counts, planned references/groups/alternate-route groups, omissions, branch boundaries, same/cross-family edges and merges, maximum fan-out, the current catalog/research revision pair, and complete candidate/branch-coordinate/decision/finalized-rank counts; a legacy tree may show the explicitly diagnostic Phase-0 counterfactual, while an authoritative grouped tree instead reports live effective-alternative, ancestry, route-cost, chain, branch-entry, per-phase fan-out/family-density, terminal-affordability, warning evidence, and the Phase-6 retain/prototype/insufficient motif decision with its review limits. A stale publication reports `awaiting_rebuild`, a failed rebuild reports its exact stage and bounded reason, and a later revision clears that stale failure.
+- [ ] `/gg research inspect <blueprint>` explains an add-on gun's automatic state, score, confidence, generated rank, optional band, stable sibling order, planned prerequisite or omission, exact branch strategy, parent-family counts, terminal/depth flags, and any grouped route-review outcome/cost bounds/ancestry diversity without adding a line for attachment/ammo entries.
+- [ ] `/gg research export` writes format 18 deterministically, preserves canonical prerequisite-group boundaries plus the legacy prerequisite union, records the automatic strategy, explicit generated relationship shapes and hybrid aggregate counts, planned generated groups, and exact/bounded alternative-route review evidence, includes the complete `grouped_route_quality` distributions/warnings/terminal bounds plus `grouped_route_motif_assessment` signals/recommendations/visual-evidence boundary, and its tree-owned band policy, configured/effective layer width, topology population, branch-prerequisite and publication-completeness summaries, planned and published ranks, topology/economy sections, second-parent quotas, strategy-specific rejection evidence, and per-weapon decision/parent relationships agree with status/inspect for representative authored, automatic, excluded, and unplaced weapons.
+- [ ] For the Phase 10 default-rollout check, confirm the packaged profile reports `grouped_routes_v1`; a temporary format-3 profile with `prerequisite_strategy: legacy_and` restores mandatory generated pairs without changing authored prerequisites or learned blueprints, and restoring the packaged profile returns to grouped routes without revoking progress.
+- [ ] At normal zoom and maximum zoom-out, select targets behind singleton, grouped, and mixed requirements. Confirm route highlighting chooses one viable OR route, grouped junctions remain legible, learning an alternative updates satisfaction without resetting the camera, Fit still frames the full tree, and no new top-heavy or excessive-width regression is visible.
+- [ ] In `DIRECT_LEARN`, select a higher unlearned target. Confirm the action reads `Research Path (N)`, RP is the aggregate distinct-node cost, additional material types are disclosed when the six-row preview is truncated, and success learns the prerequisite-first shortest closure plus target. Missing RP/materials and an injected late learning rejection must leave all inventory, points, blueprint/discovery knowledge, and legacy recipe aliases unchanged. In `CREATE_BLUEPRINT`, the same locked target must retain ordinary unmet-prerequisite behavior.
+- [ ] For the Phase 12 visual-refinement check, use a large catalog with several mature weapon families and force at least one semantic rank to wrap. Include sharply uneven family sizes and a rank where authored nodes share space with only one mature automatic family. The client should keep the minimum required row count, prefer wrap boundaries between families when that does not leave a row below half its balanced target, keep each fitting family coherent even with ordering sweeps set to zero, retain a dense shared base, and avoid both a tall/thin column and a wide top-heavy slab.
+- [ ] Inspect a target with two or more drawable any-of groups. Its junction diamonds and outgoing approaches must occupy distinct small vertical lanes, remain associated with the correct alternatives, and neither overlap nor add extra height to unrelated ranks.
+- [ ] At the first mature branch split, confirm the branches have a small but noticeable seam that grows gradually toward the top. The seam must remain much smaller than a full empty branch corridor, and similarly scored terminal weapons may still end as a two- or three-node cohort on one layer.
 - [ ] Changing the undiscovered-visibility preset does not redact or change the operator export's weapon costs, parent sets, topology metrics, or economy totals; no real player progress changes while exporting.
 - [ ] The packaged weapon economy reports 418 RP total, 10–54 RP single-parent leaf paths, 10–88 RP AND-aware leaf closures, 218 finite configured RP, 16 AND merges, and `research_policy` cost authority with no automatic cost curve.
 - [ ] A format-2 tree with no `bands` renders a rank-only tree with no empty tier gutters; adding three custom bands labels only bands that contain nodes, and removing the middle band's members leaves no vertical gap.
@@ -315,8 +326,8 @@ unchecked until that behavior has been confirmed in a real client/server run.
 - [ ] Removing a TaCZ content pack leaves no broken connector or crash; restoring it makes persisted unlocks usable again.
 - [ ] An unmatched add-on gun receives a named/icon preview node and follows the active automatic-placement/review policy without first finding its physical blueprint.
 - [ ] Under the packaged profile, unmatched ammo and attachments retain their authored 4 RP Preview fallback rules but remain non-researchable and unpublished; enabling their domains makes the fallbacks selectable without fabricating prerequisites.
-- [ ] Many disconnected generated add-on groups in All Weapons pack across rows instead of one ultra-wide strip, and repeated reloads produce the same placement.
-- [ ] Toggling a group's `include_in_overview` value during `/reload` adds or removes its unified nodes and boundary portals without leaving a stale layout or losing its Branches entry.
+- [ ] Large generated add-on weapon families wrap across Tech Tree rows instead of one ultra-wide strip, and repeated reloads produce the same placement.
+- [ ] Changing dormant legacy group metadata during `/reload` does not change the visible Tech Tree or reintroduce a hidden view selector.
 - [ ] Dedicated server rejects a client with any protocol other than `36`.
 - [ ] Reconnect, dimension change, and respawn do not combine old and new tree chunks.
 
@@ -331,7 +342,7 @@ unchecked until that behavior has been confirmed in a real client/server run.
 
 Capture clean, HUD-appropriate PNGs at native resolution:
 
-1. Fullscreen All Weapons view with the Weapon Trees sidebar, one connected prerequisite tree, a selected node, visible arrowheads, and several available and locked nodes.
+1. Fullscreen Tech Tree with the Research Trees domain sidebar, one connected prerequisite tree, a selected node, visible arrowheads, and several available and locked nodes.
 2. Selected-node contextual tooltip showing prerequisites, unlocks, RP cost, inventory material counts, and readiness.
 3. Fullscreen overlay with the world visible behind the tree and the floating Research action enabled.
 4. Blueprint Analyzer screen showing a physical TaCZ item, its exact reverse-engineering cost, and the extract-only blueprint output.
@@ -343,6 +354,13 @@ For redesign comparisons, capture the same state and camera at 320 x 240,
 854 x 480, and the normal release-test resolution. Record GUI scale and JAR
 hash, and compare each candidate against the Phase 0 evidence manifest rather
 than mixing captures from different builds.
+
+For grouped-prerequisite Phase 12, also capture a matched before/after pair from
+the same catalog, viewport, GUI scale, Fit state, and selected node. Include the
+dense lower trunk, the first mature family split, the upper terminal cohorts,
+and one multi-group any-of junction. Record the resolved node capacity and
+confirm the after image shows clearer small branch seams without a top-heavy,
+excessively wide, or tall/thin regression.
 
 Do not use a development build watermark or a screenshot from a different JAR
 than the recorded release hash.

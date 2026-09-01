@@ -48,6 +48,28 @@ public final class BlueprintReverseEngineeringEvaluator {
             Predicate<String> blockedPredicate,
             Predicate<ResourceLocation> progressionExemptPredicate,
             PhysicalItemBlueprintResolver.IdentityAdapter identityAdapter) {
+        return evaluate(
+                stack,
+                snapshot,
+                catalog,
+                profileId,
+                playerData,
+                blockedPredicate,
+                progressionExemptPredicate,
+                identityAdapter,
+                false);
+    }
+
+    static Evaluation evaluate(
+            ItemStack stack,
+            BlueprintResearchSnapshot snapshot,
+            Map<ResourceLocation, BlueprintData> catalog,
+            ResourceLocation profileId,
+            IPlayerRecipeData playerData,
+            Predicate<String> blockedPredicate,
+            Predicate<ResourceLocation> progressionExemptPredicate,
+            PhysicalItemBlueprintResolver.IdentityAdapter identityAdapter,
+            boolean nonLearningResultPermitted) {
         Map<ResourceLocation, BlueprintData> stableCatalog = catalog == null ? Map.of() : catalog;
         PhysicalItemBlueprintResolver.Resolution physical =
                 identityAdapter == null
@@ -84,7 +106,9 @@ public final class BlueprintReverseEngineeringEvaluator {
         } else if (stableExempt.test(blueprintId)) {
             status = Status.PROGRESSION_EXEMPT;
         } else if (!reversePolicy.enabled()
-                || !reversePolicy.physicalBlueprintLearningMode().learningPermitted()) {
+                || (!reversePolicy.physicalBlueprintLearningMode().learningPermitted()
+                        && !reversePolicy.outputRecyclable()
+                        && !nonLearningResultPermitted)) {
             status = Status.REVERSE_ENGINEERING_DISABLED;
         } else if (!researchPolicy.playerDataAvailable()) {
             status = Status.PLAYER_DATA_UNAVAILABLE;

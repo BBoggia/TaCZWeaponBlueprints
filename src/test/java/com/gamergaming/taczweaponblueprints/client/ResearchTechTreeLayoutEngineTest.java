@@ -519,7 +519,7 @@ class ResearchTechTreeLayoutEngineTest {
                         java.util.TreeMap::new,
                         java.util.stream.Collectors.counting()));
 
-        assertEquals(List.of(3L, 3L, 4L),
+        assertEquals(List.of(5L, 5L),
                 countsByY.values().stream().sorted().toList());
         assertTrue(countsByY.values().stream().allMatch(count -> count <= 10));
     }
@@ -596,6 +596,68 @@ class ResearchTechTreeLayoutEngineTest {
 
         assertEquals(2, distinctRows(eight));
         assertEquals(1, distinctRows(ten));
+    }
+
+    @Test
+    void multipleAnyOfJunctionsReceiveDedicatedVerticalClearance() {
+        ResearchTechTreeProjection grouped = groupedJunctionProjection(true);
+        ResearchTechTreeProjection flattened = groupedJunctionProjection(false);
+
+        ResearchTechTreeLayout groupedLayout = ResearchTechTreeLayoutEngine.layout(
+                grouped, ResearchTechTreeLayoutPolicy.DEFAULT);
+        ResearchTechTreeLayout flattenedLayout = ResearchTechTreeLayoutEngine.layout(
+                flattened, ResearchTechTreeLayoutPolicy.DEFAULT);
+        List<ResearchTreeEdgeIndex.PositionedRequirementGroup> junctions =
+                ResearchTreeEdgeIndex.create(
+                        grouped.graph(), groupedLayout.graphLayout())
+                        .requirementJunctions();
+
+        assertEquals(2, junctions.size());
+        assertEquals(
+                ResearchTechTreeLayoutPolicy.REQUIREMENT_JUNCTION_SPACING,
+                Math.abs(junctions.get(1).y() - junctions.get(0).y()));
+        assertEquals(
+                flattenedLayout.graphLayout().height()
+                        + ResearchTechTreeLayoutPolicy.REQUIREMENT_JUNCTION_SPACING,
+                groupedLayout.graphLayout().height());
+        assertEquals(
+                grouped.placements().values().stream()
+                        .map(ResearchTechTreeProjection.Placement::rank).toList(),
+                flattened.placements().values().stream()
+                        .map(ResearchTechTreeProjection.Placement::rank).toList(),
+                "junction clearance must not change semantic ranks");
+    }
+
+    @Test
+    void maximumDrawableAnyOfJunctionsRemainDistinctAndBounded() {
+        int groupCount = 32;
+        ResearchTechTreeProjection grouped = maximumJunctionProjection(true, groupCount);
+        ResearchTechTreeProjection flattened = maximumJunctionProjection(false, groupCount);
+
+        ResearchTechTreeLayout groupedLayout = ResearchTechTreeLayoutEngine.layout(
+                grouped, ResearchTechTreeLayoutPolicy.DEFAULT);
+        ResearchTechTreeLayout flattenedLayout = ResearchTechTreeLayoutEngine.layout(
+                flattened, ResearchTechTreeLayoutPolicy.DEFAULT);
+        List<Integer> junctionYs = ResearchTreeEdgeIndex.create(
+                        grouped.graph(), groupedLayout.graphLayout())
+                .requirementJunctions().stream()
+                .map(ResearchTreeEdgeIndex.PositionedRequirementGroup::y)
+                .sorted()
+                .toList();
+
+        assertEquals(groupCount, junctionYs.size());
+        assertEquals(groupCount, junctionYs.stream().distinct().count());
+        for (int index = 1; index < junctionYs.size(); index++) {
+            assertEquals(
+                    ResearchTechTreeLayoutPolicy.REQUIREMENT_JUNCTION_SPACING,
+                    junctionYs.get(index) - junctionYs.get(index - 1));
+        }
+        assertEquals(
+                flattenedLayout.graphLayout().height()
+                        + (groupCount - 1)
+                                * ResearchTechTreeLayoutPolicy.REQUIREMENT_JUNCTION_SPACING,
+                groupedLayout.graphLayout().height());
+        assertTrue(groupedLayout.graphLayout().height() <= ResearchTreeLayout.MAX_DIMENSION);
     }
 
     @Test
@@ -682,6 +744,10 @@ class ResearchTechTreeLayoutEngineTest {
                 .evidenceAdjustedInitialGutter(18, 2, true));
         assertEquals(18, ResearchTechTreeBranchCompactor
                 .evidenceAdjustedInitialGutter(18, 3, true));
+        assertEquals(17, ResearchTechTreeBranchCompactor
+                .evidenceAdjustedInitialGutter(18, 2, false, 2));
+        assertEquals(18, ResearchTechTreeBranchCompactor
+                .evidenceAdjustedInitialGutter(18, 3, false, 2));
     }
 
     @Test
@@ -731,6 +797,71 @@ class ResearchTechTreeLayoutEngineTest {
         assertTrue(totalGutter >= ResearchTechTreeLayoutPolicy.DEFAULT.nodeGap() / 2);
         assertTrue(totalGutter <= ResearchTechTreeLayoutPolicy.DEFAULT.nodeGap()
                 + ResearchTreeLayout.NODE_WIDTH / 2);
+    }
+
+    @Test
+    void authoredNodesCannotSplitTheOnlyMatureAutomaticFamily() {
+        ResearchTechTreeProjection projection = singleFamilyAuthoredProjection();
+        ResearchTechTreeLayoutPolicy defaults = ResearchTechTreeLayoutPolicy.DEFAULT;
+        ResearchTechTreeLayoutPolicy zeroOrderingSweeps = new ResearchTechTreeLayoutPolicy(
+                defaults.canvasPadding(),
+                defaults.nodeGap(),
+                defaults.sameTierStepGap(),
+                defaults.tierGap(),
+                defaults.portalPadding(),
+                defaults.maxRankBlockWidth(),
+                0,
+                defaults.compactionSweeps());
+
+        ResearchTechTreeLayout layout = ResearchTechTreeLayoutEngine.layout(
+                projection, zeroOrderingSweeps);
+        List<ResourceLocation> ordered = nodesAtSemanticRank(
+                projection, layout.graphLayout(), 0).stream()
+                .map(ResearchTreeLayout.PositionedNode::blueprintId)
+                .toList();
+
+        assertEquals(List.of(
+                id("test:single_family_authored/0"),
+                id("test:single_family_authored/2"),
+                id("test:single_family_authored/1")), ordered);
+    }
+
+    @Test
+    void responsiveAutomaticFamilyLayoutWrapsAtFamilyBoundaries() {
+        List<Integer> ranks = java.util.Collections.nCopies(13, 0);
+        ResearchTechTreeProjection projection = rankedProjection(
+                ranks,
+                List.of(),
+                8,
+                "responsive_families",
+                true,
+                (ordinal, rank) -> ordinal / 4,
+                0,
+                0);
+
+        ResearchTechTreeLayout layout = ResearchTechTreeLayoutEngine.layout(
+                projection, ResearchTechTreeLayoutPolicy.DEFAULT, 86);
+        ResearchTechTreeLayout repeated = ResearchTechTreeLayoutEngine.layout(
+                projection, ResearchTechTreeLayoutPolicy.DEFAULT, 86);
+        Map<Integer, Long> countsByY = layout.graphLayout().nodes().stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        ResearchTreeLayout.PositionedNode::y,
+                        java.util.TreeMap::new,
+                        java.util.stream.Collectors.counting()));
+
+        assertEquals(List.of(4L, 4L, 5L),
+                countsByY.values().stream().sorted().toList());
+        assertEquals(layout, repeated);
+        for (int family = 0; family < 4; family++) {
+            int currentFamily = family;
+            assertEquals(1L, layout.graphLayout().nodes().stream()
+                    .filter(node -> projection.placement(node.blueprintId()).orElseThrow()
+                            .automaticBranch().orElseThrow().branchIndex() == currentFamily)
+                    .map(ResearchTreeLayout.PositionedNode::y)
+                    .distinct()
+                    .count(),
+                    "a family that fits one row must not be cut by responsive wrapping");
+        }
     }
 
     @Test
@@ -820,7 +951,10 @@ class ResearchTechTreeLayoutEngineTest {
             ResearchTechTreeProjection projection = maximumProjection();
             ResearchTechTreeLayout layout = ResearchTechTreeLayoutEngine.layout(
                     projection, ResearchTechTreeLayoutPolicy.DEFAULT);
+            ResearchTechTreeLayout repeated = ResearchTechTreeLayoutEngine.layout(
+                    projection, ResearchTechTreeLayoutPolicy.DEFAULT);
 
+            assertEquals(layout, repeated);
             assertEquals(ResearchTreeGraph.MAX_NODES, layout.graphLayout().nodes().size());
             assertTrue(layout.graphLayout().width() <= ResearchTreeLayout.MAX_DIMENSION);
             assertTrue(layout.graphLayout().height() <= ResearchTreeLayout.MAX_DIMENSION);
@@ -1140,6 +1274,64 @@ class ResearchTechTreeLayoutEngineTest {
                 8);
     }
 
+    private static ResearchTechTreeProjection singleFamilyAuthoredProjection() {
+        ResourceLocation laneId = id("test:single_family_authored/lane");
+        List<ResearchTreeGraph.Node> nodes = new ArrayList<>();
+        List<ResearchTechTreePresentation.Member> members = new ArrayList<>();
+        LinkedHashMap<ResourceLocation, ResearchTechTreeProjection.Placement> placements =
+                new LinkedHashMap<>();
+        for (int ordinal = 0; ordinal < 3; ordinal++) {
+            ResourceLocation nodeId = id("test:single_family_authored/" + ordinal);
+            boolean automatic = ordinal != 1;
+            Optional<ResearchTechTreePresentation.AutomaticBranchPlacement> branch = automatic
+                    ? Optional.of(new ResearchTechTreePresentation.AutomaticBranchPlacement(
+                            0, 0, 0, 1))
+                    : Optional.empty();
+            PlacementOrigin origin = automatic
+                    ? PlacementOrigin.AUTOMATIC : PlacementOrigin.EXACT;
+            nodes.add(node(ordinal, nodeId));
+            members.add(new ResearchTechTreePresentation.Member(
+                    nodeId,
+                    0,
+                    ordinal,
+                    Optional.empty(),
+                    origin,
+                    Optional.empty(),
+                    branch));
+            placements.put(nodeId, new ResearchTechTreeProjection.Placement(
+                    nodeId,
+                    laneId,
+                    0,
+                    0,
+                    ordinal,
+                    Optional.empty(),
+                    origin,
+                    Optional.empty(),
+                    branch));
+        }
+        ResearchTechTreePresentation.DomainView domain =
+                new ResearchTechTreePresentation.DomainView(
+                        Domain.WEAPONS,
+                        "Single family and authored",
+                        Optional.empty(),
+                        Optional.of(nodes.get(0).blueprintId()),
+                        List.of(new ResearchTechTreePresentation.LaneView(
+                                laneId,
+                                "Single family and authored",
+                                Optional.empty(),
+                                Optional.of(nodes.get(0).blueprintId()),
+                                0,
+                                members)));
+        return new ResearchTechTreeProjection(
+                Domain.WEAPONS,
+                domain,
+                new ResearchTreeGraph(nodes, List.of()),
+                placements,
+                List.of(),
+                List.of(),
+                8);
+    }
+
     private static List<ResearchTreeLayout.PositionedNode> nodesAtSemanticRank(
             ResearchTechTreeProjection projection,
             ResearchTreeLayout layout,
@@ -1214,6 +1406,143 @@ class ResearchTechTreeLayoutEngineTest {
                 new ResearchTreeGraph(nodes, List.of()),
                 placements,
                 List.of());
+    }
+
+    private static ResearchTechTreeProjection groupedJunctionProjection(boolean grouped) {
+        ResourceLocation a = id("test:junction/a");
+        ResourceLocation b = id("test:junction/b");
+        ResourceLocation c = id("test:junction/c");
+        ResourceLocation target = id("test:junction/target");
+        List<ResearchTreeGraph.Node> nodes = List.of(
+                node(0, a),
+                node(1, b),
+                node(2, c),
+                node(3, target, 3));
+        List<ResearchTreeGraph.RequirementGroup> groups = List.of(
+                new ResearchTreeGraph.RequirementGroup(
+                        target, 0, List.of(a, b), 0, true, false),
+                new ResearchTreeGraph.RequirementGroup(
+                        target, 1, List.of(a, c), 0, true, false));
+        ResearchTreeGraph groupedGraph = ResearchTreeGraph.withRequirementGroups(nodes, groups);
+        ResearchTreeGraph graph = grouped
+                ? groupedGraph
+                : new ResearchTreeGraph(nodes, groupedGraph.edges());
+        ResourceLocation laneId = id("test:junction/lane");
+        List<ResearchTechTreePresentation.Member> members = new ArrayList<>();
+        LinkedHashMap<ResourceLocation, ResearchTechTreeProjection.Placement> placements =
+                new LinkedHashMap<>();
+        List<ResourceLocation> ids = List.of(a, b, c, target);
+        for (int ordinal = 0; ordinal < ids.size(); ordinal++) {
+            ResourceLocation nodeId = ids.get(ordinal);
+            int rank = nodeId.equals(target) ? 1 : 0;
+            members.add(new ResearchTechTreePresentation.Member(
+                    nodeId,
+                    rank,
+                    ordinal,
+                    Optional.empty(),
+                    PlacementOrigin.EXACT,
+                    Optional.empty(),
+                    Optional.empty()));
+            placements.put(nodeId, new ResearchTechTreeProjection.Placement(
+                    nodeId,
+                    laneId,
+                    rank,
+                    0,
+                    ordinal,
+                    Optional.empty(),
+                    PlacementOrigin.EXACT,
+                    Optional.empty(),
+                    Optional.empty()));
+        }
+        ResearchTechTreePresentation.DomainView domain =
+                new ResearchTechTreePresentation.DomainView(
+                        Domain.WEAPONS,
+                        "Junctions",
+                        Optional.empty(),
+                        Optional.of(a),
+                        List.of(new ResearchTechTreePresentation.LaneView(
+                                laneId,
+                                "Junctions",
+                                Optional.empty(),
+                                Optional.of(a),
+                                0,
+                                members)));
+        return new ResearchTechTreeProjection(
+                Domain.WEAPONS,
+                domain,
+                graph,
+                placements,
+                List.of(),
+                List.of(),
+                8);
+    }
+
+    private static ResearchTechTreeProjection maximumJunctionProjection(
+            boolean grouped,
+            int groupCount) {
+        ResourceLocation source = id("test:maximum_junction/source");
+        ResourceLocation target = id("test:maximum_junction/target");
+        List<ResearchTreeGraph.Node> nodes = List.of(
+                node(0, source),
+                node(1, target, 1, grouped ? groupCount : 0));
+        List<ResearchTreeGraph.RequirementGroup> groups = java.util.stream.IntStream.range(
+                        0, groupCount)
+                .mapToObj(ordinal -> new ResearchTreeGraph.RequirementGroup(
+                        target, ordinal, List.of(source), 1, true, false))
+                .toList();
+        ResearchTreeGraph graph = grouped
+                ? ResearchTreeGraph.withRequirementGroups(nodes, groups)
+                : new ResearchTreeGraph(
+                        nodes,
+                        List.of(new ResearchTreeGraph.Edge(source, target)));
+        ResourceLocation laneId = id("test:maximum_junction/lane");
+        List<ResearchTechTreePresentation.Member> members = new ArrayList<>();
+        LinkedHashMap<ResourceLocation, ResearchTechTreeProjection.Placement> placements =
+                new LinkedHashMap<>();
+        List<ResourceLocation> ids = List.of(source, target);
+        for (int ordinal = 0; ordinal < ids.size(); ordinal++) {
+            ResourceLocation nodeId = ids.get(ordinal);
+            int rank = ordinal;
+            members.add(new ResearchTechTreePresentation.Member(
+                    nodeId,
+                    rank,
+                    ordinal,
+                    Optional.empty(),
+                    PlacementOrigin.EXACT,
+                    Optional.empty(),
+                    Optional.empty()));
+            placements.put(nodeId, new ResearchTechTreeProjection.Placement(
+                    nodeId,
+                    laneId,
+                    rank,
+                    0,
+                    ordinal,
+                    Optional.empty(),
+                    PlacementOrigin.EXACT,
+                    Optional.empty(),
+                    Optional.empty()));
+        }
+        ResearchTechTreePresentation.DomainView domain =
+                new ResearchTechTreePresentation.DomainView(
+                        Domain.WEAPONS,
+                        "Maximum junctions",
+                        Optional.empty(),
+                        Optional.of(source),
+                        List.of(new ResearchTechTreePresentation.LaneView(
+                                laneId,
+                                "Maximum junctions",
+                                Optional.empty(),
+                                Optional.of(source),
+                                0,
+                                members)));
+        return new ResearchTechTreeProjection(
+                Domain.WEAPONS,
+                domain,
+                graph,
+                placements,
+                List.of(),
+                List.of(),
+                8);
     }
 
     private static long distinctRows(ResearchTechTreeProjection projection) {
@@ -1387,6 +1716,14 @@ class ResearchTechTreeLayoutEngineTest {
             int ordinal,
             ResourceLocation nodeId,
             int prerequisiteCount) {
+        return node(ordinal, nodeId, prerequisiteCount, 0);
+    }
+
+    private static ResearchTreeGraph.Node node(
+            int ordinal,
+            ResourceLocation nodeId,
+            int prerequisiteCount,
+            int hiddenPrerequisiteCount) {
         return new ResearchTreeGraph.Node(
                 ordinal,
                 nodeId,
@@ -1400,7 +1737,7 @@ class ResearchTechTreeLayoutEngineTest {
                 1,
                 0,
                 prerequisiteCount,
-                0,
+                hiddenPrerequisiteCount,
                 ResearchTreeGraph.Availability.CONTENT_UNAVAILABLE);
     }
 

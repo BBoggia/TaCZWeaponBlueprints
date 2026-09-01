@@ -321,13 +321,32 @@ class BlueprintResearchSnapshotTest {
                         .result()
                         .orElseThrow();
             }
+            String automaticPath =
+                    "data/taczweaponblueprints/taczweaponblueprints/"
+                            + "research_automatic_placement_profiles/default.json";
+            ResearchAutomaticPlacementProfile automatic;
+            try (var automaticStream = getClass().getClassLoader()
+                    .getResourceAsStream(automaticPath)) {
+                if (automaticStream == null) {
+                    throw new IllegalStateException(
+                            "Missing packaged automatic-placement profile "
+                                    + automaticPath);
+                }
+                automatic = ResearchAutomaticPlacementProfile.CODEC.parse(
+                                JsonOps.INSTANCE,
+                                JsonParser.parseReader(new InputStreamReader(
+                                        automaticStream, StandardCharsets.UTF_8)))
+                        .result()
+                        .orElseThrow();
+            }
             BlueprintResearchSnapshot loaded = BlueprintResearchSnapshot.create(
                     Map.of(),
                     Map.of(BlueprintResearchDataManager.DEFAULT_PROFILE, packaged),
                     Map.of(),
                     Map.of(),
                     Map.of(id("taczweaponblueprints:default"), tree),
-                    Map.of());
+                    Map.of(),
+                    Map.of(id("taczweaponblueprints:default"), automatic));
 
             assertEquals(1, loaded.profiles().size());
             assertEquals(2, packaged.format());

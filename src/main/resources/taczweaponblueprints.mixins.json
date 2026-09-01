@@ -6,7 +6,8 @@
   "refmap": "/META-INF/taczweaponblueprints.refmap.json",
   "mixins": [
     "IGunSmithTableRecipeAccessor",
-    "GunSmithTableMenuMixin"
+    "GunSmithTableMenuMixin",
+    "TaCZLootTableInjectorModifierMixin"
     ],
   "client": [
     "EmiScreenBaseMixin",

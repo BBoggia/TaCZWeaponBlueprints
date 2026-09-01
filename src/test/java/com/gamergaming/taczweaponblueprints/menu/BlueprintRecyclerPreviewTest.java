@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import com.gamergaming.taczweaponblueprints.progression.BlueprintRecyclingService;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintReverseEngineeringService;
+import com.gamergaming.taczweaponblueprints.progression.FoundWeaponRecoveryService;
 import com.gamergaming.taczweaponblueprints.progression.ResearchDataRedemptionService;
 
 import net.minecraft.resources.ResourceLocation;
@@ -183,6 +184,20 @@ class BlueprintRecyclerPreviewTest {
             switch (status) {
                 case EMPTY_INPUT, UNSUPPORTED_ITEM, INVALID_PLAYER -> assertEquals(
                         BlueprintRecyclerActionContract.ResultCode.INVALID_INPUT, mapped);
+                case READY -> assertEquals(
+                        BlueprintRecyclerActionContract.ResultCode.TRANSACTION_FAILED, mapped);
+                case RECOVERY_MODE_DISABLED -> assertEquals(
+                        BlueprintRecyclerActionContract.ResultCode.RECOVERY_DISABLED, mapped);
+                default -> assertEquals(status.name(), mapped.name());
+            }
+        }
+        for (FoundWeaponRecoveryService.Status status
+                : FoundWeaponRecoveryService.Status.values()) {
+            BlueprintRecyclerActionContract.ResultCode mapped =
+                    BlueprintRecyclerActionContract.ResultCode.from(status);
+            switch (status) {
+                case REVERSE_ENGINEERING_INELIGIBLE -> assertEquals(
+                        BlueprintRecyclerActionContract.ResultCode.POLICY_INELIGIBLE, mapped);
                 case READY -> assertEquals(
                         BlueprintRecyclerActionContract.ResultCode.TRANSACTION_FAILED, mapped);
                 default -> assertEquals(status.name(), mapped.name());

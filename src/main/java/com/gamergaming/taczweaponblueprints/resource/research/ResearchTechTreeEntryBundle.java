@@ -382,11 +382,15 @@ public record ResearchTechTreeEntryBundle(
                 }
             }
         });
-        if (fallback && (!target.blueprints().isEmpty()
-                || !target.tags().isEmpty()
-                || target.selector().isEmpty())) {
+        boolean selectorFallback = target.blueprints().isEmpty()
+                && target.tags().isEmpty()
+                && target.selector().isPresent();
+        boolean exactFallback = target.exactOnly()
+                && target.blueprints().size() == 1;
+        if (fallback && !selectorFallback && !exactFallback) {
             throw new IllegalArgumentException(
-                    "Research Tech Tree fallback entries require a selector-only target");
+                    "Research Tech Tree fallback entries require a selector-only "
+                            + "or single exact target");
         }
         if (rating.isPresent()) {
             if (domain != Domain.WEAPONS) {

@@ -33,9 +33,27 @@ public final class AutomaticWeaponPlacementPlanner {
             String itemType,
             String evidenceReason,
             AutomaticWeaponPlacementPolicy policy) {
+        return conservativeFallback(
+                blueprintId,
+                itemType,
+                evidenceReason,
+                policy,
+                AutomaticWeaponScoringModel.MECHANICAL_V2);
+    }
+
+    public AutomaticWeaponPlacementProposal conservativeFallback(
+            String blueprintId,
+            String itemType,
+            String evidenceReason,
+            AutomaticWeaponPlacementPolicy policy,
+            AutomaticWeaponScoringModel scoringModel) {
         if (!validText(blueprintId) || !validText(evidenceReason) || policy == null) {
             throw new IllegalArgumentException(
                     "Automatic weapon conservative fallback inputs are invalid");
+        }
+        if (scoringModel == null) {
+            throw new IllegalArgumentException(
+                    "Automatic weapon conservative fallback scoring model cannot be null");
         }
         ScoreBand band = conservativeBand(itemType);
         long stableOrder = stableOrder(blueprintId);
@@ -53,8 +71,8 @@ public final class AutomaticWeaponPlacementPlanner {
                                 Math.multiplyExact(score, SIBLING_HASH_SPACE),
                                 stableOrder)),
                 policy.levelsPerTier(),
-                ResearchTechTreeContract.AUTOMATIC_FORMULA_VERSION,
-                ResearchTechTreeContract.AUTOMATIC_REFERENCE_VERSION,
+                scoringModel.formulaVersion(),
+                scoringModel.referenceVersion(),
                 ResearchTechTreeContract.AUTOMATIC_PLACEMENT_VERSION,
                 List.of(
                         "evidence_unavailable:" + evidenceReason,
@@ -65,7 +83,35 @@ public final class AutomaticWeaponPlacementPlanner {
             Map<String, WeaponMechanicalScore> scoresByBlueprint,
             Collection<String> candidateIds,
             AutomaticWeaponPlacementPolicy policy) {
-        if (scoresByBlueprint == null || candidateIds == null || policy == null
+        if (scoresByBlueprint == null) {
+            throw new IllegalArgumentException(
+                    "Automatic weapon placement planner inputs are invalid");
+        }
+        Map<String, PlacementScore> scores = new LinkedHashMap<>();
+        scoresByBlueprint.forEach((id, score) -> scores.put(
+                id, score == null ? null : PlacementScore.mechanical(score)));
+        return planScores(scores, candidateIds, policy);
+    }
+
+    public AutomaticWeaponPlacementPlan planCapabilities(
+            Map<String, WeaponCapabilityScore> scoresByBlueprint,
+            Collection<String> candidateIds,
+            AutomaticWeaponPlacementPolicy policy) {
+        if (scoresByBlueprint == null) {
+            throw new IllegalArgumentException(
+                    "Automatic weapon placement planner inputs are invalid");
+        }
+        Map<String, PlacementScore> scores = new LinkedHashMap<>();
+        scoresByBlueprint.forEach((id, score) -> scores.put(
+                id, score == null ? null : PlacementScore.capability(score)));
+        return planScores(scores, candidateIds, policy);
+    }
+
+    private static AutomaticWeaponPlacementPlan planScores(
+            Map<String, PlacementScore> scoresByBlueprint,
+            Collection<String> candidateIds,
+            AutomaticWeaponPlacementPolicy policy) {
+        if (candidateIds == null || policy == null
                 || scoresByBlueprint.entrySet().stream().anyMatch(entry ->
                         !validText(entry.getKey()) || entry.getValue() == null)
                 || candidateIds.stream().anyMatch(id -> !validText(id))) {
@@ -87,7 +133,7 @@ public final class AutomaticWeaponPlacementPlanner {
         List<ValidatedCandidate> valid = new ArrayList<>();
         Map<String, String> rejected = new LinkedHashMap<>();
         uniqueCandidates.stream().sorted().forEach(id -> {
-            WeaponMechanicalScore score = scoresByBlueprint.get(id);
+            PlacementScore score = scoresByBlueprint.get(id);
             String rejection = rejection(id, score);
             if (rejection == null) {
                 valid.add(new ValidatedCandidate(id, score, stableOrder(id)));
@@ -97,7 +143,8 @@ public final class AutomaticWeaponPlacementPlanner {
         });
 
         valid.sort(Comparator
-                .comparingInt((ValidatedCandidate value) -> value.score().score())
+                .comparingInt((ValidatedCandidate value) ->
+                        value.score().progressionScore())
                 .thenComparingLong(ValidatedCandidate::stableOrder)
                 .thenComparing(ValidatedCandidate::blueprintId));
         Map<Long, List<ValidatedCandidate>> candidatesByOrder = valid.stream()
@@ -115,21 +162,22 @@ public final class AutomaticWeaponPlacementPlanner {
             if (rejected.containsKey(candidate.blueprintId())) {
                 continue;
             }
-            WeaponMechanicalScore score = candidate.score();
-            int mechanicalScore = score.score();
+            PlacementScore score = candidate.score();
+            int mechanicalScore = score.progressionScore();
             long siblingOrder = siblingOrder(candidate);
             List<String> reviewReasons = reviewReasons(score, policy);
             proposals.put(candidate.blueprintId(), new AutomaticWeaponPlacementProposal(
                     candidate.blueprintId(),
                     mechanicalScore,
-                    score.rating().confidence(),
+                    score.confidence(),
                     new ProgressionPosition(
-                            score.rating().suggestedTier(),
-                            score.rating().suggestedLevel(policy.levelsPerTier()),
+                            ResearchTechTreeContract.Tier.forScore(mechanicalScore),
+                            ResearchTechTreeContract.levelForScore(
+                                    mechanicalScore, policy.levelsPerTier()),
                             siblingOrder),
                     policy.levelsPerTier(),
-                    score.rating().formulaVersion(),
-                    score.rating().referenceVersion(),
+                    score.formulaVersion(),
+                    score.referenceVersion(),
                     ResearchTechTreeContract.AUTOMATIC_PLACEMENT_VERSION,
                     reviewReasons));
         }
@@ -142,38 +190,39 @@ public final class AutomaticWeaponPlacementPlanner {
                 rejected);
     }
 
-    private static String rejection(String id, WeaponMechanicalScore score) {
+    private static String rejection(String id, PlacementScore score) {
         if (score == null) {
             return "missing_mechanical_score";
         }
-        if (!id.equals(score.evidence().blueprintId())) {
+        if (!id.equals(score.blueprintId())) {
             return "mechanical_score_identity_mismatch";
         }
-        if (!ResearchTechTreeContract.AUTOMATIC_FORMULA_VERSION.equals(
-                score.rating().formulaVersion())) {
+        if (!score.scoringModel().formulaVersion().equals(score.formulaVersion())) {
             return "incompatible_formula_version";
         }
-        if (!ResearchTechTreeContract.AUTOMATIC_REFERENCE_VERSION.equals(
-                score.rating().referenceVersion())) {
+        if (!score.scoringModel().referenceVersion().equals(score.referenceVersion())) {
             return "incompatible_reference_version";
         }
         return null;
     }
 
     private static List<String> reviewReasons(
-            WeaponMechanicalScore score,
+            PlacementScore score,
             AutomaticWeaponPlacementPolicy policy) {
         List<String> result = new ArrayList<>();
-        if (score.rating().confidence() < policy.reviewConfidenceThreshold()) {
+        if (score.confidence() < policy.reviewConfidenceThreshold()) {
             result.add("low_confidence");
         }
-        if (score.evidence().scriptControlled()) {
+        if (score.scriptControlled()) {
             result.add("script_controlled");
         }
         if (score.warnings().stream().anyMatch(warning ->
                 warning.startsWith("missing_metric:")
                         || warning.startsWith("missing_reference:")
-                        || warning.startsWith("insufficient_reference:"))) {
+                        || warning.startsWith("insufficient_reference:")
+                        || warning.startsWith("missing_capability_metric:")
+                        || warning.startsWith("missing_capability_reference:")
+                        || warning.startsWith("insufficient_capability_reference:"))) {
             result.add("incomplete_mechanical_evidence");
         }
         return result;
@@ -181,7 +230,7 @@ public final class AutomaticWeaponPlacementPlanner {
 
     private static long siblingOrder(ValidatedCandidate candidate) {
         return Math.addExact(
-                Math.multiplyExact(candidate.score().score(), SIBLING_HASH_SPACE),
+                Math.multiplyExact(candidate.score().progressionScore(), SIBLING_HASH_SPACE),
                 candidate.stableOrder());
     }
 
@@ -221,8 +270,55 @@ public final class AutomaticWeaponPlacementPlanner {
 
     private record ValidatedCandidate(
             String blueprintId,
-            WeaponMechanicalScore score,
+            PlacementScore score,
             long stableOrder) {
+    }
+
+    private record PlacementScore(
+            String blueprintId,
+            int progressionScore,
+            int confidence,
+            String formulaVersion,
+            String referenceVersion,
+            AutomaticWeaponScoringModel scoringModel,
+            boolean scriptControlled,
+            List<String> warnings) {
+        private PlacementScore {
+            if (!validText(blueprintId)
+                    || progressionScore < 0
+                    || progressionScore > ResearchTechTreeContract.SCORE_MAX
+                    || confidence < 0 || confidence > ResearchTechTreeContract.SCORE_MAX
+                    || !validText(formulaVersion) || !validText(referenceVersion)
+                    || scoringModel == null || warnings == null) {
+                throw new IllegalArgumentException(
+                        "Automatic weapon progression score is invalid");
+            }
+            warnings = List.copyOf(warnings);
+        }
+
+        private static PlacementScore mechanical(WeaponMechanicalScore score) {
+            return new PlacementScore(
+                    score.evidence().blueprintId(),
+                    score.score(),
+                    score.rating().confidence(),
+                    score.rating().formulaVersion(),
+                    score.rating().referenceVersion(),
+                    AutomaticWeaponScoringModel.MECHANICAL_V2,
+                    score.evidence().scriptControlled(),
+                    score.warnings());
+        }
+
+        private static PlacementScore capability(WeaponCapabilityScore score) {
+            return new PlacementScore(
+                    score.evidence().blueprintId(),
+                    score.progressionScore(),
+                    score.confidence(),
+                    score.formulaVersion(),
+                    score.referenceVersion(),
+                    AutomaticWeaponScoringModel.CAPABILITY_V3,
+                    score.evidence().scriptControlled(),
+                    score.warnings());
+        }
     }
 
     private record ScoreBand(int minimum, int maximum) {

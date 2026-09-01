@@ -67,7 +67,7 @@ class BlueprintKnowledgeFlowPhaseTwoTest {
         assertTrue(research.contains("input.deliver(output)"));
 
         assertEquals(
-                Set.of("RECYCLE", "REDEEM", "REDEEM_STACK", "REVERSE_ENGINEER"),
+                Set.of("RECYCLE", "REDEEM", "REDEEM_STACK", "REVERSE_ENGINEER", "RECOVER_POINTS"),
                 Arrays.stream(BlueprintRecyclerActionContract.Action.values())
                         .map(Enum::name)
                         .collect(Collectors.toSet()));
@@ -75,7 +75,7 @@ class BlueprintKnowledgeFlowPhaseTwoTest {
         assertEquals(1, BlueprintRecyclerMenu.OUTPUT_SLOT);
         assertEquals(2, BlueprintRecyclerMenu.FIRST_PLAYER_SLOT);
         assertEquals(2, PlayerProgressionLimits.DATA_VERSION);
-        assertEquals("36", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("40", NetworkHandler.PROTOCOL_VERSION);
     }
 
     @Test

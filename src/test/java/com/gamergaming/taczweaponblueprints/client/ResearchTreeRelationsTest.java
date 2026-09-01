@@ -18,6 +18,39 @@ import net.minecraft.resources.ResourceLocation;
 
 class ResearchTreeRelationsTest {
     @Test
+    void focusDistinguishesAnyOfBranchesFromMandatoryRequirementEdges() {
+        ResearchTreeGraph graph = ResearchTreeGraph.withRequirementGroups(
+                List.of(
+                        node(0, "test:a", 0),
+                        node(1, "test:b", 0),
+                        node(2, "test:target", 2)),
+                List.of(new ResearchTreeGraph.RequirementGroup(
+                        id("test:target"),
+                        0,
+                        List.of(id("test:a"), id("test:b")),
+                        0,
+                        true,
+                        false)));
+        ResearchTreeRelations relations = ResearchTreeRelations.create(graph);
+
+        ResearchTreeRelations.FocusPath targetFocus = relations.focus(id("test:target"));
+        assertEquals(
+                ResearchTreePresentationContract.RelationshipRole.ALTERNATIVE_REQUIREMENT,
+                targetFocus.role(edge("test:a", "test:target")));
+        assertEquals(
+                ResearchTreePresentationContract.RelationshipRole.ALTERNATIVE_REQUIREMENT,
+                targetFocus.role(edge("test:b", "test:target")));
+        assertEquals(
+                ResearchTreePresentationContract.RelationshipRole.DIRECT_REQUIREMENT,
+                targetFocus.role(id("test:a")));
+
+        ResearchTreeRelations.FocusPath sourceFocus = relations.focus(id("test:a"));
+        assertEquals(
+                ResearchTreePresentationContract.RelationshipRole.DIRECT_UNLOCK,
+                sourceFocus.role(edge("test:a", "test:target")));
+    }
+
+    @Test
     void indexesDiamondAncestorsDescendantsAndDirectRelationships() {
         ResearchTreeRelations relations = ResearchTreeRelations.create(diamondGraph());
         ResearchTreeRelations.FocusPath focus = relations.focus(id("test:d"));

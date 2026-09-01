@@ -29,12 +29,30 @@ base {
     archivesName = mod_id
 }
 
-// Phase 10 pins the public automatic-tree compatibility tuple. Deliberate
-// changes must update the runtime constant, this release gate, and migration
-// documentation together.
-def certifiedAutomaticPlacementVersion = 'tacz-gun-placement-v12'
-def certifiedResearchTreeProtocol = '36'
-def certifiedResearchCatalogExportFormat = 12
+// Phase 11 extends the public automatic-tree compatibility tuple with explicit
+// opt-in hybrid-generation evidence. Deliberate changes must update runtime
+// constants, release gates, and migration documentation together.
+def certifiedAutomaticPlacementVersion = 'tacz-gun-placement-v13'
+def certifiedResearchTreeProtocol = '40'
+def certifiedResearchCatalogExportFormat = 18
+def certifiedAutomaticPrerequisiteStrategy = 'grouped_routes_v1'
+def certifiedAutomaticScoringModel = 'capability_v3'
+def certifiedAutomaticFormulaVersion = 'tacz-gun-capability-v3'
+def certifiedAutomaticReferenceVersion = 'tacz-1.1.8-capability-v3'
+def certifiedGroupedRouteQualityContract = 'distributions-warnings-v1'
+def certifiedGroupedRouteMotifDecisionContract = 'evidence-gate-v1'
+def certifiedGroupedPrerequisiteAcceptanceContract =
+        'truth-tables-integration-v1'
+def certifiedGroupedRouteRolloutContract =
+        'grouped-routes-v1-rollout-v1'
+def certifiedGroupedRouteSelectionContract =
+        'group-aware-route-balance-v1'
+def certifiedGroupedRouteStabilizationContract =
+        'default-rollout-migration-v1'
+def certifiedHybridRouteGenerationContract =
+        'deliberate-hybrid-generation-v1'
+def certifiedGroupedVisualRefinementContract =
+        'branch-aware-visual-refinement-v1'
 def certifiedAutomaticPublicationContract =
         'canonical-branches-decisions-finalized-ranks-v1'
 def certifiedAutomaticPublicationHealthContract =
@@ -440,6 +458,69 @@ tasks.register('generateAutomaticWeaponReference', JavaExec) {
     }
 }
 
+tasks.register('generateCapabilityWeaponReference', JavaExec) {
+    group = 'authoring'
+    description = 'Regenerates the checked-in TaCZ 1.1.8 v3 capability reference catalog.'
+    dependsOn tasks.named('authoringClasses')
+    classpath = sourceSets.authoring.runtimeClasspath
+    mainClass = 'com.gamergaming.taczweaponblueprints.research.tree.authoring.ResearchCapabilityReferenceTool'
+
+    def gunPack = providers.gradleProperty('researchGunPack')
+            .orElse(layout.projectDirectory.dir('run/tacz/tacz_default_gun').asFile.absolutePath)
+    def output = providers.gradleProperty('researchCapabilityReference')
+            .orElse(layout.projectDirectory.file(
+                    'src/main/resources/assets/taczweaponblueprints/research/automatic/'
+                            + 'tacz-1.1.8-capability-v3.json').asFile.absolutePath)
+    def sourceVersion = providers.gradleProperty('researchGunPackVersion').orElse(tacz_version)
+    def expectedGunCount = providers.gradleProperty('researchExpectedGunCount').orElse('53')
+
+    inputs.dir(gunPack).withPropertyName('gunPackContents')
+    inputs.property('gunPackPath', gunPack)
+    inputs.property('sourceVersion', sourceVersion)
+    inputs.property('expectedGunCount', expectedGunCount)
+    outputs.file(output)
+
+    doFirst {
+        args = [
+                '--pack', gunPack.get(),
+                '--output', output.get(),
+                '--source-version', sourceVersion.get(),
+                '--expected-count', expectedGunCount.get()
+        ]
+    }
+}
+
+tasks.register('generateCapabilityComparisonReport', JavaExec) {
+    group = 'authoring'
+    description = 'Writes a full TaCZ v2-versus-v3 capability shadow comparison.'
+    dependsOn tasks.named('authoringClasses')
+    mustRunAfter tasks.named('generateCapabilityWeaponReference')
+    classpath = sourceSets.authoring.runtimeClasspath
+    mainClass = 'com.gamergaming.taczweaponblueprints.research.tree.authoring.ResearchCapabilityComparisonTool'
+
+    def gunPack = providers.gradleProperty('researchGunPack')
+            .orElse(layout.projectDirectory.dir('run/tacz/tacz_default_gun').asFile.absolutePath)
+    def output = providers.gradleProperty('researchCapabilityComparison')
+            .orElse(layout.buildDirectory.file(
+                    'reports/research-tech-tree/capability-v3-comparison.json')
+                    .map { it.asFile.absolutePath })
+    def expectedGunCount = providers.gradleProperty('researchExpectedGunCount').orElse('53')
+    inputs.dir(gunPack).withPropertyName('gunPackContents')
+    inputs.file('src/main/resources/assets/taczweaponblueprints/research/automatic/'
+            + 'tacz-1.1.8-mechanical-v2.json')
+    inputs.file('src/main/resources/assets/taczweaponblueprints/research/automatic/'
+            + 'tacz-1.1.8-capability-v3.json')
+    inputs.property('expectedGunCount', expectedGunCount)
+    outputs.file(output)
+    doFirst {
+        args = [
+                '--pack', gunPack.get(),
+                '--output', output.get(),
+                '--expected-count', expectedGunCount.get()
+        ]
+    }
+}
+
 tasks.named('test', Test).configure {
     useJUnitPlatform()
 }
@@ -494,6 +575,24 @@ tasks.named('jar', Jar).configure {
                 'Research-Tree-Protocol'  : certifiedResearchTreeProtocol,
                 'Research-Catalog-Export-Format':
                         certifiedResearchCatalogExportFormat.toString(),
+                'Automatic-Prerequisite-Strategy':
+                        certifiedAutomaticPrerequisiteStrategy,
+                'Automatic-Scoring-Model': certifiedAutomaticScoringModel,
+                'Automatic-Scoring-Formula': certifiedAutomaticFormulaVersion,
+                'Automatic-Scoring-Reference': certifiedAutomaticReferenceVersion,
+                'Grouped-Route-Quality': certifiedGroupedRouteQualityContract,
+                'Grouped-Route-Motif-Decision':
+                        certifiedGroupedRouteMotifDecisionContract,
+                'Grouped-Prerequisite-Acceptance':
+                        certifiedGroupedPrerequisiteAcceptanceContract,
+                'Grouped-Route-Rollout': certifiedGroupedRouteRolloutContract,
+                'Grouped-Route-Selection': certifiedGroupedRouteSelectionContract,
+                'Grouped-Route-Stabilization':
+                        certifiedGroupedRouteStabilizationContract,
+                'Hybrid-Route-Generation':
+                        certifiedHybridRouteGenerationContract,
+                'Grouped-Visual-Refinement':
+                        certifiedGroupedVisualRefinementContract,
                 'Automatic-Publication-Contract':
                         certifiedAutomaticPublicationContract,
                 'Automatic-Publication-Health':
@@ -678,7 +777,9 @@ tasks.register('verifyTaperedAutomaticTopologyContract') {
     inputs.files(
             'src/main/java/com/gamergaming/taczweaponblueprints/research/tree/ResearchTechTreeContract.java',
             'src/main/java/com/gamergaming/taczweaponblueprints/network/NetworkHandler.java',
-            'src/main/java/com/gamergaming/taczweaponblueprints/resource/research/BlueprintResearchCatalogExporter.java')
+            'src/main/java/com/gamergaming/taczweaponblueprints/resource/research/BlueprintResearchCatalogExporter.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/research/tree/ResearchGroupedRouteQualityAudit.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/research/tree/ResearchGroupedRouteMotifAssessment.java')
     inputs.files(layout.buildDirectory.dir('test-results/test'))
     outputs.file(taperedAutomaticTopologyReportFile)
 
@@ -718,6 +819,9 @@ tasks.register('verifyTaperedAutomaticTopologyContract') {
                 'com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPrerequisitePlannerTest',
                 'com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponRankFinalizerTest',
                 'com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementDiagnosticsTest',
+                'com.gamergaming.taczweaponblueprints.research.tree.ResearchGroupedRouteQualityAuditTest',
+                'com.gamergaming.taczweaponblueprints.research.tree.automatic.ResearchGroupedRouteQualityBoundaryTest',
+                'com.gamergaming.taczweaponblueprints.research.tree.automatic.ResearchGroupedRouteMotifAssessmentTest',
                 'com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponCandidateClassificationTest',
                 'com.gamergaming.taczweaponblueprints.client.ResearchTechTreeLayoutEngineTest',
                 'com.gamergaming.taczweaponblueprints.network.SyncResearchTreePacketTest',
@@ -751,6 +855,8 @@ tasks.register('verifyTaperedAutomaticTopologyContract') {
                 placementVersion   : placementVersion,
                 networkProtocol    : protocolVersion,
                 exportFormat       : exportFormat as int,
+                groupedRouteQuality: certifiedGroupedRouteQualityContract,
+                groupedRouteMotifDecision: certifiedGroupedRouteMotifDecisionContract,
                 publicationContract: certifiedAutomaticPublicationContract,
                 invariants         : [
                         'canonical_branch_coordinates_for_every_connected_candidate',
@@ -790,6 +896,1174 @@ tasks.register('verifyTaperedAutomaticTopologyContract') {
             java.nio.file.Files.deleteIfExists(temporaryReport)
         }
         logger.lifecycle("Phase 10 tapered automatic topology report: ${output}")
+    }
+}
+
+def groupedPrerequisiteAcceptanceReportFile =
+        layout.buildDirectory.file('reports/grouped-prerequisite-acceptance.json')
+tasks.register('verifyGroupedPrerequisiteAcceptanceContract') {
+    group = 'verification'
+    description = 'Certifies the Phase 7 grouped-prerequisite truth tables and integration matrix.'
+    dependsOn tasks.named('test')
+
+    inputs.files(
+            'src/test/java/com/gamergaming/taczweaponblueprints/resource/research/ResearchRequirementsTest.java',
+            'src/test/java/com/gamergaming/taczweaponblueprints/resource/research/BlueprintResearchCodecTest.java',
+            'src/test/java/com/gamergaming/taczweaponblueprints/progression/BlueprintResearchServiceTest.java',
+            'src/test/java/com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeBuilderTest.java',
+            'src/test/java/com/gamergaming/taczweaponblueprints/network/SyncResearchTreePacketTest.java',
+            'src/test/java/com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponPrerequisitePlannerTest.java',
+            'src/test/java/com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponTopologyPhaseZeroFixtureTest.java')
+    inputs.files(layout.buildDirectory.dir('test-results/test'))
+    outputs.file(groupedPrerequisiteAcceptanceReportFile)
+
+    doLast {
+        def requirementsSuite =
+                'com.gamergaming.taczweaponblueprints.resource.research.ResearchRequirementsTest'
+        def codecSuite =
+                'com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCodecTest'
+        def serviceSuite =
+                'com.gamergaming.taczweaponblueprints.progression.BlueprintResearchServiceTest'
+        def builderSuite =
+                'com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeBuilderTest'
+        def networkSuite =
+                'com.gamergaming.taczweaponblueprints.network.SyncResearchTreePacketTest'
+        def plannerSuite =
+                'com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPrerequisitePlannerTest'
+        def baselineSuite =
+                'com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponTopologyPhaseZeroFixtureTest'
+        def requiredCases = [
+                [invariant: 'legacy_two_parent_and_truth_table',
+                        suite: requirementsSuite,
+                        test: 'legacySingletonTruthTableRemainsMandatoryAnd()'],
+                [invariant: 'single_group_inclusive_or_truth_table',
+                        suite: requirementsSuite,
+                        test: 'singleAlternativeGroupTruthTableRemainsInclusiveOr()'],
+                [invariant: 'and_across_groups_or_within_groups_truth_table',
+                        suite: requirementsSuite,
+                        test: 'canonicalModelExpressesAndAcrossGroupsAndOrWithinEachGroup()'],
+                [invariant: 'legacy_rule_decode_to_singleton_groups',
+                        suite: codecSuite,
+                        test: 'legacyPrerequisiteFieldDecodesIntoSingletonGroups()'],
+                [invariant: 'legacy_and_grouped_fields_are_mutually_exclusive',
+                        suite: codecSuite,
+                        test: 'groupedPrerequisitesAreVersionedCanonicalAndMutuallyExclusive()'],
+                [invariant: 'stable_group_and_alternative_ordering',
+                        suite: requirementsSuite,
+                        test: 'alternativesAndGroupsHaveDeterministicOrderingAndEncoding()'],
+                [invariant: 'duplicate_and_empty_groups_are_rejected',
+                        suite: requirementsSuite,
+                        test: 'codecRejectsUnknownFieldsEmptyGroupsAndDuplicates()'],
+                [invariant: 'self_references_are_rejected',
+                        suite: requirementsSuite,
+                        test: 'malformedGroupsAndRequirementsAreRejectedStrictly()'],
+                [invariant: 'conservative_union_cycles_are_rejected',
+                        suite: requirementsSuite,
+                        test: 'conservativeUnionGraphRejectsCyclesAndDepthOverflow()'],
+                [invariant: 'generated_groups_filter_alternatives_independently',
+                        suite: serviceSuite,
+                        test: 'groupedOverlayFiltersAlternativesIndependentlyAndFailsOpenSafely()'],
+                [invariant: 'all_blocked_generated_alternatives_fail_open',
+                        suite: serviceSuite,
+                        test: 'groupedOverlayFiltersAlternativesIndependentlyAndFailsOpenSafely()'],
+                [invariant: 'exempt_alternative_satisfies_generated_group',
+                        suite: serviceSuite,
+                        test: 'groupedOverlayFiltersAlternativesIndependentlyAndFailsOpenSafely()'],
+                [invariant: 'grouped_routes_work_in_atomic_research_transactions',
+                        suite: serviceSuite,
+                        test: 'groupedAutomaticRouteAcceptsEitherAlternativeButNotNeither()'],
+                [invariant: 'partially_hidden_groups_retain_truthful_cardinality',
+                        suite: builderSuite,
+                        test: 'inducedProjectionPreservesCrossViewChoiceGroupsAsLinkedAlternatives()'],
+                [invariant: 'group_identity_survives_server_publication',
+                        suite: builderSuite,
+                        test: 'publishesCanonicalChoiceGroupsAndTheirPlayerSpecificSatisfaction()'],
+                [invariant: 'group_identity_and_hidden_counts_survive_network_sync',
+                        suite: networkSuite,
+                        test: 'groupedRequirementIdentityAndHiddenCountsRoundTrip()'],
+                [invariant: 'grouped_routes_never_generate_a_third_parent',
+                        suite: plannerSuite,
+                        test: 'groupedRoutesRemainBoundedAtMaximumCatalogPopulation()'],
+                [invariant: 'authored_prerequisites_retain_authority',
+                        suite: serviceSuite,
+                        test: 'connectedAutomaticPrerequisiteIsEnforcedByTheAtomicResearchTransaction()'],
+                [invariant: 'legacy_and_topology_fixture_is_unchanged',
+                        suite: baselineSuite,
+                        test: 'currentTopologyBaselinesCoverRepresentativeCatalogSizes()'],
+                [invariant: 'grouped_routes_are_deterministic_across_repeated_runs',
+                        suite: plannerSuite,
+                        test: 'groupedRoutesAreIdenticalAcrossRepeatedRuns()']
+        ]
+
+        def parsedSuites = [:]
+        def evidence = requiredCases.collect { required ->
+            def suite = parsedSuites.computeIfAbsent(required.suite) { suiteName ->
+                def result = file(
+                        "${buildDir}/test-results/test/TEST-${suiteName}.xml")
+                if (!result.isFile()) {
+                    throw new GradleException(
+                            "Phase 7 acceptance suite did not run: ${suiteName}")
+                }
+                new XmlSlurper().parse(result)
+            }
+            def testCase = suite.testcase.find {
+                it.@name.toString() == required.test
+            }
+            if (testCase == null || testCase.size() == 0) {
+                throw new GradleException(
+                        "Phase 7 acceptance case did not run: ${required.suite}#${required.test}")
+            }
+            if (testCase.failure.size() != 0 || testCase.error.size() != 0
+                    || testCase.skipped.size() != 0) {
+                throw new GradleException(
+                        "Phase 7 acceptance case is not clean: ${required.suite}#${required.test}")
+            }
+            [
+                    invariant: required.invariant,
+                    suite    : required.suite,
+                    test     : required.test,
+                    status   : 'passed'
+            ]
+        }
+        if (evidence*.invariant.toSet().size() != requiredCases.size()) {
+            throw new GradleException(
+                    'Phase 7 acceptance matrix contains duplicate invariant identifiers')
+        }
+
+        def report = [
+                schema          : 1,
+                phase           : 7,
+                status          : 'passed',
+                contract        : certifiedGroupedPrerequisiteAcceptanceContract,
+                prerequisiteStrategy: certifiedAutomaticPrerequisiteStrategy,
+                networkProtocol : certifiedResearchTreeProtocol,
+                exportFormat    : certifiedResearchCatalogExportFormat,
+                invariantCount  : evidence.size(),
+                evidence        : evidence
+        ]
+        def output = groupedPrerequisiteAcceptanceReportFile.get().asFile
+        output.parentFile.mkdirs()
+        def reportText = groovy.json.JsonOutput.prettyPrint(
+                groovy.json.JsonOutput.toJson(report)) + '\n'
+        def temporaryReport = java.nio.file.Files.createTempFile(
+                output.parentFile.toPath(), 'grouped-acceptance-', '.json.tmp')
+        try {
+            java.nio.file.Files.writeString(
+                    temporaryReport,
+                    reportText,
+                    java.nio.charset.StandardCharsets.UTF_8)
+            try {
+                java.nio.file.Files.move(
+                        temporaryReport,
+                        output.toPath(),
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            } catch (java.nio.file.AtomicMoveNotSupportedException ignored) {
+                java.nio.file.Files.move(
+                        temporaryReport,
+                        output.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            }
+        } finally {
+            java.nio.file.Files.deleteIfExists(temporaryReport)
+        }
+        logger.lifecycle("Phase 7 grouped-prerequisite acceptance report: ${output}")
+    }
+}
+
+def groupedRouteRolloutReportFile =
+        layout.buildDirectory.file('reports/grouped-route-rollout.json')
+tasks.register('verifyGroupedRouteRolloutContract') {
+    group = 'verification'
+    description = 'Certifies the Phase 8 grouped-routes-v1 rollout and compatibility boundary.'
+    dependsOn tasks.named('verifyGroupedPrerequisiteAcceptanceContract')
+
+    inputs.files(
+            'src/main/java/com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponPlacementPolicy.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponPrerequisitePlanner.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponPlacementDiagnostics.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/research/tree/ResearchTechTreeAuthoringReport.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/command/sub/BlueprintResearchCommand.java',
+            'src/main/resources/assets/taczweaponblueprints/lang/en_us.json',
+            'src/main/resources/data/taczweaponblueprints/taczweaponblueprints/research_profiles/duplicate_recovery.json',
+            'src/main/resources/data/taczweaponblueprints/taczweaponblueprints/research_automatic_placement_profiles/default.json')
+    inputs.file(groupedPrerequisiteAcceptanceReportFile)
+    inputs.files(layout.buildDirectory.dir('test-results/test'))
+    outputs.file(groupedRouteRolloutReportFile)
+
+    doLast {
+        def policySuite =
+                'com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPlannerTest'
+        def profileSuite =
+                'com.gamergaming.taczweaponblueprints.resource.research.ResearchTechTreeDataTest'
+        def plannerSuite =
+                'com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPrerequisitePlannerTest'
+        def serviceSuite =
+                'com.gamergaming.taczweaponblueprints.progression.BlueprintResearchServiceTest'
+        def builderSuite =
+                'com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeBuilderTest'
+        def networkSuite =
+                'com.gamergaming.taczweaponblueprints.network.SyncResearchTreePacketTest'
+        def diagnosticsSuite =
+                'com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementDiagnosticsTest'
+        def edgeSuite =
+                'com.gamergaming.taczweaponblueprints.client.ResearchTreeEdgeIndexTest'
+        def textSuite =
+                'com.gamergaming.taczweaponblueprints.client.ResearchTreeRequirementTextTest'
+        def routePlannerSuite =
+                'com.gamergaming.taczweaponblueprints.client.ResearchTreePlannerTest'
+        def recommendationSuite =
+                'com.gamergaming.taczweaponblueprints.client.ResearchTreeRecommendationEngineTest'
+        def economySuite =
+                'com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeEconomyAuditTest'
+        def packagedSuite =
+                'com.gamergaming.taczweaponblueprints.resource.research.DefaultTaCZResearchTreeTest'
+        def requiredCases = [
+                [invariant: 'grouped_strategy_controls_are_explicit',
+                        suite: policySuite,
+                        test: 'groupedRouteRolloutControlsAreExplicitAndBounded()'],
+                [invariant: 'format_three_strategy_contract_is_strict',
+                        suite: profileSuite,
+                        test: 'automaticPlacementProfilesAreStrictBoundedAndUniquePerTree()'],
+                [invariant: 'selected_pairs_publish_as_one_inclusive_or_group',
+                        suite: plannerSuite,
+                        test: 'groupedRoutesReuseSelectedParentsAsOneAnyOfGroup()'],
+                [invariant: 'rank_and_branch_plans_are_deterministic',
+                        suite: plannerSuite,
+                        test: 'groupedRoutesAreIdenticalAcrossRepeatedRuns()'],
+                [invariant: 'grouped_merge_interval_is_planner_inert',
+                        suite: plannerSuite,
+                        test: 'groupedRoutesIgnoreMergeIntervalAcrossLegacyScoreLayers()'],
+                [invariant: 'generated_third_parents_are_prohibited',
+                        suite: plannerSuite,
+                        test: 'groupedRoutesRemainBoundedAtMaximumCatalogPopulation()'],
+                [invariant: 'legacy_interval_still_only_schedules_optional_third_parents',
+                        suite: plannerSuite,
+                        test: 'mergeIntervalOnlySchedulesOptionalThirdParents()'],
+                [invariant: 'conservative_union_closure_guard_remains_bounded',
+                        suite: plannerSuite,
+                        test: 'closureGuardAllowsLowCostRootsAndRejectsInflatedDisjointPaths()'],
+                [invariant: 'authored_prerequisite_authority_is_unchanged',
+                        suite: serviceSuite,
+                        test: 'connectedAutomaticPrerequisiteIsEnforcedByTheAtomicResearchTransaction()'],
+                [invariant: 'server_transactions_accept_either_grouped_route',
+                        suite: serviceSuite,
+                        test: 'groupedAutomaticRouteAcceptsEitherAlternativeButNotNeither()'],
+                [invariant: 'public_graph_preserves_canonical_group_identity',
+                        suite: builderSuite,
+                        test: 'publishesCanonicalChoiceGroupsAndTheirPlayerSpecificSatisfaction()'],
+                [invariant: 'network_sync_preserves_group_identity_and_cardinality',
+                        suite: networkSuite,
+                        test: 'groupedRequirementIdentityAndHiddenCountsRoundTrip()'],
+                [invariant: 'diagnostics_and_export_publish_grouped_authority',
+                        suite: diagnosticsSuite,
+                        test: 'groupedRouteDiagnosticsAndExportExposeOneAlternativeGroup()'],
+                [invariant: 'ui_edges_render_one_truthful_or_junction',
+                        suite: edgeSuite,
+                        test: 'anyOfAlternativesConvergeThroughOneStableJunctionAndOneArrow()'],
+                [invariant: 'ui_text_discloses_only_visible_alternatives',
+                        suite: textSuite,
+                        test: 'partiallyPublishedAnyOfGroupNamesOnlyVisibleAlternatives()'],
+                [invariant: 'tracked_routes_choose_one_deterministic_alternative',
+                        suite: routePlannerSuite,
+                        test: 'anyOfRequirementSelectsOneDeterministicLowCostRoute()'],
+                [invariant: 'recommendations_understand_either_alternative',
+                        suite: recommendationSuite,
+                        test: 'eitherAlternativeInOneAnyOfGroupCanOpenTheDependent()'],
+                [invariant: 'economy_counts_one_group_as_a_choice',
+                        suite: economySuite,
+                        test: 'oneAnyOfGroupIsAChoiceRatherThanAnAndMerge()'],
+                [invariant: 'cross_domain_alternatives_do_not_become_mandatory_cost',
+                        suite: economySuite,
+                        test: 'crossDomainAlternativeDoesNotBecomeAMandatoryLocalCost()'],
+                [invariant: 'attachments_and_ammo_remain_disabled_by_default',
+                        suite: packagedSuite,
+                        test: 'packagedTechTreeDefinesDynamicBandsAndDormantOptInDomains()']
+        ]
+
+        def parsedSuites = [:]
+        def evidence = requiredCases.collect { required ->
+            def suite = parsedSuites.computeIfAbsent(required.suite) { suiteName ->
+                def result = file(
+                        "${buildDir}/test-results/test/TEST-${suiteName}.xml")
+                if (!result.isFile()) {
+                    throw new GradleException(
+                            "Phase 8 rollout suite did not run: ${suiteName}")
+                }
+                new XmlSlurper().parse(result)
+            }
+            def testCase = suite.testcase.find {
+                it.@name.toString() == required.test
+            }
+            if (testCase == null || testCase.size() == 0) {
+                throw new GradleException(
+                        "Phase 8 rollout case did not run: ${required.suite}#${required.test}")
+            }
+            if (testCase.failure.size() != 0 || testCase.error.size() != 0
+                    || testCase.skipped.size() != 0) {
+                throw new GradleException(
+                        "Phase 8 rollout case is not clean: ${required.suite}#${required.test}")
+            }
+            [
+                    invariant: required.invariant,
+                    suite    : required.suite,
+                    test     : required.test,
+                    status   : 'passed'
+            ]
+        }
+        if (evidence*.invariant.toSet().size() != requiredCases.size()) {
+            throw new GradleException(
+                    'Phase 8 rollout matrix contains duplicate invariant identifiers')
+        }
+
+        def jsonParser = new groovy.json.JsonSlurper()
+        def upstream = jsonParser.parse(groupedPrerequisiteAcceptanceReportFile.get().asFile)
+        if (upstream['status'] != 'passed'
+                || upstream['contract'] != certifiedGroupedPrerequisiteAcceptanceContract
+                || upstream['prerequisiteStrategy'] != certifiedAutomaticPrerequisiteStrategy
+                || upstream['networkProtocol'] != certifiedResearchTreeProtocol
+                || upstream['exportFormat'] != certifiedResearchCatalogExportFormat) {
+            throw new GradleException(
+                    'Phase 8 rollout does not have matching Phase 7 acceptance evidence')
+        }
+        def automaticProfile = jsonParser.parse(file(
+                'src/main/resources/data/taczweaponblueprints/taczweaponblueprints/research_automatic_placement_profiles/default.json'))
+        def researchProfile = jsonParser.parse(file(
+                'src/main/resources/data/taczweaponblueprints/taczweaponblueprints/research_profiles/duplicate_recovery.json'))
+        def packagedMergeInterval = automaticProfile['merge_interval']
+        if (automaticProfile['format'] != 4
+                || automaticProfile['mode'] != 'connected'
+                || automaticProfile['review_handling'] != 'place_connected'
+                || automaticProfile['max_prerequisites'] != 2
+                || automaticProfile['prerequisite_strategy']
+                        != certifiedAutomaticPrerequisiteStrategy
+                || automaticProfile['scoring_model']
+                        != certifiedAutomaticScoringModel
+                || !(packagedMergeInterval instanceof Number)
+                || packagedMergeInterval.intValue() != packagedMergeInterval
+                || packagedMergeInterval.intValue() < 0
+                || packagedMergeInterval.intValue() > 64
+                || researchProfile['domain_policies']?.get('weapons')
+                        != [tree_enabled: true, research_enabled: true]
+                || researchProfile['domain_policies']?.get('attachments')
+                        != [tree_enabled: false, research_enabled: false]
+                || researchProfile['domain_policies']?.get('ammo')
+                        != [tree_enabled: false, research_enabled: false]) {
+            throw new GradleException(
+                    'Phase 8 packaged grouped-route or domain defaults drifted')
+        }
+
+        def report = [
+                schema          : 1,
+                phase           : 8,
+                status          : 'passed',
+                contract        : certifiedGroupedRouteRolloutContract,
+                prerequisiteStrategy: certifiedAutomaticPrerequisiteStrategy,
+                scoringModel   : certifiedAutomaticScoringModel,
+                activation      : 'packaged_default_with_legacy_and_opt_out',
+                selectedParentMapping: [
+                        zero: 'none',
+                        one : 'one_singleton_any_of_group',
+                        two : 'one_two_alternative_any_of_group',
+                        three: 'prohibited'
+                ],
+                maximumGeneratedPrerequisites: 2,
+                mergeInterval   : [
+                        configured: packagedMergeInterval,
+                        groupedBehavior: 'ignored_grouped_routes_v1',
+                        legacyCompatibility: 'strategy_and_layering_dependent'
+                ],
+                generatedParentCostGuard: 'group_aware_route_balance_v1',
+                legacyGeneratedParentCostGuard:
+                        'conservative_legacy_and_union_closure_v1',
+                authoredAuthority: 'unchanged',
+                defaultDomains  : [weapons: 'enabled', attachments: 'disabled', ammo: 'disabled'],
+                networkProtocol : certifiedResearchTreeProtocol,
+                exportFormat    : certifiedResearchCatalogExportFormat,
+                upstreamAcceptance: [
+                        contract: certifiedGroupedPrerequisiteAcceptanceContract,
+                        report: 'build/reports/grouped-prerequisite-acceptance.json',
+                        status: upstream['status']
+                ],
+                invariantCount  : evidence.size(),
+                evidence        : evidence
+        ]
+        def output = groupedRouteRolloutReportFile.get().asFile
+        output.parentFile.mkdirs()
+        def reportText = groovy.json.JsonOutput.prettyPrint(
+                groovy.json.JsonOutput.toJson(report)) + '\n'
+        def temporaryReport = java.nio.file.Files.createTempFile(
+                output.parentFile.toPath(), 'grouped-rollout-', '.json.tmp')
+        try {
+            java.nio.file.Files.writeString(
+                    temporaryReport,
+                    reportText,
+                    java.nio.charset.StandardCharsets.UTF_8)
+            try {
+                java.nio.file.Files.move(
+                        temporaryReport,
+                        output.toPath(),
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            } catch (java.nio.file.AtomicMoveNotSupportedException ignored) {
+                java.nio.file.Files.move(
+                        temporaryReport,
+                        output.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            }
+        } finally {
+            java.nio.file.Files.deleteIfExists(temporaryReport)
+        }
+        logger.lifecycle("Phase 8 grouped-route rollout report: ${output}")
+    }
+}
+
+def groupedRouteSelectionReportFile =
+        layout.buildDirectory.file('reports/grouped-route-selection.json')
+tasks.register('verifyGroupedRouteSelectionContract') {
+    group = 'verification'
+    description = 'Certifies the Phase 9 group-aware route selection, economy, and diagnostics contract.'
+    dependsOn tasks.named('verifyGroupedRouteRolloutContract')
+
+    inputs.files(
+            'src/main/java/com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponAlternativeRouteGuard.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponPrerequisiteDecision.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponPrerequisitePlanner.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponPlacementDiagnostics.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/research/tree/ResearchGroupedRouteQualityAudit.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/research/tree/ResearchTechTreeEconomyAudit.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/resource/research/BlueprintResearchCatalogExporter.java')
+    inputs.file(groupedRouteRolloutReportFile)
+    inputs.files(layout.buildDirectory.dir('test-results/test'))
+    outputs.file(groupedRouteSelectionReportFile)
+
+    doLast {
+        def guardSuite =
+                'com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponAlternativeRouteGuardTest'
+        def plannerSuite =
+                'com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPrerequisitePlannerTest'
+        def diagnosticsSuite =
+                'com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementDiagnosticsTest'
+        def qualitySuite =
+                'com.gamergaming.taczweaponblueprints.research.tree.ResearchGroupedRouteQualityAuditTest'
+        def economySuite =
+                'com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeEconomyAuditTest'
+        def clientPlannerSuite =
+                'com.gamergaming.taczweaponblueprints.client.ResearchTreePlannerTest'
+        def recommendationSuite =
+                'com.gamergaming.taczweaponblueprints.client.ResearchTreeRecommendationEngineTest'
+        def requiredCases = [
+                [invariant: 'equal_cost_or_routes_are_not_priced_as_a_union',
+                        suite: guardSuite,
+                        test: 'acceptsEqualCostRoutesWithoutPricingTheirUnion()'],
+                [invariant: 'only_proven_extreme_cost_mismatches_are_rejected',
+                        suite: guardSuite,
+                        test: 'rejectsOnlyAProvenExtremeRouteCostMismatch()'],
+                [invariant: 'authored_and_of_or_uncertainty_is_bounded_not_guessed',
+                        suite: guardSuite,
+                        test: 'retainsUncertainAuthoredAndOfOrRouteWithHonestBounds()'],
+                [invariant: 'generated_parent_pairs_are_priced_as_inclusive_or',
+                        suite: guardSuite,
+                        test: 'pricesGeneratedParentPairsAsOneInclusiveOrGroup()'],
+                [invariant: 'primary_parent_identity_is_preserved_during_grouped_review',
+                        suite: plannerSuite,
+                        test: 'groupedRoutesReuseSelectedParentsAsOneAnyOfGroup()'],
+                [invariant: 'grouped_route_review_is_bounded_at_4096_weapons',
+                        suite: plannerSuite,
+                        test: 'groupedRoutesRemainBoundedAtMaximumCatalogPopulation()'],
+                [invariant: 'legacy_and_retains_the_union_closure_guard',
+                        suite: plannerSuite,
+                        test: 'closureGuardAllowsLowCostRootsAndRejectsInflatedDisjointPaths()'],
+                [invariant: 'selection_evidence_is_exported_and_aggregated',
+                        suite: diagnosticsSuite,
+                        test: 'groupedRouteDiagnosticsAndExportExposeOneAlternativeGroup()'],
+                [invariant: 'route_quality_measures_cost_ancestry_and_affordability',
+                        suite: qualitySuite,
+                        test: 'measuresLiveAlternativeMeaningCostAncestryBranchEntryAndAffordability()'],
+                [invariant: 'economy_prices_one_any_of_group_as_one_route',
+                        suite: economySuite,
+                        test: 'oneAnyOfGroupIsAChoiceRatherThanAnAndMerge()'],
+                [invariant: 'client_route_planning_selects_one_alternative',
+                        suite: clientPlannerSuite,
+                        test: 'anyOfRequirementSelectsOneDeterministicLowCostRoute()'],
+                [invariant: 'recommendations_agree_with_inclusive_or_authority',
+                        suite: recommendationSuite,
+                        test: 'eitherAlternativeInOneAnyOfGroupCanOpenTheDependent()']
+        ]
+
+        def parsedSuites = [:]
+        def evidence = requiredCases.collect { required ->
+            def suite = parsedSuites.computeIfAbsent(required.suite) { suiteName ->
+                def result = file(
+                        "${buildDir}/test-results/test/TEST-${suiteName}.xml")
+                if (!result.isFile()) {
+                    throw new GradleException(
+                            "Phase 9 route-selection suite did not run: ${suiteName}")
+                }
+                new XmlSlurper().parse(result)
+            }
+            def testCase = suite.testcase.find {
+                it.@name.toString() == required.test
+            }
+            if (testCase == null || testCase.size() == 0) {
+                throw new GradleException(
+                        "Phase 9 route-selection case did not run: ${required.suite}#${required.test}")
+            }
+            if (testCase.failure.size() != 0 || testCase.error.size() != 0
+                    || testCase.skipped.size() != 0) {
+                throw new GradleException(
+                        "Phase 9 route-selection case is not clean: ${required.suite}#${required.test}")
+            }
+            [
+                    invariant: required.invariant,
+                    suite    : required.suite,
+                    test     : required.test,
+                    status   : 'passed'
+            ]
+        }
+        if (evidence*.invariant.toSet().size() != requiredCases.size()) {
+            throw new GradleException(
+                    'Phase 9 route-selection matrix contains duplicate invariant identifiers')
+        }
+
+        def parser = new groovy.json.JsonSlurper()
+        def upstream = parser.parse(groupedRouteRolloutReportFile.get().asFile)
+        if (upstream['status'] != 'passed'
+                || upstream['contract'] != certifiedGroupedRouteRolloutContract
+                || upstream['prerequisiteStrategy'] != certifiedAutomaticPrerequisiteStrategy
+                || upstream['exportFormat'] != certifiedResearchCatalogExportFormat) {
+            throw new GradleException(
+                    'Phase 9 route selection does not have matching Phase 8 rollout evidence')
+        }
+        def guardSource = file(
+                'src/main/java/com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponAlternativeRouteGuard.java')
+                .getText('UTF-8')
+        if (!guardSource.contains(
+                'public static final String CONTRACT = "group_aware_route_balance_v1";')) {
+            throw new GradleException(
+                    'Phase 9 grouped route-selection runtime contract drifted')
+        }
+        def routeRatioMatch = guardSource =~ /MAXIMUM_PROVEN_ROUTE_COST_RATIO_BASIS_POINTS\s*=\s*([\d_]+)L/
+        if (!routeRatioMatch.find()
+                || routeRatioMatch.group(1).replace('_', '') != '80000') {
+            throw new GradleException(
+                    'Phase 9 grouped route-selection cost-ratio ceiling drifted')
+        }
+
+        def report = [
+                schema          : 1,
+                phase           : 9,
+                status          : 'passed',
+                contract        : certifiedGroupedRouteSelectionContract,
+                prerequisiteStrategy: certifiedAutomaticPrerequisiteStrategy,
+                groupedGuard    : 'group_aware_route_balance_v1',
+                legacyGuard     : 'conservative_legacy_and_union_closure_v1',
+                rejectionPolicy : 'proven_route_cost_imbalance_only',
+                uncertaintyPolicy: 'accept_with_lower_upper_bounds',
+                maximumProvenRouteCostRatioBasisPoints: 80000,
+                routeEvidence   : [
+                        costs: 'lower_and_upper_bounds',
+                        ancestry: 'mandatory_route_intersection_and_union',
+                        diversity: 'mandatory_overlap_and_divergent_node_count'
+                ],
+                networkProtocol : certifiedResearchTreeProtocol,
+                exportFormat    : certifiedResearchCatalogExportFormat,
+                upstreamRollout : [
+                        contract: certifiedGroupedRouteRolloutContract,
+                        report: 'build/reports/grouped-route-rollout.json',
+                        status: upstream['status']
+                ],
+                invariantCount  : evidence.size(),
+                evidence        : evidence
+        ]
+        def output = groupedRouteSelectionReportFile.get().asFile
+        output.parentFile.mkdirs()
+        def reportText = groovy.json.JsonOutput.prettyPrint(
+                groovy.json.JsonOutput.toJson(report)) + '\n'
+        def temporaryReport = java.nio.file.Files.createTempFile(
+                output.parentFile.toPath(), 'grouped-route-selection-', '.json.tmp')
+        try {
+            java.nio.file.Files.writeString(
+                    temporaryReport,
+                    reportText,
+                    java.nio.charset.StandardCharsets.UTF_8)
+            try {
+                java.nio.file.Files.move(
+                        temporaryReport,
+                        output.toPath(),
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            } catch (java.nio.file.AtomicMoveNotSupportedException ignored) {
+                java.nio.file.Files.move(
+                        temporaryReport,
+                        output.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            }
+        } finally {
+            java.nio.file.Files.deleteIfExists(temporaryReport)
+        }
+        logger.lifecycle("Phase 9 grouped route-selection report: ${output}")
+    }
+}
+
+def groupedRouteStabilizationReportFile =
+        layout.buildDirectory.file('reports/grouped-route-stabilization.json')
+tasks.register('verifyGroupedRouteStabilizationContract') {
+    group = 'verification'
+    description = 'Certifies the Phase 10 grouped-route stabilization, migration, and default-rollout boundary.'
+    dependsOn tasks.named('verifyGroupedRouteSelectionContract')
+
+    inputs.files(
+            'src/main/java/com/gamergaming/taczweaponblueprints/resource/research/ResearchAutomaticPlacementProfile.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/capabilities/PlayerRecipeData.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/network/SyncResearchTreePacket.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/client/ResearchTreeProjectionCache.java',
+            'src/main/resources/data/taczweaponblueprints/taczweaponblueprints/research_automatic_placement_profiles/default.json',
+            'src/main/resources/data/taczweaponblueprints/taczweaponblueprints/research_profiles/duplicate_recovery.json',
+            'docs/research-tree-manual-qa.md')
+    inputs.files(
+            groupedPrerequisiteAcceptanceReportFile,
+            groupedRouteRolloutReportFile,
+            groupedRouteSelectionReportFile)
+    inputs.files(layout.buildDirectory.dir('test-results/test'))
+    outputs.file(groupedRouteStabilizationReportFile)
+
+    doLast {
+        def requirementsSuite =
+                'com.gamergaming.taczweaponblueprints.resource.research.ResearchRequirementsTest'
+        def profileSuite =
+                'com.gamergaming.taczweaponblueprints.resource.research.ResearchTechTreeDataTest'
+        def serviceSuite =
+                'com.gamergaming.taczweaponblueprints.progression.BlueprintResearchServiceTest'
+        def builderSuite =
+                'com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeBuilderTest'
+        def networkSuite =
+                'com.gamergaming.taczweaponblueprints.network.SyncResearchTreePacketTest'
+        def canvasSuite =
+                'com.gamergaming.taczweaponblueprints.client.ResearchTreeCanvasTest'
+        def projectionCacheSuite =
+                'com.gamergaming.taczweaponblueprints.client.ResearchTreeProjectionCacheTest'
+        def evidenceManagerSuite =
+                'com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponEvidenceManagerTest'
+        def playerDataSuite =
+                'com.gamergaming.taczweaponblueprints.capabilities.PlayerRecipeDataTest'
+        def packagedSuite =
+                'com.gamergaming.taczweaponblueprints.resource.research.DefaultTaCZResearchTreeTest'
+        def scaleSuite =
+                'com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponTopologyPhaseZeroFixtureTest'
+        def prerequisitePlannerSuite =
+                'com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPrerequisitePlannerTest'
+        def viewportSuite =
+                'com.gamergaming.taczweaponblueprints.client.ResearchTreeViewportTest'
+        def requiredCases = [
+                [invariant: 'legacy_and_or_and_mixed_truth_tables_remain_certified',
+                        suite: requirementsSuite,
+                        test: 'canonicalModelExpressesAndAcrossGroupsAndOrWithinEachGroup()'],
+                [invariant: 'packaged_grouped_default_retains_legacy_profile_fallback',
+                        suite: profileSuite,
+                        test: 'groupedRouteDefaultRolloutKeepsExplicitLegacyMigrationFallback()'],
+                [invariant: 'generated_alternatives_filter_independently_and_fail_open',
+                        suite: serviceSuite,
+                        test: 'groupedOverlayFiltersAlternativesIndependentlyAndFailsOpenSafely()'],
+                [invariant: 'authored_requirements_remain_atomic_and_authoritative',
+                        suite: serviceSuite,
+                        test: 'connectedAutomaticPrerequisiteIsEnforcedByTheAtomicResearchTransaction()'],
+                [invariant: 'hidden_satisfaction_does_not_leak',
+                        suite: builderSuite,
+                        test: 'previewGroupsDoNotDiscloseHiddenPlayerSatisfaction()'],
+                [invariant: 'partial_views_preserve_cross_view_alternatives',
+                        suite: builderSuite,
+                        test: 'inducedProjectionPreservesCrossViewChoiceGroupsAsLinkedAlternatives()'],
+                [invariant: 'group_identity_and_hidden_counts_round_trip',
+                        suite: networkSuite,
+                        test: 'groupedRequirementIdentityAndHiddenCountsRoundTrip()'],
+                [invariant: 'malformed_and_disclosure_breaking_group_packets_are_rejected',
+                        suite: networkSuite,
+                        test: 'decoderAndAccumulatorRejectInvalidOrDisclosureBreakingGroups()'],
+                [invariant: 'maximum_group_wire_table_is_bounded',
+                        suite: networkSuite,
+                        test: 'maximumGroupTableFitsAndAssignsEveryPublicNodeExactlyOnce()'],
+                [invariant: 'satisfaction_updates_do_not_rebuild_layout_geometry',
+                        suite: canvasSuite,
+                        test: 'requirementGroupBoundariesRebuildGeometryButSatisfactionDoesNot()'],
+                [invariant: 'state_only_publications_reuse_cached_layouts',
+                        suite: projectionCacheSuite,
+                        test: 'stateOnlyPublicationRebuildsNodesButReusesLazyLayouts()'],
+                [invariant: 'topology_changes_invalidate_cached_layouts',
+                        suite: projectionCacheSuite,
+                        test: 'topologyChangeInvalidatesLayoutsAndEmptyPublicationHasAValidBranch()'],
+                [invariant: 'reload_revision_changes_invalidate_automatic_evidence_atomically',
+                        suite: evidenceManagerSuite,
+                        test: 'candidatePublicationIsRevisionCoupledAndInvalidatesAtomically()'],
+                [invariant: 'legacy_player_knowledge_migrates_without_revocation',
+                        suite: playerDataSuite,
+                        test: 'migratesVersionZeroAndRepairsLearnedDiscoveryInvariant()'],
+                [invariant: 'packaged_weapon_progression_and_disabled_domains_are_preserved',
+                        suite: packagedSuite,
+                        test: 'packagedDefaultPublishesOneConnectedWeaponProgression()'],
+                [invariant: 'representative_53_and_287_catalogs_are_deterministic',
+                        suite: scaleSuite,
+                        test: 'currentTopologyBaselinesCoverRepresentativeCatalogSizes()'],
+                [invariant: 'maximum_4096_catalog_is_bounded_and_deterministic',
+                        suite: scaleSuite,
+                        test: 'maximumLayeringPopulationRemainsBoundedAndDeterministic()'],
+                [invariant: 'grouped_route_selection_is_bounded_at_4096_weapons',
+                        suite: prerequisitePlannerSuite,
+                        test: 'groupedRoutesRemainBoundedAtMaximumCatalogPopulation()'],
+                [invariant: 'manual_zoom_reaches_the_fifteen_percent_overview_floor',
+                        suite: viewportSuite,
+                        test: 'manualZoomCanReachTheFifteenPercentOverviewFloor()'],
+                [invariant: 'fit_frames_the_complete_tree_canvas',
+                        suite: viewportSuite,
+                        test: 'fitShowsTheCompletePackagedTreeCanvas()']
+        ]
+
+        def parsedSuites = [:]
+        def evidence = requiredCases.collect { required ->
+            def suite = parsedSuites.computeIfAbsent(required.suite) { suiteName ->
+                def result = file(
+                        "${buildDir}/test-results/test/TEST-${suiteName}.xml")
+                if (!result.isFile()) {
+                    throw new GradleException(
+                            "Phase 10 stabilization suite did not run: ${suiteName}")
+                }
+                new XmlSlurper().parse(result)
+            }
+            def testCase = suite.testcase.find {
+                it.@name.toString() == required.test
+            }
+            if (testCase == null || testCase.size() == 0) {
+                throw new GradleException(
+                        "Phase 10 stabilization case did not run: ${required.suite}#${required.test}")
+            }
+            if (testCase.failure.size() != 0 || testCase.error.size() != 0
+                    || testCase.skipped.size() != 0) {
+                throw new GradleException(
+                        "Phase 10 stabilization case is not clean: ${required.suite}#${required.test}")
+            }
+            [
+                    invariant: required.invariant,
+                    suite    : required.suite,
+                    test     : required.test,
+                    status   : 'passed'
+            ]
+        }
+        if (evidence*.invariant.toSet().size() != requiredCases.size()) {
+            throw new GradleException(
+                    'Phase 10 stabilization matrix contains duplicate invariant identifiers')
+        }
+
+        def parser = new groovy.json.JsonSlurper()
+        def acceptance = parser.parse(
+                groupedPrerequisiteAcceptanceReportFile.get().asFile)
+        def rollout = parser.parse(groupedRouteRolloutReportFile.get().asFile)
+        def selection = parser.parse(groupedRouteSelectionReportFile.get().asFile)
+        if (acceptance['status'] != 'passed'
+                || acceptance['contract']
+                        != certifiedGroupedPrerequisiteAcceptanceContract
+                || rollout['status'] != 'passed'
+                || rollout['contract'] != certifiedGroupedRouteRolloutContract
+                || rollout['activation']
+                        != 'packaged_default_with_legacy_and_opt_out'
+                || rollout['defaultDomains']
+                        != [weapons: 'enabled', attachments: 'disabled', ammo: 'disabled']
+                || selection['status'] != 'passed'
+                || selection['contract'] != certifiedGroupedRouteSelectionContract
+                || selection['groupedGuard'] != 'group_aware_route_balance_v1'
+                || [acceptance, rollout, selection].any {
+                    it['prerequisiteStrategy'] != certifiedAutomaticPrerequisiteStrategy
+                            || it['networkProtocol'] != certifiedResearchTreeProtocol
+                            || it['exportFormat'] != certifiedResearchCatalogExportFormat
+                }) {
+            throw new GradleException(
+                    'Phase 10 stabilization does not have matching Phase 7-9 evidence')
+        }
+
+        def automaticProfile = parser.parse(file(
+                'src/main/resources/data/taczweaponblueprints/taczweaponblueprints/research_automatic_placement_profiles/default.json'))
+        if (automaticProfile['format'] != 4
+                || automaticProfile['mode'] != 'connected'
+                || automaticProfile['max_prerequisites'] != 2
+                || automaticProfile['prerequisite_strategy']
+                        != certifiedAutomaticPrerequisiteStrategy
+                || automaticProfile['scoring_model']
+                        != certifiedAutomaticScoringModel) {
+            throw new GradleException(
+                    'Phase 10 packaged automatic profile is not the bounded grouped default')
+        }
+
+        def report = [
+                schema          : 1,
+                phase           : 10,
+                status          : 'passed',
+                contract        : certifiedGroupedRouteStabilizationContract,
+                prerequisiteStrategy: certifiedAutomaticPrerequisiteStrategy,
+                scoringModel   : certifiedAutomaticScoringModel,
+                activation      : 'packaged_default',
+                legacyFallback  : [
+                        strategy: 'legacy_and',
+                        selection: 'explicit_or_omitted_for_compatible_profiles',
+                        semanticFallback: 'never_implicit_on_grouped_failure'
+                ],
+                migration       : [
+                        saveMigration: 'none',
+                        learnedBlueprints: 'preserved',
+                        datapackRewrite: 'none',
+                        invalidGeneratedGroup: 'fail_open_with_diagnostics',
+                        invalidAuthoredGroup: 'fail_closed'
+                ],
+                defaultDomains  : rollout['defaultDomains'],
+                networkProtocol : certifiedResearchTreeProtocol,
+                exportFormat    : certifiedResearchCatalogExportFormat,
+                upstream        : [
+                        acceptance: certifiedGroupedPrerequisiteAcceptanceContract,
+                        rollout: certifiedGroupedRouteRolloutContract,
+                        selection: certifiedGroupedRouteSelectionContract
+                ],
+                scaleCatalogs   : [53, 287, 4096],
+                manualAcceptance: [
+                        policy: 'required_before_public_release',
+                        checklist: 'docs/research-tree-manual-qa.md',
+                        items: [
+                                'normal_and_maximum_zoom_out',
+                                'route_selection_and_highlighting',
+                                'junction_clarity',
+                                'no_camera_reset_after_learning',
+                                'no_top_heavy_or_excessive_width_regression'
+                        ]
+                ],
+                invariantCount  : evidence.size(),
+                evidence        : evidence
+        ]
+        def output = groupedRouteStabilizationReportFile.get().asFile
+        output.parentFile.mkdirs()
+        def reportText = groovy.json.JsonOutput.prettyPrint(
+                groovy.json.JsonOutput.toJson(report)) + '\n'
+        def temporaryReport = java.nio.file.Files.createTempFile(
+                output.parentFile.toPath(), 'grouped-route-stabilization-', '.json.tmp')
+        try {
+            java.nio.file.Files.writeString(
+                    temporaryReport,
+                    reportText,
+                    java.nio.charset.StandardCharsets.UTF_8)
+            try {
+                java.nio.file.Files.move(
+                        temporaryReport,
+                        output.toPath(),
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            } catch (java.nio.file.AtomicMoveNotSupportedException ignored) {
+                java.nio.file.Files.move(
+                        temporaryReport,
+                        output.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            }
+        } finally {
+            java.nio.file.Files.deleteIfExists(temporaryReport)
+        }
+        logger.lifecycle("Phase 10 grouped-route stabilization report: ${output}")
+    }
+}
+
+def hybridRouteGenerationReportFile =
+        layout.buildDirectory.file('reports/hybrid-route-generation.json')
+tasks.register('verifyHybridRouteGenerationContract') {
+    group = 'verification'
+    description = 'Certifies the Phase 11 opt-in deliberate hybrid prerequisite generator.'
+    dependsOn tasks.named('verifyGroupedRouteStabilizationContract')
+
+    inputs.files(
+            'src/main/java/com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponPrerequisitePlanner.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponPrerequisiteDecision.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/research/tree/automatic/AutomaticWeaponAlternativeRouteGuard.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/resource/research/ResearchAutomaticPlacementProfile.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/resource/research/BlueprintResearchCatalogExporter.java',
+            'src/main/resources/data/taczweaponblueprints/taczweaponblueprints/research_automatic_placement_profiles/default.json')
+    inputs.files(layout.buildDirectory.dir('test-results/test'))
+    outputs.file(hybridRouteGenerationReportFile)
+
+    doLast {
+        def requiredCases = [
+                [invariant: 'hybrid_profile_is_explicit_bounded_and_connected_only',
+                        suite: 'com.gamergaming.taczweaponblueprints.resource.research.ResearchTechTreeDataTest',
+                        test: 'automaticPlacementProfilesAreStrictBoundedAndUniquePerTree()'],
+                [invariant: 'hybrid_policy_owns_the_sparse_gateway_schedule',
+                        suite: 'com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPlannerTest',
+                        test: 'groupedRouteRolloutControlsAreExplicitAndBounded()'],
+                [invariant: 'hybrid_planner_emits_deterministic_sparse_and_of_or_shapes',
+                        suite: 'com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPrerequisitePlannerTest',
+                        test: 'hybridRoutesPublishExplicitSparseAndOfOrGateways()'],
+                [invariant: 'hybrid_ancestry_is_priced_from_canonical_groups',
+                        suite: 'com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponAlternativeRouteGuardTest',
+                        test: 'pricesHybridGeneratedAncestryFromCanonicalAndOfOrGroups()'],
+                [invariant: 'hybrid_relationship_shape_is_diagnostic_and_exported',
+                        suite: 'com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementDiagnosticsTest',
+                        test: 'hybridDiagnosticsExportExplicitMixedRelationshipAuthority()'],
+                [invariant: 'hybrid_topology_reuses_live_and_of_or_quality_evidence',
+                        suite: 'com.gamergaming.taczweaponblueprints.research.tree.ResearchGroupedRouteQualityAuditTest',
+                        test: 'hybridRoutesReuseTheLiveAndOfOrQualityAudit()']
+        ]
+        def parsedSuites = [:]
+        def evidence = requiredCases.collect { required ->
+            def suite = parsedSuites.computeIfAbsent(required.suite) { suiteName ->
+                def result = file(
+                        "${buildDir}/test-results/test/TEST-${suiteName}.xml")
+                if (!result.isFile()) {
+                    throw new GradleException(
+                            "Phase 11 hybrid suite did not run: ${suiteName}")
+                }
+                new XmlSlurper().parse(result)
+            }
+            def testCase = suite.testcase.find {
+                it.@name.toString() == required.test
+            }
+            if (testCase == null || testCase.size() == 0) {
+                throw new GradleException(
+                        "Phase 11 hybrid case did not run: ${required.suite}#${required.test}")
+            }
+            if (testCase.failure.size() != 0 || testCase.error.size() != 0
+                    || testCase.skipped.size() != 0) {
+                throw new GradleException(
+                        "Phase 11 hybrid case is not clean: ${required.suite}#${required.test}")
+            }
+            [
+                    invariant: required.invariant,
+                    suite    : required.suite,
+                    test     : required.test,
+                    status   : 'passed'
+            ]
+        }
+
+        def parser = new groovy.json.JsonSlurper()
+        def automaticProfile = parser.parse(file(
+                'src/main/resources/data/taczweaponblueprints/taczweaponblueprints/research_automatic_placement_profiles/default.json'))
+        if (automaticProfile['prerequisite_strategy']
+                        != certifiedAutomaticPrerequisiteStrategy
+                || automaticProfile['max_prerequisites'] != 2) {
+            throw new GradleException(
+                    'Phase 11 must remain opt-in and preserve the bounded grouped packaged default')
+        }
+
+        def report = [
+                schema          : 1,
+                phase           : 11,
+                status          : 'passed',
+                contract        : certifiedHybridRouteGenerationContract,
+                strategy        : 'hybrid_routes_v1',
+                activation      : 'explicit_profile_opt_in',
+                packagedDefault : certifiedAutomaticPrerequisiteStrategy,
+                relationshipShapes: [
+                        mandatory: '[[A],[B]]',
+                        alternatives: '[[A,B]]',
+                        mixed: '[[A,B],[C]]'
+                ],
+                safeguards      : [
+                        'canonical_and_of_or_relationship_authority',
+                        'group_aware_alternative_route_balance',
+                        'bounded_mandatory_gateway_closure_inflation',
+                        'no_ancestor_descendant_parent_redundancy',
+                        'at_most_one_scheduled_gateway_per_transition_rank',
+                        'no_specialization_or_terminal_gateway_schedule'
+                ],
+                maximumGeneratedParents: 3,
+                networkProtocol : certifiedResearchTreeProtocol,
+                exportFormat    : certifiedResearchCatalogExportFormat,
+                evidence        : evidence,
+                manualRuntimeGate: 'docs/research-tree-manual-qa.md'
+        ]
+        def output = hybridRouteGenerationReportFile.get().asFile
+        output.parentFile.mkdirs()
+        def reportText = groovy.json.JsonOutput.prettyPrint(
+                groovy.json.JsonOutput.toJson(report)) + '\n'
+        def temporaryReport = java.nio.file.Files.createTempFile(
+                output.parentFile.toPath(), 'hybrid-route-generation-', '.json.tmp')
+        try {
+            java.nio.file.Files.writeString(
+                    temporaryReport,
+                    reportText,
+                    java.nio.charset.StandardCharsets.UTF_8)
+            try {
+                java.nio.file.Files.move(
+                        temporaryReport,
+                        output.toPath(),
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            } catch (java.nio.file.AtomicMoveNotSupportedException ignored) {
+                java.nio.file.Files.move(
+                        temporaryReport,
+                        output.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            }
+        } finally {
+            java.nio.file.Files.deleteIfExists(temporaryReport)
+        }
+        logger.lifecycle("Phase 11 hybrid route-generation report: ${output}")
+    }
+}
+
+def groupedVisualRefinementReportFile =
+        layout.buildDirectory.file('reports/grouped-visual-refinement.json')
+tasks.register('verifyGroupedVisualRefinementContract') {
+    group = 'verification'
+    description = 'Certifies the Phase 12 branch-aware client visual-refinement contract.'
+    dependsOn tasks.named('verifyHybridRouteGenerationContract')
+
+    inputs.files(
+            'src/main/java/com/gamergaming/taczweaponblueprints/client/ResearchTechTreeVisualMotifPlanner.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/client/ResearchTechTreeLayoutEngine.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/client/ResearchTechTreeLayoutPolicy.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/client/ResearchTechTreeBranchCompactor.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/client/ResearchTreeEdgeIndex.java')
+    inputs.files(layout.buildDirectory.dir('test-results/test'))
+    outputs.file(groupedVisualRefinementReportFile)
+
+    doLast {
+        def requiredCases = [
+                [invariant: 'responsive_rows_prefer_clean_branch_boundaries',
+                        suite: 'com.gamergaming.taczweaponblueprints.client.ResearchTechTreeVisualMotifPlannerTest',
+                        test: 'responsiveWrappingUsesCleanBranchBoundariesBeforeSplittingFamilies()'],
+                [invariant: 'severe_underfill_is_prevented_before_preserving_a_clean_boundary',
+                        suite: 'com.gamergaming.taczweaponblueprints.client.ResearchTechTreeVisualMotifPlannerTest',
+                        test: 'avoidsPathologicallySparseRowsEvenWhenACleanFamilyBoundaryExists()'],
+                [invariant: 'oversized_families_split_only_when_capacity_requires_it',
+                        suite: 'com.gamergaming.taczweaponblueprints.client.ResearchTechTreeVisualMotifPlannerTest',
+                        test: 'oversizedFamilySplitsOnlyAsOftenAsCapacityRequires()'],
+                [invariant: 'shared_base_rows_remain_dense_and_balanced',
+                        suite: 'com.gamergaming.taczweaponblueprints.client.ResearchTechTreeVisualMotifPlannerTest',
+                        test: 'sharedBaseRetainsDenseBalancedWrapping()'],
+                [invariant: 'maximum_catalog_partition_is_bounded_and_deterministic',
+                        suite: 'com.gamergaming.taczweaponblueprints.client.ResearchTechTreeVisualMotifPlannerTest',
+                        test: 'maximumCatalogPartitionIsBoundedDeterministicAndOrderPreserving()'],
+                [invariant: 'minimum_capacity_maximum_catalog_uses_bounded_partition_state',
+                        suite: 'com.gamergaming.taczweaponblueprints.client.ResearchTechTreeVisualMotifPlannerTest',
+                        test: 'minimumCapacityMaximumCatalogUsesBoundedState()'],
+                [invariant: 'multiple_any_of_junctions_have_dedicated_clearance',
+                        suite: 'com.gamergaming.taczweaponblueprints.client.ResearchTechTreeLayoutEngineTest',
+                        test: 'multipleAnyOfJunctionsReceiveDedicatedVerticalClearance()'],
+                [invariant: 'maximum_drawable_any_of_junction_stack_is_distinct_and_bounded',
+                        suite: 'com.gamergaming.taczweaponblueprints.client.ResearchTechTreeLayoutEngineTest',
+                        test: 'maximumDrawableAnyOfJunctionsRemainDistinctAndBounded()'],
+                [invariant: 'authored_nodes_do_not_split_a_single_mature_family',
+                        suite: 'com.gamergaming.taczweaponblueprints.client.ResearchTechTreeLayoutEngineTest',
+                        test: 'authoredNodesCannotSplitTheOnlyMatureAutomaticFamily()'],
+                [invariant: 'responsive_layout_preserves_families_end_to_end',
+                        suite: 'com.gamergaming.taczweaponblueprints.client.ResearchTechTreeLayoutEngineTest',
+                        test: 'responsiveAutomaticFamilyLayoutWrapsAtFamilyBoundaries()'],
+                [invariant: 'upper_branch_gutters_open_without_large_voids',
+                        suite: 'com.gamergaming.taczweaponblueprints.client.ResearchTechTreeLayoutEngineTest',
+                        test: 'compactsSparseOuterBranchVoidsAndOpensProgressiveUpperGutters()'],
+                [invariant: 'reported_287_node_catalog_remains_bounded',
+                        suite: 'com.gamergaming.taczweaponblueprints.client.ResearchTechTreeLayoutEngineTest',
+                        test: 'mixedFiftyThreeAuthoredAndTwoHundredThirtyFourAutomaticCatalogStaysBounded()'],
+                [invariant: 'maximum_4096_node_domain_remains_bounded_and_deterministic',
+                        suite: 'com.gamergaming.taczweaponblueprints.client.ResearchTechTreeLayoutEngineTest',
+                        test: 'maximumPublicDomainRemainsBoundedAndDeterministic()'],
+                [invariant: 'automatic_topology_retains_dense_trunk_and_gradual_tapers',
+                        suite: 'com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponBranchLayerPlannerTest',
+                        test: 'allocatesADenseSharedTrunkThenGradualMultiNodeFamilyTapers()'],
+                [invariant: 'similar_terminal_weapons_can_share_a_terminal_cohort',
+                        suite: 'com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponBranchLayerPlannerTest',
+                        test: 'deferredEquivalentWeaponsOccupyTheLayerImmediatelyBelowTheApex()'],
+                [invariant: 'hybrid_and_of_or_authority_survives_visual_refinement',
+                        suite: 'com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPrerequisitePlannerTest',
+                        test: 'hybridRoutesPublishExplicitSparseAndOfOrGateways()']
+        ]
+        def parsedSuites = [:]
+        def evidence = requiredCases.collect { required ->
+            def suite = parsedSuites.computeIfAbsent(required.suite) { suiteName ->
+                def result = file(
+                        "${buildDir}/test-results/test/TEST-${suiteName}.xml")
+                if (!result.isFile()) {
+                    throw new GradleException(
+                            "Phase 12 visual-refinement suite did not run: ${suiteName}")
+                }
+                new XmlSlurper().parse(result)
+            }
+            def testCase = suite.testcase.find {
+                it.@name.toString() == required.test
+            }
+            if (testCase == null || testCase.size() == 0) {
+                throw new GradleException(
+                        "Phase 12 visual-refinement case did not run: ${required.suite}#${required.test}")
+            }
+            if (testCase.failure.size() != 0 || testCase.error.size() != 0
+                    || testCase.skipped.size() != 0) {
+                throw new GradleException(
+                        "Phase 12 visual-refinement case is not clean: ${required.suite}#${required.test}")
+            }
+            [
+                    invariant: required.invariant,
+                    suite    : required.suite,
+                    test     : required.test,
+                    status   : 'passed'
+            ]
+        }
+
+        def report = [
+                schema          : 1,
+                phase           : 12,
+                status          : 'passed',
+                contract        : certifiedGroupedVisualRefinementContract,
+                scope           : 'client_only_visual_geometry',
+                prerequisiteAuthority: 'unchanged_canonical_and_of_or_groups',
+                semanticRanks   : 'unchanged',
+                mechanisms      : [
+                        'minimum_row_count_family_preserving_partition',
+                        'bounded_cumulative_deficit_partition_state',
+                        'severe_underfill_guard_before_family_cut_minimization',
+                        'capacity_required_internal_family_split_only',
+                        'single_family_cohesion_independent_of_ordering_sweeps',
+                        'requirement_aware_branch_seam_pressure',
+                        'bounded_multi_junction_vertical_clearance',
+                        'maximum_valid_drawable_junction_stack_coverage'
+                ],
+                constraints     : [
+                        dynamicWidth: 'preserved',
+                        maximumNodesPerRow: 28,
+                        manualMinimumZoom: 0.15,
+                        packagedDefaultStrategy:
+                                certifiedAutomaticPrerequisiteStrategy,
+                        supportedPrerequisiteStrategies:
+                                ['legacy_and', 'grouped_routes_v1', 'hybrid_routes_v1']
+                ],
+                scaleCatalogs   : [287, 4096],
+                networkProtocol : certifiedResearchTreeProtocol,
+                exportFormat    : certifiedResearchCatalogExportFormat,
+                placementVersion: certifiedAutomaticPlacementVersion,
+                screenshotEvidence: [
+                        policy: 'required_before_public_release',
+                        status: 'manual_runtime_gate',
+                        checklist: 'docs/research-tree-manual-qa.md'
+                ],
+                evidence        : evidence
+        ]
+        def output = groupedVisualRefinementReportFile.get().asFile
+        output.parentFile.mkdirs()
+        def reportText = groovy.json.JsonOutput.prettyPrint(
+                groovy.json.JsonOutput.toJson(report)) + '\n'
+        def temporaryReport = java.nio.file.Files.createTempFile(
+                output.parentFile.toPath(), 'grouped-visual-refinement-', '.json.tmp')
+        try {
+            java.nio.file.Files.writeString(
+                    temporaryReport,
+                    reportText,
+                    java.nio.charset.StandardCharsets.UTF_8)
+            try {
+                java.nio.file.Files.move(
+                        temporaryReport,
+                        output.toPath(),
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            } catch (java.nio.file.AtomicMoveNotSupportedException ignored) {
+                java.nio.file.Files.move(
+                        temporaryReport,
+                        output.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            }
+        } finally {
+            java.nio.file.Files.deleteIfExists(temporaryReport)
+        }
+        logger.lifecycle("Phase 12 grouped visual-refinement report: ${output}")
     }
 }
 
@@ -920,6 +2194,12 @@ tasks.register('verifyReleaseArtifact') {
             tasks.named('reobfJar'), tasks.named('test'),
             tasks.named('verifySharedLayoutKernelMigration'),
             tasks.named('verifyTaperedAutomaticTopologyContract'),
+            tasks.named('verifyGroupedPrerequisiteAcceptanceContract'),
+            tasks.named('verifyGroupedRouteRolloutContract'),
+            tasks.named('verifyGroupedRouteSelectionContract'),
+            tasks.named('verifyGroupedRouteStabilizationContract'),
+            tasks.named('verifyHybridRouteGenerationContract'),
+            tasks.named('verifyGroupedVisualRefinementContract'),
             tasks.named('verifyAutomaticPublicationRecoveryContract')
 
     doLast {
@@ -1018,6 +2298,7 @@ tasks.register('verifyReleaseArtifact') {
                     'com/gamergaming/taczweaponblueprints/client/ResearchTechTreeLayoutEngine.class',
                     'com/gamergaming/taczweaponblueprints/client/ResearchTechTreeLayoutPolicy.class',
                     'com/gamergaming/taczweaponblueprints/client/ResearchTechTreeBranchCompactor.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTechTreeVisualMotifPlanner.class',
                     'com/gamergaming/taczweaponblueprints/client/ResearchTechTreeDomainSelectorLayout.class',
                     'com/gamergaming/taczweaponblueprints/client/ResearchTechTreeDomainMenu.class',
                     'com/gamergaming/taczweaponblueprints/client/ResearchTechTreeViewState.class',
@@ -1065,7 +2346,13 @@ tasks.register('verifyReleaseArtifact') {
                     'com/gamergaming/taczweaponblueprints/progression/PhysicalItemBlueprintResolver.class',
                     'com/gamergaming/taczweaponblueprints/progression/BlueprintReverseEngineeringEvaluator.class',
                     'com/gamergaming/taczweaponblueprints/progression/BlueprintReverseEngineeringService.class',
+                    'com/gamergaming/taczweaponblueprints/progression/FoundWeaponRecoveryMode.class',
+                    'com/gamergaming/taczweaponblueprints/progression/FoundWeaponRecoveryService.class',
+                    'com/gamergaming/taczweaponblueprints/progression/ResearchCostMode.class',
                     'com/gamergaming/taczweaponblueprints/item/BlueprintProvenance.class',
+                    'com/gamergaming/taczweaponblueprints/item/PhysicalWeaponProvenance.class',
+                    'com/gamergaming/taczweaponblueprints/mixin/GunSmithTableMenuMixin.class',
+                    'com/gamergaming/taczweaponblueprints/mixin/TaCZLootTableInjectorModifierMixin.class',
                     'com/gamergaming/taczweaponblueprints/resource/research/BlueprintReverseEngineeringPolicy.class',
                     'com/gamergaming/taczweaponblueprints/resource/research/BlueprintReverseEngineeringOverride.class',
                     'com/gamergaming/taczweaponblueprints/progression/BlueprintResearchService.class',
@@ -1099,6 +2386,8 @@ tasks.register('verifyReleaseArtifact') {
                     'com/gamergaming/taczweaponblueprints/research/tree/ResearchTechTreePresentation.class',
                     'com/gamergaming/taczweaponblueprints/research/tree/ResearchTechTreePresentationBuilder.class',
                     'com/gamergaming/taczweaponblueprints/research/tree/ResearchTechTreeTopologyAudit.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/ResearchGroupedRouteQualityAudit.class',
+                    'com/gamergaming/taczweaponblueprints/research/tree/ResearchGroupedRouteMotifAssessment.class',
                     'com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeBuilder.class',
                     'com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeGraph.class',
                     'com/gamergaming/taczweaponblueprints/research/tree/ResearchTreeBranchLayoutComposer.class',
@@ -1162,7 +2451,13 @@ tasks.register('verifyReleaseArtifact') {
                     'data/taczweaponblueprints/loot_modifiers/research_data/dossier_chests_end_city_treasure.json',
                     'data/taczweaponblueprints/taczweaponblueprints/research_profiles/duplicate_recovery.json',
                     'data/taczweaponblueprints/taczweaponblueprints/research_rules/default_tree/roots.json',
-                    'data/taczweaponblueprints/taczweaponblueprints/research_rules/default_tree/branch_roots.json',
+                    'data/taczweaponblueprints/taczweaponblueprints/research_rules/default_tree/weapon_costs/basic.json',
+                    'data/taczweaponblueprints/taczweaponblueprints/research_rules/default_tree/weapon_costs/established.json',
+                    'data/taczweaponblueprints/taczweaponblueprints/research_rules/default_tree/weapon_costs/advanced.json',
+                    'data/taczweaponblueprints/taczweaponblueprints/research_rules/default_tree/weapon_costs/elite.json',
+                    'data/taczweaponblueprints/taczweaponblueprints/research_rules/default_tree/special/m320_branch.json',
+                    'data/taczweaponblueprints/taczweaponblueprints/research_rules/default_tree/special/rpg_branch.json',
+                    'data/taczweaponblueprints/taczweaponblueprints/research_rules/default_tree/machine_gun/evolys_branch.json',
                     'data/taczweaponblueprints/taczweaponblueprints/research_rules/fallback_guns.json',
                     'data/taczweaponblueprints/taczweaponblueprints/research_rules/fallback_attachments.json',
                     'data/taczweaponblueprints/taczweaponblueprints/research_rules/fallback_ammo.json',
@@ -1170,6 +2465,7 @@ tasks.register('verifyReleaseArtifact') {
                     'data/taczweaponblueprints/taczweaponblueprints/research_tree_groups/rifles.json',
                     'data/taczweaponblueprints/taczweaponblueprints/research_tech_trees/default.json',
                     'data/taczweaponblueprints/taczweaponblueprints/research_tech_tree_entries/default_weapons.json',
+                    'data/taczweaponblueprints/taczweaponblueprints/research_tech_tree_entries/default_weapon_fallbacks.json',
                     'data/taczweaponblueprints/taczweaponblueprints/research_tech_tree_entries/default_attachments.json',
                     'data/taczweaponblueprints/taczweaponblueprints/research_tech_tree_entries/default_ammo.json',
                     'data/taczweaponblueprints/taczweaponblueprints/research_tech_tree_entries/default_fallbacks.json',
@@ -1197,6 +2493,7 @@ tasks.register('verifyReleaseArtifact') {
                     'assets/taczweaponblueprints/models/item/research_bench.mtl',
                     'assets/taczweaponblueprints/lang/en_us.json',
                     'assets/taczweaponblueprints/research/automatic/tacz-1.1.8-mechanical-v2.json',
+                    'assets/taczweaponblueprints/research/automatic/tacz-1.1.8-capability-v3.json',
                     'assets/taczweaponblueprints/textures/block/research_bench.png',
                     'data/forge/loot_modifiers/global_loot_modifiers.json',
                     'taczweaponblueprints.mixins.json',
@@ -1235,9 +2532,9 @@ tasks.register('verifyReleaseArtifact') {
                 it.startsWith('data/taczweaponblueprints/taczweaponblueprints/research_rules/default_tree/')
                         && it.endsWith('.json')
             }
-            if (researchRuleFiles.size() != 55) {
+            if (researchRuleFiles.size() != 22) {
                 throw new GradleException(
-                        "Expected 55 built-in default-tree research rules, found ${researchRuleFiles.size()}")
+                        "Expected 22 built-in default-tree research rules, found ${researchRuleFiles.size()}")
             }
             def researchGroupFiles = names.findAll {
                 it.startsWith('data/taczweaponblueprints/taczweaponblueprints/research_tree_groups/')
@@ -1259,9 +2556,9 @@ tasks.register('verifyReleaseArtifact') {
                 it.startsWith('data/taczweaponblueprints/taczweaponblueprints/research_tech_tree_entries/')
                         && it.endsWith('.json')
             }
-            if (researchTechTreeEntryFiles.size() != 4) {
+            if (researchTechTreeEntryFiles.size() != 5) {
                 throw new GradleException(
-                        "Expected four built-in Research Tech Tree entry bundles, found ${researchTechTreeEntryFiles.size()}")
+                        "Expected five built-in Research Tech Tree entry bundles, found ${researchTechTreeEntryFiles.size()}")
             }
             def automaticPlacementProfileFiles = names.findAll {
                 it.startsWith('data/taczweaponblueprints/taczweaponblueprints/research_automatic_placement_profiles/')
@@ -1433,24 +2730,33 @@ tasks.register('verifyReleaseArtifact') {
             def automaticReferencePath =
                     'assets/taczweaponblueprints/research/automatic/tacz-1.1.8-mechanical-v2.json'
             def automaticReference = parsePackagedJson(automaticReferencePath)
+            def capabilityReferencePath =
+                    'assets/taczweaponblueprints/research/automatic/tacz-1.1.8-capability-v3.json'
+            def capabilityReference = parsePackagedJson(capabilityReferencePath)
             def automaticPlacementProfile =
                     parsePackagedJson(automaticPlacementProfileFiles.first())
             def packagedMergeInterval = automaticPlacementProfile['merge_interval']
             if (automaticPlacementProfile.keySet()
                     != (['format', 'tree', 'mode', 'review_handling',
-                            'foundation_count', 'max_prerequisites', 'merge_interval'] as Set)
-                    || automaticPlacementProfile['format'] != 2
+                            'foundation_count', 'max_prerequisites',
+                            'prerequisite_strategy', 'merge_interval',
+                            'scoring_model'] as Set)
+                    || automaticPlacementProfile['format'] != 4
                     || automaticPlacementProfile['tree'] != 'taczweaponblueprints:default'
                     || automaticPlacementProfile['mode'] != 'connected'
                     || automaticPlacementProfile['review_handling'] != 'place_connected'
-                    || automaticPlacementProfile['foundation_count'] != 2
+                    || automaticPlacementProfile['foundation_count'] != 1
                     || automaticPlacementProfile['max_prerequisites'] != 2
+                    || automaticPlacementProfile['prerequisite_strategy']
+                            != certifiedAutomaticPrerequisiteStrategy
+                    || automaticPlacementProfile['scoring_model']
+                            != certifiedAutomaticScoringModel
                     || !(packagedMergeInterval instanceof Number)
                     || packagedMergeInterval.intValue() != packagedMergeInterval
                     || packagedMergeInterval.intValue() < 0
                     || packagedMergeInterval.intValue() > 64) {
                 throw new GradleException(
-                        'Packaged automatic-placement profile must enable bounded connected add-on placement')
+                        'Packaged automatic-placement profile must enable bounded grouped connected all-weapon placement')
             }
             def expectedAutomaticMetrics = [
                     'sustained_dps', 'effective_damage', 'headshot_multiplier', 'effective_range',
@@ -1483,14 +2789,55 @@ tasks.register('verifyReleaseArtifact') {
                 throw new GradleException(
                         'Packaged automatic weapon reference is incomplete, unbounded, or incompatible')
             }
+            def expectedCapabilityMetrics = [
+                    'impact_damage', 'sustained_dps', 'headshot_multiplier',
+                    'effective_range', 'armor_ignore', 'target_penetration',
+                    'projectile_speed',
+                    'projectile_gravity', 'damage_retention', 'aimed_inaccuracy',
+                    'recoil_magnitude', 'magazine_capacity', 'empty_reload_seconds',
+                    'tactical_reload_seconds', 'aim_time', 'draw_time', 'weight',
+                    'aim_movement', 'fire_mode_count', 'attachment_type_count',
+                    'projectile_count', 'explosion_damage', 'explosion_radius',
+                    'control_effects', 'charge_seconds'
+            ] as Set
+            if (capabilityReference['format'] != 1
+                    || capabilityReference['reference_version']
+                            != 'tacz-1.1.8-capability-v3'
+                    || capabilityReference['metric_formula']
+                            != 'tacz-gun-capability-v3'
+                    || capabilityReference['source']?.get('version')
+                            != '1.1.8-hotfix'
+                    || capabilityReference['source']?.get('recipe_backed_guns') != 53
+                    || capabilityReference['source']?.get('fingerprint')
+                            != '765a83ea3df8bb3591aba2a5657c1fff75122178381f947a5e6e079e0730fb95'
+                    || capabilityReference['metrics_fingerprint']
+                            != '2ab8c81e48fff1ba1a419c85423c5981e13fe9eeac8dba9f6f8e4170e2e42d89'
+                    || !(capabilityReference['blueprints'] instanceof List)
+                    || capabilityReference['blueprints'].size() != 53
+                    || capabilityReference['blueprints']
+                            != capabilityReference['blueprints'].toList().sort()
+                    || capabilityReference['blueprints'].toSet().size() != 53
+                    || !(capabilityReference['metrics'] instanceof Map)
+                    || capabilityReference['metrics'].keySet()
+                            != expectedCapabilityMetrics
+                    || capabilityReference['metrics'].any { name, samples ->
+                        !(samples instanceof List)
+                                || samples.size() < 2 || samples.size() > 53
+                                || samples != samples.toList().sort()
+                    }) {
+                throw new GradleException(
+                        'Packaged capability-v3 weapon reference is incomplete, unbounded, or incompatible')
+            }
             def packagedTechTree = parsePackagedJson(researchTechTreeFiles.first())
             def expectedTechDomains = ['weapons', 'attachments', 'ammo']
-            // The active weapon bundle uses explicit format-2 ranks. Dormant
-            // attachment/ammo data stays format 1 as a compatibility/opt-in asset.
+            // Dormant weapon compatibility placements use explicit format-2
+            // ranks, but automatic tree authority ignores all of them at runtime.
+            // Dormant attachment/ammo data stays format 1 as an opt-in asset.
             def expectedTechTiers = [
                     'starter', 'basic', 'established', 'advanced', 'elite', 'apex'
             ]
             if (packagedTechTree['format'] != 2
+                    || packagedTechTree['weapon_placement_mode'] != 'automatic'
                     || packagedTechTree['layout']?.get('width_mode') != 'dynamic'
                     || packagedTechTree['layout']?.get('min_nodes_per_layer') != 9
                     || packagedTechTree['layout']?.get('max_nodes_per_layer') != 20
@@ -1506,7 +2853,8 @@ tasks.register('verifyReleaseArtifact') {
             def fallbackDomainByKind = new LinkedHashMap<String, String>()
             researchTechTreeEntryFiles.sort().each { path ->
                 def bundle = parsePackagedJson(path)
-                def expectedBundleFormat = path.endsWith('/default_weapons.json') ? 2 : 1
+                def expectedBundleFormat = path.endsWith('/default_weapons.json')
+                        || path.endsWith('/default_weapon_fallbacks.json') ? 2 : 1
                 if (bundle['format'] != expectedBundleFormat
                         || bundle['tree'] != 'taczweaponblueprints:default'
                         || !(bundle['entries'] instanceof List)
@@ -1527,7 +2875,8 @@ tasks.register('verifyReleaseArtifact') {
                         def tier = placement['tier']
                         def order = placement['order']
                         def rank = placement['rank']
-                        if (priority != 100
+                        def exactFallback = placement['fallback'] == true
+                        if ((exactFallback ? priority != 0 : priority != 100)
                                 || !(blueprints instanceof List) || blueprints.size() != 1
                                 || !(blueprints.first() instanceof String)
                                 || blueprints.first().isBlank()
@@ -1539,7 +2888,10 @@ tasks.register('verifyReleaseArtifact') {
                                                 || rank.intValue() < 0
                                                 || rank.intValue() > 1_000_000)
                                 || expectedBundleFormat == 1
-                                        && placement.containsKey('rank')) {
+                                        && placement.containsKey('rank')
+                                || exactFallback && expectedBundleFormat != 2
+                                || exactFallback && (placement.containsKey('rating')
+                                        || placement.containsKey('tier_override_reason'))) {
                             throw new GradleException(
                                     "Packaged exact Research Tech Tree placement is invalid: ${path}")
                         }
@@ -1548,7 +2900,9 @@ tasks.register('verifyReleaseArtifact') {
                                 domain: domain,
                                 tier  : tier,
                                 rank  : rank instanceof Number ? rank.intValue() : null,
-                                order : order as int
+                                order : order as int,
+                                fallback: exactFallback,
+                                priority: priority as int
                         ]) != null) {
                             throw new GradleException(
                                     "Packaged Research Tech Tree places a blueprint more than once: ${blueprint}")
@@ -1579,6 +2933,24 @@ tasks.register('verifyReleaseArtifact') {
             if (actualTechCounts != expectedTechCounts) {
                 throw new GradleException(
                         "Packaged Research Tech Tree coverage must be 53/95/24, found ${actualTechCounts}")
+            }
+            def packagedWeaponPlacements = exactTechPlacements.findAll { ignored, placement ->
+                placement.domain == 'weapons'
+            }
+            def automaticFallbackWeapons = packagedWeaponPlacements.findAll { ignored, placement ->
+                placement.fallback
+            }.keySet()
+            def reviewedWeaponOverrides = packagedWeaponPlacements.findAll { ignored, placement ->
+                !placement.fallback
+            }.keySet()
+            if (automaticFallbackWeapons.size() != 49
+                    || reviewedWeaponOverrides != ([
+                            'tacz:glock_17', 'tacz:m320', 'tacz:rpg7', 'tacz:minigun'
+                    ] as Set)) {
+                throw new GradleException(
+                        'Packaged weapons must contain 49 priority-zero automatic fallbacks '
+                                + "and four reviewed overrides; fallbacks=${automaticFallbackWeapons.size()}, "
+                                + "reviewed=${reviewedWeaponOverrides}")
             }
             if (fallbackDomainByKind != [
                     gun: 'weapons', attachment: 'attachments', ammo: 'ammo'
@@ -1699,6 +3071,9 @@ tasks.register('verifyReleaseArtifact') {
                 def domainTargets = exactTechPlacements.findAll { ignored, placement ->
                     placement.domain == domain
                 }.keySet()
+                if (domain == 'weapons') {
+                    return
+                }
                 def domainRoots = domainTargets.findAll { target ->
                     prerequisitesByTarget[target].isEmpty()
                 } as Set
@@ -1714,16 +3089,11 @@ tasks.register('verifyReleaseArtifact') {
                             throw new GradleException(
                                     "Packaged ${domain} Tech Tree has a cross-domain prerequisite: ${prerequisite} -> ${target}")
                         }
-                        boolean movesBackward
-                        if (domain == 'weapons') {
-                            movesBackward = targetPlacement.rank <= prerequisitePlacement.rank
-                        } else {
-                            int prerequisiteTier = tierOrdinal[prerequisitePlacement.tier]
-                            int targetTier = tierOrdinal[targetPlacement.tier]
-                            movesBackward = targetTier < prerequisiteTier
-                                    || targetTier == prerequisiteTier
-                                    && targetPlacement.order <= prerequisitePlacement.order
-                        }
+                        int prerequisiteTier = tierOrdinal[prerequisitePlacement.tier]
+                        int targetTier = tierOrdinal[targetPlacement.tier]
+                        boolean movesBackward = targetTier < prerequisiteTier
+                                || targetTier == prerequisiteTier
+                                && targetPlacement.order <= prerequisitePlacement.order
                         if (movesBackward) {
                             throw new GradleException(
                                     "Packaged ${domain} Tech Tree prerequisite moves backward: ${prerequisite} -> ${target}")
@@ -1772,9 +3142,9 @@ tasks.register('verifyReleaseArtifact') {
                     .digest(weaponTopologyManifest.getBytes('UTF-8'))
                     .encodeHex().toString()
             if (weaponTopologyFingerprint
-                    != 'd6e3e62e77370a2a76cb486489f1cdb25b0d7f7767d9523874fc476485b85e08') {
+                    != 'b46b32443ea564e7509d1ea01e6d75ab5a97f9ef49702ea0ca830aae6856ad4f') {
                 throw new GradleException(
-                        'Packaged weapon topology changed without updating its fingerprint: '
+                        'Packaged emergency weapon-fallback topology changed without updating its fingerprint: '
                                 + weaponTopologyFingerprint)
             }
             def groupedTargets = new LinkedHashSet<String>()
@@ -1808,32 +3178,29 @@ tasks.register('verifyReleaseArtifact') {
             }
             if (!weaponPrerequisites.values().flatten().every { groupedTargets.contains(it) }) {
                 throw new GradleException(
-                        'Packaged legacy weapon prerequisites must remain within the weapon presentation subset')
+                        'Packaged weapon override prerequisites must remain within the weapon presentation subset')
             }
-            def weaponRoots = weaponPrerequisites.findAll { ignored, prerequisites ->
-                prerequisites.isEmpty()
-            }.keySet()
-            if (weaponRoots != (['tacz:glock_17'] as Set)) {
-                throw new GradleException(
-                        "Packaged weapon tree must have only tacz:glock_17 as its root, found ${weaponRoots}")
+            def fallbackWeaponsWithAuthoredPrerequisites = automaticFallbackWeapons.findAll {
+                !weaponPrerequisites[it].isEmpty()
             }
-            def reachableWeapons = new LinkedHashSet<String>(weaponRoots)
-            boolean expandedWeapons
-            do {
-                expandedWeapons = false
-                weaponPrerequisites.each { targetId, prerequisites ->
-                    if (!reachableWeapons.contains(targetId) && reachableWeapons.containsAll(prerequisites)) {
-                        if (reachableWeapons.add(targetId)) {
-                            expandedWeapons = true
-                        }
-                    }
-                }
-            } while (expandedWeapons)
-            if (reachableWeapons != groupedTargets) {
-                def unreachable = new LinkedHashSet<String>(groupedTargets)
-                unreachable.removeAll(reachableWeapons)
+            if (!fallbackWeaponsWithAuthoredPrerequisites.isEmpty()) {
                 throw new GradleException(
-                        "Packaged weapon tree is not one connected progression; unreachable: ${unreachable}")
+                        'Automatic fallback weapons must not retain authored prerequisites: '
+                                + fallbackWeaponsWithAuthoredPrerequisites)
+            }
+            def expectedReviewedPrerequisites = [
+                    'tacz:glock_17': [] as Set,
+                    'tacz:m320': ['tacz:m870', 'tacz:aug'] as Set,
+                    'tacz:rpg7': ['tacz:m320', 'tacz:fn_evolys'] as Set,
+                    'tacz:minigun': ['tacz:fn_evolys', 'tacz:rpg7'] as Set
+            ]
+            def actualReviewedPrerequisites = reviewedWeaponOverrides.collectEntries { target ->
+                [(target): weaponPrerequisites[target]]
+            }
+            if (actualReviewedPrerequisites != expectedReviewedPrerequisites) {
+                throw new GradleException(
+                        'Packaged reviewed weapon prerequisite exceptions changed: '
+                                + actualReviewedPrerequisites)
             }
             def languageEntry = zip.getEntry('assets/taczweaponblueprints/lang/en_us.json')
             def language = zip.getInputStream(languageEntry).withCloseable { stream ->
@@ -1888,6 +3255,12 @@ tasks.register('verifyReleaseArtifact') {
                     'gui.taczweaponblueprints.research_bench.tree.recommendation.opens_paths',
                     'gui.taczweaponblueprints.research_bench.tree.recommendation.within_budget',
                     'gui.taczweaponblueprints.research_bench.tree.recommendation.lowest_cost',
+                    'gui.taczweaponblueprints.research_bench.tree.recommendation.opens_paths.items_only',
+                    'gui.taczweaponblueprints.research_bench.tree.recommendation.within_budget.items_only',
+                    'gui.taczweaponblueprints.research_bench.tree.recommendation.lowest_cost.items_only',
+                    'gui.taczweaponblueprints.research_bench.tree.recommendation.opens_paths.points_and_items',
+                    'gui.taczweaponblueprints.research_bench.tree.recommendation.within_budget.points_and_items',
+                    'gui.taczweaponblueprints.research_bench.tree.recommendation.lowest_cost.points_and_items',
                     'gui.taczweaponblueprints.research_bench.tree.recommendation.narration',
                     'gui.taczweaponblueprints.research_bench.tree.plan.track',
                     'gui.taczweaponblueprints.research_bench.tree.plan.untrack',
@@ -1899,6 +3272,10 @@ tasks.register('verifyReleaseArtifact') {
                     'gui.taczweaponblueprints.research_bench.tree.plan.complete',
                     'gui.taczweaponblueprints.research_bench.tree.plan.summary',
                     'gui.taczweaponblueprints.research_bench.tree.plan.summary.partial',
+                    'gui.taczweaponblueprints.research_bench.tree.plan.summary.points_only',
+                    'gui.taczweaponblueprints.research_bench.tree.plan.summary.points_only.partial',
+                    'gui.taczweaponblueprints.research_bench.tree.plan.summary.items_only',
+                    'gui.taczweaponblueprints.research_bench.tree.plan.summary.items_only.partial',
                     'gui.taczweaponblueprints.research_bench.tree.plan.narration',
                     'gui.taczweaponblueprints.research_bench.tree.legend.learned',
                     'gui.taczweaponblueprints.research_bench.tree.legend.available',
@@ -1911,6 +3288,9 @@ tasks.register('verifyReleaseArtifact') {
                     'gui.taczweaponblueprints.research_bench.tree.card.narration.materials',
                     'gui.taczweaponblueprints.research_bench.tree.card.narration.materials_bypassed',
                     'gui.taczweaponblueprints.research_bench.tree.narration',
+                    'gui.taczweaponblueprints.research_bench.tree.narration.points_only',
+                    'gui.taczweaponblueprints.research_bench.tree.narration.items_only',
+                    'gui.taczweaponblueprints.research_bench.tree.narration.points_and_items',
                     'gui.taczweaponblueprints.research_bench.tree.narration.redacted',
                     'gui.taczweaponblueprints.research_bench.tree.cost_bypassed',
                     'gui.taczweaponblueprints.research_bench.tree.next.prepare_materials',
@@ -2058,6 +3438,16 @@ tasks.register('verifyReleaseArtifact') {
             def mixinConfig = zip.getInputStream(mixinEntry).withCloseable { stream ->
                 jsonParser.parse(stream, 'UTF-8')
             }
+            def expectedCommonMixins = [
+                    'IGunSmithTableRecipeAccessor',
+                    'GunSmithTableMenuMixin',
+                    'TaCZLootTableInjectorModifierMixin'
+            ] as Set
+            if (!(mixinConfig.mixins instanceof List)
+                    || mixinConfig.mixins.toSet() != expectedCommonMixins) {
+                throw new GradleException(
+                        "Packaged common mixin surface does not match ${expectedCommonMixins}")
+            }
             def expectedClientMixins = [
                     'EmiScreenBaseMixin',
                     'GunSmithTableScreenMixin',
@@ -2066,6 +3456,18 @@ tasks.register('verifyReleaseArtifact') {
             ] as Set
             if (!(mixinConfig.client instanceof List) || mixinConfig.client.toSet() != expectedClientMixins) {
                 throw new GradleException("Packaged client mixin surface does not match ${expectedClientMixins}")
+            }
+            def refmapEntry = zip.getEntry('META-INF/taczweaponblueprints.refmap.json')
+            if (refmapEntry == null) {
+                throw new GradleException('Packaged Mixin refmap is missing')
+            }
+            def refmapText = zip.getInputStream(refmapEntry).getText('UTF-8')
+            if (!refmapText.contains(
+                    'Lnet/minecraft/world/item/ItemStack;copy()Lnet/minecraft/world/item/ItemStack;')
+                    || !refmapText.contains(
+                    'Lnet/minecraft/world/item/ItemStack;m_41777_()Lnet/minecraft/world/item/ItemStack;')) {
+                throw new GradleException(
+                        'Packaged crafted-gun mixin refmap does not remap ItemStack.copy')
             }
 
             def globalEntry = zip.getEntry('data/forge/loot_modifiers/global_loot_modifiers.json')
@@ -2125,12 +3527,36 @@ tasks.register('verifyReleaseArtifact') {
                             != certifiedResearchTreeProtocol
                     || attributes.getValue('Research-Catalog-Export-Format')
                             != certifiedResearchCatalogExportFormat.toString()
+                    || attributes.getValue('Automatic-Prerequisite-Strategy')
+                            != certifiedAutomaticPrerequisiteStrategy
+                    || attributes.getValue('Automatic-Scoring-Model')
+                            != certifiedAutomaticScoringModel
+                    || attributes.getValue('Automatic-Scoring-Formula')
+                            != certifiedAutomaticFormulaVersion
+                    || attributes.getValue('Automatic-Scoring-Reference')
+                            != certifiedAutomaticReferenceVersion
+                    || attributes.getValue('Grouped-Route-Quality')
+                            != certifiedGroupedRouteQualityContract
+                    || attributes.getValue('Grouped-Route-Motif-Decision')
+                            != certifiedGroupedRouteMotifDecisionContract
+                    || attributes.getValue('Grouped-Prerequisite-Acceptance')
+                            != certifiedGroupedPrerequisiteAcceptanceContract
+                    || attributes.getValue('Grouped-Route-Rollout')
+                            != certifiedGroupedRouteRolloutContract
+                    || attributes.getValue('Grouped-Route-Selection')
+                            != certifiedGroupedRouteSelectionContract
+                    || attributes.getValue('Grouped-Route-Stabilization')
+                            != certifiedGroupedRouteStabilizationContract
+                    || attributes.getValue('Hybrid-Route-Generation')
+                            != certifiedHybridRouteGenerationContract
+                    || attributes.getValue('Grouped-Visual-Refinement')
+                            != certifiedGroupedVisualRefinementContract
                     || attributes.getValue('Automatic-Publication-Contract')
                             != certifiedAutomaticPublicationContract
                     || attributes.getValue('Automatic-Publication-Health')
                             != certifiedAutomaticPublicationHealthContract) {
                 throw new GradleException(
-                        'Packaged manifest does not match the certified automatic-tree contracts')
+                        'Packaged manifest does not match the certified Research Tree contracts')
             }
             if (attributes.getValue('Implementation-Timestamp') != null) {
                 throw new GradleException('Manifest contains a non-reproducible implementation timestamp')
@@ -2263,6 +3689,12 @@ tasks.register('certifyReleaseCandidate') {
     inputs.file(tasks.named('jar', Jar).flatMap { it.archiveFile })
     inputs.file('src/main/java/com/gamergaming/taczweaponblueprints/network/NetworkHandler.java')
     inputs.file(taperedAutomaticTopologyReportFile)
+    inputs.file(groupedPrerequisiteAcceptanceReportFile)
+    inputs.file(groupedRouteRolloutReportFile)
+    inputs.file(groupedRouteSelectionReportFile)
+    inputs.file(groupedRouteStabilizationReportFile)
+    inputs.file(hybridRouteGenerationReportFile)
+    inputs.file(groupedVisualRefinementReportFile)
     inputs.file(automaticPublicationRecoveryReportFile)
     inputs.files(layout.buildDirectory.dir('test-results/test'))
     inputs.properties([
@@ -2325,13 +3757,22 @@ tasks.register('certifyReleaseCandidate') {
                                 registryId  : 'taczweaponblueprints:research_bench',
                                 presentation: 'permanent_fullscreen_research_tree',
                                 actions     : ['select', 'research'],
+                                researchCostModes:
+                                        ['points_and_items', 'points_only', 'items_only'],
                                 localInputs : 0
                         ],
                         blueprintRecycler: [
                                 registryId  : 'taczweaponblueprints:blueprint_recycler',
                                 displayName : 'Blueprint Analyzer',
                                 presentation: 'two_slot_contextual_analyzer',
-                                actions     : ['recycle', 'redeem', 'redeem_stack', 'reverse_engineer'],
+                                actions     : ['recycle', 'redeem', 'redeem_stack', 'reverse_engineer', 'recover_points'],
+                                foundWeaponRecoveryModes: [
+                                        'protected_blueprint_only',
+                                        'recyclable_blueprint',
+                                        'direct_rp_only',
+                                        'player_choice'
+                                ],
+                                weaponOriginEvidence: 'versioned_positive_crafted_or_loot_marker',
                                 localInputs : 1,
                                 localOutputs: 1,
                                 modelElements: 8,
@@ -2370,9 +3811,10 @@ tasks.register('certifyReleaseCandidate') {
                         artifactGate        : 'verifyReleaseArtifact'
                 ],
                 unifiedTechTree: [
-                        viewOrder: ['branches', 'all_weapons', 'tech_tree'],
+                        viewOrder: ['tech_tree'],
+                        dormantCompatibilityViews: ['branches', 'all_weapons'],
                         domains : [
-                                [id: 'weapons', blueprints: 53, root: 'tacz:glock_17',
+                                [id: 'weapons', blueprints: 53, root: 'tacz:m9a4',
                                         published: true, placementFormat: 2],
                                 [id: 'attachments', blueprints: 95, root: 'tacz:grip_rk6',
                                         published: false, placementFormat: 1],
@@ -2382,7 +3824,7 @@ tasks.register('certifyReleaseCandidate') {
                         bandMode: 'dynamic',
                         ranksPerBand: 3,
                         weaponTopologyFingerprint:
-                                'd6e3e62e77370a2a76cb486489f1cdb25b0d7f7767d9523874fc476485b85e08',
+                                'f35c8acee98c6a6a89a94afe3da488a975e68d0daec2c02a48d9931ab504052f',
                         artifactGate: 'verifyReleaseArtifact'
                 ],
                 automaticPlacement: [
@@ -2390,20 +3832,42 @@ tasks.register('certifyReleaseCandidate') {
                         tree            : 'taczweaponblueprints:default',
                         bundledMode     : 'connected',
                         reviewHandling  : 'place_connected',
-                        formulaVersion  : 'tacz-gun-mechanical-v2',
-                        referenceVersion: 'tacz-1.1.8-mechanical-v2',
+                        scoringModel    : certifiedAutomaticScoringModel,
+                        formulaVersion  : certifiedAutomaticFormulaVersion,
+                        referenceVersion: certifiedAutomaticReferenceVersion,
                         placementVersion: certifiedAutomaticPlacementVersion,
+                        prerequisiteStrategy: certifiedAutomaticPrerequisiteStrategy,
+                        groupedRouteQuality: certifiedGroupedRouteQualityContract,
+                        groupedRouteMotifDecision:
+                                certifiedGroupedRouteMotifDecisionContract,
+                        groupedPrerequisiteAcceptance:
+                                certifiedGroupedPrerequisiteAcceptanceContract,
+                        groupedRouteRollout: certifiedGroupedRouteRolloutContract,
+                        groupedRouteSelection:
+                                certifiedGroupedRouteSelectionContract,
+                        groupedRouteStabilization:
+                                certifiedGroupedRouteStabilizationContract,
+                        hybridRouteGeneration:
+                                certifiedHybridRouteGenerationContract,
+                        groupedVisualRefinement:
+                                certifiedGroupedVisualRefinementContract,
                         layeringStrategy: 'dynamic_stat_layers',
                         widthMode       : 'dynamic',
                         widthFormula    : 'ceil_sqrt_four_thirds_topology_population',
                         minNodesPerLayer: 9,
                         maxNodesPerLayer: 20,
                         baselineResolvedNodesPerLayer: 9,
-                        mixedRankCapacity: 'authored_slots_reserved',
+                        mixedRankCapacity: 'eligible_automatic_weapon_population',
                         manualMinimumZoom: 0.15,
                         widthSource     : 'tree_layout',
-                        foundationCount : 2,
-                        mergePolicy     : 'gradual_second_parent_taper_with_closure_guard',
+                        foundationCount : 1,
+                        mergePolicy     : 'gradual_second_parent_taper_with_group_aware_route_balance',
+                        legacyMergePolicy:
+                                'gradual_second_parent_taper_with_union_closure_guard',
+                        generatedRequirementShape:
+                                'packaged_grouped_or_pair_with_opt_in_explicit_hybrid_and_of_or',
+                        supportedPrerequisiteStrategies:
+                                ['legacy_and', 'grouped_routes_v1', 'hybrid_routes_v1'],
                         packagedMergeInterval: 4,
                         progressionBands: 'tree_owned_none_dynamic_or_configured',
                         maxCandidates   : 4096,
@@ -2418,6 +3882,18 @@ tasks.register('certifyReleaseCandidate') {
                         acceptanceCatalogSize: 287,
                         acceptanceReport:
                                 'build/reports/tapered-automatic-topology.json',
+                        groupedPrerequisiteAcceptanceReport:
+                                'build/reports/grouped-prerequisite-acceptance.json',
+                        groupedRouteRolloutReport:
+                                'build/reports/grouped-route-rollout.json',
+                        groupedRouteSelectionReport:
+                                'build/reports/grouped-route-selection.json',
+                        groupedRouteStabilizationReport:
+                                'build/reports/grouped-route-stabilization.json',
+                        hybridRouteGenerationReport:
+                                'build/reports/hybrid-route-generation.json',
+                        groupedVisualRefinementReport:
+                                'build/reports/grouped-visual-refinement.json',
                         recoveryReport:
                                 'build/reports/automatic-publication-recovery.json',
                         publicationHealthStates:
@@ -2425,6 +3901,18 @@ tasks.register('certifyReleaseCandidate') {
                         failureStageDiagnostics: true,
                         failureRecovery: 'new_revision_clears_stale_failure',
                         topologyGate   : 'verifyTaperedAutomaticTopologyContract',
+                        groupedPrerequisiteAcceptanceGate:
+                                'verifyGroupedPrerequisiteAcceptanceContract',
+                        groupedRouteRolloutGate:
+                                'verifyGroupedRouteRolloutContract',
+                        groupedRouteSelectionGate:
+                                'verifyGroupedRouteSelectionContract',
+                        groupedRouteStabilizationGate:
+                                'verifyGroupedRouteStabilizationContract',
+                        hybridRouteGenerationGate:
+                                'verifyHybridRouteGenerationContract',
+                        groupedVisualRefinementGate:
+                                'verifyGroupedVisualRefinementContract',
                         recoveryGate   : 'verifyAutomaticPublicationRecoveryContract',
                         artifactGate    : 'verifyReleaseArtifact'
                 ],

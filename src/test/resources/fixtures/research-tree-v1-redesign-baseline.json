@@ -22,8 +22,11 @@
     "tech_tree": "baseline:tree"
   },
   "tree": {
-    "format": 1,
+    "format": 2,
     "title": "Legacy Redesign Baseline",
+    "weapon_placement_mode": "automatic",
+    "layout": {"max_nodes_per_layer": 9},
+    "bands": {"mode": "none"},
     "tiers": [
       {"id": "starter", "title": "Starter"},
       {"id": "basic", "title": "Basic"},
@@ -320,16 +323,18 @@
       "baseline:ammo": 2
     },
     "automatic": {
-      "authored": [
+      "authored": [],
+      "eligible": [
+        "addon:fallback_gun",
         "baseline:root",
         "baseline:selector",
         "baseline:tagged",
-        "baseline:upgrade"
+        "baseline:upgrade",
+        "orphan:unplaced_gun"
       ],
-      "eligible": ["addon:fallback_gun", "orphan:unplaced_gun"],
       "unplaced": [],
-      "fingerprint": "c84270f15f7e349ce12ad365984bd64df2188f4d3fde8efe4d6c5ef93292f4e9"
+      "fingerprint": "be381b7ad38ccf1c8c5bf645e0dd4d7a07685bd4c9a85d10ccc9e8adc1bcf40d"
     },
-    "publication_fingerprint": "fdf561c8114e2756ac53eb628a5c80816a0b288e5f5cb399391da7fef27c1f75"
+    "publication_fingerprint": "677a16737f552b9d6a2165d4715ec2e73af44fd5924927bb793cde15047e9c67"
   }
 }

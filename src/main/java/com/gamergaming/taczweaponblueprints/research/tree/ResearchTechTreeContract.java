@@ -40,11 +40,39 @@ public final class ResearchTechTreeContract {
     public static final int MAX_PROGRESSION_RANK = 1_000_000;
     public static final String AUTOMATIC_FORMULA_VERSION = "tacz-gun-mechanical-v2";
     public static final String AUTOMATIC_REFERENCE_VERSION = "tacz-1.1.8-mechanical-v2";
+    /** Shadow capability model retained beside v2 until its comparison gate passes. */
+    public static final String CAPABILITY_FORMULA_VERSION = "tacz-gun-capability-v3";
+    public static final String CAPABILITY_REFERENCE_VERSION = "tacz-1.1.8-capability-v3";
     /**
      * Bump this whenever automatic foundation, parent selection, merge, layering,
      * or rank-finalization semantics deliberately change.
      */
-    public static final String AUTOMATIC_PLACEMENT_VERSION = "tacz-gun-placement-v12";
+    public static final String AUTOMATIC_PLACEMENT_VERSION = "tacz-gun-placement-v13";
+    /** Preferred generated-edge span for catalogs that fit within the graph depth limit. */
+    public static final int MAX_AUTOMATIC_EDGE_RANK_SPAN = 2;
+
+    /**
+     * Returns the smallest safe automatic edge span for a tree of the supplied
+     * height. Normal catalogs retain the preferred two-rank cap. Exceptionally
+     * tall catalogs relax it only when a two-rank path could not possibly fit
+     * beneath the prerequisite graph's global depth bound.
+     */
+    public static int automaticEdgeRankSpanLimit(
+            int occupiedRankCount,
+            int maximumPrerequisiteDepth) {
+        if (occupiedRankCount < 0) {
+            throw new IllegalArgumentException("occupiedRankCount must be non-negative");
+        }
+        if (maximumPrerequisiteDepth <= 0) {
+            throw new IllegalArgumentException("maximumPrerequisiteDepth must be positive");
+        }
+        int transitions = Math.max(0, occupiedRankCount - 1);
+        int depthSafeSpan = Math.max(
+                1,
+                Math.floorDiv(transitions, maximumPrerequisiteDepth)
+                        + (transitions % maximumPrerequisiteDepth == 0 ? 0 : 1));
+        return Math.max(MAX_AUTOMATIC_EDGE_RANK_SPAN, depthSafeSpan);
+    }
     /**
      * The lower two fifths of a sufficiently deep generated tree remain a shared
      * mesh. Shallow trees retain at least two shared transitions so small catalogs
@@ -59,7 +87,7 @@ public final class ResearchTechTreeContract {
      * this only alongside an intentional built-in topology migration.
      */
     public static final String DEFAULT_WEAPON_TOPOLOGY_FINGERPRINT =
-            "d6e3e62e77370a2a76cb486489f1cdb25b0d7f7767d9523874fc476485b85e08";
+            "f35c8acee98c6a6a89a94afe3da488a975e68d0daec2c02a48d9931ab504052f";
 
     public static final List<BrowseIntent> BROWSE_ORDER = List.of(
             BrowseIntent.BRANCHES,

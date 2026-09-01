@@ -165,6 +165,36 @@ class ResearchTechTreeTopologyAuditTest {
     }
 
     @Test
+    void oneAnyOfGroupDoesNotReportAnAndOrCrossBranchMerge() {
+        ResourceLocation left = id("test:left");
+        ResourceLocation right = id("test:right");
+        ResourceLocation choice = id("test:choice");
+        ResearchTreeGraph graph = ResearchTreeGraph.withRequirementGroups(
+                List.of(
+                        node(0, A, 0),
+                        node(1, left, 1),
+                        node(2, right, 1),
+                        node(3, choice, 2)),
+                List.of(
+                        requirement(left, 0, A),
+                        requirement(right, 0, A),
+                        requirement(choice, 0, left, right)));
+        ResearchTechTreeTopologyAudit.DomainAudit domain =
+                ResearchTechTreeTopologyAudit.audit(
+                        graph,
+                        rankPresentation(
+                                rankMember(A, 0, 0),
+                                rankMember(left, 1, 0),
+                                rankMember(right, 1, 1),
+                                rankMember(choice, 2, 0)))
+                        .domain(Domain.WEAPONS).orElseThrow();
+
+        assertEquals(1, domain.maximumPrerequisiteCount());
+        assertEquals(0, domain.mergeCount());
+        assertEquals(0, domain.crossBranchMergeCount());
+    }
+
+    @Test
     void emptyPresentationHasAnEmptyAuditAndNullInputsAreRejected() {
         assertEquals(
                 ResearchTechTreeTopologyAudit.Audit.EMPTY,
@@ -188,6 +218,18 @@ class ResearchTechTreeTopologyAuditTest {
                                 tier, tier.name(), Optional.empty()))
                         .toList(),
                 List.of(domains));
+    }
+
+    private static ResearchTreeGraph.RequirementGroup requirement(
+            ResourceLocation dependent,
+            int ordinal,
+            ResourceLocation... alternatives) {
+        return new ResearchTreeGraph.RequirementGroup(
+                dependent,
+                ordinal,
+                List.of(alternatives),
+                0,
+                false);
     }
 
     private static ResearchTechTreePresentation rankPresentation(

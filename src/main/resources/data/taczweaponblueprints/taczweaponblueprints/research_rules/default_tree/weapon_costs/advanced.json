@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "profile": "taczweaponblueprints:duplicate_recovery",
+  "priority": 100,
+  "target": {
+    "blueprints": [
+      "tacz:aa12",
+      "tacz:ak47",
+      "tacz:b93r",
+      "tacz:deagle",
+      "tacz:deagle_golden",
+      "tacz:fn_fal",
+      "tacz:g36k",
+      "tacz:hk416d",
+      "tacz:hk_g3",
+      "tacz:hk_mk23",
+      "tacz:kar98",
+      "tacz:lonetrail",
+      "tacz:m16a1",
+      "tacz:m16a4",
+      "tacz:m700",
+      "tacz:qbz_95",
+      "tacz:sks_tactical",
+      "tacz:taurus500",
+      "tacz:timeless50",
+      "tacz:ump45"
+    ]
+  },
+  "visibility": "full",
+  "tree_enabled": true,
+  "research_cost": {
+    "points": 8,
+    "ingredients": [
+      { "items": ["minecraft:paper"], "count": 4 },
+      { "items": ["minecraft:iron_ingot"], "count": 3 }
+    ]
+  }
+}

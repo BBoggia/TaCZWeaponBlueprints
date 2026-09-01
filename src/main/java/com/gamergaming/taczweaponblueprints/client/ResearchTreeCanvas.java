@@ -49,6 +49,8 @@ public final class ResearchTreeCanvas {
     private ResearchTreeRelations relations = ResearchTreeRelations.EMPTY;
     private ResearchTreeRelations.FocusPath focusPath = ResearchTreeRelations.FocusPath.EMPTY;
     private ResearchTreeRelations.FocusPath hoverPath = ResearchTreeRelations.FocusPath.EMPTY;
+    private Map<ResearchTreeEdgeIndex.RequirementGroupKey,
+            ResearchTreeGraph.RequirementGroup> requirementGroupsByKey = Map.of();
     private ResourceLocation trackedTargetId;
     private Set<ResourceLocation> trackedPathNodeIds = Set.of();
     private Set<ResearchTreeGraph.Edge> trackedPathEdges = Set.of();
@@ -161,6 +163,8 @@ public final class ResearchTreeCanvas {
         BoundaryRelationshipCounts nextBoundaryCounts =
                 indexBoundaryRelationships(nextCrossGroupLinks);
         List<HiddenAnchorSpan> nextHiddenAnchorSpans = indexHiddenAnchors(layout);
+        Map<ResearchTreeEdgeIndex.RequirementGroupKey, ResearchTreeGraph.RequirementGroup>
+                nextRequirementGroups = indexRequirementGroups(graph);
         boolean topologyChanged = !this.graph.hasSameLayoutTopology(graph)
                 || this.layout != layout
                 || edgeRoutingProfile != indexedEdgeRoutingProfile;
@@ -182,6 +186,7 @@ public final class ResearchTreeCanvas {
         this.boundaryRequirementCounts = nextBoundaryCounts.requirements();
         this.boundaryUnlockCounts = nextBoundaryCounts.unlocks();
         this.hiddenAnchorSpans = nextHiddenAnchorSpans;
+        this.requirementGroupsByKey = nextRequirementGroups;
         this.portals = nextPortals;
         this.techTreeLayout = null;
         this.techTreePortals = List.of();
@@ -360,6 +365,9 @@ public final class ResearchTreeCanvas {
                 }
                 List<ResearchTreeEdgeIndex.PositionedEdge> visibleEdges =
                         edgeIndex.visible(minimumX, minimumY, maximumX, maximumY);
+                List<ResearchTreeEdgeIndex.PositionedRequirementGroup> visibleJunctions =
+                        visibleRequirementJunctions(
+                                minimumX, minimumY, maximumX, maximumY);
                 for (int layer = 0; layer < 3; layer++) {
                     for (ResearchTreeEdgeIndex.PositionedEdge edge : visibleEdges) {
                         ResearchTreePresentationContract.RelationshipRole role = edgeRole(edge);
@@ -367,6 +375,17 @@ public final class ResearchTreeCanvas {
                                 && (!fullscreen
                                 || ResearchTreePresentationContract.edgeVisible(detail, role))) {
                             drawEdge(graphics, edge, role, nodeBorderColor);
+                        }
+                    }
+                    for (ResearchTreeEdgeIndex.PositionedRequirementGroup junction
+                            : visibleJunctions) {
+                        ResearchTreePresentationContract.RelationshipRole role =
+                                requirementJunctionRole(junction);
+                        if (edgeLayer(role) == layer
+                                && (!fullscreen
+                                || ResearchTreePresentationContract.edgeVisible(detail, role))) {
+                            drawRequirementJunction(
+                                    graphics, junction, role, nodeBorderColor);
                         }
                     }
                 }
@@ -927,12 +946,14 @@ public final class ResearchTreeCanvas {
         return relations.directUnlocks(blueprintId);
     }
 
+    public List<ResearchTreeGraph.RequirementGroup> requirementGroups(
+            ResourceLocation blueprintId) {
+        return graph.requirementGroupsOf(blueprintId);
+    }
+
     /** Counts internal and cross-group requirements without rendering remote nodes. */
     public int totalRequirementCount(ResourceLocation blueprintId) {
-        return Math.addExact(
-                directRequirements(blueprintId).size(),
-                boundaryRelationshipCount(
-                        blueprintId, ResearchTreeProjection.Direction.REQUIREMENT));
+        return requirementGroups(blueprintId).size();
     }
 
     /** Counts internal and cross-group unlocks without rendering remote nodes. */
@@ -1582,6 +1603,23 @@ public final class ResearchTreeCanvas {
                 .toList();
     }
 
+    private static Map<ResearchTreeEdgeIndex.RequirementGroupKey,
+            ResearchTreeGraph.RequirementGroup> indexRequirementGroups(
+                    ResearchTreeGraph graph) {
+        Map<ResearchTreeEdgeIndex.RequirementGroupKey, ResearchTreeGraph.RequirementGroup>
+                indexed = new java.util.LinkedHashMap<>();
+        for (ResearchTreeGraph.RequirementGroup group : graph.requirementGroups()) {
+            ResearchTreeEdgeIndex.RequirementGroupKey key =
+                    new ResearchTreeEdgeIndex.RequirementGroupKey(
+                            group.dependentId(), group.ordinal());
+            if (indexed.put(key, group) != null) {
+                throw new IllegalArgumentException(
+                        "Research Tree contains a duplicate requirement-group key");
+            }
+        }
+        return Map.copyOf(indexed);
+    }
+
     private static List<PortalTarget> portalTargets(
             List<ResearchTreeProjection.CrossGroupLink> links) {
         Map<ResourceLocation, List<ResearchTreeProjection.CrossGroupLink>> byDestination =
@@ -1701,6 +1739,19 @@ public final class ResearchTreeCanvas {
         return List.copyOf(visible);
     }
 
+    List<ResearchTreeEdgeIndex.PositionedRequirementGroup> visibleRequirementJunctions(
+            double minimumX,
+            double minimumY,
+            double maximumX,
+            double maximumY) {
+        if (maximumX < minimumX || maximumY < minimumY) {
+            throw new IllegalArgumentException(
+                    "invalid Research Tree requirement-junction bounds");
+        }
+        return edgeIndex.visibleRequirementJunctions(
+                minimumX, minimumY, maximumX, maximumY);
+    }
+
     boolean isHiddenAnchorVisible(ResearchTreeLayout.HiddenAnchor anchor) {
         Optional<ResearchTreeLayout.PositionedNode> dependent = layout.position(anchor.dependentId());
         if (dependent.isEmpty()) {
@@ -1721,7 +1772,11 @@ public final class ResearchTreeCanvas {
                 .map(nodeBorderColor::applyAsInt)
                 .orElse(style.edge());
         color = relationshipColor(role, color);
-        for (int index = 1; index < positioned.points().size(); index++) {
+        boolean directArrow = edgeIndex.drawsDirectArrow(positioned.edge());
+        int pointLimit = directArrow
+                ? positioned.points().size()
+                : positioned.points().size() - 1;
+        for (int index = 1; index < pointLimit; index++) {
             ResearchTreeEdgeIndex.RoutePoint start = positioned.points().get(index - 1);
             ResearchTreeEdgeIndex.RoutePoint end = positioned.points().get(index);
             if (start.x() == end.x()) {
@@ -1732,21 +1787,115 @@ public final class ResearchTreeCanvas {
                 throw new IllegalStateException("Research Tree route contains a diagonal segment");
             }
         }
-        drawArrowhead(graphics, positioned.endX(), positioned.arrowBaseY(), positioned.endY(), color);
+        if (directArrow) {
+            drawArrowhead(
+                    graphics,
+                    positioned.endX(),
+                    positioned.arrowBaseY(),
+                    positioned.endY(),
+                    color);
+        }
+    }
+
+    private void drawRequirementJunction(
+            GuiGraphics graphics,
+            ResearchTreeEdgeIndex.PositionedRequirementGroup junction,
+            ResearchTreePresentationContract.RelationshipRole role,
+            ToIntFunction<ResearchTreeGraph.Node> nodeBorderColor) {
+        ResearchTreeGraph.RequirementGroup group = requirementGroupsByKey.get(junction.key());
+        if (group == null) {
+            throw new IllegalStateException(
+                    "Research Tree junction has no live requirement group");
+        }
+        int color = graph.node(junction.key().dependentId())
+                .map(nodeBorderColor::applyAsInt)
+                .orElse(style.edge());
+        color = relationshipColor(role, color);
+        for (ResearchTreeEdgeIndex.JunctionBranch branch : junction.branches()) {
+            fillVerticalLine(
+                    graphics,
+                    branch.approachX(),
+                    branch.approachY(),
+                    junction.y(),
+                    color);
+            fillHorizontalLine(
+                    graphics, branch.approachX(), junction.x(), junction.y(), color);
+        }
+        int arrowBaseY = junction.dependentBottomY() + 4;
+        fillVerticalLine(graphics, junction.x(), junction.y(), arrowBaseY, color);
+        drawArrowhead(
+                graphics,
+                junction.x(),
+                arrowBaseY,
+                junction.dependentBottomY(),
+                color);
+        int fill = !group.satisfactionDisclosed()
+                ? style.hiddenFill()
+                : group.satisfied() ? style.learnedFill() : style.lockedFill();
+        drawRequirementDiamond(graphics, junction.x(), junction.y(), fill, color);
+    }
+
+    private static void drawRequirementDiamond(
+            GuiGraphics graphics,
+            int centerX,
+            int centerY,
+            int fill,
+            int border) {
+        for (int deltaY = -4; deltaY <= 4; deltaY++) {
+            int halfWidth = 4 - Math.abs(deltaY);
+            int y = centerY + deltaY;
+            graphics.fill(
+                    centerX - halfWidth, y,
+                    centerX + halfWidth + 1, y + 1,
+                    border);
+            if (halfWidth > 0) {
+                graphics.fill(
+                        centerX - halfWidth + 1, y,
+                        centerX + halfWidth, y + 1,
+                        fill);
+            }
+        }
+    }
+
+    private ResearchTreePresentationContract.RelationshipRole requirementJunctionRole(
+            ResearchTreeEdgeIndex.PositionedRequirementGroup junction) {
+        ResearchTreePresentationContract.RelationshipRole strongest =
+                ResearchTreePresentationContract.RelationshipRole.NEUTRAL;
+        int strongestLayer = edgeLayer(strongest);
+        boolean found = false;
+        for (ResearchTreeEdgeIndex.JunctionBranch branch : junction.branches()) {
+            // Edge role depends only on synchronized topology and current focus; the
+            // junction does not retain a stale publication-state snapshot.
+            ResearchTreePresentationContract.RelationshipRole candidate =
+                    edgeRole(branch.edge());
+            int candidateLayer = edgeLayer(candidate);
+            if (!found || candidateLayer > strongestLayer) {
+                strongest = candidate;
+                strongestLayer = candidateLayer;
+                found = true;
+            }
+        }
+        return strongest;
     }
 
     private ResearchTreePresentationContract.RelationshipRole edgeRole(
             ResearchTreeEdgeIndex.PositionedEdge positioned) {
+        return edgeRole(positioned.edge());
+    }
+
+    private ResearchTreePresentationContract.RelationshipRole edgeRole(
+            ResearchTreeGraph.Edge edge) {
         ResearchTreePresentationContract.RelationshipRole hoverRole =
-                hoverPath.role(positioned.edge());
+                hoverPath.role(edge);
         ResearchTreePresentationContract.RelationshipRole role =
                 hoverRole == ResearchTreePresentationContract.RelationshipRole.DIRECT_REQUIREMENT
                         || hoverRole == ResearchTreePresentationContract.RelationshipRole.DIRECT_UNLOCK
+                        || hoverRole == ResearchTreePresentationContract.RelationshipRole.ALTERNATIVE_REQUIREMENT
                         ? hoverRole
-                        : focusPath.role(positioned.edge());
+                        : focusPath.role(edge);
         if ((role == ResearchTreePresentationContract.RelationshipRole.UNRELATED
                 || role == ResearchTreePresentationContract.RelationshipRole.NEUTRAL)
-                && trackedPathEdges.contains(positioned.edge())) {
+                && trackedPathEdges.contains(edge)) {
             return ResearchTreePresentationContract.RelationshipRole.UNLOCK_PATH;
         }
         return role;
@@ -1755,7 +1904,7 @@ public final class ResearchTreeCanvas {
     private static int edgeLayer(ResearchTreePresentationContract.RelationshipRole role) {
         return switch (role) {
             case UNRELATED, NEUTRAL -> 0;
-            case REQUIREMENT_PATH, UNLOCK_PATH -> 1;
+            case REQUIREMENT_PATH, ALTERNATIVE_REQUIREMENT, UNLOCK_PATH -> 1;
             case SELECTED, DIRECT_REQUIREMENT, DIRECT_UNLOCK -> 2;
         };
     }
@@ -1948,7 +2097,7 @@ public final class ResearchTreeCanvas {
         return switch (role) {
             case SELECTED -> style.accent();
             case DIRECT_REQUIREMENT -> style.directRequirement();
-            case REQUIREMENT_PATH -> style.requirementPath();
+            case ALTERNATIVE_REQUIREMENT, REQUIREMENT_PATH -> style.requirementPath();
             case DIRECT_UNLOCK -> style.directUnlock();
             case UNLOCK_PATH -> style.unlockPath();
             case UNRELATED -> style.unrelated();

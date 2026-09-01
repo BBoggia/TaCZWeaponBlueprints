@@ -7,7 +7,9 @@ import java.util.Optional;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.AutomaticPlacementMode;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPolicy;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponScoringModel;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPolicy.LayeringStrategy;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPolicy.PrerequisiteStrategy;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPolicy.ReviewHandling;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponProgressionBand;
 import com.gamergaming.taczweaponblueprints.resource.loot.StrictOptionalFieldCodec;
@@ -30,9 +32,13 @@ public record ResearchAutomaticPlacementProfile(
         int mergeInterval,
         int maxNodesPerRank,
         List<AutomaticWeaponProgressionBand> progressionBands,
-        int foundationCount) {
+        int foundationCount,
+        PrerequisiteStrategy prerequisiteStrategy,
+        AutomaticWeaponScoringModel scoringModel) {
     public static final int LEGACY_FORMAT = 1;
-    public static final int CURRENT_FORMAT = 2;
+    public static final int CURRENT_FORMAT = 4;
+    public static final int GROUPED_ROUTES_INTRODUCED_FORMAT = 3;
+    public static final int CAPABILITY_SCORING_INTRODUCED_FORMAT = 4;
 
     private static final Codec<Integer> FORMAT_CODEC = Codec.INT.flatXmap(
             ResearchAutomaticPlacementProfile::validateFormat,
@@ -70,6 +76,14 @@ public record ResearchAutomaticPlacementProfile(
     private static final Codec<ReviewHandling> REVIEW_HANDLING_CODEC = Codec.STRING.flatXmap(
             ResearchAutomaticPlacementProfile::decodeReviewHandling,
             value -> DataResult.success(value.serializedName()));
+    private static final Codec<PrerequisiteStrategy> PREREQUISITE_STRATEGY_CODEC =
+            Codec.STRING.flatXmap(
+                    ResearchAutomaticPlacementProfile::decodePrerequisiteStrategy,
+                    value -> DataResult.success(value.serializedName()));
+    private static final Codec<AutomaticWeaponScoringModel> SCORING_MODEL_CODEC =
+            Codec.STRING.flatXmap(
+                    ResearchAutomaticPlacementProfile::decodeScoringModel,
+                    value -> DataResult.success(value.serializedName()));
     private static final Codec<AutomaticWeaponProgressionBand> RAW_BAND_CODEC =
             RecordCodecBuilder.create(instance -> instance.group(
                     BlueprintResearchCodecs.RESOURCE_LOCATION.fieldOf("id")
@@ -178,7 +192,24 @@ public record ResearchAutomaticPlacementProfile(
                                                     .DEFAULT_FOUNDATION_COUNT
                                                             ? Optional.empty()
                                                             : Optional.of(value))
-                            .forGetter(ResearchAutomaticPlacementProfile::foundationCount))
+                            .forGetter(ResearchAutomaticPlacementProfile::foundationCount),
+                    new StrictOptionalFieldCodec<>(
+                            "prerequisite_strategy", PREREQUISITE_STRATEGY_CODEC)
+                            .xmap(
+                                    value -> value.orElse(PrerequisiteStrategy.LEGACY_AND),
+                                    value -> value == PrerequisiteStrategy.LEGACY_AND
+                                            ? Optional.empty()
+                                            : Optional.of(value))
+                            .forGetter(ResearchAutomaticPlacementProfile
+                                    ::prerequisiteStrategy),
+                    new StrictOptionalFieldCodec<>("scoring_model", SCORING_MODEL_CODEC)
+                            .xmap(
+                                    value -> value.orElse(
+                                            AutomaticWeaponScoringModel.MECHANICAL_V2),
+                                    value -> value == AutomaticWeaponScoringModel.MECHANICAL_V2
+                                            ? Optional.empty()
+                                            : Optional.of(value))
+                            .forGetter(ResearchAutomaticPlacementProfile::scoringModel))
                     .apply(instance, ResearchAutomaticPlacementProfile::new));
     public static final Codec<ResearchAutomaticPlacementProfile> CODEC = StrictRecordCodec.wrap(
             "Research Tech Tree automatic-placement profile",
@@ -193,7 +224,58 @@ public record ResearchAutomaticPlacementProfile(
             "merge_interval",
             "max_nodes_per_rank",
             "bands",
-            "foundation_count");
+            "foundation_count",
+            "prerequisite_strategy",
+            "scoring_model");
+
+    /** Source-compatible constructor for profiles written before scoring-model selection. */
+    public ResearchAutomaticPlacementProfile(
+            int format,
+            ResourceLocation tree,
+            AutomaticPlacementMode mode,
+            int levelsPerTier,
+            int reviewConfidenceThreshold,
+            ReviewHandling reviewHandling,
+            int maxGeneratedPrerequisites,
+            int mergeInterval,
+            int maxNodesPerRank,
+            List<AutomaticWeaponProgressionBand> progressionBands,
+            int foundationCount,
+            PrerequisiteStrategy prerequisiteStrategy) {
+        this(
+                format, tree, mode, levelsPerTier, reviewConfidenceThreshold,
+                reviewHandling, maxGeneratedPrerequisites, mergeInterval,
+                maxNodesPerRank, progressionBands, foundationCount,
+                prerequisiteStrategy, AutomaticWeaponScoringModel.MECHANICAL_V2);
+    }
+
+    /** Compatibility constructor for profiles predating prerequisite strategies. */
+    public ResearchAutomaticPlacementProfile(
+            int format,
+            ResourceLocation tree,
+            AutomaticPlacementMode mode,
+            int levelsPerTier,
+            int reviewConfidenceThreshold,
+            ReviewHandling reviewHandling,
+            int maxGeneratedPrerequisites,
+            int mergeInterval,
+            int maxNodesPerRank,
+            List<AutomaticWeaponProgressionBand> progressionBands,
+            int foundationCount) {
+        this(
+                format,
+                tree,
+                mode,
+                levelsPerTier,
+                reviewConfidenceThreshold,
+                reviewHandling,
+                maxGeneratedPrerequisites,
+                mergeInterval,
+                maxNodesPerRank,
+                progressionBands,
+                foundationCount,
+                PrerequisiteStrategy.LEGACY_AND);
+    }
 
     /** Compatibility constructor for profiles predating configurable foundations. */
     public ResearchAutomaticPlacementProfile(
@@ -218,7 +300,8 @@ public record ResearchAutomaticPlacementProfile(
                 mergeInterval,
                 maxNodesPerRank,
                 progressionBands,
-                AutomaticWeaponPlacementPolicy.DEFAULT_FOUNDATION_COUNT);
+                AutomaticWeaponPlacementPolicy.DEFAULT_FOUNDATION_COUNT,
+                PrerequisiteStrategy.LEGACY_AND);
     }
 
     /** Existing programmatic profiles retain their format-specific defaults. */
@@ -239,7 +322,8 @@ public record ResearchAutomaticPlacementProfile(
                 AutomaticWeaponPlacementPolicy.DEFAULT_MERGE_INTERVAL,
                 AutomaticWeaponPlacementPolicy.DEFAULT_MAX_NODES_PER_RANK,
                 List.of(),
-                AutomaticWeaponPlacementPolicy.DEFAULT_FOUNDATION_COUNT);
+                AutomaticWeaponPlacementPolicy.DEFAULT_FOUNDATION_COUNT,
+                PrerequisiteStrategy.LEGACY_AND);
     }
 
     /** Existing six-argument profiles inherit the bounded topology defaults. */
@@ -261,7 +345,8 @@ public record ResearchAutomaticPlacementProfile(
                 AutomaticWeaponPlacementPolicy.DEFAULT_MERGE_INTERVAL,
                 AutomaticWeaponPlacementPolicy.DEFAULT_MAX_NODES_PER_RANK,
                 List.of(),
-                AutomaticWeaponPlacementPolicy.DEFAULT_FOUNDATION_COUNT);
+                AutomaticWeaponPlacementPolicy.DEFAULT_FOUNDATION_COUNT,
+                PrerequisiteStrategy.LEGACY_AND);
     }
 
     /** Existing eight-argument profiles inherit the Phase 5 width and band defaults. */
@@ -285,7 +370,8 @@ public record ResearchAutomaticPlacementProfile(
                 mergeInterval,
                 AutomaticWeaponPlacementPolicy.DEFAULT_MAX_NODES_PER_RANK,
                 List.of(),
-                AutomaticWeaponPlacementPolicy.DEFAULT_FOUNDATION_COUNT);
+                AutomaticWeaponPlacementPolicy.DEFAULT_FOUNDATION_COUNT,
+                PrerequisiteStrategy.LEGACY_AND);
     }
 
     public ResearchAutomaticPlacementProfile {
@@ -293,9 +379,30 @@ public record ResearchAutomaticPlacementProfile(
                 ? List.of()
                 : List.copyOf(progressionBands);
         if (format < LEGACY_FORMAT || format > CURRENT_FORMAT
-                || tree == null || mode == null || reviewHandling == null) {
+                || tree == null || mode == null || reviewHandling == null
+                || prerequisiteStrategy == null || scoringModel == null) {
             throw new IllegalArgumentException(
                     "Automatic-placement profile identity is invalid");
+        }
+        if (format < GROUPED_ROUTES_INTRODUCED_FORMAT
+                && prerequisiteStrategy != PrerequisiteStrategy.LEGACY_AND) {
+            throw new IllegalArgumentException(
+                    "Grouped prerequisite strategies require automatic-placement format "
+                            + GROUPED_ROUTES_INTRODUCED_FORMAT);
+        }
+        if (format < CAPABILITY_SCORING_INTRODUCED_FORMAT
+                && scoringModel != AutomaticWeaponScoringModel.MECHANICAL_V2) {
+            throw new IllegalArgumentException(
+                    "Capability scoring requires automatic-placement format "
+                            + CAPABILITY_SCORING_INTRODUCED_FORMAT);
+        }
+        boolean requiresConnectedMode = switch (prerequisiteStrategy) {
+            case LEGACY_AND -> false;
+            case GROUPED_ROUTES_V1, HYBRID_ROUTES_V1 -> true;
+        };
+        if (requiresConnectedMode && !mode.createsPrerequisite()) {
+            throw new IllegalArgumentException(
+                    "Grouped prerequisite strategies require connected placement mode");
         }
         new AutomaticWeaponPlacementPolicy(
                 levelsPerTier,
@@ -308,7 +415,8 @@ public record ResearchAutomaticPlacementProfile(
                         : LayeringStrategy.DYNAMIC_STAT_LAYERS,
                 maxNodesPerRank,
                 progressionBands,
-                foundationCount);
+                foundationCount,
+                prerequisiteStrategy);
         if (format == LEGACY_FORMAT
                 && (maxNodesPerRank
                         != AutomaticWeaponPlacementPolicy.DEFAULT_MAX_NODES_PER_RANK
@@ -340,7 +448,8 @@ public record ResearchAutomaticPlacementProfile(
                         : LayeringStrategy.DYNAMIC_STAT_LAYERS,
                 maxNodesPerRank,
                 progressionBands,
-                foundationCount);
+                foundationCount,
+                prerequisiteStrategy);
     }
 
     private static DataResult<Integer> validateFormat(int value) {
@@ -462,6 +571,30 @@ public record ResearchAutomaticPlacementProfile(
         } catch (IllegalArgumentException exception) {
             return DataResult.error(() ->
                     "unknown automatic-placement review handling " + value);
+        }
+    }
+
+    private static DataResult<PrerequisiteStrategy> decodePrerequisiteStrategy(
+            String value) {
+        if (value == null) {
+            return DataResult.error(() ->
+                    "automatic-placement prerequisite strategy cannot be null");
+        }
+        for (PrerequisiteStrategy strategy : PrerequisiteStrategy.values()) {
+            if (strategy.serializedName().equals(value)) {
+                return DataResult.success(strategy);
+            }
+        }
+        return DataResult.error(() ->
+                "unknown automatic-placement prerequisite strategy " + value);
+    }
+
+    private static DataResult<AutomaticWeaponScoringModel> decodeScoringModel(
+            String value) {
+        try {
+            return DataResult.success(AutomaticWeaponScoringModel.decode(value));
+        } catch (IllegalArgumentException exception) {
+            return DataResult.error(exception::getMessage);
         }
     }
 }

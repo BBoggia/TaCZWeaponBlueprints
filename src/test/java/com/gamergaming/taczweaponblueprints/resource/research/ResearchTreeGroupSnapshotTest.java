@@ -127,7 +127,8 @@ class ResearchTreeGroupSnapshotTest {
         assertTrue(audit.hasProblems());
 
         String exported = BlueprintResearchCatalogExporter.export(snapshot, catalog, PROFILE);
-        assertTrue(exported.contains("\"format\": 12"));
+        assertTrue(exported.contains("\"format\": "
+                + BlueprintResearchCatalogExporter.CURRENT_FORMAT));
         assertTrue(exported.contains("\"research_group\": \"test:pistols\""));
         assertTrue(exported.contains("\"research_rank\": 0"));
         assertTrue(exported.contains("\"presentation_source\": \"automatic_fallback\""));

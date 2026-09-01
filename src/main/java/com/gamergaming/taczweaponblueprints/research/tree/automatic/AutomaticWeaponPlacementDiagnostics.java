@@ -10,8 +10,12 @@ import java.util.Set;
 
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.AutomaticPlacementMode;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPolicy.LayeringStrategy;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPolicy.MergeIntervalBehavior;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPolicy.PrerequisiteStrategy;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPolicy.ReviewHandling;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponPlacementCandidateSnapshot;
+import com.gamergaming.taczweaponblueprints.resource.research.ResearchPrerequisiteGroup;
+import com.gamergaming.taczweaponblueprints.resource.research.ResearchRequirements;
 
 import net.minecraft.resources.ResourceLocation;
 
@@ -26,6 +30,7 @@ public record AutomaticWeaponPlacementDiagnostics(
         AutomaticPlacementMode mode,
         ReviewHandling reviewHandling,
         LayeringStrategy layeringStrategy,
+        PrerequisiteStrategy prerequisiteStrategy,
         int maxGeneratedPrerequisites,
         int mergeInterval,
         long catalogRevision,
@@ -35,9 +40,43 @@ public record AutomaticWeaponPlacementDiagnostics(
         int resolvedNodesPerLayer,
         PublicationSummary publicationSummary,
         Map<ResourceLocation, Entry> entries) {
+    /** Compatibility constructor for diagnostics predating strategy identity. */
+    public AutomaticWeaponPlacementDiagnostics(
+            ResourceLocation profileId,
+            ResourceLocation treeId,
+            AutomaticPlacementMode mode,
+            ReviewHandling reviewHandling,
+            LayeringStrategy layeringStrategy,
+            int maxGeneratedPrerequisites,
+            int mergeInterval,
+            long catalogRevision,
+            long researchRevision,
+            int catalogWeaponCount,
+            int topologyWeaponCount,
+            int resolvedNodesPerLayer,
+            PublicationSummary publicationSummary,
+            Map<ResourceLocation, Entry> entries) {
+        this(
+                profileId,
+                treeId,
+                mode,
+                reviewHandling,
+                layeringStrategy,
+                PrerequisiteStrategy.LEGACY_AND,
+                maxGeneratedPrerequisites,
+                mergeInterval,
+                catalogRevision,
+                researchRevision,
+                catalogWeaponCount,
+                topologyWeaponCount,
+                resolvedNodesPerLayer,
+                publicationSummary,
+                entries);
+    }
+
     public AutomaticWeaponPlacementDiagnostics {
         if (profileId == null || treeId == null || mode == null || reviewHandling == null
-                || layeringStrategy == null
+                || layeringStrategy == null || prerequisiteStrategy == null
                 || maxGeneratedPrerequisites < 1
                 || maxGeneratedPrerequisites
                         > AutomaticWeaponPlacementPolicy.MAX_GENERATED_PREREQUISITES
@@ -56,6 +95,16 @@ public record AutomaticWeaponPlacementDiagnostics(
             throw new IllegalArgumentException(
                     "Automatic placement diagnostics are invalid");
         }
+        int strategyMaximumPrerequisites = switch (prerequisiteStrategy) {
+            case LEGACY_AND -> AutomaticWeaponPlacementPolicy.MAX_GENERATED_PREREQUISITES;
+            case GROUPED_ROUTES_V1 -> 2;
+            case HYBRID_ROUTES_V1 ->
+                    AutomaticWeaponPlacementPolicy.MAX_GENERATED_PREREQUISITES;
+        };
+        if (maxGeneratedPrerequisites > strategyMaximumPrerequisites) {
+            throw new IllegalArgumentException(
+                    "Automatic placement diagnostics exceed the strategy prerequisite limit");
+        }
         LinkedHashMap<ResourceLocation, Entry> copy = new LinkedHashMap<>();
         entries.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey(
@@ -71,6 +120,17 @@ public record AutomaticWeaponPlacementDiagnostics(
         if (copy.size() != catalogWeaponCount) {
             throw new IllegalArgumentException(
                     "Automatic placement diagnostic partition is incomplete");
+        }
+        if (copy.values().stream().anyMatch(entry ->
+                entry.generatedPrerequisites().size() > maxGeneratedPrerequisites
+                        || !requirementsMatchStrategy(
+                                prerequisiteStrategy,
+                                entry.generatedPrerequisites(),
+                                entry.generatedRequirements())
+                        || prerequisiteStrategy == PrerequisiteStrategy.HYBRID_ROUTES_V1
+                                && !requirementsMatchDecisionShape(entry))) {
+            throw new IllegalArgumentException(
+                    "Automatic placement diagnostics contain invalid prerequisite groups");
         }
         long actualTopologyWeaponCount = copy.values().stream()
                 .filter(entry -> entry.state() == State.AUTHORED
@@ -200,6 +260,7 @@ public record AutomaticWeaponPlacementDiagnostics(
                     State.AUTOMATIC,
                     Optional.of(proposal),
                     prerequisites,
+                    prerequisitePlan.requirementsFor(id),
                     omission,
                     prerequisitePlan.decisionFor(id)));
         });
@@ -209,6 +270,7 @@ public record AutomaticWeaponPlacementDiagnostics(
                 candidates.mode(),
                 candidates.policy().reviewHandling(),
                 candidates.policy().layeringStrategy(),
+                prerequisitePlan.prerequisiteStrategy(),
                 candidates.policy().maxGeneratedPrerequisites(),
                 candidates.policy().mergeInterval(),
                 candidates.catalogRevision(),
@@ -228,6 +290,25 @@ public record AutomaticWeaponPlacementDiagnostics(
                 : Optional.ofNullable(entries.get(blueprintId));
     }
 
+    public MergeIntervalBehavior mergeIntervalBehavior() {
+        return AutomaticWeaponPlacementPolicy.mergeIntervalBehavior(
+                layeringStrategy,
+                prerequisiteStrategy,
+                maxGeneratedPrerequisites,
+                mergeInterval);
+    }
+
+    public String generatedParentCostGuard() {
+        return switch (prerequisiteStrategy) {
+            case LEGACY_AND ->
+                    AutomaticWeaponPlacementPolicy.LEGACY_GENERATED_PARENT_COST_GUARD;
+            case GROUPED_ROUTES_V1 ->
+                    AutomaticWeaponPlacementPolicy.GROUPED_GENERATED_PARENT_COST_GUARD;
+            case HYBRID_ROUTES_V1 ->
+                    AutomaticWeaponPlacementPolicy.HYBRID_GENERATED_PARENT_COST_GUARD;
+        };
+    }
+
     public long count(State state) {
         if (state == null) {
             return 0L;
@@ -239,6 +320,53 @@ public record AutomaticWeaponPlacementDiagnostics(
         return entries.values().stream()
                 .mapToInt(entry -> entry.generatedPrerequisites().size())
                 .sum();
+    }
+
+    /** Number of authoritative generated AND-groups represented by this plan. */
+    public int generatedRequirementGroupCount() {
+        return entries.values().stream()
+                .mapToInt(entry -> entry.generatedRequirements().allOf().size())
+                .sum();
+    }
+
+    /** Number of generated groups that offer more than one valid route. */
+    public int generatedAlternativeGroupCount() {
+        return Math.toIntExact(entries.values().stream()
+                .flatMap(entry -> entry.generatedRequirements().allOf().stream())
+                .filter(group -> group.anyOf().size() > 1)
+                .count());
+    }
+
+    /** Generated targets whose selected parents are all mandatory. */
+    public int generatedMandatoryConvergenceCount() {
+        return Math.toIntExact(entries.values().stream()
+                .filter(entry -> entry.generatedPrerequisites().size() > 1)
+                .flatMap(entry -> entry.prerequisiteDecision().stream())
+                .filter(decision -> decision.generatedRequirementShape()
+                        == AutomaticWeaponPrerequisiteDecision.GeneratedRequirementShape
+                                .MANDATORY_SINGLETONS)
+                .count());
+    }
+
+    /** Generated targets that combine one OR route group with a mandatory gate. */
+    public int generatedMixedRequirementCount() {
+        return Math.toIntExact(entries.values().stream()
+                .flatMap(entry -> entry.prerequisiteDecision().stream())
+                .filter(decision -> decision.generatedRequirementShape()
+                        == AutomaticWeaponPrerequisiteDecision.GeneratedRequirementShape
+                                .ALTERNATIVE_ROUTES_WITH_MANDATORY_GATEWAY)
+                .count());
+    }
+
+    /** Generated targets offering a pure alternative route pair. */
+    public int generatedAlternativeRouteDecisionCount() {
+        return Math.toIntExact(entries.values().stream()
+                .filter(entry -> entry.generatedPrerequisites().size() > 1)
+                .flatMap(entry -> entry.prerequisiteDecision().stream())
+                .filter(decision -> decision.generatedRequirementShape()
+                        == AutomaticWeaponPrerequisiteDecision.GeneratedRequirementShape
+                                .ALTERNATIVE_ROUTES)
+                .count());
     }
 
     public BranchTopologySummary branchTopologySummary() {
@@ -301,6 +429,17 @@ public record AutomaticWeaponPlacementDiagnostics(
                         .filter(AutomaticWeaponPrerequisiteDecision
                                 ::mergeRejectedForClosureInflation)
                         .count()),
+                Math.toIntExact(decisions.stream()
+                        .filter(value -> value.alternativeRouteReview().isPresent())
+                        .count()),
+                Math.toIntExact(decisions.stream()
+                        .filter(AutomaticWeaponPrerequisiteDecision
+                                ::alternativeRouteAccepted)
+                        .count()),
+                Math.toIntExact(decisions.stream()
+                        .filter(AutomaticWeaponPrerequisiteDecision
+                                ::alternativeRouteRejectedForCostImbalance)
+                        .count()),
                 fanOut.values().stream().mapToInt(Integer::intValue).max().orElse(0));
     }
 
@@ -343,6 +482,55 @@ public record AutomaticWeaponPlacementDiagnostics(
         return id;
     }
 
+    private static boolean requirementsMatchStrategy(
+            PrerequisiteStrategy strategy,
+            List<ResourceLocation> prerequisites,
+            ResearchRequirements requirements) {
+        if (!Set.copyOf(prerequisites).equals(Set.copyOf(
+                requirements.conservativeAlternatives()))) {
+            return false;
+        }
+        return switch (strategy) {
+            case LEGACY_AND -> requirements.legacySingletons().isPresent();
+            case GROUPED_ROUTES_V1 -> prerequisites.isEmpty()
+                    ? requirements.allOf().isEmpty()
+                    : prerequisites.size() <= 2
+                            && requirements.allOf().size() == 1;
+            case HYBRID_ROUTES_V1 -> prerequisites.isEmpty()
+                    ? requirements.allOf().isEmpty()
+                    : prerequisites.size() <= 3
+                            && requirements.allOf().size() <= 2
+                            && requirements.allOf().stream()
+                                    .allMatch(group -> group.anyOf().size() <= 2);
+        };
+    }
+
+    private static boolean requirementsMatchDecisionShape(Entry entry) {
+        if (entry.generatedPrerequisites().isEmpty()) {
+            return true;
+        }
+        AutomaticWeaponPrerequisiteDecision decision =
+                entry.prerequisiteDecision().orElse(null);
+        if (decision == null) {
+            return false;
+        }
+        List<ResourceLocation> parents = entry.generatedPrerequisites();
+        ResearchRequirements expected = switch (decision.generatedRequirementShape()) {
+            case MANDATORY_SINGLETONS -> ResearchRequirements.fromLegacy(parents);
+            case ALTERNATIVE_ROUTES -> new ResearchRequirements(List.of(
+                    new ResearchPrerequisiteGroup(parents)));
+            case ALTERNATIVE_ROUTES_WITH_MANDATORY_GATEWAY ->
+                    parents.size() == 3
+                            ? new ResearchRequirements(List.of(
+                                    new ResearchPrerequisiteGroup(
+                                            parents.subList(0, 2)),
+                                    ResearchPrerequisiteGroup.singleton(
+                                            parents.get(2))))
+                            : ResearchRequirements.EMPTY;
+        };
+        return expected.equals(entry.generatedRequirements());
+    }
+
     public enum State {
         AUTHORED("authored"),
         AUTOMATIC("automatic"),
@@ -368,8 +556,30 @@ public record AutomaticWeaponPlacementDiagnostics(
             State state,
             Optional<AutomaticWeaponPlacementProposal> proposal,
             List<ResourceLocation> generatedPrerequisites,
+            ResearchRequirements generatedRequirements,
             Optional<String> reason,
             Optional<AutomaticWeaponPrerequisiteDecision> prerequisiteDecision) {
+        /** Compatibility constructor for diagnostics predating canonical groups. */
+        public Entry(
+                ResourceLocation blueprintId,
+                State state,
+                Optional<AutomaticWeaponPlacementProposal> proposal,
+                List<ResourceLocation> generatedPrerequisites,
+                Optional<String> reason,
+                Optional<AutomaticWeaponPrerequisiteDecision> prerequisiteDecision) {
+            this(
+                    blueprintId,
+                    state,
+                    proposal,
+                    generatedPrerequisites,
+                    ResearchRequirements.fromLegacy(
+                            generatedPrerequisites == null
+                                    ? List.of()
+                                    : generatedPrerequisites),
+                    reason,
+                    prerequisiteDecision);
+        }
+
         public Entry(
                 ResourceLocation blueprintId,
                 State state,
@@ -412,7 +622,7 @@ public record AutomaticWeaponPlacementDiagnostics(
                     ? Optional.empty() : prerequisiteDecision;
             Set<ResourceLocation> selectedPrerequisites = Set.copyOf(
                     generatedPrerequisites);
-            if (blueprintId == null || state == null
+            if (blueprintId == null || state == null || generatedRequirements == null
                     || proposal.filter(value -> !value.blueprintId().equals(
                             blueprintId.toString())).isPresent()
                     || reason.filter(String::isBlank).isPresent()
@@ -421,6 +631,8 @@ public record AutomaticWeaponPlacementDiagnostics(
                             != generatedPrerequisites.size()
                     || generatedPrerequisites.size()
                             > AutomaticWeaponPlacementPolicy.MAX_GENERATED_PREREQUISITES
+                    || !selectedPrerequisites.equals(Set.copyOf(
+                            generatedRequirements.conservativeAlternatives()))
                     || (state == State.AUTOMATIC) != proposal.isPresent()
                     || (state != State.AUTOMATIC
                             && !generatedPrerequisites.isEmpty())
@@ -463,10 +675,14 @@ public record AutomaticWeaponPlacementDiagnostics(
             int depthShortcutCount,
             int terminalPeerCount,
             int closureInflationRejectionCount,
+            int alternativeRouteReviewCount,
+            int acceptedAlternativeRouteCount,
+            int rejectedAlternativeRouteCostImbalanceCount,
             int maximumFanOut) {
         public static final BranchTopologySummary UNAVAILABLE =
                 new BranchTopologySummary(
-                        false, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                        false, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0);
 
         public BranchTopologySummary {
             if (available ? familyStartIndex < 0 || transitionEndIndex < familyStartIndex
@@ -478,6 +694,9 @@ public record AutomaticWeaponPlacementDiagnostics(
                             || sameFamilyMergeCount != 0 || crossFamilyMergeCount != 0
                             || depthShortcutCount != 0 || terminalPeerCount != 0
                             || closureInflationRejectionCount != 0
+                            || alternativeRouteReviewCount != 0
+                            || acceptedAlternativeRouteCount != 0
+                            || rejectedAlternativeRouteCostImbalanceCount != 0
                             || maximumFanOut != 0) {
                 throw new IllegalArgumentException(
                         "Automatic branch topology summary is invalid");
@@ -489,6 +708,12 @@ public record AutomaticWeaponPlacementDiagnostics(
                     || sameFamilyMergeCount < 0 || crossFamilyMergeCount < 0
                     || depthShortcutCount < 0 || terminalPeerCount < 0
                     || closureInflationRejectionCount < 0
+                    || alternativeRouteReviewCount < 0
+                    || acceptedAlternativeRouteCount < 0
+                    || rejectedAlternativeRouteCostImbalanceCount < 0
+                    || acceptedAlternativeRouteCount
+                            + rejectedAlternativeRouteCostImbalanceCount
+                            != alternativeRouteReviewCount
                     || maximumFanOut < 0)) {
                 throw new IllegalArgumentException(
                         "Automatic branch topology counts are invalid");
@@ -505,7 +730,24 @@ public record AutomaticWeaponPlacementDiagnostics(
             int candidateCount,
             int canonicalBranchCoordinateCount,
             int prerequisiteDecisionCount,
-            int publishedRankCount) {
+            int publishedRankCount,
+            int unexpectedParentlessCandidateCount) {
+        /** Compatibility constructor for summaries predating connectivity proof. */
+        public PublicationSummary(
+                boolean applicable,
+                int candidateCount,
+                int canonicalBranchCoordinateCount,
+                int prerequisiteDecisionCount,
+                int publishedRankCount) {
+            this(
+                    applicable,
+                    candidateCount,
+                    canonicalBranchCoordinateCount,
+                    prerequisiteDecisionCount,
+                    publishedRankCount,
+                    0);
+        }
+
         public PublicationSummary {
             if (candidateCount < 0
                     || candidateCount
@@ -516,9 +758,12 @@ public record AutomaticWeaponPlacementDiagnostics(
                     || prerequisiteDecisionCount > candidateCount
                     || publishedRankCount < 0
                     || publishedRankCount > prerequisiteDecisionCount
+                    || unexpectedParentlessCandidateCount < 0
+                    || unexpectedParentlessCandidateCount > candidateCount
                     || (!applicable && (canonicalBranchCoordinateCount != 0
                             || prerequisiteDecisionCount != 0
-                            || publishedRankCount != 0))) {
+                            || publishedRankCount != 0
+                            || unexpectedParentlessCandidateCount != 0))) {
                 throw new IllegalArgumentException(
                         "Automatic publication summary is invalid");
             }
@@ -536,7 +781,8 @@ public record AutomaticWeaponPlacementDiagnostics(
                             ? Math.toIntExact(plan.decisions().values().stream()
                                     .filter(value -> value.publishedRank().isPresent())
                                     .count())
-                            : 0);
+                            : 0,
+                    applicable ? countUnexpectedParentlessCandidates(plan) : 0);
         }
 
         public boolean canonicalBranchCoordinatesAvailable() {
@@ -554,9 +800,14 @@ public record AutomaticWeaponPlacementDiagnostics(
                             && publishedRankCount == prerequisiteDecisionCount;
         }
 
+        public boolean connectedTopologyComplete() {
+            return !applicable || unexpectedParentlessCandidateCount == 0;
+        }
+
         public boolean complete() {
             return canonicalBranchCoordinatesComplete()
-                    && rankReconciliationComplete();
+                    && rankReconciliationComplete()
+                    && connectedTopologyComplete();
         }
 
         public int canonicalBranchCoverageBasisPoints() {
@@ -578,7 +829,7 @@ public record AutomaticWeaponPlacementDiagnostics(
             AutomaticPlacementMode mode,
             Map<ResourceLocation, Entry> entries) {
         if (entries == null) {
-            return new PublicationSummary(false, 0, 0, 0, 0);
+            return new PublicationSummary(false, 0, 0, 0, 0, 0);
         }
         int candidates = Math.toIntExact(entries.values().stream()
                 .filter(java.util.Objects::nonNull)
@@ -599,6 +850,24 @@ public record AutomaticWeaponPlacementDiagnostics(
                         .count())
                 : 0;
         return new PublicationSummary(
-                applicable, candidates, 0, decisions, published);
+                applicable, candidates, 0, decisions, published, 0);
+    }
+
+    private static int countUnexpectedParentlessCandidates(
+            AutomaticWeaponPrerequisitePlan plan) {
+        return Math.toIntExact(plan.omittedCandidates().entrySet().stream()
+                .filter(entry -> {
+                    AutomaticWeaponPrerequisitePlan.BranchCoordinate coordinate =
+                            plan.branchCoordinates().get(entry.getKey());
+                    return coordinate != null && coordinate.rankIndex() > 0;
+                })
+                .filter(entry -> !intentionallyIndependent(entry.getValue()))
+                .count());
+    }
+
+    private static boolean intentionallyIndependent(String omissionReason) {
+        return "authored_prerequisites".equals(omissionReason)
+                || "entry_point".equals(omissionReason)
+                || "review_policy_independent".equals(omissionReason);
     }
 }

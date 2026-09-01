@@ -21,10 +21,13 @@ import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContra
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.ProgressionPosition;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Tier;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementDiagnostics.State;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPolicy.PrerequisiteStrategy;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponPlacementCandidateSnapshot;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponEvidenceSnapshot;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCatalogExporter;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchSnapshot;
+import com.gamergaming.taczweaponblueprints.resource.research.ResearchPrerequisiteGroup;
+import com.gamergaming.taczweaponblueprints.resource.research.ResearchRequirements;
 import com.google.gson.JsonParser;
 
 import net.minecraft.resources.ResourceLocation;
@@ -33,6 +36,7 @@ class AutomaticWeaponPlacementDiagnosticsTest {
     private static final ResourceLocation PROFILE = id("test:profile");
     private static final ResourceLocation TREE = id("test:tree");
     private static final ResourceLocation AUTOMATIC = id("addon:auto");
+    private static final ResourceLocation STRAY = id("addon:stray");
     private static final ResourceLocation EXCLUDED = id("addon:excluded");
     private static final ResourceLocation AUTHORED = id("tacz:authored");
     private static final ResourceLocation UNPLACED = id("addon:unplaced");
@@ -50,6 +54,8 @@ class AutomaticWeaponPlacementDiagnosticsTest {
         assertEquals(1L, diagnostics.excludedAutomaticCount());
         assertEquals(1L, diagnostics.count(State.UNPLACED));
         assertEquals(1, diagnostics.generatedPrerequisiteCount());
+        assertEquals(1, diagnostics.generatedRequirementGroupCount());
+        assertEquals(0, diagnostics.generatedAlternativeGroupCount());
         assertEquals(AUTHORED, diagnostics.entry(AUTOMATIC).orElseThrow()
                 .generatedPrerequisite().orElseThrow());
         assertEquals("review_required", diagnostics.entry(EXCLUDED).orElseThrow()
@@ -76,7 +82,90 @@ class AutomaticWeaponPlacementDiagnosticsTest {
     }
 
     @Test
-    void formatTwelveExportIncludesExactBranchPrerequisiteProvenance() {
+    void publicationRejectsUnexpectedParentlessNodesAboveTheFoundationRank() {
+        AutomaticWeaponPlacementCandidateSnapshot candidates =
+                new AutomaticWeaponPlacementCandidateSnapshot(
+                        TREE,
+                        AutomaticPlacementMode.CONNECTED,
+                        AutomaticWeaponPlacementPolicy.DEFAULT,
+                        5L,
+                        7L,
+                        2,
+                        Map.of(
+                                AUTOMATIC.toString(), proposal(AUTOMATIC),
+                                STRAY.toString(), proposal(STRAY)),
+                        Map.of(),
+                        Set.of(),
+                        Set.of());
+        AutomaticWeaponPrerequisiteDecision foundationDecision =
+                new AutomaticWeaponPrerequisiteDecision(
+                        AUTOMATIC,
+                        AutomaticWeaponPrerequisiteDecision.Strategy.FOUNDATION,
+                        Optional.of(0),
+                        0,
+                        0,
+                        0,
+                        1,
+                        Map.of(),
+                        false,
+                        false).withPublishedRank(0);
+        AutomaticWeaponPrerequisiteDecision strayDecision =
+                new AutomaticWeaponPrerequisiteDecision(
+                        STRAY,
+                        AutomaticWeaponPrerequisiteDecision.Strategy.SPECIALIZATION,
+                        Optional.of(0),
+                        1,
+                        0,
+                        0,
+                        1,
+                        Map.of(),
+                        false,
+                        false).withPublishedRank(1);
+        AutomaticWeaponPrerequisitePlan plan =
+                new AutomaticWeaponPrerequisitePlan(
+                        PROFILE,
+                        TREE,
+                        AutomaticPlacementMode.CONNECTED,
+                        5L,
+                        7L,
+                        2,
+                        Map.of(),
+                        Map.of(
+                                AUTOMATIC, "generated_root",
+                                STRAY, "generated_root"),
+                        Map.of(
+                                AUTOMATIC, foundationDecision,
+                                STRAY, strayDecision),
+                        Map.of(
+                                AUTOMATIC,
+                                new AutomaticWeaponPrerequisitePlan.BranchCoordinate(
+                                        0, 0, 0, 0),
+                                STRAY,
+                                new AutomaticWeaponPrerequisitePlan.BranchCoordinate(
+                                        0, 1, 0, 0)));
+
+        AutomaticWeaponPlacementDiagnostics diagnostics =
+                AutomaticWeaponPlacementDiagnostics.create(
+                        PROFILE, candidates, plan);
+
+        assertEquals(1, diagnostics.publicationSummary()
+                .unexpectedParentlessCandidateCount());
+        assertFalse(diagnostics.publicationSummary().connectedTopologyComplete());
+        assertFalse(diagnostics.publicationSummary().complete());
+        var root = JsonParser.parseString(BlueprintResearchCatalogExporter.export(
+                BlueprintResearchSnapshot.EMPTY,
+                Map.of(AUTOMATIC, data(AUTOMATIC), STRAY, data(STRAY)),
+                PROFILE,
+                diagnostics)).getAsJsonObject();
+        var publication = root.getAsJsonObject("automatic_placement")
+                .getAsJsonObject("publication");
+        assertEquals(1, publication.get(
+                "unexpected_parentless_candidate_count").getAsInt());
+        assertFalse(publication.get("connected_topology_complete").getAsBoolean());
+    }
+
+    @Test
+    void formatFourteenExportIncludesExactBranchPrerequisiteProvenance() {
         Map<ResourceLocation, BlueprintData> catalog = Map.of(
                 AUTOMATIC, data(AUTOMATIC),
                 EXCLUDED, data(EXCLUDED),
@@ -99,7 +188,8 @@ class AutomaticWeaponPlacementDiagnosticsTest {
                 diagnostics()));
         var root = JsonParser.parseString(exported).getAsJsonObject();
 
-        assertEquals(12, root.get("format").getAsInt());
+        assertEquals(BlueprintResearchCatalogExporter.CURRENT_FORMAT,
+                root.get("format").getAsInt());
         assertEquals("connected", root.getAsJsonObject("automatic_placement")
                 .get("mode").getAsString());
         assertEquals("exclude", root.getAsJsonObject("automatic_placement")
@@ -110,6 +200,12 @@ class AutomaticWeaponPlacementDiagnosticsTest {
                 .get("resolved_nodes_per_layer").getAsInt());
         assertEquals(1, root.getAsJsonObject("automatic_placement")
                 .get("planned_prerequisite_count").getAsInt());
+        assertEquals("legacy_and", root.getAsJsonObject("automatic_placement")
+                .get("prerequisite_strategy").getAsString());
+        assertEquals(1, root.getAsJsonObject("automatic_placement")
+                .get("planned_requirement_group_count").getAsInt());
+        assertEquals(0, root.getAsJsonObject("automatic_placement")
+                .get("planned_alternative_group_count").getAsInt());
         assertEquals(1, root.getAsJsonObject("automatic_placement")
                 .get("excluded_automatic_count").getAsInt());
         assertEquals(1, root.getAsJsonObject("automatic_placement")
@@ -149,6 +245,10 @@ class AutomaticWeaponPlacementDiagnosticsTest {
                 automaticEntry.getAsJsonArray("planned_prerequisites").asList().stream()
                         .map(value -> value.getAsString())
                         .toList());
+        assertEquals(List.of(AUTHORED.toString()),
+                automaticEntry.getAsJsonArray("planned_prerequisite_groups")
+                        .get(0).getAsJsonObject().getAsJsonArray("any_of")
+                        .asList().stream().map(value -> value.getAsString()).toList());
         var prerequisiteDecision = automaticEntry.getAsJsonObject(
                 "prerequisite_decision");
         assertEquals("foundation", prerequisiteDecision.get("strategy").getAsString());
@@ -200,7 +300,320 @@ class AutomaticWeaponPlacementDiagnosticsTest {
     }
 
     @Test
-    void formatTwelveExportsClosureInflationRejectionEvidence() {
+    void groupedRouteDiagnosticsAndExportExposeOneAlternativeGroup() {
+        AutomaticWeaponPlacementPolicy groupedPolicy =
+                new AutomaticWeaponPlacementPolicy(
+                        AutomaticWeaponPlacementPolicy.DEFAULT.levelsPerTier(),
+                        AutomaticWeaponPlacementPolicy.DEFAULT
+                                .reviewConfidenceThreshold(),
+                        AutomaticWeaponPlacementPolicy.DEFAULT.reviewHandling(),
+                        2,
+                        AutomaticWeaponPlacementPolicy.DEFAULT.mergeInterval(),
+                        AutomaticWeaponPlacementPolicy.DEFAULT.layeringStrategy(),
+                        AutomaticWeaponPlacementPolicy.DEFAULT.maxNodesPerRank(),
+                        AutomaticWeaponPlacementPolicy.DEFAULT.progressionBands(),
+                        AutomaticWeaponPlacementPolicy.DEFAULT.foundationCount(),
+                        PrerequisiteStrategy.GROUPED_ROUTES_V1);
+        AutomaticWeaponPlacementCandidateSnapshot candidates =
+                new AutomaticWeaponPlacementCandidateSnapshot(
+                        TREE,
+                        AutomaticPlacementMode.CONNECTED,
+                        groupedPolicy,
+                        5L,
+                        7L,
+                        3,
+                        Map.of(AUTOMATIC.toString(), proposal(AUTOMATIC)),
+                        Map.of(),
+                        Set.of(AUTHORED.toString(), EXCLUDED.toString()),
+                        Set.of());
+        ResearchRequirements groupedRequirements = new ResearchRequirements(List.of(
+                new ResearchPrerequisiteGroup(List.of(AUTHORED, EXCLUDED))));
+        AutomaticWeaponPrerequisiteDecision decision =
+                new AutomaticWeaponPrerequisiteDecision(
+                        AUTOMATIC,
+                        AutomaticWeaponPrerequisiteDecision.Strategy.SHARED_TRUNK,
+                        Optional.of(0),
+                        1,
+                        2,
+                        2,
+                        2,
+                        10_000,
+                        true,
+                        Map.of(
+                                AUTHORED,
+                                AutomaticWeaponPrerequisiteDecision.ParentRelation
+                                        .AUTHORED_SAME_FAMILY,
+                                EXCLUDED,
+                                AutomaticWeaponPrerequisiteDecision.ParentRelation
+                                        .AUTHORED_CROSS_FAMILY),
+                        Optional.empty(),
+                        false,
+                        false,
+                        Optional.empty(),
+                        Optional.of(new AutomaticWeaponPrerequisiteDecision
+                                .AlternativeRouteReview(
+                                        EXCLUDED,
+                                        AutomaticWeaponPrerequisiteDecision
+                                                .AlternativeRouteOutcome.ACCEPTED_EXACT,
+                                        20L,
+                                        20L,
+                                        30L,
+                                        30L,
+                                        15_000L,
+                                        15_000L,
+                                        2_500,
+                                        3,
+                                        true)),
+                        AutomaticWeaponPrerequisiteDecision.GeneratedRequirementShape
+                                .ALTERNATIVE_ROUTES);
+        AutomaticWeaponPrerequisitePlan plan = new AutomaticWeaponPrerequisitePlan(
+                PROFILE,
+                TREE,
+                AutomaticPlacementMode.CONNECTED,
+                PrerequisiteStrategy.GROUPED_ROUTES_V1,
+                5L,
+                7L,
+                1,
+                Map.of(AUTOMATIC, List.of(AUTHORED, EXCLUDED)),
+                Map.of(AUTOMATIC, groupedRequirements),
+                Map.of(),
+                Map.of(AUTOMATIC, decision),
+                Map.of());
+        AutomaticWeaponPlacementDiagnostics diagnostics =
+                AutomaticWeaponPlacementDiagnostics.create(
+                        PROFILE, candidates, plan);
+        assertEquals(2, diagnostics.generatedPrerequisiteCount());
+        assertEquals(1, diagnostics.generatedRequirementGroupCount());
+        assertEquals(1, diagnostics.generatedAlternativeGroupCount());
+        assertEquals(
+                AutomaticWeaponPlacementPolicy.MergeIntervalBehavior
+                        .IGNORED_GROUPED_ROUTES_V1,
+                diagnostics.mergeIntervalBehavior());
+        assertEquals(
+                AutomaticWeaponAlternativeRouteGuard.CONTRACT,
+                diagnostics.generatedParentCostGuard());
+        assertEquals(
+                groupedRequirements,
+                diagnostics.entry(AUTOMATIC).orElseThrow().generatedRequirements());
+        assertEquals(1,
+                diagnostics.branchTopologySummary().alternativeRouteReviewCount());
+        assertEquals(1,
+                diagnostics.branchTopologySummary().acceptedAlternativeRouteCount());
+        assertEquals(0, diagnostics.branchTopologySummary()
+                .rejectedAlternativeRouteCostImbalanceCount());
+
+        var root = JsonParser.parseString(BlueprintResearchCatalogExporter.export(
+                BlueprintResearchSnapshot.EMPTY,
+                Map.of(
+                        AUTOMATIC, data(AUTOMATIC),
+                        AUTHORED, data(AUTHORED),
+                        EXCLUDED, data(EXCLUDED)),
+                PROFILE,
+                diagnostics)).getAsJsonObject();
+        var automaticSummary = root.getAsJsonObject("automatic_placement");
+        assertEquals("grouped_routes_v1",
+                automaticSummary.get("prerequisite_strategy").getAsString());
+        assertEquals(2, automaticSummary
+                .get("planned_prerequisite_count").getAsInt());
+        assertEquals(1, automaticSummary
+                .get("planned_requirement_group_count").getAsInt());
+        assertEquals(1, automaticSummary
+                .get("planned_alternative_group_count").getAsInt());
+        var branchSummary = automaticSummary.getAsJsonObject("branch_prerequisites");
+        assertEquals(1, branchSummary.get("alternative_route_review_count").getAsInt());
+        assertEquals(1, branchSummary.get("accepted_alternative_route_count").getAsInt());
+        var automaticEntry = root.getAsJsonArray("entries").asList().stream()
+                .map(value -> value.getAsJsonObject())
+                .filter(value -> AUTOMATIC.toString().equals(
+                        value.get("blueprint").getAsString()))
+                .findFirst().orElseThrow()
+                .getAsJsonObject("automatic_placement");
+        assertEquals(
+                groupedRequirements.allOf().get(0).anyOf().stream()
+                        .map(ResourceLocation::toString).toList(),
+                automaticEntry.getAsJsonArray("planned_prerequisite_groups")
+                        .get(0).getAsJsonObject().getAsJsonArray("any_of")
+                        .asList().stream().map(value -> value.getAsString()).toList());
+        var review = automaticEntry.getAsJsonObject("prerequisite_decision")
+                .getAsJsonObject("alternative_route_review");
+        assertEquals("accepted_exact", review.get("outcome").getAsString());
+        assertEquals(15_000L,
+                review.get("route_cost_ratio_upper_bound_basis_points").getAsLong());
+        assertEquals(2_500,
+                review.get("mandatory_ancestry_overlap_basis_points").getAsInt());
+        assertEquals("alternative_routes",
+                automaticEntry.getAsJsonObject("prerequisite_decision")
+                        .get("requirement_shape").getAsString());
+
+        AutomaticWeaponPrerequisitePlan legacyIdentity =
+                new AutomaticWeaponPrerequisitePlan(
+                        PROFILE,
+                        TREE,
+                        AutomaticPlacementMode.CONNECTED,
+                        5L,
+                        7L,
+                        1,
+                        Map.of(AUTOMATIC, List.of(AUTHORED, EXCLUDED)),
+                        Map.of(),
+                        Map.of(),
+                        Map.of());
+        assertThrows(IllegalArgumentException.class, () ->
+                AutomaticWeaponPlacementDiagnostics.create(
+                        PROFILE, candidates, legacyIdentity));
+    }
+
+    @Test
+    void hybridDiagnosticsExportExplicitMixedRelationshipAuthority() {
+        AutomaticWeaponPlacementPolicy hybridPolicy =
+                new AutomaticWeaponPlacementPolicy(
+                        3,
+                        0,
+                        AutomaticWeaponPlacementPolicy.ReviewHandling.PLACE_CONNECTED,
+                        3,
+                        1,
+                        AutomaticWeaponPlacementPolicy.LayeringStrategy
+                                .DYNAMIC_STAT_LAYERS,
+                        9,
+                        List.of(),
+                        2,
+                        PrerequisiteStrategy.HYBRID_ROUTES_V1);
+        AutomaticWeaponPlacementCandidateSnapshot candidates =
+                new AutomaticWeaponPlacementCandidateSnapshot(
+                        TREE,
+                        AutomaticPlacementMode.CONNECTED,
+                        hybridPolicy,
+                        5L,
+                        7L,
+                        4,
+                        Map.of(
+                                AUTOMATIC.toString(),
+                                proposal(AUTOMATIC).withProgressionCoordinate(
+                                        new ResearchTechTreeContract
+                                                .ProgressionCoordinate(
+                                                        2,
+                                                        17L << 56,
+                                                        Optional.empty()))),
+                        Map.of(),
+                        Set.of(
+                                AUTHORED.toString(),
+                                EXCLUDED.toString(),
+                                UNPLACED.toString()),
+                        Set.of());
+        List<ResourceLocation> parents = List.of(AUTHORED, EXCLUDED, UNPLACED);
+        ResearchRequirements mixed = new ResearchRequirements(List.of(
+                new ResearchPrerequisiteGroup(parents.subList(0, 2)),
+                ResearchPrerequisiteGroup.singleton(parents.get(2))));
+        AutomaticWeaponPrerequisiteDecision decision =
+                new AutomaticWeaponPrerequisiteDecision(
+                        AUTOMATIC,
+                        AutomaticWeaponPrerequisiteDecision.Strategy.TRANSITION_LOCAL,
+                        Optional.of(0),
+                        2,
+                        1,
+                        3,
+                        3,
+                        10_000,
+                        true,
+                        Map.of(
+                                AUTHORED,
+                                AutomaticWeaponPrerequisiteDecision.ParentRelation
+                                        .AUTHORED_SAME_FAMILY,
+                                EXCLUDED,
+                                AutomaticWeaponPrerequisiteDecision.ParentRelation
+                                        .AUTHORED_SAME_FAMILY,
+                                UNPLACED,
+                                AutomaticWeaponPrerequisiteDecision.ParentRelation
+                                        .AUTHORED_CROSS_FAMILY),
+                        Optional.empty(),
+                        false,
+                        false,
+                        Optional.empty(),
+                        Optional.empty(),
+                        AutomaticWeaponPrerequisiteDecision.GeneratedRequirementShape
+                                .ALTERNATIVE_ROUTES_WITH_MANDATORY_GATEWAY);
+        AutomaticWeaponPrerequisitePlan plan = new AutomaticWeaponPrerequisitePlan(
+                PROFILE,
+                TREE,
+                AutomaticPlacementMode.CONNECTED,
+                PrerequisiteStrategy.HYBRID_ROUTES_V1,
+                5L,
+                7L,
+                1,
+                Map.of(AUTOMATIC, parents),
+                Map.of(AUTOMATIC, mixed),
+                Map.of(),
+                Map.of(AUTOMATIC, decision),
+                Map.of());
+        AutomaticWeaponPrerequisiteDecision mislabeled =
+                new AutomaticWeaponPrerequisiteDecision(
+                        decision.blueprintId(),
+                        decision.strategy(),
+                        decision.branchIndex(),
+                        decision.rankIndex(),
+                        decision.familyStartIndex(),
+                        decision.transitionEndIndex(),
+                        decision.desiredParentCount(),
+                        decision.secondParentQuotaBasisPoints(),
+                        decision.secondParentEligible(),
+                        decision.selectedParentRelations(),
+                        decision.mergeRejection(),
+                        decision.depthShortcut(),
+                        decision.terminalPeer(),
+                        decision.publishedRank(),
+                        decision.alternativeRouteReview(),
+                        AutomaticWeaponPrerequisiteDecision.GeneratedRequirementShape
+                                .MANDATORY_SINGLETONS);
+        assertThrows(IllegalArgumentException.class, () ->
+                new AutomaticWeaponPrerequisitePlan(
+                        PROFILE,
+                        TREE,
+                        AutomaticPlacementMode.CONNECTED,
+                        PrerequisiteStrategy.HYBRID_ROUTES_V1,
+                        5L,
+                        7L,
+                        1,
+                        Map.of(AUTOMATIC, parents),
+                        Map.of(AUTOMATIC, mixed),
+                        Map.of(),
+                        Map.of(AUTOMATIC, mislabeled),
+                        Map.of()));
+
+        AutomaticWeaponPlacementDiagnostics diagnostics =
+                AutomaticWeaponPlacementDiagnostics.create(PROFILE, candidates, plan);
+        assertEquals(0, diagnostics.generatedAlternativeRouteDecisionCount());
+        assertEquals(0, diagnostics.generatedMandatoryConvergenceCount());
+        assertEquals(1, diagnostics.generatedMixedRequirementCount());
+        assertEquals(
+                AutomaticWeaponPlacementPolicy.MergeIntervalBehavior
+                        .HYBRID_MANDATORY_GATEWAY_SCHEDULE,
+                diagnostics.mergeIntervalBehavior());
+
+        var root = JsonParser.parseString(BlueprintResearchCatalogExporter.export(
+                BlueprintResearchSnapshot.EMPTY,
+                Map.of(
+                        AUTOMATIC, data(AUTOMATIC),
+                        AUTHORED, data(AUTHORED),
+                        EXCLUDED, data(EXCLUDED),
+                        UNPLACED, data(UNPLACED)),
+                PROFILE,
+                diagnostics)).getAsJsonObject();
+        var summary = root.getAsJsonObject("automatic_placement");
+        assertEquals("hybrid_routes_v1",
+                summary.get("prerequisite_strategy").getAsString());
+        assertEquals(1, summary.get("planned_mixed_requirement_count").getAsInt());
+        var exportedDecision = root.getAsJsonArray("entries").asList().stream()
+                .map(value -> value.getAsJsonObject())
+                .filter(value -> AUTOMATIC.toString().equals(
+                        value.get("blueprint").getAsString()))
+                .findFirst().orElseThrow()
+                .getAsJsonObject("automatic_placement")
+                .getAsJsonObject("prerequisite_decision");
+        assertEquals("alternative_routes_with_mandatory_gateway",
+                exportedDecision.get("requirement_shape").getAsString());
+    }
+
+    @Test
+    void formatFourteenExportsClosureInflationRejectionEvidence() {
         ResourceLocation rejected = id("tacz:other_authored");
         AutomaticWeaponPrerequisiteDecision decision =
                 new AutomaticWeaponPrerequisiteDecision(
@@ -274,6 +687,14 @@ class AutomaticWeaponPlacementDiagnosticsTest {
         var summary = root.getAsJsonObject("automatic_placement")
                 .getAsJsonObject("branch_prerequisites");
         assertEquals(1, summary.get("closure_inflation_rejection_count").getAsInt());
+        assertEquals(1,
+                summary.get("closure_rejected_additional_parent_count").getAsInt());
+        assertEquals(
+                summary.get("same_family_merge_count").getAsInt(),
+                summary.get("same_family_multi_parent_set_count").getAsInt());
+        assertEquals(
+                summary.get("cross_family_merge_count").getAsInt(),
+                summary.get("cross_family_multi_parent_set_count").getAsInt());
         var automatic = root.getAsJsonArray("entries").asList().stream()
                 .map(value -> value.getAsJsonObject())
                 .filter(value -> AUTOMATIC.toString().equals(

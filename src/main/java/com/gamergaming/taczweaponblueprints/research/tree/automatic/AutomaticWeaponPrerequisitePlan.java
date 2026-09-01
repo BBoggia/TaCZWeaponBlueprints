@@ -12,6 +12,9 @@ import java.util.Set;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.AutomaticPlacementMode;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponPlacementCandidateSnapshot;
+import com.gamergaming.taczweaponblueprints.resource.research.ResearchPrerequisiteGroup;
+import com.gamergaming.taczweaponblueprints.resource.research.ResearchRequirements;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPolicy.PrerequisiteStrategy;
 
 import net.minecraft.resources.ResourceLocation;
 
@@ -24,13 +27,70 @@ public record AutomaticWeaponPrerequisitePlan(
         ResourceLocation profileId,
         ResourceLocation treeId,
         AutomaticPlacementMode mode,
+        PrerequisiteStrategy prerequisiteStrategy,
         long catalogRevision,
         long researchRevision,
         int candidateCount,
         Map<ResourceLocation, List<ResourceLocation>> prerequisites,
+        Map<ResourceLocation, ResearchRequirements> requirementGroups,
         Map<ResourceLocation, String> omittedCandidates,
         Map<ResourceLocation, AutomaticWeaponPrerequisiteDecision> decisions,
         Map<ResourceLocation, BranchCoordinate> branchCoordinates) {
+    /** Compatibility constructor for canonical plans predating strategy identity. */
+    public AutomaticWeaponPrerequisitePlan(
+            ResourceLocation profileId,
+            ResourceLocation treeId,
+            AutomaticPlacementMode mode,
+            long catalogRevision,
+            long researchRevision,
+            int candidateCount,
+            Map<ResourceLocation, List<ResourceLocation>> prerequisites,
+            Map<ResourceLocation, ResearchRequirements> requirementGroups,
+            Map<ResourceLocation, String> omittedCandidates,
+            Map<ResourceLocation, AutomaticWeaponPrerequisiteDecision> decisions,
+            Map<ResourceLocation, BranchCoordinate> branchCoordinates) {
+        this(
+                profileId,
+                treeId,
+                mode,
+                PrerequisiteStrategy.LEGACY_AND,
+                catalogRevision,
+                researchRevision,
+                candidateCount,
+                prerequisites,
+                requirementGroups,
+                omittedCandidates,
+                decisions,
+                branchCoordinates);
+    }
+
+    /** Compatibility constructor for flat generated prerequisite plans. */
+    public AutomaticWeaponPrerequisitePlan(
+            ResourceLocation profileId,
+            ResourceLocation treeId,
+            AutomaticPlacementMode mode,
+            long catalogRevision,
+            long researchRevision,
+            int candidateCount,
+            Map<ResourceLocation, List<ResourceLocation>> prerequisites,
+            Map<ResourceLocation, String> omittedCandidates,
+            Map<ResourceLocation, AutomaticWeaponPrerequisiteDecision> decisions,
+            Map<ResourceLocation, BranchCoordinate> branchCoordinates) {
+        this(
+                profileId,
+                treeId,
+                mode,
+                PrerequisiteStrategy.LEGACY_AND,
+                catalogRevision,
+                researchRevision,
+                candidateCount,
+                prerequisites,
+                singletonRequirements(prerequisites),
+                omittedCandidates,
+                decisions,
+                branchCoordinates);
+    }
+
     /** Compatibility constructor for plans created before canonical branch publication. */
     public AutomaticWeaponPrerequisitePlan(
             ResourceLocation profileId,
@@ -80,20 +140,24 @@ public record AutomaticWeaponPrerequisitePlan(
 
     public AutomaticWeaponPrerequisitePlan {
         if (profileId == null || treeId == null || mode == null
+                || prerequisiteStrategy == null
                 || catalogRevision < 0L || researchRevision < 0L
                 || candidateCount < 0
                 || candidateCount > WeaponMechanicalReferenceCatalog.MAX_REFERENCE_WEAPONS
-                || prerequisites == null
+                || prerequisites == null || requirementGroups == null
                 || omittedCandidates == null || decisions == null
                 || branchCoordinates == null) {
             throw new IllegalArgumentException(
                     "Automatic weapon prerequisite plan is invalid");
         }
         prerequisites = immutablePrerequisiteMap(prerequisites);
+        requirementGroups = immutableMap(requirementGroups);
         omittedCandidates = immutableMap(omittedCandidates);
         decisions = immutableMap(decisions);
         branchCoordinates = immutableMap(branchCoordinates);
-        if (prerequisites.size() + omittedCandidates.size() != candidateCount
+        if (!requirementsMatch(
+                    prerequisites, requirementGroups, prerequisiteStrategy)
+                || prerequisites.size() + omittedCandidates.size() != candidateCount
                 || prerequisites.keySet().stream().anyMatch(omittedCandidates::containsKey)
                 || (!mode.createsPrerequisite() && !prerequisites.isEmpty())
                 || prerequisites.entrySet().stream().anyMatch(entry ->
@@ -104,7 +168,12 @@ public record AutomaticWeaponPrerequisitePlan(
                 || omittedCandidates.values().stream().anyMatch(value ->
                         value == null || value.isBlank()
                                 || !value.equals(value.trim()))
-                || !decisionsValid(prerequisites, omittedCandidates, decisions)
+                || !decisionsValid(
+                        prerequisites,
+                        requirementGroups,
+                        omittedCandidates,
+                        decisions,
+                        prerequisiteStrategy)
                 || !branchCoordinatesValid(
                         prerequisites, omittedCandidates, decisions, branchCoordinates)) {
             throw new IllegalArgumentException(
@@ -133,6 +202,7 @@ public record AutomaticWeaponPrerequisitePlan(
                         candidates.catalogRevision(),
                         candidates.researchRevision())
                 && mode == candidates.mode()
+                && prerequisiteStrategy == candidates.policy().prerequisiteStrategy()
                 && candidateCount == candidates.eligibleProposals().size();
     }
 
@@ -144,6 +214,14 @@ public record AutomaticWeaponPrerequisitePlan(
         return blueprintId == null
                 ? List.of()
                 : prerequisites.getOrDefault(blueprintId, List.of());
+    }
+
+    /** Canonical generated requirements for the plan's versioned strategy. */
+    public ResearchRequirements requirementsFor(ResourceLocation blueprintId) {
+        return blueprintId == null
+                ? ResearchRequirements.EMPTY
+                : requirementGroups.getOrDefault(
+                        blueprintId, ResearchRequirements.EMPTY);
     }
 
     public Optional<AutomaticWeaponPrerequisiteDecision> decisionFor(
@@ -180,10 +258,12 @@ public record AutomaticWeaponPrerequisitePlan(
                 profileId,
                 treeId,
                 mode,
+                prerequisiteStrategy,
                 catalogRevision,
                 researchRevision,
                 candidateCount,
                 prerequisites,
+                requirementGroups,
                 omittedCandidates,
                 reconciled,
                 branchCoordinates);
@@ -212,8 +292,10 @@ public record AutomaticWeaponPrerequisitePlan(
 
     private static boolean decisionsValid(
             Map<ResourceLocation, List<ResourceLocation>> prerequisites,
+            Map<ResourceLocation, ResearchRequirements> requirementGroups,
             Map<ResourceLocation, String> omittedCandidates,
-            Map<ResourceLocation, AutomaticWeaponPrerequisiteDecision> decisions) {
+            Map<ResourceLocation, AutomaticWeaponPrerequisiteDecision> decisions,
+            PrerequisiteStrategy strategy) {
         for (Map.Entry<ResourceLocation, AutomaticWeaponPrerequisiteDecision> entry
                 : decisions.entrySet()) {
             ResourceLocation blueprintId = entry.getKey();
@@ -224,12 +306,40 @@ public record AutomaticWeaponPrerequisitePlan(
                     || prerequisites.containsKey(blueprintId)
                             && !Set.copyOf(prerequisites.get(blueprintId)).equals(
                                     decision.selectedParentRelations().keySet())
+                    || strategy == PrerequisiteStrategy.HYBRID_ROUTES_V1
+                            && prerequisites.containsKey(blueprintId)
+                            && !requirementsForDecision(
+                                    decision.generatedRequirementShape(),
+                                    prerequisites.get(blueprintId)).equals(
+                                            requirementGroups.get(blueprintId))
                     || omittedCandidates.containsKey(blueprintId)
                             && !decision.selectedParentRelations().isEmpty()) {
                 return false;
             }
         }
         return true;
+    }
+
+    private static ResearchRequirements requirementsForDecision(
+            AutomaticWeaponPrerequisiteDecision.GeneratedRequirementShape shape,
+            List<ResourceLocation> parents) {
+        if (shape == null || parents == null || parents.isEmpty()
+                || parents.size() > 3) {
+            return ResearchRequirements.EMPTY;
+        }
+        return switch (shape) {
+            case MANDATORY_SINGLETONS -> ResearchRequirements.fromLegacy(parents);
+            case ALTERNATIVE_ROUTES -> new ResearchRequirements(List.of(
+                    new ResearchPrerequisiteGroup(parents)));
+            case ALTERNATIVE_ROUTES_WITH_MANDATORY_GATEWAY ->
+                    parents.size() == 3
+                            ? new ResearchRequirements(List.of(
+                                    new ResearchPrerequisiteGroup(
+                                            parents.subList(0, 2)),
+                                    ResearchPrerequisiteGroup.singleton(
+                                            parents.get(2))))
+                            : ResearchRequirements.EMPTY;
+        };
     }
 
     private static boolean branchCoordinatesValid(
@@ -279,6 +389,54 @@ public record AutomaticWeaponPrerequisitePlan(
                     copy.put(entry.getKey(), values);
                 });
         return Collections.unmodifiableMap(copy);
+    }
+
+    private static Map<ResourceLocation, ResearchRequirements> singletonRequirements(
+            Map<ResourceLocation, List<ResourceLocation>> prerequisites) {
+        if (prerequisites == null) {
+            return Map.of();
+        }
+        LinkedHashMap<ResourceLocation, ResearchRequirements> requirements =
+                new LinkedHashMap<>();
+        prerequisites.forEach((id, values) -> requirements.put(
+                id,
+                ResearchRequirements.fromLegacy(
+                        values == null ? List.of() : values)));
+        return requirements;
+    }
+
+    private static boolean requirementsMatch(
+            Map<ResourceLocation, List<ResourceLocation>> prerequisites,
+            Map<ResourceLocation, ResearchRequirements> requirements,
+            PrerequisiteStrategy strategy) {
+        if (!requirements.keySet().equals(prerequisites.keySet())) {
+            return false;
+        }
+        for (Map.Entry<ResourceLocation, ResearchRequirements> entry
+                : requirements.entrySet()) {
+            List<ResourceLocation> generated = prerequisites.get(entry.getKey());
+            boolean valid = switch (strategy) {
+                case LEGACY_AND -> entry.getValue().legacySingletons()
+                        .filter(singletons -> Set.copyOf(singletons).equals(
+                                Set.copyOf(generated)))
+                        .isPresent();
+                case GROUPED_ROUTES_V1 -> generated.size() <= 2
+                        && entry.getValue().allOf().size() == 1
+                        && Set.copyOf(entry.getValue().allOf().get(0).anyOf())
+                                .equals(Set.copyOf(generated));
+                case HYBRID_ROUTES_V1 -> generated.size() <= 3
+                        && entry.getValue().allOf().size() <= 2
+                        && entry.getValue().allOf().stream()
+                                .allMatch(group -> group.anyOf().size() <= 2)
+                        && entry.getValue().allOf().stream()
+                                .filter(group -> group.anyOf().size() == 2)
+                                .count() <= 1;
+            };
+            if (!valid) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static <T> Map<ResourceLocation, T> immutableMap(

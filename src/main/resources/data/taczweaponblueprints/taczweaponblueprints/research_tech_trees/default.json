@@ -3,6 +3,7 @@
   "title": "Research Tech Tree",
   "translation_key": "gui.taczweaponblueprints.tech_tree.title",
   "icon": "tacz:glock_17",
+  "weapon_placement_mode": "automatic",
   "layout": {
     "width_mode": "dynamic",
     "min_nodes_per_layer": 9,

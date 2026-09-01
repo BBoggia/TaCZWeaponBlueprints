@@ -57,6 +57,18 @@ class ResearchAutomaticPlacementPhaseZeroTest {
     }
 
     @Test
+    void automaticEdgeSpanStaysAtTwoUntilTheDepthLimitMakesItImpossible() {
+        assertEquals(2, ResearchTechTreeContract.automaticEdgeRankSpanLimit(0, 64));
+        assertEquals(2, ResearchTechTreeContract.automaticEdgeRankSpanLimit(129, 64));
+        assertEquals(3, ResearchTechTreeContract.automaticEdgeRankSpanLimit(130, 64));
+        assertEquals(4, ResearchTechTreeContract.automaticEdgeRankSpanLimit(205, 64));
+        assertThrows(IllegalArgumentException.class,
+                () -> ResearchTechTreeContract.automaticEdgeRankSpanLimit(-1, 64));
+        assertThrows(IllegalArgumentException.class,
+                () -> ResearchTechTreeContract.automaticEdgeRankSpanLimit(10, 0));
+    }
+
+    @Test
     void progressionCoordinatesExcludeClientOnlyWrapRows() {
         ProgressionPosition starterTop = new ProgressionPosition(Tier.STARTER, 2, 100);
         ProgressionPosition basicBottom = new ProgressionPosition(Tier.BASIC, 0, 0);

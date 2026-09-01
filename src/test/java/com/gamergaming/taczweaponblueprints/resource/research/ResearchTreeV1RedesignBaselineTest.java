@@ -165,7 +165,7 @@ public class ResearchTreeV1RedesignBaselineTest {
     }
 
     @Test
-    void phaseFourExpandsEligibilityToEveryNonAuthoredGun()
+    void automaticAuthorityMakesEveryGunEligible()
             throws Exception {
         Baseline baseline = loadBaseline();
         AutomaticBaseline automatic = automaticBaseline(baseline);
@@ -180,7 +180,7 @@ public class ResearchTreeV1RedesignBaselineTest {
         assertEquals(strings(expected.getAsJsonArray("unplaced")),
                 automatic.candidates().unplacedBlueprintIds());
         assertTrue(automatic.candidates().excludedAutomaticCandidates().isEmpty());
-        assertEquals(2, automatic.candidates().automaticCandidateCount());
+        assertEquals(6, automatic.candidates().automaticCandidateCount());
 
         AutomaticWeaponPlacementProposal fallback = automatic.candidates()
                 .eligibleProposals().get("addon:fallback_gun");
@@ -192,9 +192,12 @@ public class ResearchTreeV1RedesignBaselineTest {
         assertTrue(formerlyUnplaced.reviewReasons().contains("unscored_fallback"));
         assertFalse(automatic.prerequisites().prerequisitesFor(
                 id("addon:fallback_gun")).isEmpty());
-        assertFalse(automatic.prerequisites().prerequisitesFor(
-                id("orphan:unplaced_gun")).isEmpty());
-        assertTrue(automatic.prerequisites().omittedCandidates().isEmpty());
+        assertTrue(automatic.prerequisites().omittedCandidates()
+                .containsKey(id("orphan:unplaced_gun")));
+        assertEquals(
+                automatic.candidates().eligibleProposals().size(),
+                automatic.prerequisites().prerequisites().size()
+                        + automatic.prerequisites().omittedCandidates().size());
 
         var effective = ResearchTechTreePlacementResolver.resolveWithAutomatic(
                 baseline.snapshot(),

@@ -20,8 +20,9 @@ Run these operator commands after the server has loaded TaCZ recipes:
 ```
 
 `export` writes `taczweaponblueprints/research-catalog.json` inside the current
-world folder. Format 12 is stable and sorted. It includes every live blueprint
-ID, selected rule, visibility, cost, prerequisites, authored group placement,
+world folder. Format 18 is stable and sorted. It includes every live blueprint
+ID, selected rule, visibility, cost, legacy prerequisite union, canonical
+prerequisite groups, authored group placement,
 fallback status, missing authored members, the selected tree's presentation-band
 policy, revision-matched automatic placement decisions, topology/economy audits,
 and a decision explanation for every weapon. The audit is built from a detached
@@ -33,7 +34,7 @@ The topology section covers connectivity, reachability, rank population and
 gaps, fan-in/fan-out, depth, merges, approximate crossings/edge length, origin
 counts, and optional comparison with an explicitly supplied prior parent
 fixture. The economy section compares finite configured RP income with policy
-costs, leaf paths, AND-aware prerequisite closures, and the full tree. Rank,
+costs, leaf paths, AND-of-OR-aware prerequisite closures, and the full tree. Rank,
 tier, band, and layout never set costs; the current export reports
 `cost_authority: research_policy` and `automatic_cost_curve_enabled: false`.
 See [generation redesign Phase 9](research-tree-generation-redesign-phase-9.md)
@@ -105,10 +106,14 @@ Phase 8's maximum population, packaged safe-default contract, release evidence,
 and remaining runtime-QA boundary are documented in
 [`research-automatic-placement-phase-8.md`](research-automatic-placement-phase-8.md).
 
-The generation redesign now supersedes the original fallback-only admission
-gate: every gun without an exact, tag, or non-fallback selector placement is an
-automatic candidate. Guns with no matching entry publish through the tree's
-Weapons fallback lane when their proposal is eligible. See
+Weapon placement now has one explicit authority per tree; it is never a hybrid.
+An `automatic` tree sends every catalog gun through scoring, placement, and
+generated prerequisite planning, and ignores all authored weapon coordinates
+and prerequisite declarations. An `authored_only` tree ignores automatic
+proposals and publishes only guns matched by an exact, tag, or non-fallback
+selector placement. Unmatched guns and entries marked `fallback` are omitted.
+Ammo and attachment placement and prerequisites remain authored in either mode.
+See
 [`research-tree-generation-redesign-phase-4.md`](research-tree-generation-redesign-phase-4.md).
 
 ## Resource locations
@@ -123,9 +128,10 @@ data/<namespace>/taczweaponblueprints/research_automatic_placement_profiles/<pat
 ```
 
 The complete example pack is in
-`examples/research-tree-datapack`. It uses a format-2 weapon profile, tree,
-automatic-placement policy, and explicit-rank manual bundle together with a
-format-1 selector fallback. Copy it into a world's `datapacks` directory,
+`examples/research-tree-datapack`. It uses a format-2 automatic weapon profile,
+tree, and automatic-placement policy. Its placement-entry examples remain
+useful when changing the tree to `authored_only`, but do not control weapons
+while the tree is automatic. Copy it into a world's `datapacks` directory,
 replace the placeholder `example_guns` IDs, and select its profile with the
 `activeResearchProfile` server config.
 
@@ -211,15 +217,28 @@ immutable snapshot is published.
 
 ## Research Tech Tree presentation data
 
-A profile may select one authored map with `"tech_tree": "namespace:path"`.
+A profile may select one map with `"tech_tree": "namespace:path"`.
 The format-1 map defines its title, six Starter-through-Apex labels, domain
 labels, and ordered lanes. Every domain declares a fallback lane and tier.
 Tree format 2 requires a shared layout policy and makes visible progression
-bands optional. `layout.max_nodes_per_layer` accepts 8–28 and defaults to 9 for
+bands optional. It also accepts `weapon_placement_mode`, which defaults to
+`authored_only`. Choose exactly one model:
+
+- `"weapon_placement_mode": "automatic"` requires exactly one automatic
+  placement profile for this tree. Every catalog gun is owned by the generator;
+  authored weapon positions and prerequisites are ignored. The profile mode and
+  review handling must place every candidate, so `independent` and `exclude`
+  are invalid for this authority mode.
+- `"weapon_placement_mode": "authored_only"` forbids an automatic placement
+  profile for this tree. Only non-fallback exact, tag, or selector matches are
+  published; unspecified guns are intentionally absent.
+
+Format-1 trees are always `authored_only` and cannot opt into automatic weapon
+authority. `layout.max_nodes_per_layer` accepts 8–28 and defaults to 9 for
 legacy format-1 trees. Omitting `width_mode` preserves fixed-width behavior.
 With `width_mode: "dynamic"`, `min_nodes_per_layer` also accepts 8–28, defaults
 to 9, and may not exceed the maximum. The server resolves the effective width
-as `ceil(sqrt(4 × (authored + eligible automatic weapons) / 3))`, clamped to
+as `ceil(sqrt(4 × eligible automatic weapons / 3))`, clamped to
 the configured range. This targets a wider 4:3 semantic topology instead of a
 square one. Excluded, unplaced, attachment, and ammunition entries do
 not inflate it. It bounds generated semantic layers and the client's maximum
@@ -256,6 +275,7 @@ cross-domain requirement or unlock portal.
 ```json
 {
   "format": 2,
+  "weapon_placement_mode": "automatic",
   "layout": {
     "width_mode": "dynamic",
     "min_nodes_per_layer": 9,
@@ -334,46 +354,91 @@ and `appeal` evidence. If its authored tier differs from the suggested rating
 tier, `tier_override_reason` is required. Ratings are forbidden for ammo,
 attachments, tags, and broad selectors.
 
-Placement precedence is exact ID, tag, then selector; higher bundle priority
-wins within one specificity. A deterministic resource-ID and entry-index
-tie-break keeps reloads stable. Unknown add-on content should use a conservative
-General-lane selector instead of fabricated dependencies.
+In an `authored_only` tree, non-fallback authored placement always outranks an
+entry marked `fallback`; fallback entries are not published by the simplified
+weapon population rule.
+Within the same fallback class, placement precedence is exact ID, tag, then
+selector; higher bundle priority wins within one specificity. A deterministic
+resource-ID and entry-index tie-break keeps reloads stable. Unknown add-on
+content should use a conservative General-lane selector instead of fabricated
+dependencies.
 
-Automatic-placement profiles accept formats 1 and 2. Format 1 preserves the
+Automatic-placement profiles accept formats 1 through 4. Format 1 preserves the
 legacy six-tier score buckets; `levels_per_tier` accepts 1–5 and defaults to 3.
-Format 2 instead creates contiguous stat-sorted ranks across the complete
+Formats 2 through 4 instead create contiguous stat-sorted ranks across the complete
 eligible weapon population. `foundation_count` accepts 1–3 and defaults to 2;
 that many low-scoring weapons reserve the foundation rank, and later
 provisional layers fill to the selected tree's resolved layer capacity.
-Dynamic capacity is computed once from the complete authored-plus-eligible
-weapon population before ranks and prerequisites are generated. Generated prerequisites are selected
-from earlier automatic layers, except that each mixed-tree foundation node may
-bridge to one authored node at the same or an earlier provisional rank. The
+Dynamic capacity is computed once from the complete eligible automatic weapon
+population before ranks and prerequisites are generated. Generated
+prerequisites are selected from earlier automatic layers. The
 graph-aware finalization and presentation passes then lift dependent nodes and
 compact empty ranks. The legacy profile field
 `max_nodes_per_rank` remains readable for format-1-tree compatibility but a
-format-2 tree is authoritative. Numeric score gaps therefore cannot create
+format-2-or-newer tree is authoritative. Numeric score gaps therefore cannot create
 empty rows. `mode` accepts `independent`, `distributed`, or `connected`;
 `review_confidence_threshold` accepts 0–100 and defaults to 60.
 `max_prerequisites` accepts 1–3 and defaults to 2. `merge_interval` accepts
-0–64, defaults to 4, and uses zero to disable optional third-parent convergence.
-Connected branch-aware format-2 placement uses a deterministic second-parent
+0–64, defaults to 4, and uses zero to disable optional third-parent convergence
+under the legacy strategy.
+Connected branch-aware format-2-or-newer placement uses a deterministic second-parent
 quota: 100% through the shared trunk, a gradual decline through the family
 transition, and a 20% branch-local floor through specialization and terminal
 cohorts. This keeps upper branches mostly narrow without forcing every branch
 into a single chain. A configured `merge_interval` never controls ordinary
-two-parent tapering; it only schedules bounded third-parent opportunities when
-`max_prerequisites` is 3 and the second-parent quota also admits the node.
+two-parent tapering; under `legacy_and`, it only schedules bounded third-parent
+opportunities when `max_prerequisites` is 3 and the second-parent quota also
+admits the node. Under `hybrid_routes_v1`, it instead schedules at most one
+deliberate mandatory-gateway opportunity per eligible shared or transition
+rank, and never schedules one in specialization or terminal cohorts.
 
-Before an optional parent is accepted, the planner compares the union of its RP
-prerequisite closure with the more expensive existing path. The normal ceiling
-is about 1.5 times the dominant path. A one-direct-parent-cost grace keeps cheap
-foundation merges viable; deeper disjoint paths that exceed the ceiling retain
-their primary parent and report `merge_rejected_closure_inflation`. This review
-uses the resolved research-policy point costs and never derives cost from rank,
-tier, branch, or weapon statistics. Every generated edge must move to a
-strictly higher published rank; only the pre-normalization authored foundation
-bridge may begin on the same provisional rank. Format 1 retains the earlier
+Format 3 adds the strict `prerequisite_strategy` field. It defaults to
+`legacy_and`, preserving the format-2 interpretation in which every selected
+parent is a mandatory singleton group. `grouped_routes_v1` is permitted only
+with `mode: connected` and `max_prerequisites` no greater than 2. It reuses the
+same deterministic branch/layer parent selection but publishes the selected set
+as follows: zero parents creates a generated root, one parent creates one
+singleton group, and two parents create one inclusive `any_of` group. Thus a
+selected pair means `A OR B`, not `A AND B`. Generated third alternatives are
+not part of version 1. Existing format-1 and format-2 profiles continue to
+decode as `legacy_and`; selecting grouped routes under either older format is a
+reload error.
+
+Format 4 adds the strict `scoring_model` field. `mechanical_v2` is the omitted
+default for migration safety; `capability_v3` selects the package-based scorer,
+expanded TaCZ evidence, calibrated progression score, and matching v3 role
+evidence. Older profile formats cannot select v3. The bundled profile explicitly
+uses `capability_v3`; existing custom datapacks remain on v2 until they opt in.
+See [`research-capability-scoring-v3.md`](research-capability-scoring-v3.md) for
+the formula, pinned reference, review behavior, and rollback procedure.
+
+`hybrid_routes_v1` is also format-3, connected-only, and requires dynamic stat
+layers. It accepts up to three generated parents and chooses one explicit
+relationship shape before materializing them: mandatory singletons
+`[[A],[B]]`, alternatives `[[A,B]]`, or an alternative pair plus a mandatory
+gateway `[[A,B],[C]]`. A mixed opportunity that cannot safely retain its third
+parent degrades to `[[A,B]]`; it is never mislabeled or reinterpreted from
+parent count. The packaged profile does not enable this strategy.
+
+Before an optional parent is accepted, the planner applies a strategy-specific
+RP review. `legacy_and` compares the union of both prerequisite closures with
+the more expensive individual path. Its normal ceiling is about 1.5 times the
+dominant path, with a one-direct-parent-cost grace for cheap foundation merges;
+deeper disjoint paths that exceed the ceiling retain their primary parent and
+report `merge_rejected_closure_inflation`. `grouped_routes_v1` instead prices
+the parents as alternative routes. It records exact or bounded individual
+route costs plus mandatory-ancestry overlap and rejects only when the lower
+bound proves a route-cost ratio above 8.0x. The 4.0x p95 ratio remains a
+diagnostic warning rather than a hidden per-route veto. Both reviews use
+resolved research-policy point costs and never derive cost from rank, tier,
+branch, or weapon statistics. Hybrid alternatives use that same group-aware
+review against canonical generated ancestry. Its mandatory gateway is then
+reviewed as a bounded addition to the selected OR route, while the sparse
+schedule and ancestor/descendant check prevent rank-wide gates and redundant
+parents. Every generated edge must move to a strictly higher published rank.
+An authored foundation bridge, or the reconciliation from generated foundation
+peers to one promoted automatic entry point, may begin on the same provisional
+rank; rank finalization lifts the dependent before publication. Format 1 retains the earlier
 anchor and tier-gateway behavior from the compatibility planner. Reviewed
 `place_independent` proposals are excluded from the anchor pool as well as from
 generated target edges.
@@ -385,6 +450,15 @@ proposal always retains its warning evidence in diagnostics and exports.
 unscoreable guns use a conservative weapon-type band only when reviewed
 placement is explicitly enabled; a stable ID determines their exact position
 within that band rather than catalog discovery order.
+
+Requirement authority follows the tree mode. An `authored_only` tree retains
+the selected research rule's legacy `prerequisites` or canonical
+`prerequisite_groups`. For guns in an `automatic` tree, generated groups replace
+authored requirements completely; ammo and attachment requirements remain
+authored. Unsafe generated alternatives are filtered independently; another
+safe route survives, a progression-exempt route satisfies the group, and a
+group with no safe alternatives fails open rather than stranding an add-on
+weapon.
 
 The deprecated automatic-profile `bands` field remains readable for format-1
 compatibility evidence, but a format-2 tree's `bands` policy owns the published
@@ -400,17 +474,18 @@ interleave lane classifications to keep forks, merges, and dependency paths
 readable. Rank remains vertical authority. Legacy or custom band labels render
 only when their optional references form a coherent bottom-to-top overlay.
 
-The built-in map contains 53 weapon, 95 attachment, and 24 ammo placements.
-The active 53-weapon bundle uses explicit format-2 ranks; the disabled
-attachment/ammo bundles remain available as format-1 opt-in compatibility
-data. The map is documented in
+The built-in map contains 53 dormant authored weapon, 95 attachment, and 24
+ammo placements. Its `automatic` authority ignores every authored weapon
+coordinate and prerequisite, so all 53 live recipe-backed weapons use the same
+revision-matched generator. The disabled attachment/ammo bundles
+remain available as format-1 opt-in compatibility data. The map is documented in
 [`research-tech-tree-phase-3.md`](development/research-tech-tree-phase-3.md).
 
 For a release datapack, audit each domain independently: every exact placement
 should resolve to exactly one research rule, every prerequisite should stay in
 the intended domain unless a deliberate cross-domain portal is desired, and
 every node should be reachable from a usable entry. The bundled mod's release
-artifact gate enforces those rules for all 53/95/24 authored placements while
+artifact gate enforces those rules for all 53/95/24 packaged placements while
 publishing only Weapons by default; third-party
 packs should apply the same checks to their exported live catalog and complete
 the reload cases in the manual QA matrix.
@@ -425,6 +500,48 @@ Its format-2 domain policy publishes only the 53 Weapons by default;
 Attachments and Ammo remain dormant. Branches and All Weapons still derive
 from a separate weapon-only presentation subset.
 
+## Prerequisite groups
+
+Research-rule format 2 can express inclusive route choices directly:
+
+```json
+{
+  "format": 2,
+  "profile": "example:default",
+  "target": {
+    "blueprints": ["example_guns:advanced_rifle"]
+  },
+  "prerequisite_groups": [
+    {
+      "any_of": [
+        "example_guns:assault_route",
+        "example_guns:marksman_route"
+      ]
+    },
+    {
+      "any_of": ["example_guns:advanced_receiver"]
+    }
+  ]
+}
+```
+
+The rule above means `(assault_route OR marksman_route) AND
+advanced_receiver`. `any_of` is inclusive: learning both alternatives is valid;
+this is not exclusive XOR.
+
+Legacy `prerequisites` remains supported and keeps its original mandatory-AND
+meaning. For example, `"prerequisites": ["example:a", "example:b"]`
+normalizes to two singleton groups and still requires both A and B. A rule must
+use either `prerequisites` or `prerequisite_groups`, never both. Both forms must
+use exact blueprint targets.
+
+Each group contains 1–64 unique alternatives, one dependent may contain at
+most 64 groups and 64 alternatives in total, and all IDs and groups are sorted
+canonically after decoding. Empty groups, duplicate groups or alternatives,
+selected self-references, cycles through any possible alternative, and paths
+deeper than 64 nodes reject the complete reload. Valid legacy format-1 rules
+need no migration.
+
 ## How a tree is formed
 
 - A rule-resolved policy and its format-2 domain policy must both have
@@ -435,17 +552,22 @@ from a separate weapon-only presentation subset.
   anonymous question-mark node, `name` reveals only the translated name,
   `preview` adds identity/icon and aggregate requirements, and `full` adds exact
   policy state and details.
-- Every `prerequisites` entry creates an arrow from the prerequisite to each
-  targeted blueprint.
+- Every legacy `prerequisites` entry creates one mandatory singleton group and
+  one arrow to each targeted blueprint. Every `prerequisite_groups` alternative
+  creates an arrow while retaining its any-of group identity.
+- The client renders a mandatory singleton as a direct arrow. A group with more
+  than one visible, undiscovered, or outside-view alternative converges through
+  a diamond and one outgoing arrow. Selected-node details use `Requires one of`
+  and never name undisclosed or projection-external members.
 - A prerequisite-bearing rule must use exact targets. Tags and selectors remain
   useful for policy or economy overrides, but cannot invent one dependency for
   an unknown set of weapons.
 - Rules may branch by giving several targets the same prerequisite, and may
   merge by giving one target several prerequisites.
-- Multiple prerequisites use AND semantics: every listed blueprint must be
-  learned before the dependent blueprint becomes researchable. Keep routine
-  nodes single-parent and reserve two-parent merges for gateways, capstones,
-  or meaningful specialization convergence.
+- Multiple legacy prerequisites and multiple canonical groups use AND
+  semantics. Alternatives within one canonical group use OR semantics. Keep
+  routine nodes single-route and reserve multiple mandatory groups for gateways,
+  capstones, or meaningful specialization convergence.
 - Format-2 dependencies require a strictly lower prerequisite rank. Tier,
   level, and sibling order do not authorize an edge.
 - Format-1 dependencies retain their legacy compatibility rule: the
@@ -497,7 +619,16 @@ an enabled domain fallback is used, its own prerequisites are cleared and direct
 references to the missing preferred root are rebased to it. Candidate order is
 therefore gameplay data, not alphabetical order. If no candidate is available,
 the structural audit reports the missing root instead of silently inventing
-progression. `entry_point_candidates` and the `weapons` key of
+progression. A resolved entry point is also excluded from lower-precedence
+automatic prerequisite generation, including when a live block or exemption
+selects a different fallback after the automatic plan was published. Generated
+prerequisite alternatives that still reference the preferred entry are rebased
+to that same live fallback before tree, journal, preview, or unlock evaluation.
+When a missing preferred root promotes exactly one automatic foundation member,
+the other generated foundation peers connect through it before rank finalization
+so the live tree retains one free starting route. Automatic-only trees with no
+configured entry point retain their configured number of generated roots.
+`entry_point_candidates` and the `weapons` key of
 `tech_entry_point_candidates` are mutually exclusive; older profiles remain
 valid without the new field.
 
@@ -611,22 +742,22 @@ and prerequisites while leaving the generic fallback intact.
 
 ## Cost guidance
 
-The built-in policies use Glock 17 as the weapon tree's 2 RP shared entry and
-retain 2, 4, 6, 8, 10, and 12 RP authoring for Starter through Apex content in
-every Tech Tree domain. Only Weapons are Research Bench-researchable under the
-built-in profile.
+The built-in policies retain 2, 4, 6, 8, 10, and 12 RP authoring for generated
+capability tiers in every Tech Tree domain. Automatic scoring chooses the live
+weapon foundation; no named weapon is guaranteed to remain the root across
+catalog or scoring changes. Only Weapons are Research Bench-researchable under
+the built-in profile.
 Material costs rise with depth as well. Keep every enabled research point cost
 strictly greater than its recycling value, and preferably increase costs along
 each dependency path so an upgrade never becomes cheaper than its prerequisite.
 
-The bundled authored Tech Tree has one entry candidate per domain: Glock 17 for
-Weapons, RK-6 for Attachments, and 9mm for Ammunition. The built-in policy
-activates only Glock 17 and the Weapons graph. Every authored default node is
-reachable within its domain and prerequisite tiers never move
-downward. Type, lane, and tier still do not authorize dependencies; the bundled
-edges are explicit exact research-rule data. Datapacks should likewise author
-exact prerequisite edges rather than deriving them from presentation
-placement. Genuine cross-domain prerequisites are supported and publish as
+The bundled automatic Tech Tree activates all recipe-backed Weapons and lets
+the generator choose its foundation and edges. RK-6 and 9mm remain authored
+entry candidates for the disabled Attachment and Ammunition domains. Every
+published node is reachable within its domain and prerequisite ranks never move
+downward. In an authored-only tree, type, lane, and tier still do not authorize
+dependencies; datapacks must author exact prerequisite edges. Genuine
+cross-domain prerequisites are supported and publish as
 boundary portals, but should not be added merely to force the domains together.
 Each disclosed cross-domain edge is indexed once in its authoritative
 prerequisite-to-dependent direction and exposed reciprocally as a Requirement

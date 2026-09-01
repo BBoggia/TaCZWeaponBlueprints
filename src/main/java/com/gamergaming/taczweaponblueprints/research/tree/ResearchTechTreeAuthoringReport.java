@@ -16,6 +16,7 @@ import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWea
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPrerequisiteDecision;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponRoleAnalyzer;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.WeaponMechanicalScore;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.WeaponCapabilityScore;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponEvidenceSnapshot;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchPolicy;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchPolicyResolver;
@@ -138,6 +139,8 @@ public record ResearchTechTreeAuthoringReport(
                     ? null : automatic.proposal().orElse(null);
             WeaponMechanicalScore score = stableEvidence.scoresByBlueprint()
                     .get(blueprintId.toString());
+            WeaponCapabilityScore capability = stableEvidence.capabilityScoresByBlueprint()
+                    .get(blueprintId.toString());
             List<ResourceLocation> parents = effectiveParents.getOrDefault(blueprintId, List.of());
             Optional<AutomaticWeaponPrerequisiteDecision> prerequisiteDecision =
                     automatic == null
@@ -146,7 +149,9 @@ public record ResearchTechTreeAuthoringReport(
             List<ParentChoice> parentChoices = parents.stream().map(parent -> {
                 Optional<Integer> similarity = similarity(
                         score,
-                        stableEvidence.scoresByBlueprint().get(parent.toString()));
+                        stableEvidence.scoresByBlueprint().get(parent.toString()),
+                        capability,
+                        stableEvidence.capabilityScoresByBlueprint().get(parent.toString()));
                 int load = fanOut.getOrDefault(parent, 0);
                 AutomaticWeaponPrerequisiteDecision.ParentRelation relation =
                         prerequisiteDecision.isEmpty()
@@ -175,7 +180,16 @@ public record ResearchTechTreeAuthoringReport(
             Optional<ResourceLocation> band = proposal == null
                     ? manualPlacement.flatMap(value -> value.progressionCoordinate().bandId())
                     : proposal.progressionCoordinate().bandId();
-            List<String> reviewFallbackReasons = reviewFallbackReasons(automatic, proposal);
+            Optional<Integer> authoredCapabilityTierDelta = manualPlacement
+                    .filter(ignored -> capability != null)
+                    .map(value -> capability.suggestedTier().ordinal()
+                            - value.tier().ordinal());
+            LinkedHashSet<String> reviewReasons = new LinkedHashSet<>(
+                    reviewFallbackReasons(automatic, proposal));
+            authoredCapabilityTierDelta
+                    .filter(value -> Math.abs(value) >= 2)
+                    .ifPresent(value -> reviewReasons.add(
+                            "authored_capability_tier_divergence:" + value));
             entries.put(blueprintId, new Entry(
                     blueprintId,
                     state(automatic, manualPlacement),
@@ -187,8 +201,19 @@ public record ResearchTechTreeAuthoringReport(
                     parentChoices.stream().mapToInt(ParentChoice::fanOutPenalty).max().orElse(0),
                     parentChoiceReason(automatic, parents, definition),
                     mergeReason(automaticDiagnostics, automatic, proposal, parents, automaticRanks),
-                    reviewFallbackReasons,
-                    prerequisiteDecision));
+                    reviewReasons.stream().sorted().toList(),
+                    prerequisiteDecision,
+                    capability == null
+                            ? Optional.empty()
+                            : Optional.of(capability.progressionScore()),
+                    capability == null
+                            ? Optional.empty()
+                            : Optional.of(capability.confidence()),
+                    capability == null
+                            ? Optional.empty()
+                            : Optional.of(capability.suggestedTier()),
+                    authoredCapabilityTierDelta,
+                    capability == null ? List.of() : capability.warnings()));
         });
         return new ResearchTechTreeAuthoringReport(
                 profileId,
@@ -240,6 +265,12 @@ public record ResearchTechTreeAuthoringReport(
             if (parents.size() < 2 && rejection.isPresent()) {
                 return rejection.orElseThrow().reason().serializedName();
             }
+            Optional<AutomaticWeaponPrerequisiteDecision.AlternativeRouteReview> review =
+                    automatic.prerequisiteDecision().orElseThrow()
+                            .alternativeRouteReview();
+            if (parents.size() < 2 && review.filter(value -> !value.accepted()).isPresent()) {
+                return review.orElseThrow().outcome().serializedName();
+            }
         }
         if (parents.size() < 2) {
             return "none";
@@ -263,6 +294,7 @@ public record ResearchTechTreeAuthoringReport(
         }
         int rankIndex = automaticRanks.indexOf(proposal.progressionCoordinate().rank());
         int mergeInterval = diagnostics.mergeInterval();
+        boolean periodicMergeActive = diagnostics.mergeIntervalBehavior().active();
         if (diagnostics.layeringStrategy() != LayeringStrategy.DYNAMIC_STAT_LAYERS) {
             long connectedBefore = diagnostics.entries().values().stream()
                     .filter(entry -> entry.state()
@@ -277,13 +309,13 @@ public record ResearchTechTreeAuthoringReport(
                     && connectedBefore == 0L) {
                 return "tier_gateway";
             }
-            return mergeInterval > 0 && (connectedBefore + 1L) % mergeInterval == 0L
+            return periodicMergeActive && (connectedBefore + 1L) % mergeInterval == 0L
                     ? "periodic_tier_merge"
                     : "generated_multi_parent";
         }
         int lowerTransitions = ResearchTechTreeContract.sharedMeshTransitionCount(
                 automaticRanks.size());
-        if (mergeInterval > 0
+        if (periodicMergeActive
                 && rankIndex > 0
                 && rankIndex <= lowerTransitions
                 && rankIndex % mergeInterval == 0) {
@@ -320,11 +352,18 @@ public record ResearchTechTreeAuthoringReport(
     /** Strength-relative mechanical role affinity shared with automatic branch analysis. */
     private static Optional<Integer> similarity(
             WeaponMechanicalScore target,
-            WeaponMechanicalScore parent) {
+            WeaponMechanicalScore parent,
+            WeaponCapabilityScore targetCapability,
+            WeaponCapabilityScore parentCapability) {
+        AutomaticWeaponRoleAnalyzer analyzer = new AutomaticWeaponRoleAnalyzer();
+        if (targetCapability != null && parentCapability != null) {
+            java.util.OptionalInt result = analyzer.analyze(targetCapability)
+                    .similarityTo(analyzer.analyze(parentCapability));
+            return result.isPresent() ? Optional.of(result.getAsInt()) : Optional.empty();
+        }
         if (target == null || parent == null) {
             return Optional.empty();
         }
-        AutomaticWeaponRoleAnalyzer analyzer = new AutomaticWeaponRoleAnalyzer();
         java.util.OptionalInt result = analyzer.analyze(target)
                 .similarityTo(analyzer.analyze(parent));
         return result.isPresent() ? Optional.of(result.getAsInt()) : Optional.empty();
@@ -347,7 +386,12 @@ public record ResearchTechTreeAuthoringReport(
             String parentChoiceReason,
             String mergeReason,
             List<String> reviewFallbackReasons,
-            Optional<AutomaticWeaponPrerequisiteDecision> prerequisiteDecision) {
+            Optional<AutomaticWeaponPrerequisiteDecision> prerequisiteDecision,
+            Optional<Integer> capabilityScore,
+            Optional<Integer> capabilityConfidence,
+            Optional<ResearchTechTreeContract.Tier> capabilitySuggestedTier,
+            Optional<Integer> authoredCapabilityTierDelta,
+            List<String> capabilityWarnings) {
         /** Compatibility constructor for authoring fixtures predating Phase 6 provenance. */
         public Entry(
                 ResourceLocation blueprintId,
@@ -373,7 +417,46 @@ public record ResearchTechTreeAuthoringReport(
                     parentChoiceReason,
                     mergeReason,
                     reviewFallbackReasons,
-                    Optional.empty());
+                    Optional.empty(),
+                    Optional.empty(),
+                    Optional.empty(),
+                    Optional.empty(),
+                    Optional.empty(),
+                    List.of());
+        }
+
+        /** Compatibility constructor for fixtures predating capability-v3 diagnostics. */
+        public Entry(
+                ResourceLocation blueprintId,
+                String state,
+                Optional<Integer> mechanicalScore,
+                Optional<Integer> assignedRank,
+                Optional<ResourceLocation> bandId,
+                List<ParentChoice> parentChoices,
+                Optional<Integer> similarityScore,
+                int fanOutPenalty,
+                String parentChoiceReason,
+                String mergeReason,
+                List<String> reviewFallbackReasons,
+                Optional<AutomaticWeaponPrerequisiteDecision> prerequisiteDecision) {
+            this(
+                    blueprintId,
+                    state,
+                    mechanicalScore,
+                    assignedRank,
+                    bandId,
+                    parentChoices,
+                    similarityScore,
+                    fanOutPenalty,
+                    parentChoiceReason,
+                    mergeReason,
+                    reviewFallbackReasons,
+                    prerequisiteDecision,
+                    Optional.empty(),
+                    Optional.empty(),
+                    Optional.empty(),
+                    Optional.empty(),
+                    List.of());
         }
 
         public Entry {
@@ -386,6 +469,15 @@ public record ResearchTechTreeAuthoringReport(
                     ? List.of() : List.copyOf(reviewFallbackReasons);
             prerequisiteDecision = prerequisiteDecision == null
                     ? Optional.empty() : prerequisiteDecision;
+            capabilityScore = capabilityScore == null ? Optional.empty() : capabilityScore;
+            capabilityConfidence = capabilityConfidence == null
+                    ? Optional.empty() : capabilityConfidence;
+            capabilitySuggestedTier = capabilitySuggestedTier == null
+                    ? Optional.empty() : capabilitySuggestedTier;
+            authoredCapabilityTierDelta = authoredCapabilityTierDelta == null
+                    ? Optional.empty() : authoredCapabilityTierDelta;
+            capabilityWarnings = capabilityWarnings == null
+                    ? List.of() : capabilityWarnings.stream().distinct().sorted().toList();
             if (blueprintId == null || !validText(state)
                     || mechanicalScore.filter(value -> value < 0 || value > 100).isPresent()
                     || assignedRank.filter(value -> value < 0
@@ -398,7 +490,18 @@ public record ResearchTechTreeAuthoringReport(
                     || !validText(parentChoiceReason) || !validText(mergeReason)
                     || prerequisiteDecision.filter(value ->
                             !value.blueprintId().equals(blueprintId)).isPresent()
-                    || reviewFallbackReasons.stream().anyMatch(value -> !validText(value))) {
+                    || reviewFallbackReasons.stream().anyMatch(value -> !validText(value))
+                    || capabilityScore.filter(value -> value < 0 || value > 100).isPresent()
+                    || capabilityConfidence.filter(value -> value < 0 || value > 100).isPresent()
+                    || capabilitySuggestedTier.isPresent() != capabilityScore.isPresent()
+                    || capabilityConfidence.isPresent() != capabilityScore.isPresent()
+                    || authoredCapabilityTierDelta.filter(value ->
+                            value < -ResearchTechTreeContract.Tier.values().length + 1
+                                    || value > ResearchTechTreeContract.Tier.values().length - 1)
+                            .isPresent()
+                    || (authoredCapabilityTierDelta.isPresent()
+                            && capabilitySuggestedTier.isEmpty())
+                    || capabilityWarnings.stream().anyMatch(value -> !validText(value))) {
                 throw new IllegalArgumentException("Invalid Research Tech Tree authoring entry");
             }
         }

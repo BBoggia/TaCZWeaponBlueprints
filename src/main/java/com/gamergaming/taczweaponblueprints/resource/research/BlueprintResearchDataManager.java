@@ -2,22 +2,28 @@ package com.gamergaming.taczweaponblueprints.resource.research;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.compat.fzzy_config.BlueprintConfig;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
+import com.gamergaming.taczweaponblueprints.item.BlueprintData;
+import com.gamergaming.taczweaponblueprints.item.BlueprintKind;
 import com.gamergaming.taczweaponblueprints.journal.BlueprintJournalBuilder;
 import com.gamergaming.taczweaponblueprints.journal.BlueprintJournalSnapshot;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionConfigSnapshot;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionAccess;
+import com.gamergaming.taczweaponblueprints.progression.ResearchProgressionConnectivity;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeBuilder;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePublication;
@@ -331,6 +337,21 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
         return resolvePolicy(config, config.activeProfileId(), blueprintId, playerData);
     }
 
+    /**
+     * Creates one memoized effective-policy resolver for a server request. Use
+     * this when resolving a prerequisite closure so every lookup shares the same
+     * catalog/research revisions and connectivity cache.
+     */
+    public Function<ResourceLocation, BlueprintResearchPolicy> policyResolverFor(
+            IPlayerRecipeData playerData) {
+        BlueprintProgressionConfigSnapshot config = progressionConfig();
+        ResourceLocation profileId = config.activeProfileId();
+        return policyResolver(
+                resolutionContext(profileId, config),
+                profileId,
+                playerData);
+    }
+
     public BlueprintResearchPolicy policyFor(
             ResourceLocation profileId,
             ResourceLocation blueprintId,
@@ -402,6 +423,56 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
             ResourceLocation blueprintId,
             IPlayerRecipeData playerData) {
         ResolutionContext context = resolutionContext(profileId, config);
+        return policyResolver(context, profileId, playerData).apply(blueprintId);
+    }
+
+    private Function<ResourceLocation, BlueprintResearchPolicy> policyResolver(
+            ResolutionContext context,
+            ResourceLocation profileId,
+            IPlayerRecipeData playerData) {
+        Predicate<ResourceLocation> exempt = id -> BlueprintProgressionAccess.isProgressionExempt(
+                ModConfigs.BLUEPRINT.accessSnapshot(),
+                id,
+                context.catalog().blueprints().get(id));
+        Map<ResourceLocation, ResourceLocation> entryPointReplacements =
+                BlueprintResearchPolicyResolver.entryPointReplacements(
+                        context.research().snapshot(),
+                        context.catalog().blueprints(),
+                        profileId,
+                        ModConfigs.BLUEPRINT::isItemBlacklisted,
+                        exempt);
+        Map<ResourceLocation, BlueprintResearchPolicy> structuralPolicies = new HashMap<>();
+        Function<ResourceLocation, BlueprintResearchPolicy> structuralResolver =
+                id -> structuralPolicies.computeIfAbsent(
+                        id,
+                        key -> resolveStructuralPolicy(
+                                context,
+                                profileId,
+                                key,
+                                playerData,
+                                exempt,
+                                entryPointReplacements));
+        if (playerData == null) {
+            return structuralResolver;
+        }
+        ResearchProgressionConnectivity connectivity =
+                new ResearchProgressionConnectivity(
+                        playerData, structuralResolver, exempt);
+        Map<ResourceLocation, BlueprintResearchPolicy> effectivePolicies = new HashMap<>();
+        return id -> effectivePolicies.computeIfAbsent(id, key -> {
+            BlueprintResearchPolicy structural = structuralResolver.apply(key);
+            return structural.withPrerequisitesSatisfied(
+                    connectivity.requirementsSatisfied(structural));
+        });
+    }
+
+    private BlueprintResearchPolicy resolveStructuralPolicy(
+            ResolutionContext context,
+            ResourceLocation profileId,
+            ResourceLocation blueprintId,
+            IPlayerRecipeData playerData,
+            Predicate<ResourceLocation> exempt,
+            Map<ResourceLocation, ResourceLocation> entryPointReplacements) {
         BlueprintResearchPolicy datapackPolicy = BlueprintResearchPolicyResolver.resolve(
                 context.research().snapshot(),
                 context.catalog().blueprints(),
@@ -409,21 +480,22 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
                 blueprintId,
                 playerData,
                 ModConfigs.BLUEPRINT::isItemBlacklisted,
-                id -> BlueprintProgressionAccess.isProgressionExempt(
-                        ModConfigs.BLUEPRINT.accessSnapshot(),
-                        id,
-                        context.catalog().blueprints().get(id)));
+                exempt);
         return AutomaticWeaponPrerequisiteOverlay.apply(
-                config.apply(datapackPolicy),
+                context.config().apply(datapackPolicy),
                 context.automatic().prerequisitePlan().orElse(null),
                 playerData,
                 ModConfigs.BLUEPRINT::isItemBlacklisted,
-                config.maximumUndiscoveredVisibility().allowsServerSelection(),
+                context.config().maximumUndiscoveredVisibility().allowsServerSelection(),
                 context.catalog().blueprints()::containsKey,
-                id -> BlueprintProgressionAccess.isProgressionExempt(
-                        ModConfigs.BLUEPRINT.accessSnapshot(),
-                        id,
-                        context.catalog().blueprints().get(id)));
+                exempt,
+                entryPointReplacements,
+                context.research().snapshot().usesAutomaticWeaponPlacement(profileId)
+                        && isWeapon(context.catalog().blueprints().get(blueprintId)));
+    }
+
+    private static boolean isWeapon(BlueprintData data) {
+        return data != null && data.getKind() == BlueprintKind.GUN;
     }
 
     private ResolutionContext resolutionContext(

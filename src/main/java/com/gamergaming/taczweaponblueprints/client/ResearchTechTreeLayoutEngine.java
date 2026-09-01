@@ -240,22 +240,22 @@ public final class ResearchTechTreeLayoutEngine {
                 nodesBySemanticRank,
                 stableOrder,
                 policy.orderingSweeps());
+        AutomaticFamilyOrder familyOrder = AutomaticFamilyOrder.from(projection);
         List<Integer> semanticRanks = List.copyOf(nodesBySemanticRank.keySet());
         for (int semanticRank : semanticRanks) {
             List<ResourceLocation> nodes = nodesBySemanticRank.get(semanticRank);
             OptionalLegacyTier legacyTier = commonLegacyTier(projection, nodes);
             java.util.Optional<ResourceLocation> bandId = commonBandId(projection, nodes);
-            int rowCount = divideRoundUp(nodes.size(), rowCapacity);
-            int baseRowSize = nodes.size() / rowCount;
-            int largerRows = nodes.size() % rowCount;
-            int cursor = 0;
-            for (int wrapRow = 0; wrapRow < rowCount; wrapRow++) {
+            ResearchTechTreeVisualMotifPlanner.Plan motifPlan =
+                    ResearchTechTreeVisualMotifPlanner.partition(
+                            nodes, rowCapacity, familyOrder::matureFamily);
+            for (int wrapRow = 0; wrapRow < motifPlan.rows().size(); wrapRow++) {
                 int rank = nextRank++;
                 rowByRank.put(rank,
                         new VisualRow(semanticRank, wrapRow, legacyTier, bandId));
-                int rowSize = baseRowSize + (wrapRow < largerRows ? 1 : 0);
-                for (int index = 0; index < rowSize; index++) {
-                    ResourceLocation nodeId = nodes.get(cursor++);
+                List<ResourceLocation> row = motifPlan.rows().get(wrapRow);
+                for (int index = 0; index < row.size(); index++) {
+                    ResourceLocation nodeId = row.get(index);
                     rankByNode.put(nodeId, rank);
                     orderByNode.put(nodeId, index);
                 }
@@ -338,6 +338,15 @@ public final class ResearchTechTreeLayoutEngine {
         dependents.values().forEach(values -> values.sort(stableOrder));
         AutomaticFamilyOrder familyOrder = AutomaticFamilyOrder.from(projection);
 
+        /*
+         * Family cohesion is a presentation invariant, not an optimization
+         * sweep. Apply it once even for a single-rank tree or a policy with
+         * zero ordering sweeps; later barycentric passes re-apply it after
+         * every rank sort.
+         */
+        nodesByRank.values().forEach(nodes ->
+                cohereAutomaticFamilies(nodes, familyOrder, stableOrder));
+
         List<Integer> ranks = List.copyOf(nodesByRank.keySet());
         for (int sweep = 0; sweep < sweeps; sweep++) {
             Map<ResourceLocation, Integer> order = semanticOrderIndex(nodesByRank);
@@ -381,7 +390,7 @@ public final class ResearchTechTreeLayoutEngine {
                     membersByFamily.computeIfAbsent(
                             family, ignored -> new ArrayList<>()).add(nodeId));
         }
-        if (membersByFamily.size() < 2) {
+        if (membersByFamily.isEmpty()) {
             return;
         }
 
@@ -484,12 +493,11 @@ public final class ResearchTechTreeLayoutEngine {
                 ranks.put(placement.nodeId(), branch.rankIndex());
             }
             return familyStart == null
-                    || families.values().stream().distinct().count() < 2L
-                            ? NONE
-                            : new AutomaticFamilyOrder(
-                                    Map.copyOf(families),
-                                    Map.copyOf(ranks),
-                                    familyStart);
+                    ? NONE
+                    : new AutomaticFamilyOrder(
+                            Map.copyOf(families),
+                            Map.copyOf(ranks),
+                            familyStart);
         }
     }
 
@@ -624,6 +632,8 @@ public final class ResearchTechTreeLayoutEngine {
         }
         boolean[] clearanceAbove = new boolean[visualRows.rowByRank().size()];
         boolean[] clearanceBelow = new boolean[visualRows.rowByRank().size()];
+        int[] requirementJunctionClearanceBelow =
+                requirementJunctionClearanceBelow(projection, visualRows);
         for (ResearchTechTreeProjection.BoundaryLink link : projection.boundaryLinks()) {
             int rank = visualRows.rankByNode().get(link.localNodeId());
             if (link.direction() == ResearchTechTreeProjection.Direction.UNLOCK) {
@@ -649,6 +659,8 @@ public final class ResearchTechTreeLayoutEngine {
                 }
                 yByVisualRank[visualRank] = nextY;
                 nextY = addExact(nextY, ResearchTreeLayout.NODE_HEIGHT);
+                nextY = addExact(
+                        nextY, requirementJunctionClearanceBelow[visualRank]);
                 if (clearanceBelow[visualRank]) {
                     nextY = addExact(nextY, policy.portalClearance());
                 }
@@ -690,6 +702,34 @@ public final class ResearchTechTreeLayoutEngine {
                 List.copyOf(tiers),
                 List.copyOf(bands),
                 canvasHeight);
+    }
+
+    /**
+     * Reserves only the additional clearance required when one dependent owns
+     * several drawable any-of junctions. The ordinary row gap already carries
+     * the first junction, so singleton and one-junction nodes add no height.
+     */
+    private static int[] requirementJunctionClearanceBelow(
+            ResearchTechTreeProjection projection,
+            VisualRows visualRows) {
+        Map<ResourceLocation, Integer> drawableGroupsByDependent = new HashMap<>();
+        projection.graph().requirementGroups().forEach(group -> {
+            int alternativeCount = group.visibleAlternativeIds().size()
+                    + group.hiddenAlternativeCount()
+                    + group.externalAlternativeCount();
+            if (alternativeCount > 1 && !group.visibleAlternativeIds().isEmpty()) {
+                drawableGroupsByDependent.merge(
+                        group.dependentId(), 1, Math::addExact);
+            }
+        });
+        int[] result = new int[visualRows.rowByRank().size()];
+        drawableGroupsByDependent.forEach((dependentId, groupCount) -> {
+            int visualRank = visualRows.rankByNode().get(dependentId);
+            result[visualRank] = Math.max(
+                    result[visualRank],
+                    ResearchTechTreeLayoutPolicy.requirementJunctionClearance(groupCount));
+        });
+        return result;
     }
 
     private static boolean progressionBandsAreCoherent(

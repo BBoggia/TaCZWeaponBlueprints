@@ -1,0 +1,30 @@
+{
+  "format": 1,
+  "profile": "taczweaponblueprints:duplicate_recovery",
+  "priority": 100,
+  "target": {
+    "blueprints": [
+      "tacz:aug",
+      "tacz:db_long",
+      "tacz:db_short",
+      "tacz:hk_mp5a5",
+      "tacz:m1014",
+      "tacz:m249",
+      "tacz:m870",
+      "tacz:p90",
+      "tacz:rhino357",
+      "tacz:spas_12",
+      "tacz:springfield1873",
+      "tacz:vector45"
+    ]
+  },
+  "visibility": "full",
+  "tree_enabled": true,
+  "research_cost": {
+    "points": 6,
+    "ingredients": [
+      { "items": ["minecraft:paper"], "count": 3 },
+      { "items": ["minecraft:iron_ingot"], "count": 2 }
+    ]
+  }
+}

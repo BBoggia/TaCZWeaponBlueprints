@@ -392,6 +392,10 @@ public final class AutomaticWeaponRankFinalizer {
             }
         }
         Map<Integer, Long> automaticWidths = widths;
+        int maximumAutomaticEdgeSpan = ResearchTechTreeContract.automaticEdgeRankSpanLimit(
+                automaticWidths.size(),
+                com.gamergaming.taczweaponblueprints.resource.research
+                        .BlueprintResearchSnapshot.MAX_PREREQUISITE_DEPTH);
         authoredRanks.forEach((profile, ranks) -> {
             Map<Integer, Long> authoredWidths = new HashMap<>();
             ranks.values().forEach(rank ->
@@ -412,6 +416,14 @@ public final class AutomaticWeaponRankFinalizer {
             if (prerequisiteRank >= dependentRank) {
                 throw new IllegalStateException(
                         "Automatic rank finalization retained a same-rank or backward edge");
+            }
+            if (!mixedTopology
+                    && dependentRank - prerequisiteRank
+                            > maximumAutomaticEdgeSpan) {
+                throw new IllegalStateException(
+                        "Automatic rank finalization retained an edge spanning more than "
+                                + maximumAutomaticEdgeSpan
+                                + " ranks");
             }
         }));
         for (AutomaticWeaponPrerequisitePlan plan : plans) {

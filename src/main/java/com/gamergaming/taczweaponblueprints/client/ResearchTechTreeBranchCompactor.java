@@ -250,7 +250,8 @@ final class ResearchTechTreeBranchCompactor {
         int initial = evidenceAdjustedInitialGutter(
                 nodeGap,
                 rankPressure.maximumFanOut(),
-                rankPressure.hasCrossing());
+                rankPressure.hasCrossing(),
+                rankPressure.maximumAlternativeCount());
         int mature = Math.addExact(
                 nodeGap, Math.floorDiv(ResearchTreeLayout.NODE_WIDTH, 2));
         return Math.addExact(
@@ -263,7 +264,16 @@ final class ResearchTechTreeBranchCompactor {
             int nodeGap,
             int maximumFanOut,
             boolean hasCrossing) {
-        if (nodeGap < 0 || maximumFanOut < 0) {
+        return evidenceAdjustedInitialGutter(
+                nodeGap, maximumFanOut, hasCrossing, 1);
+    }
+
+    static int evidenceAdjustedInitialGutter(
+            int nodeGap,
+            int maximumFanOut,
+            boolean hasCrossing,
+            int maximumAlternativeCount) {
+        if (nodeGap < 0 || maximumFanOut < 0 || maximumAlternativeCount < 0) {
             throw new IllegalArgumentException(
                     "Research Tech Tree branch pressure cannot be negative");
         }
@@ -273,6 +283,9 @@ final class ResearchTechTreeBranchCompactor {
         }
         if (hasCrossing) {
             result = Math.addExact(result, divideRoundUp(nodeGap, 8));
+        }
+        if (maximumAlternativeCount >= 2) {
+            result = Math.addExact(result, divideRoundUp(nodeGap, 6));
         }
         return Math.min(nodeGap, result);
     }
@@ -341,11 +354,14 @@ final class ResearchTechTreeBranchCompactor {
                         Map.of(), Map.of(), Integer.MAX_VALUE, Integer.MAX_VALUE);
     }
 
-    private record RankPressure(int maximumFanOut, boolean hasCrossing) {
-        private static final RankPressure NONE = new RankPressure(0, false);
+    private record RankPressure(
+            int maximumFanOut,
+            boolean hasCrossing,
+            int maximumAlternativeCount) {
+        private static final RankPressure NONE = new RankPressure(0, false, 0);
 
         private RankPressure {
-            if (maximumFanOut < 0) {
+            if (maximumFanOut < 0 || maximumAlternativeCount < 0) {
                 throw new IllegalArgumentException(
                         "Research Tech Tree rank pressure cannot be negative");
             }
@@ -368,11 +384,19 @@ final class ResearchTechTreeBranchCompactor {
             Map<Integer, Map<ResourceLocation, Integer>> fanOutByRank =
                     new LinkedHashMap<>();
             Map<Integer, List<ResearchTreeGraph.Edge>> edgesByRank = new LinkedHashMap<>();
+            Map<Integer, Integer> alternativesByRank = new LinkedHashMap<>();
             projection.graph().edges().forEach(edge -> {
                 int rank = semanticRankIndex.get(edge.dependentId());
                 fanOutByRank.computeIfAbsent(rank, ignored -> new LinkedHashMap<>())
                         .merge(edge.prerequisiteId(), 1, Math::addExact);
                 edgesByRank.computeIfAbsent(rank, ignored -> new ArrayList<>()).add(edge);
+            });
+            projection.graph().requirementGroups().forEach(group -> {
+                int rank = semanticRankIndex.get(group.dependentId());
+                int alternatives = group.visibleAlternativeIds().size()
+                        + group.hiddenAlternativeCount()
+                        + group.externalAlternativeCount();
+                alternativesByRank.merge(rank, alternatives, Math::max);
             });
             Map<Integer, RankPressure> result = new LinkedHashMap<>();
             edgesByRank.forEach((rank, edges) -> result.put(
@@ -380,7 +404,8 @@ final class ResearchTechTreeBranchCompactor {
                     new RankPressure(
                             fanOutByRank.get(rank).values().stream()
                                     .mapToInt(Integer::intValue).max().orElse(0),
-                            hasCrossing(edges, kernel))));
+                            hasCrossing(edges, kernel),
+                            alternativesByRank.getOrDefault(rank, 0))));
             return new TopologyPressure(result);
         }
 

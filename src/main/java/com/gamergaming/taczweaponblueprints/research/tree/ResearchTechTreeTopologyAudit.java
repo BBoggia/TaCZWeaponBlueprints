@@ -87,10 +87,20 @@ public final class ResearchTechTreeTopologyAudit {
         Map<ResourceLocation, Set<ResourceLocation>> adjacency = new LinkedHashMap<>();
         Map<ResourceLocation, Set<ResourceLocation>> dependents = new LinkedHashMap<>();
         Map<ResourceLocation, List<ResourceLocation>> prerequisites = new LinkedHashMap<>();
+        Map<ResourceLocation, List<List<ResourceLocation>>> requirementGroups =
+                new LinkedHashMap<>();
         members.forEach(id -> {
             adjacency.put(id, new LinkedHashSet<>());
             dependents.put(id, new LinkedHashSet<>());
             prerequisites.put(id, new ArrayList<>());
+            List<List<ResourceLocation>> groups = graph.requirementGroupsOf(id).stream()
+                    .map(group -> group.visibleAlternativeIds().stream()
+                            .filter(alternative ->
+                                    domainByNode.get(alternative) == domain.domain())
+                            .toList())
+                    .filter(alternatives -> !alternatives.isEmpty())
+                    .toList();
+            requirementGroups.put(id, groups);
         });
 
         int internalEdges = 0;
@@ -127,7 +137,7 @@ public final class ResearchTechTreeTopologyAudit {
         }
 
         Set<ResourceLocation> roots = new LinkedHashSet<>();
-        prerequisites.forEach((id, values) -> {
+        requirementGroups.forEach((id, values) -> {
             if (values.isEmpty()) {
                 roots.add(id);
             }
@@ -142,7 +152,7 @@ public final class ResearchTechTreeTopologyAudit {
         int emptyRankCount = Math.subtractExact(
                 Math.addExact(Math.subtractExact(maximumRank, minimumRank), 1),
                 rankPopulations.size());
-        int mergeCount = (int) prerequisites.values().stream()
+        int mergeCount = (int) requirementGroups.values().stream()
                 .filter(values -> values.size() > 1).count();
         int automaticCount = (int) presentationById.values().stream()
                 .filter(member -> member.origin() == PlacementOrigin.AUTOMATIC).count();
@@ -158,13 +168,14 @@ public final class ResearchTechTreeTopologyAudit {
                 roots,
                 componentCount(adjacency),
                 reachableCount(roots, dependents),
-                prerequisites.values().stream().mapToInt(List::size).max().orElse(0),
+                requirementGroups.values().stream().mapToInt(List::size).max().orElse(0),
                 dependents.values().stream().mapToInt(Set::size).max().orElse(0),
                 maximumDepth(members, prerequisites),
                 rankPopulations.values().stream().mapToInt(Integer::intValue).max().orElse(0),
                 emptyRankCount,
                 mergeCount,
-                crossBranchMergeCount(roots, dependents, prerequisites),
+                crossBranchMergeCount(
+                        roots, dependents, prerequisites, requirementGroups),
                 approximateCrossings(rankedEdges, presentationById),
                 totalEdgeRankSpan,
                 maximumEdgeRankSpan,
@@ -248,7 +259,8 @@ public final class ResearchTechTreeTopologyAudit {
     private static int crossBranchMergeCount(
             Set<ResourceLocation> roots,
             Map<ResourceLocation, Set<ResourceLocation>> dependents,
-            Map<ResourceLocation, List<ResourceLocation>> prerequisites) {
+            Map<ResourceLocation, List<ResourceLocation>> prerequisites,
+            Map<ResourceLocation, List<List<ResourceLocation>>> requirementGroups) {
         Set<ResourceLocation> seeds = new LinkedHashSet<>();
         if (roots.size() == 1) {
             ResourceLocation root = roots.iterator().next();
@@ -260,15 +272,40 @@ public final class ResearchTechTreeTopologyAudit {
             seeds.addAll(roots);
         }
         Map<ResourceLocation, Set<ResourceLocation>> memo = new LinkedHashMap<>();
+        boolean singletonOnly = requirementGroups.values().stream()
+                .flatMap(List::stream)
+                .allMatch(group -> group.size() == 1);
+        if (singletonOnly) {
+            int legacyCount = 0;
+            for (List<ResourceLocation> parents : prerequisites.values()) {
+                if (parents.size() < 2) {
+                    continue;
+                }
+                Set<ResourceLocation> lineages = new LinkedHashSet<>();
+                parents.forEach(parent -> lineages.addAll(branchSeeds(
+                        parent, seeds, prerequisites, memo, new LinkedHashSet<>())));
+                if (lineages.size() > 1) {
+                    legacyCount++;
+                }
+            }
+            return legacyCount;
+        }
         int count = 0;
-        for (List<ResourceLocation> parents : prerequisites.values()) {
-            if (parents.size() < 2) {
+        for (List<List<ResourceLocation>> groups : requirementGroups.values()) {
+            if (groups.size() < 2 || groups.stream().anyMatch(List::isEmpty)) {
                 continue;
             }
-            Set<ResourceLocation> lineages = new LinkedHashSet<>();
-            parents.forEach(parent -> lineages.addAll(branchSeeds(
-                    parent, seeds, prerequisites, memo, new LinkedHashSet<>())));
-            if (lineages.size() > 1) {
+            List<Set<ResourceLocation>> groupLineages = groups.stream().map(parents -> {
+                Set<ResourceLocation> lineages = new LinkedHashSet<>();
+                parents.forEach(parent -> lineages.addAll(branchSeeds(
+                        parent, seeds, prerequisites, memo, new LinkedHashSet<>())));
+                return lineages;
+            }).toList();
+            Set<ResourceLocation> shared = new LinkedHashSet<>(groupLineages.get(0));
+            groupLineages.stream().skip(1).forEach(shared::retainAll);
+            Set<ResourceLocation> combined = new LinkedHashSet<>();
+            groupLineages.forEach(combined::addAll);
+            if (shared.isEmpty() && combined.size() > 1) {
                 count++;
             }
         }

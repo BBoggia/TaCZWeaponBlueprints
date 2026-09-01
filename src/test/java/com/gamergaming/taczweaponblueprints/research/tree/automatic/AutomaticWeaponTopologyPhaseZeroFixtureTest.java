@@ -9,6 +9,8 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchGroupedRouteBaselineAudit;
+
 class AutomaticWeaponTopologyPhaseZeroFixtureTest {
     @Test
     void currentTopologyBaselinesCoverRepresentativeCatalogSizes() {
@@ -124,6 +126,188 @@ class AutomaticWeaponTopologyPhaseZeroFixtureTest {
                 14,
                 "f9cebd10489f3577af98cb83439df48467c8eddf7f498f45d55f6321dae882c5"),
                 forward);
+    }
+
+    @Test
+    void groupedRouteCounterfactualIsCharacterizedAtRepresentativeScales() {
+        List<AutomaticWeaponTopologyPhaseZeroFixture.GroupedRouteBaseline> actual = List.of(
+                AutomaticWeaponTopologyPhaseZeroFixture.groupedRouteBaseline(
+                        AutomaticWeaponTopologyPhaseZeroFixture.packagedScale()),
+                AutomaticWeaponTopologyPhaseZeroFixture.groupedRouteBaseline(
+                        AutomaticWeaponTopologyPhaseZeroFixture.largeAddon()));
+
+        assertEquals(List.of(
+                new AutomaticWeaponTopologyPhaseZeroFixture.GroupedRouteBaseline(
+                        "packaged_scale",
+                        53,
+                        68,
+                        34,
+                        17,
+                        17,
+                        0,
+                        2,
+                        4,
+                        new ResearchGroupedRouteBaselineAudit.IntDistribution(
+                                40, 1, 1, 3, 3, 7),
+                        new ResearchGroupedRouteBaselineAudit.AlternativeEvidence(
+                                17,
+                                0,
+                                new ResearchGroupedRouteBaselineAudit.IntDistribution(
+                                        17, 0, 2_000, 3_333, 4_000, 4_000),
+                                new ResearchGroupedRouteBaselineAudit.IntDistribution(
+                                        17, 6_000, 8_000, 10_000, 10_000, 10_000),
+                                new ResearchGroupedRouteBaselineAudit.IntDistribution(
+                                        17, 4_286, 7_143, 10_000, 10_000, 10_000)),
+                        new ResearchGroupedRouteBaselineAudit.RouteCostComparison(
+                                13,
+                                128,
+                                new ResearchGroupedRouteBaselineAudit.LongDistribution(
+                                        13, 32, 56, 88, 96, 96),
+                                new ResearchGroupedRouteBaselineAudit.LongDistribution(
+                                        13, 24, 32, 48, 48, 48),
+                                new ResearchGroupedRouteBaselineAudit.LongDistribution(
+                                        13, 24, 40, 48, 56, 56),
+                                13,
+                                13,
+                                true),
+                        "78ecab68f806c1af6262c48ba9a206534a9455ebe37a37a8b83788c59e3ad857"),
+                new AutomaticWeaponTopologyPhaseZeroFixture.GroupedRouteBaseline(
+                        "large_addon",
+                        287,
+                        459,
+                        111,
+                        174,
+                        174,
+                        0,
+                        2,
+                        6,
+                        new ResearchGroupedRouteBaselineAudit.IntDistribution(
+                                260, 1, 1, 3, 3, 10),
+                        new ResearchGroupedRouteBaselineAudit.AlternativeEvidence(
+                                174,
+                                0,
+                                new ResearchGroupedRouteBaselineAudit.IntDistribution(
+                                        174, 3_333, 5_556, 9_000, 9_231, 9_375),
+                                new ResearchGroupedRouteBaselineAudit.IntDistribution(
+                                        174, 625, 4_444, 6_667, 6_667, 6_667),
+                                new ResearchGroupedRouteBaselineAudit.IntDistribution(
+                                        174, 6_786, 10_000, 10_000, 10_000, 10_000)),
+                        new ResearchGroupedRouteBaselineAudit.RouteCostComparison(
+                                27,
+                                128,
+                                new ResearchGroupedRouteBaselineAudit.LongDistribution(
+                                        27, 104, 312, 360, 368, 368),
+                                new ResearchGroupedRouteBaselineAudit.LongDistribution(
+                                        27, 48, 112, 120, 120, 120),
+                                new ResearchGroupedRouteBaselineAudit.LongDistribution(
+                                        27, 48, 112, 120, 128, 128),
+                                6,
+                                27,
+                                true),
+                        "052e3b1daeb3c539f4715ba6fba28171448f78eb14f2b2aeeebf744f646ddf62")),
+                actual);
+    }
+
+    @Test
+    void groupedRouteCounterfactualIsIndependentOfCandidateIterationOrder() {
+        for (AutomaticWeaponTopologyPhaseZeroFixture.Scenario scenario : List.of(
+                AutomaticWeaponTopologyPhaseZeroFixture.packagedScale(),
+                AutomaticWeaponTopologyPhaseZeroFixture.largeAddon())) {
+            assertEquals(
+                    AutomaticWeaponTopologyPhaseZeroFixture.groupedRouteBaseline(scenario),
+                    AutomaticWeaponTopologyPhaseZeroFixture.groupedRouteBaseline(
+                            scenario, true));
+            assertEquals(
+                    AutomaticWeaponTopologyPhaseZeroFixture.groupedRouteAudit(
+                            scenario, false),
+                    AutomaticWeaponTopologyPhaseZeroFixture.groupedRouteAudit(
+                            scenario, true));
+        }
+    }
+
+    @Test
+    void groupedRoutePhaseAndBranchEvidenceCoversEveryAutomaticDecision() {
+        var audit = AutomaticWeaponTopologyPhaseZeroFixture.groupedRouteAudit(
+                AutomaticWeaponTopologyPhaseZeroFixture.largeAddon(), false);
+
+        assertEquals(
+                List.of(2, 111, 51, 69, 54),
+                audit.strategies().stream()
+                        .map(ResearchGroupedRouteBaselineAudit.StrategySummary::targetCount)
+                        .toList());
+        assertEquals(
+                List.of(0, 202, 102, 90, 65),
+                audit.strategies().stream()
+                        .map(ResearchGroupedRouteBaselineAudit.StrategySummary
+                                ::parentReferenceCount)
+                        .toList());
+        assertEquals(
+                List.of(0, 91, 51, 21, 11),
+                audit.strategies().stream()
+                        .map(ResearchGroupedRouteBaselineAudit.StrategySummary
+                                ::multiParentTargetCount)
+                        .toList());
+        assertEquals(
+                List.of(0, 90, 68, 90, 65),
+                audit.strategies().stream()
+                        .map(ResearchGroupedRouteBaselineAudit.StrategySummary
+                                ::sameFamilyReferenceCount)
+                        .toList());
+        assertEquals(
+                List.of(0, 112, 34, 0, 0),
+                audit.strategies().stream()
+                        .map(ResearchGroupedRouteBaselineAudit.StrategySummary
+                                ::crossFamilyReferenceCount)
+                        .toList());
+        assertEquals(
+                List.of(0, 68, 26, 9, 7),
+                audit.strategies().stream()
+                        .map(ResearchGroupedRouteBaselineAudit.StrategySummary
+                                ::closureInflationRejectionCount)
+                        .toList());
+        assertEquals(
+                List.of(0, 3, 4, 2, 2),
+                audit.strategies().stream()
+                        .map(value -> value.parentFanOut().percentile95())
+                        .toList());
+        assertEquals(
+                List.of(0, 10, 7, 2, 2),
+                audit.strategies().stream()
+                        .map(value -> value.parentFanOut().maximum())
+                        .toList());
+        assertEquals(
+                List.of(
+                        new ResearchGroupedRouteBaselineAudit.BranchEntrySummary(
+                                0, 4, 0, 4, 8),
+                        new ResearchGroupedRouteBaselineAudit.BranchEntrySummary(
+                                1, 4, 0, 4, 8),
+                        new ResearchGroupedRouteBaselineAudit.BranchEntrySummary(
+                                2, 4, 0, 4, 8),
+                        new ResearchGroupedRouteBaselineAudit.BranchEntrySummary(
+                                4, 4, 0, 4, 8),
+                        new ResearchGroupedRouteBaselineAudit.BranchEntrySummary(
+                                5, 4, 0, 4, 8)),
+                audit.branchEntries());
+        assertEquals(
+                audit.automaticTargetCount(),
+                audit.strategies().stream()
+                        .mapToInt(ResearchGroupedRouteBaselineAudit.StrategySummary::targetCount)
+                        .sum());
+        assertEquals(
+                audit.generatedReferenceCount(),
+                audit.strategies().stream()
+                        .mapToInt(ResearchGroupedRouteBaselineAudit.StrategySummary
+                                ::parentReferenceCount)
+                        .sum());
+        assertEquals(
+                audit.alternativeGroupCandidateCount(),
+                audit.strategies().stream()
+                        .mapToInt(ResearchGroupedRouteBaselineAudit.StrategySummary
+                                ::multiParentTargetCount)
+                        .sum());
+        assertFalse(audit.branchEntries().isEmpty());
+        assertTrue(audit.branchEntries().stream()
+                .allMatch(entry -> entry.parentReferenceCount() >= entry.targetCount()));
     }
 
     @Test

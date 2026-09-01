@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchResearchAction;
 import com.gamergaming.taczweaponblueprints.menu.ResearchSelectionPreview;
+import com.gamergaming.taczweaponblueprints.progression.ResearchCostMode;
 
 import io.netty.buffer.Unpooled;
 import net.minecraft.network.FriendlyByteBuf;
@@ -95,6 +96,25 @@ class ResearchBenchPacketTest {
     }
 
     @Test
+    void boundedPathPlanningFailuresRoundTripAsAppendOnlyActionResults() {
+        for (ResearchBenchMenu.ActionResultCode code : List.of(
+                ResearchBenchMenu.ActionResultCode.PATH_TOO_LARGE,
+                ResearchBenchMenu.ActionResultCode.ROUTE_TOO_COMPLEX)) {
+            ResearchBenchMenu.ActionResult result = new ResearchBenchMenu.ActionResult(
+                    ResearchBenchResearchAction.RESEARCH,
+                    Optional.of(BLUEPRINT),
+                    code);
+            FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+            try {
+                new ResearchBenchActionResultPacket(7, 94, result).toBytes(buffer);
+                assertEquals(result, new ResearchBenchActionResultPacket(buffer).result());
+            } finally {
+                buffer.release();
+            }
+        }
+    }
+
+    @Test
     void actionResultsRejectInvalidCorrelationAndSemanticCombinations() {
         assertThrows(IllegalArgumentException.class, () ->
                 new ResearchBenchActionResultPacket(
@@ -146,6 +166,122 @@ class ResearchBenchPacketTest {
     }
 
     @Test
+    void pathPreviewRoundTripsAggregateCountsAndTruncatedMaterials() {
+        ResearchSelectionPreview preview = new ResearchSelectionPreview(
+                Optional.of(BLUEPRINT),
+                42,
+                80,
+                true,
+                false,
+                true,
+                false,
+                false,
+                List.of(new ResearchSelectionPreview.IngredientPreview(
+                        List.of(new ResourceLocation("minecraft:paper")),
+                        Optional.empty(),
+                        12,
+                        12)),
+                5,
+                3);
+        FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            new SyncResearchBenchPreviewPacket(9, preview).toBytes(buffer);
+            ResearchSelectionPreview decoded =
+                    new SyncResearchBenchPreviewPacket(buffer).preview();
+            assertEquals(preview, decoded);
+            assertEquals(5, decoded.unlockCount());
+            assertEquals(2, decoded.additionalIngredientTypes());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    void effectiveResearchCostModeRoundTripsAndRejectsUnknownValues() {
+        ResearchSelectionPreview preview = new ResearchSelectionPreview(
+                Optional.of(BLUEPRINT),
+                0,
+                80,
+                true,
+                true,
+                true,
+                true,
+                false,
+                List.of(new ResearchSelectionPreview.IngredientPreview(
+                        List.of(new ResourceLocation("minecraft:paper")),
+                        Optional.empty(),
+                        3,
+                        3)),
+                1,
+                1,
+                ResearchSelectionPreview.PathPlanningState.NONE,
+                ResearchCostMode.ITEMS_ONLY);
+        FriendlyByteBuf roundTrip = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            new SyncResearchBenchPreviewPacket(9, preview).toBytes(roundTrip);
+            assertEquals(preview, new SyncResearchBenchPreviewPacket(roundTrip).preview());
+        } finally {
+            roundTrip.release();
+        }
+
+        FriendlyByteBuf invalid = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            new SyncResearchBenchPreviewPacket(9, preview).toBytes(invalid);
+            invalid.setByte(invalid.writerIndex() - 1, ResearchCostMode.values().length);
+            assertThrows(
+                    IllegalArgumentException.class,
+                    () -> new SyncResearchBenchPreviewPacket(invalid));
+        } finally {
+            invalid.release();
+        }
+    }
+
+    @Test
+    void boundedPathPlanningStateRoundTripsAndRejectsUnknownOrdinals() {
+        ResearchSelectionPreview preview = new ResearchSelectionPreview(
+                Optional.of(BLUEPRINT),
+                0,
+                80,
+                false,
+                true,
+                true,
+                false,
+                false,
+                List.of(),
+                1,
+                0,
+                ResearchSelectionPreview.PathPlanningState.PATH_TOO_LARGE);
+        FriendlyByteBuf roundTrip = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            new SyncResearchBenchPreviewPacket(9, preview).toBytes(roundTrip);
+            assertEquals(preview, new SyncResearchBenchPreviewPacket(roundTrip).preview());
+        } finally {
+            roundTrip.release();
+        }
+
+        FriendlyByteBuf invalid = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            invalid.writeVarInt(1);
+            invalid.writeBoolean(false);
+            invalid.writeVarInt(0);
+            invalid.writeVarInt(0);
+            invalid.writeBoolean(false);
+            invalid.writeBoolean(false);
+            invalid.writeBoolean(false);
+            invalid.writeBoolean(false);
+            invalid.writeBoolean(false);
+            invalid.writeVarInt(0);
+            invalid.writeVarInt(0);
+            invalid.writeVarInt(ResearchSelectionPreview.PathPlanningState.values().length);
+            assertThrows(
+                    IllegalArgumentException.class,
+                    () -> new SyncResearchBenchPreviewPacket(invalid));
+        } finally {
+            invalid.release();
+        }
+    }
+
+    @Test
     void previewRejectsExcessIngredientTypesDuringDecode() {
         FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
         try {
@@ -158,6 +294,9 @@ class ResearchBenchPacketTest {
             buffer.writeBoolean(false);
             buffer.writeBoolean(false);
             buffer.writeBoolean(false);
+            buffer.writeVarInt(0);
+            buffer.writeVarInt(0);
+            buffer.writeVarInt(ResearchSelectionPreview.PathPlanningState.NONE.ordinal());
             buffer.writeVarInt(7);
             assertThrows(IllegalArgumentException.class, () -> new SyncResearchBenchPreviewPacket(buffer));
         } finally {

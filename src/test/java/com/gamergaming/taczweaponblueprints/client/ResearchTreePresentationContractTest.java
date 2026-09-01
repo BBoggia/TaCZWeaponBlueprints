@@ -242,7 +242,7 @@ class ResearchTreePresentationContractTest {
     }
 
     @Test
-    void fullscreenPrimaryEntryAlwaysReturnsToTheOtherBrowseView() {
+    void legacyViewActionsRemainDormantWhilePlayerCycleStaysOnTechTree() {
         assertEquals(
                 ResearchTreePresentationContract.FullscreenViewAction.SHOW_ALL_WEAPONS,
                 ResearchTreePresentationContract.fullscreenViewAction(
@@ -264,9 +264,22 @@ class ResearchTreePresentationContractTest {
                 ResearchTreePresentationContract.nextBrowseView(
                         ResearchTreePresentationContract.BrowseView.ALL_WEAPONS, true));
         assertEquals(
-                ResearchTreePresentationContract.BrowseView.BRANCHES,
+                ResearchTreePresentationContract.BrowseView.TECH_TREE,
                 ResearchTreePresentationContract.nextBrowseView(
                         ResearchTreePresentationContract.BrowseView.ALL_WEAPONS, false));
+        assertEquals(
+                ResearchTreePresentationContract.BrowseView.TECH_TREE,
+                ResearchTreePresentationContract.nextBrowseView(
+                        ResearchTreePresentationContract.BrowseView.TECH_TREE, false));
+        assertEquals(
+                java.util.List.of(ResearchTreePresentationContract.BrowseView.TECH_TREE),
+                ResearchTreePresentationContract.PLAYER_BROWSE_VIEWS);
+        assertFalse(ResearchTreePresentationContract.browseViewSelectorVisible());
+        assertFalse(ResearchTreePresentationContract.legacyBrowseViewsVisible());
+        assertEquals(
+                ResearchTreePresentationContract.BrowseView.TECH_TREE,
+                ResearchTreePresentationContract.retainPlayerBrowseView(
+                        ResearchTreePresentationContract.BrowseView.BRANCHES));
         assertThrows(
                 IllegalArgumentException.class,
                 () -> ResearchTreePresentationContract.fullscreenViewAction(null));
@@ -325,9 +338,9 @@ class ResearchTreePresentationContractTest {
     }
 
     @Test
-    void branchesAreTheDefaultAndSidebarSelectionHasViewSpecificMeaning() {
+    void techTreeIsTheDefaultWhileDormantLegacySelectionRetainsItsSemantics() {
         assertEquals(
-                ResearchTreePresentationContract.BrowseView.BRANCHES,
+                ResearchTreePresentationContract.BrowseView.TECH_TREE,
                 ResearchTreePresentationContract.DEFAULT_BROWSE_VIEW);
         assertEquals(
                 ResearchTreePresentationContract.GroupSelectionAction.SHOW_GROUP,

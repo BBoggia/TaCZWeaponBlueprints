@@ -71,10 +71,13 @@ class TaCZGunPackExtractorTest {
         assertEquals("rifle", sample.gunType());
         assertEquals(9.0, sample.baseDamage());
         assertEquals(60.0, sample.effectiveRange());
-        assertEquals(2.6, sample.reloadSeconds());
-        assertEquals(1.2, sample.recoilMagnitude());
+        assertEquals(2.6, sample.reloadSeconds(), 0.0001);
+        assertEquals(1.2, sample.recoilMagnitude(), 0.0001);
         assertEquals(2, sample.fireModeCount());
         assertEquals(2, sample.attachmentTypeCount());
+        assertEquals(1, sample.projectileCount());
+        assertEquals(8.0 / 9.0, sample.damageRetention(), 0.0001);
+        assertEquals(2.0, sample.tacticalReloadSeconds(), 0.0001);
         assertFalse(sample.sourceHash().isBlank());
         assertEquals(0, sample.missingFields().size());
     }
@@ -163,6 +166,60 @@ class TaCZGunPackExtractorTest {
         TaCZGunStats tube = new TaCZGunPackExtractor().extract(temporaryDirectory).get(0);
 
         assertEquals(4.16, tube.reloadSeconds(), 0.0001);
+    }
+
+    @Test
+    void extractsBurstHeatAndExplosionCapabilitiesUsingTaCZFieldNames()
+            throws IOException {
+        write("data/test/recipes/gun/capability.json", """
+                {"result":{"type":"gun","id":"test:capability"}}
+                """);
+        write("data/test/index/guns/capability.json", """
+                {"type":"rpg","data":"test:capability_data"}
+                """);
+        write("data/test/data/guns/capability_data.json", """
+                {
+                  "rpm":120,
+                  "ammo_amount":1,
+                  "bullet":{
+                    "bullet_amount":3,
+                    "damage":10,
+                    "speed":60,
+                    "life":5,
+                    "gravity":0.15,
+                    "ignite":{"entity":true,"block":false},
+                    "ignite_entity_time":2,
+                    "explosion":{"explode":true,"damage":50,"radius":6,
+                                 "knockback":true,"delay":30}
+                  },
+                  "reload":{"type":"magazine","cooldown":{"empty":3,"tactical":2}},
+                  "aim_time":0.1,
+                  "draw_time":1.0,
+                  "weight":4,
+                  "movement_speed":{"aim":-0.2},
+                  "fire_mode":["semi","burst"],
+                  "burst_data":{"count":3,"bpm":600},
+                  "heat":{"max":100,"per_shot":4},
+                  "recoil":{"pitch":[{"value":[2,2]}]},
+                  "inaccuracy":{"aim":0.2}
+                }
+                """);
+
+        TaCZGunStats stats = new TaCZGunPackExtractor().extract(temporaryDirectory).get(0);
+
+        assertEquals(3, stats.projectileCount());
+        assertEquals(6.0, stats.explosionRadius());
+        assertEquals(30.0, stats.explosionDelaySeconds());
+        assertEquals(true, stats.explosionKnockback());
+        assertEquals(true, stats.projectileIgnitesEntities());
+        assertEquals(2.0, stats.igniteEntitySeconds());
+        assertEquals(3, stats.burstCount());
+        assertEquals(600.0, stats.burstRoundsPerMinute());
+        assertEquals(25.0, stats.heatCapacityShots());
+        assertEquals(2, stats.fireModes().size());
+        assertEquals(1.0, stats.fireModes().stream()
+                .filter(mode -> mode.mode().equals("burst"))
+                .findFirst().orElseThrow().triggerIntervalSeconds());
     }
 
     private void write(String relativePath, String content) throws IOException {

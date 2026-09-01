@@ -27,11 +27,14 @@ public record BlueprintResearchRule(
         Optional<BlueprintResearchCost> researchCost,
         Optional<Boolean> requiresDiscovery,
         Optional<List<ResourceLocation>> prerequisites,
+        Optional<ResearchRequirements> prerequisiteGroups,
         Optional<Boolean> creativeBypassesCost,
         Optional<BlueprintReverseEngineeringOverride> reverseEngineering) {
-    public static final int CURRENT_FORMAT = 1;
+    public static final int LEGACY_FORMAT = 1;
+    public static final int CURRENT_FORMAT = 2;
     public static final int MAX_ABSOLUTE_PRIORITY = 1_000_000;
-    public static final int MAX_PREREQUISITES = 64;
+    public static final int MAX_PREREQUISITES =
+            ResearchRequirements.MAX_TOTAL_ALTERNATIVES;
 
     private static final Codec<Integer> FORMAT_CODEC = Codec.INT.flatXmap(
             BlueprintResearchRule::validateFormat,
@@ -69,6 +72,10 @@ public record BlueprintResearchRule(
                             "prerequisites",
                             BlueprintResearchCodecs.RESOURCE_LOCATION.listOf())
                             .forGetter(BlueprintResearchRule::prerequisites),
+                    new StrictOptionalFieldCodec<>(
+                            "prerequisite_groups",
+                            ResearchRequirements.CODEC)
+                            .forGetter(BlueprintResearchRule::prerequisiteGroups),
                     new StrictOptionalFieldCodec<>("creative_bypasses_cost", Codec.BOOL)
                             .forGetter(BlueprintResearchRule::creativeBypassesCost),
                     new StrictOptionalFieldCodec<>(
@@ -93,8 +100,45 @@ public record BlueprintResearchRule(
             "research_cost",
             "requires_discovery",
             "prerequisites",
+            "prerequisite_groups",
             "creative_bypasses_cost",
             "reverse_engineering");
+
+    /** Compatibility constructor for the format-1 flat prerequisite contract. */
+    public BlueprintResearchRule(
+            int format,
+            ResourceLocation profile,
+            int priority,
+            BlueprintResearchTarget target,
+            Optional<JournalVisibility> visibility,
+            Optional<Boolean> treeEnabled,
+            Optional<Boolean> researchEnabled,
+            Optional<Boolean> recyclingEnabled,
+            Optional<Boolean> allowUnlearnedRecycling,
+            Optional<Integer> recyclingValue,
+            Optional<BlueprintResearchCost> researchCost,
+            Optional<Boolean> requiresDiscovery,
+            Optional<List<ResourceLocation>> prerequisites,
+            Optional<Boolean> creativeBypassesCost,
+            Optional<BlueprintReverseEngineeringOverride> reverseEngineering) {
+        this(
+                format,
+                profile,
+                priority,
+                target,
+                visibility,
+                treeEnabled,
+                researchEnabled,
+                recyclingEnabled,
+                allowUnlearnedRecycling,
+                recyclingValue,
+                researchCost,
+                requiresDiscovery,
+                prerequisites,
+                Optional.empty(),
+                creativeBypassesCost,
+                reverseEngineering);
+    }
 
     /** Backwards-compatible constructor for rules authored before reverse engineering. */
     public BlueprintResearchRule(
@@ -126,6 +170,7 @@ public record BlueprintResearchRule(
                 researchCost,
                 requiresDiscovery,
                 prerequisites,
+                Optional.empty(),
                 creativeBypassesCost,
                 Optional.empty());
     }
@@ -159,12 +204,13 @@ public record BlueprintResearchRule(
                 researchCost,
                 requiresDiscovery,
                 prerequisites,
+                Optional.empty(),
                 creativeBypassesCost,
                 Optional.empty());
     }
 
     public BlueprintResearchRule {
-        if (format != CURRENT_FORMAT) {
+        if (format < LEGACY_FORMAT || format > CURRENT_FORMAT) {
             throw new IllegalArgumentException("unsupported blueprint research-rule format " + format);
         }
         if (profile == null || target == null) {
@@ -187,12 +233,13 @@ public record BlueprintResearchRule(
         prerequisites = prerequisites == null
                 ? Optional.empty()
                 : prerequisites.map(values -> List.copyOf(new LinkedHashSet<>(values)));
+        prerequisiteGroups = optional(prerequisiteGroups);
         creativeBypassesCost = optional(creativeBypassesCost);
         reverseEngineering = optional(reverseEngineering);
     }
 
     private static DataResult<Integer> validateFormat(int value) {
-        return value == CURRENT_FORMAT
+        return value >= LEGACY_FORMAT && value <= CURRENT_FORMAT
                 ? DataResult.success(value)
                 : DataResult.error(() -> "unsupported blueprint research-rule format " + value);
     }
@@ -205,11 +252,18 @@ public record BlueprintResearchRule(
     }
 
     private static DataResult<BlueprintResearchRule> validateRule(BlueprintResearchRule rule) {
-        if (rule.prerequisites().map(List::size).orElse(0) > MAX_PREREQUISITES) {
+        if (rule.prerequisites().isPresent() && rule.prerequisiteGroups().isPresent()) {
+            return DataResult.error(() -> "research rule fields prerequisites and prerequisite_groups are mutually exclusive");
+        }
+        if (rule.prerequisiteGroups().isPresent() && rule.format() < CURRENT_FORMAT) {
+            return DataResult.error(() -> "prerequisite_groups requires research-rule format " + CURRENT_FORMAT);
+        }
+        if (rule.prerequisiteRequirements().map(ResearchRequirements::alternativeCount).orElse(0)
+                > MAX_PREREQUISITES) {
             return DataResult.error(() -> "research rule cannot contain more than "
                     + MAX_PREREQUISITES + " prerequisites");
         }
-        if (rule.prerequisites().isPresent() && !rule.target().exactOnly()) {
+        if (rule.prerequisiteRequirements().isPresent() && !rule.target().exactOnly()) {
             return DataResult.error(() -> "prerequisite-bearing research rules must use exact blueprint targets");
         }
         return DataResult.success(rule);
@@ -219,15 +273,31 @@ public record BlueprintResearchRule(
         return value == null ? Optional.empty() : value;
     }
 
+    /** Canonical view; presence preserves an explicit empty override. */
+    public Optional<ResearchRequirements> prerequisiteRequirements() {
+        return prerequisiteGroups.isPresent()
+                ? prerequisiteGroups
+                : prerequisites.map(ResearchRequirements::fromLegacy);
+    }
+
     void validateForSnapshot() {
         target.validateForSnapshot();
         researchCost.ifPresent(BlueprintResearchCost::validateForSnapshot);
         reverseEngineering.ifPresent(BlueprintReverseEngineeringOverride::validateForSnapshot);
-        if (prerequisites.map(List::size).orElse(0) > MAX_PREREQUISITES) {
+        if (prerequisites.isPresent() && prerequisiteGroups.isPresent()) {
+            throw new IllegalArgumentException(
+                    "research rule fields prerequisites and prerequisite_groups are mutually exclusive");
+        }
+        if (prerequisiteGroups.isPresent() && format < CURRENT_FORMAT) {
+            throw new IllegalArgumentException(
+                    "prerequisite_groups requires research-rule format " + CURRENT_FORMAT);
+        }
+        if (prerequisiteRequirements().map(ResearchRequirements::alternativeCount).orElse(0)
+                > MAX_PREREQUISITES) {
             throw new IllegalArgumentException(
                     "research rule cannot contain more than " + MAX_PREREQUISITES + " prerequisites");
         }
-        if (prerequisites.isPresent() && !target.exactOnly()) {
+        if (prerequisiteRequirements().isPresent() && !target.exactOnly()) {
             throw new IllegalArgumentException(
                     "prerequisite-bearing research rules must use exact blueprint targets");
         }
@@ -236,5 +306,8 @@ public record BlueprintResearchRule(
                         || value.toString().length() > PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH)) {
             throw new IllegalArgumentException("research rule contains an oversized prerequisite ID");
         }
+        // Self references and cycles are validated only after rule selection.
+        // Rejecting them here would make a harmless lower-priority shadowed
+        // rule invalidate an otherwise sound snapshot.
     }
 }

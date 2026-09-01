@@ -58,6 +58,9 @@ class BlueprintRecyclerActionValidatorTest {
         assertTrue(BlueprintRecyclerActionValidator.supports(
                 BlueprintRecyclerPreview.InputKind.PHYSICAL_ITEM,
                 BlueprintRecyclerActionContract.Action.REVERSE_ENGINEER));
+        assertTrue(BlueprintRecyclerActionValidator.supports(
+                BlueprintRecyclerPreview.InputKind.PHYSICAL_ITEM,
+                BlueprintRecyclerActionContract.Action.RECOVER_POINTS));
         assertFalse(BlueprintRecyclerActionValidator.supports(
                 BlueprintRecyclerPreview.InputKind.PHYSICAL_ITEM,
                 BlueprintRecyclerActionContract.Action.RECYCLE));

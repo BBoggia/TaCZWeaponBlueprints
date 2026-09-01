@@ -106,7 +106,7 @@ public record BlueprintJournalEntry(
                 showExactPolicy && showResearch && policy.canAffordPoints(),
                 showResearch ? cost.points() : 0,
                 showResearch ? cost.ingredients().size() : 0,
-                showResearch ? policy.prerequisites().size() : 0,
+                showResearch ? policy.requirements().allOf().size() : 0,
                 visibility.revealsExactPolicy() && policy.recyclingEnabled()
                         ? policy.recyclingValue()
                         : 0);

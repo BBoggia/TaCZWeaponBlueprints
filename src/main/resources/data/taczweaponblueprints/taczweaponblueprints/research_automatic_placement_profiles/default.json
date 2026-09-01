@@ -1,9 +1,11 @@
 {
-  "format": 2,
+  "format": 4,
   "tree": "taczweaponblueprints:default",
   "mode": "connected",
   "review_handling": "place_connected",
-  "foundation_count": 2,
+  "foundation_count": 1,
   "max_prerequisites": 2,
+  "prerequisite_strategy": "grouped_routes_v1",
+  "scoring_model": "capability_v3",
   "merge_interval": 4
 }

@@ -86,4 +86,24 @@ class ResearchTreeFullscreenRailLayoutTest {
         assertThrows(IllegalArgumentException.class, () ->
                 ResearchTreeFullscreenRailLayout.entryIndexForSlot(0, 5, 1, 2));
     }
+
+    @Test
+    void hiddenViewActionGivesItsSlotToTheFirstTechTreeDomain() {
+        int visibleEntries = 5;
+        int domains = 12;
+        int maximumScroll = ResearchTreeFullscreenRailLayout.maximumGroupScroll(
+                visibleEntries, domains, false);
+
+        assertEquals(7, maximumScroll);
+        assertEquals(8, ResearchTreeFullscreenRailLayout.entryIndexForSlot(
+                0, visibleEntries, maximumScroll, domains, false));
+        assertEquals(12, ResearchTreeFullscreenRailLayout.entryIndexForSlot(
+                4, visibleEntries, maximumScroll, domains, false));
+        assertEquals(1, ResearchTreeFullscreenRailLayout.entryIndexForSlot(
+                0, visibleEntries, 0, 2, false));
+        assertEquals(2, ResearchTreeFullscreenRailLayout.entryIndexForSlot(
+                1, visibleEntries, 0, 2, false));
+        assertEquals(-1, ResearchTreeFullscreenRailLayout.entryIndexForSlot(
+                2, visibleEntries, 0, 2, false));
+    }
 }

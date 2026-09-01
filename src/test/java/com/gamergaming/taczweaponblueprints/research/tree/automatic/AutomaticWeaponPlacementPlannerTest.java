@@ -15,6 +15,10 @@ import org.junit.jupiter.api.Test;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.MechanicalRating;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Tier;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPolicy.LayeringStrategy;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPolicy.MergeIntervalBehavior;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPolicy.PrerequisiteStrategy;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPolicy.ReviewHandling;
 
 class AutomaticWeaponPlacementPlannerTest {
     private final AutomaticWeaponPlacementPlanner planner =
@@ -40,7 +44,7 @@ class AutomaticWeaponPlacementPlannerTest {
         AutomaticWeaponPlacementPlan plan = planner.plan(
                 evidence, candidates, AutomaticWeaponPlacementPolicy.DEFAULT);
 
-        assertEquals("tacz-gun-placement-v12",
+        assertEquals("tacz-gun-placement-v13",
                 ResearchTechTreeContract.AUTOMATIC_PLACEMENT_VERSION);
         assertEquals(ResearchTechTreeContract.AUTOMATIC_PLACEMENT_VERSION,
                 plan.placementVersion());
@@ -262,6 +266,86 @@ class AutomaticWeaponPlacementPlannerTest {
                         4097,
                         Map.of(),
                         oversizedRejections));
+    }
+
+    @Test
+    void groupedRouteRolloutControlsAreExplicitAndBounded() {
+        AutomaticWeaponPlacementPolicy grouped = policy(
+                LayeringStrategy.DYNAMIC_STAT_LAYERS,
+                2,
+                4,
+                PrerequisiteStrategy.GROUPED_ROUTES_V1);
+        assertEquals(
+                MergeIntervalBehavior.IGNORED_GROUPED_ROUTES_V1,
+                grouped.mergeIntervalBehavior());
+        assertFalse(grouped.schedulesPeriodicMerge());
+        assertEquals(
+                "conservative_legacy_and_union_closure_v1",
+                AutomaticWeaponPlacementPolicy.GENERATED_PARENT_COST_GUARD);
+        assertEquals(
+                AutomaticWeaponAlternativeRouteGuard.CONTRACT,
+                grouped.generatedParentCostGuard());
+        assertEquals(
+                AutomaticWeaponPlacementPolicy.LEGACY_GENERATED_PARENT_COST_GUARD,
+                policy(LayeringStrategy.DYNAMIC_STAT_LAYERS, 2, 4,
+                        PrerequisiteStrategy.LEGACY_AND)
+                        .generatedParentCostGuard());
+
+        assertEquals(
+                MergeIntervalBehavior.DISABLED,
+                policy(LayeringStrategy.DYNAMIC_STAT_LAYERS, 2, 0,
+                        PrerequisiteStrategy.GROUPED_ROUTES_V1)
+                        .mergeIntervalBehavior());
+        assertEquals(
+                MergeIntervalBehavior.INERT_PREREQUISITE_CEILING,
+                policy(LayeringStrategy.DYNAMIC_STAT_LAYERS, 2, 4,
+                        PrerequisiteStrategy.LEGACY_AND)
+                        .mergeIntervalBehavior());
+        assertEquals(
+                MergeIntervalBehavior.LEGACY_THIRD_PARENT_SCHEDULE,
+                policy(LayeringStrategy.DYNAMIC_STAT_LAYERS, 3, 4,
+                        PrerequisiteStrategy.LEGACY_AND)
+                        .mergeIntervalBehavior());
+        assertEquals(
+                MergeIntervalBehavior.LEGACY_SECOND_PARENT_SCHEDULE,
+                policy(LayeringStrategy.LEGACY_SCORE_BUCKETS, 2, 4,
+                        PrerequisiteStrategy.LEGACY_AND)
+                        .mergeIntervalBehavior());
+        AutomaticWeaponPlacementPolicy hybrid = policy(
+                LayeringStrategy.DYNAMIC_STAT_LAYERS,
+                3,
+                4,
+                PrerequisiteStrategy.HYBRID_ROUTES_V1);
+        assertEquals(
+                MergeIntervalBehavior.HYBRID_MANDATORY_GATEWAY_SCHEDULE,
+                hybrid.mergeIntervalBehavior());
+        assertTrue(hybrid.schedulesPeriodicMerge());
+        assertEquals(
+                AutomaticWeaponPlacementPolicy.HYBRID_GENERATED_PARENT_COST_GUARD,
+                hybrid.generatedParentCostGuard());
+        assertThrows(IllegalArgumentException.class, () -> policy(
+                LayeringStrategy.LEGACY_SCORE_BUCKETS,
+                3,
+                4,
+                PrerequisiteStrategy.HYBRID_ROUTES_V1));
+    }
+
+    private static AutomaticWeaponPlacementPolicy policy(
+            LayeringStrategy layeringStrategy,
+            int maxGeneratedPrerequisites,
+            int mergeInterval,
+            PrerequisiteStrategy prerequisiteStrategy) {
+        return new AutomaticWeaponPlacementPolicy(
+                3,
+                60,
+                ReviewHandling.PLACE_CONNECTED,
+                maxGeneratedPrerequisites,
+                mergeInterval,
+                layeringStrategy,
+                9,
+                List.of(),
+                2,
+                prerequisiteStrategy);
     }
 
     private static WeaponMechanicalScore score(

@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
+
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.Codec;
@@ -207,6 +209,86 @@ class BlueprintResearchCodecTest {
     }
 
     @Test
+    void legacyPrerequisiteFieldDecodesIntoSingletonGroups() {
+        BlueprintResearchRule legacy = decode(
+                BlueprintResearchRule.CODEC,
+                """
+                        {
+                          "format": 1,
+                          "profile": "test:profile",
+                          "target": {"blueprints": ["test:advanced"]},
+                          "prerequisites": ["test:route_b", "test:route_a"]
+                        }
+                        """);
+
+        assertEquals(java.util.Optional.of(
+                List.of(id("test:route_b"), id("test:route_a"))),
+                legacy.prerequisites());
+        assertEquals(
+                List.of(
+                        ResearchPrerequisiteGroup.singleton(id("test:route_a")),
+                        ResearchPrerequisiteGroup.singleton(id("test:route_b"))),
+                legacy.prerequisiteRequirements().orElseThrow().allOf());
+    }
+
+    @Test
+    void groupedPrerequisitesAreVersionedCanonicalAndMutuallyExclusive() {
+        BlueprintResearchRule grouped = decode(
+                BlueprintResearchRule.CODEC,
+                """
+                        {
+                          "format": 2,
+                          "profile": "test:profile",
+                          "target": {"blueprints": ["test:advanced"]},
+                          "prerequisite_groups": [
+                            {"any_of": ["test:route_b", "test:route_a"]},
+                            {"any_of": ["test:foundation"]}
+                          ]
+                        }
+                        """);
+
+        assertTrue(grouped.prerequisites().isEmpty());
+        assertEquals(
+                List.of(id("test:foundation"), id("test:route_a"), id("test:route_b")),
+                grouped.prerequisiteRequirements().orElseThrow()
+                        .conservativeAlternatives());
+        assertTrue(grouped.prerequisiteRequirements().orElseThrow()
+                .legacySingletons().isEmpty());
+
+        assertDecodeFails(
+                BlueprintResearchRule.CODEC,
+                """
+                        {
+                          "format": 2,
+                          "profile": "test:profile",
+                          "target": {"blueprints": ["test:advanced"]},
+                          "prerequisites": ["test:legacy"],
+                          "prerequisite_groups": [{"any_of": ["test:route"]}]
+                        }
+                        """);
+        assertDecodeFails(
+                BlueprintResearchRule.CODEC,
+                """
+                        {
+                          "format": 1,
+                          "profile": "test:profile",
+                          "target": {"blueprints": ["test:advanced"]},
+                          "prerequisite_groups": [{"any_of": ["test:route"]}]
+                        }
+                        """);
+        assertDecodeFails(
+                BlueprintResearchRule.CODEC,
+                """
+                        {
+                          "format": 2,
+                          "profile": "test:profile",
+                          "target": {"selector": {"namespaces": ["test"]}},
+                          "prerequisite_groups": [{"any_of": ["test:route"]}]
+                        }
+                        """);
+    }
+
+    @Test
     void reverseEngineeringPolicyIsStrictBoundedAndBackwardsCompatible() {
         BlueprintResearchProfile legacy = decode(
                 BlueprintResearchProfile.CODEC,
@@ -301,6 +383,10 @@ class BlueprintResearchCodecTest {
 
     private static <T> T decode(Codec<T> codec, String json) {
         return codec.parse(JsonOps.INSTANCE, JsonParser.parseString(json)).result().orElseThrow();
+    }
+
+    private static net.minecraft.resources.ResourceLocation id(String value) {
+        return new net.minecraft.resources.ResourceLocation(value);
     }
 
     private static <T> void assertDecodeFails(Codec<T> codec, String json) {

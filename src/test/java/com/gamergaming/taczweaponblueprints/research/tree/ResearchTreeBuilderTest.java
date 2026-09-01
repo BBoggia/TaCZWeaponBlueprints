@@ -21,6 +21,8 @@ import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchR
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchSnapshot;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchTarget;
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
+import com.gamergaming.taczweaponblueprints.resource.research.ResearchPrerequisiteGroup;
+import com.gamergaming.taczweaponblueprints.resource.research.ResearchRequirements;
 
 import net.minecraft.resources.ResourceLocation;
 
@@ -64,7 +66,8 @@ class ResearchTreeBuilderTest {
         assertEquals(ResearchTreeGraph.State.LOCKED, graph.node(id("test:d")).orElseThrow().state());
         assertEquals(List.of(id("test:b"), id("test:c")), graph.prerequisitesOf(id("test:d")));
         assertEquals(2, graph.node(id("test:d")).orElseThrow().prerequisiteCount());
-        assertEquals(0, graph.node(id("test:d")).orElseThrow().hiddenPrerequisiteCount());
+        assertEquals(1, graph.node(id("test:d")).orElseThrow().hiddenPrerequisiteCount());
+        assertEquals(3, graph.requirementGroupsOf(id("test:d")).size());
     }
 
     @Test
@@ -96,6 +99,127 @@ class ResearchTreeBuilderTest {
         assertEquals(named.blueprintId(), graph.edges().get(0).prerequisiteId());
         assertEquals(id("test:dependent"), graph.edges().get(0).dependentId());
         assertEquals(0, graph.node(id("test:dependent")).orElseThrow().hiddenPrerequisiteCount());
+    }
+
+    @Test
+    void publishesCanonicalChoiceGroupsAndTheirPlayerSpecificSatisfaction() {
+        ResourceLocation advanced = id("test:advanced");
+        ResourceLocation routeA = id("test:route_a");
+        ResourceLocation routeB = id("test:route_b");
+        ResourceLocation support = id("test:support");
+        BlueprintResearchRule grouped = groupedRule(
+                advanced,
+                JournalVisibility.FULL,
+                routeA,
+                routeB,
+                support);
+        Map<ResourceLocation, BlueprintData> catalog = Map.of(
+                advanced, data(advanced.toString()),
+                routeA, data(routeA.toString()),
+                routeB, data(routeB.toString()),
+                support, data(support.toString()));
+        PlayerRecipeData player = new PlayerRecipeData();
+        player.addBlueprint(routeB.toString());
+
+        ResearchTreeGraph graph = ResearchTreeBuilder.build(
+                catalog,
+                snapshot(Map.of(id("test:advanced_rule"), grouped)),
+                config(),
+                player,
+                ignored -> false);
+
+        List<ResearchTreeGraph.RequirementGroup> groups =
+                graph.requirementGroupsOf(advanced);
+        assertEquals(2, groups.size());
+        assertEquals(List.of(routeA, routeB), groups.get(0).visibleAlternativeIds());
+        assertTrue(groups.get(0).satisfactionDisclosed());
+        assertTrue(groups.get(0).satisfied());
+        assertEquals(List.of(support), groups.get(1).visibleAlternativeIds());
+        assertEquals(3, graph.node(advanced).orElseThrow().prerequisiteCount());
+        assertEquals(ResearchTreeGraph.Availability.PREREQUISITES_REQUIRED,
+                graph.node(advanced).orElseThrow().availability());
+    }
+
+    @Test
+    void learnedOutOfOrderNodeDoesNotUnlockDependentsUntilConnectedToRoot() {
+        ResourceLocation root = id("test:root");
+        ResourceLocation missing = id("test:missing");
+        ResourceLocation outOfOrder = id("test:out_of_order");
+        ResourceLocation target = id("test:target");
+        Map<ResourceLocation, BlueprintData> catalog = Map.of(
+                root, data(root.toString()),
+                missing, data(missing.toString()),
+                outOfOrder, data(outOfOrder.toString()),
+                target, data(target.toString()));
+        BlueprintResearchSnapshot snapshot = snapshot(Map.of(
+                id("test:missing_rule"),
+                        rule(missing.toString(), JournalVisibility.FULL, List.of(root)),
+                id("test:out_of_order_rule"),
+                        rule(outOfOrder.toString(), JournalVisibility.FULL, List.of(missing)),
+                id("test:target_rule"),
+                        rule(target.toString(), JournalVisibility.FULL, List.of(outOfOrder))));
+        PlayerRecipeData player = new PlayerRecipeData();
+        player.addBlueprint(root.toString());
+        player.addBlueprint(outOfOrder.toString());
+
+        ResearchTreeGraph disconnected = ResearchTreeBuilder.build(
+                catalog, snapshot, config(), player, ignored -> false);
+
+        assertEquals(ResearchTreeGraph.State.LEARNED,
+                disconnected.node(outOfOrder).orElseThrow().state());
+        assertEquals(ResearchTreeGraph.Availability.PREREQUISITES_REQUIRED,
+                disconnected.node(target).orElseThrow().availability());
+        assertTrue(disconnected.requirementGroupsOf(target).stream()
+                .noneMatch(ResearchTreeGraph.RequirementGroup::satisfied));
+
+        player.addBlueprint(missing.toString());
+        ResearchTreeGraph repaired = ResearchTreeBuilder.build(
+                catalog, snapshot, config(), player, ignored -> false);
+
+        assertEquals(ResearchTreeGraph.Availability.AVAILABLE,
+                repaired.node(target).orElseThrow().availability());
+        assertTrue(repaired.requirementGroupsOf(target).stream()
+                .allMatch(ResearchTreeGraph.RequirementGroup::satisfied));
+    }
+
+    @Test
+    void previewGroupsDoNotDiscloseHiddenPlayerSatisfaction() {
+        ResourceLocation advanced = id("test:advanced");
+        ResourceLocation routeA = id("test:route_a");
+        ResourceLocation routeB = id("test:route_b");
+        ResourceLocation support = id("test:support");
+        Map<ResourceLocation, BlueprintData> catalog = Map.of(
+                advanced, data(advanced.toString()),
+                routeA, data(routeA.toString()),
+                routeB, data(routeB.toString()),
+                support, data(support.toString()));
+        PlayerRecipeData player = new PlayerRecipeData();
+        player.addBlueprint(routeB.toString());
+        player.addBlueprint(support.toString());
+
+        ResearchTreeGraph graph = ResearchTreeBuilder.build(
+                catalog,
+                snapshot(Map.of(
+                        id("test:advanced_rule"),
+                        groupedRule(
+                                advanced,
+                                JournalVisibility.PREVIEW,
+                                routeA,
+                                routeB,
+                                support))),
+                config(),
+                player,
+                ignored -> false);
+
+        List<ResearchTreeGraph.RequirementGroup> groups =
+                graph.requirementGroupsOf(advanced);
+        assertEquals(2, groups.size());
+        assertTrue(groups.stream().noneMatch(
+                ResearchTreeGraph.RequirementGroup::satisfactionDisclosed));
+        assertTrue(groups.stream().noneMatch(
+                ResearchTreeGraph.RequirementGroup::satisfied));
+        assertEquals(ResearchTreeGraph.Availability.PREVIEW,
+                graph.node(advanced).orElseThrow().availability());
     }
 
     @Test
@@ -198,6 +322,47 @@ class ResearchTreeBuilderTest {
     }
 
     @Test
+    void inducedProjectionPreservesCrossViewChoiceGroupsAsLinkedAlternatives() {
+        ResearchTreeGraph.Node routeA = node(0, "test:route_a", 0);
+        ResearchTreeGraph.Node routeB = node(1, "test:route_b", 0);
+        ResearchTreeGraph.Node dependent = node(2, "test:dependent", 2);
+        ResearchTreeGraph graph = ResearchTreeGraph.withRequirementGroups(
+                List.of(routeA, routeB, dependent),
+                List.of(new ResearchTreeGraph.RequirementGroup(
+                        dependent.blueprintId(),
+                        0,
+                        List.of(routeA.blueprintId(), routeB.blueprintId()),
+                        0,
+                        false)));
+
+        ResearchTreeGraph partial = graph.orderedInducedSubgraph(
+                List.of(routeA.blueprintId(), dependent.blueprintId()));
+
+        ResearchTreeGraph.RequirementGroup partialGroup =
+                partial.requirementGroupsOf(dependent.blueprintId()).get(0);
+        assertEquals(List.of(routeA.blueprintId()), partialGroup.visibleAlternativeIds());
+        assertEquals(0, partialGroup.hiddenAlternativeCount());
+        assertEquals(1, partialGroup.externalAlternativeCount());
+        assertEquals(
+                List.of(new ResearchTreeGraph.Edge(
+                        routeA.blueprintId(), dependent.blueprintId())),
+                partial.edges());
+        assertEquals(1, partial.node(dependent.blueprintId()).orElseThrow().prerequisiteCount());
+        assertEquals(0,
+                partial.node(dependent.blueprintId()).orElseThrow().hiddenPrerequisiteCount());
+
+        ResearchTreeGraph dependentOnly = graph.orderedInducedSubgraph(
+                List.of(dependent.blueprintId()));
+        ResearchTreeGraph.RequirementGroup externalOnly =
+                dependentOnly.requirementGroupsOf(dependent.blueprintId()).get(0);
+        assertTrue(externalOnly.visibleAlternativeIds().isEmpty());
+        assertEquals(2, externalOnly.externalAlternativeCount());
+        assertTrue(dependentOnly.edges().isEmpty());
+        assertEquals(0,
+                dependentOnly.node(dependent.blueprintId()).orElseThrow().prerequisiteCount());
+    }
+
+    @Test
     void graphRejectsIdentityAndPolicyLeaksFromRestrictedNodes() {
         assertThrows(IllegalArgumentException.class, () -> new ResearchTreeGraph.Node(
                 0,
@@ -226,15 +391,17 @@ class ResearchTreeBuilderTest {
                 JournalVisibility.PREVIEW,
                 false, true, false, 8, 0, 0, 0,
                 ResearchTreeGraph.Availability.PREVIEW));
-        assertThrows(IllegalArgumentException.class, () -> new ResearchTreeGraph.Node(
+        ResearchTreeGraph.Node mismatchedHiddenCount = new ResearchTreeGraph.Node(
                 0,
                 id("test:target"),
                 "name.target",
                 "rifle",
                 id("test:slot/target"),
                 JournalVisibility.FULL,
-                false, false, false, 8, 0, 1, 1,
-                ResearchTreeGraph.Availability.PREREQUISITES_REQUIRED));
+                false, false, false, 8, 0, 0, 1,
+                ResearchTreeGraph.Availability.PREREQUISITES_REQUIRED);
+        assertThrows(IllegalArgumentException.class, () -> new ResearchTreeGraph(
+                List.of(mismatchedHiddenCount), List.of(), List.of()));
     }
 
     @Test
@@ -292,6 +459,34 @@ class ResearchTreeBuilderTest {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.of(prerequisites),
+                Optional.empty());
+    }
+
+    private static BlueprintResearchRule groupedRule(
+            ResourceLocation target,
+            JournalVisibility visibility,
+            ResourceLocation routeA,
+            ResourceLocation routeB,
+            ResourceLocation support) {
+        return new BlueprintResearchRule(
+                BlueprintResearchRule.CURRENT_FORMAT,
+                PROFILE,
+                0,
+                new BlueprintResearchTarget(
+                        List.of(target), List.of(), Optional.empty()),
+                Optional.of(visibility),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.of(new ResearchRequirements(List.of(
+                        new ResearchPrerequisiteGroup(List.of(routeA, routeB)),
+                        ResearchPrerequisiteGroup.singleton(support)))),
+                Optional.empty(),
                 Optional.empty());
     }
 

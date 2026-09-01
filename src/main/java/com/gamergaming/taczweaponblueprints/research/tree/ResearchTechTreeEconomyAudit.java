@@ -12,6 +12,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain;
+import com.gamergaming.taczweaponblueprints.progression.ResearchCostMode;
 import com.gamergaming.taczweaponblueprints.resource.award.ResearchPointAwardEconomyProjection;
 
 import net.minecraft.resources.ResourceLocation;
@@ -27,11 +28,25 @@ public final class ResearchTechTreeEconomyAudit {
             ResearchTreeGraph graph,
             ResearchTechTreePresentation presentation,
             ResearchPointAwardEconomyProjection.Projection pointIncome) {
+        return audit(graph, presentation, pointIncome, ResearchCostMode.POINTS_AND_ITEMS);
+    }
+
+    public static Audit audit(
+            ResearchTreeGraph graph,
+            ResearchTechTreePresentation presentation,
+            ResearchPointAwardEconomyProjection.Projection pointIncome,
+            ResearchCostMode researchCostMode) {
         if (graph == null || presentation == null) {
             throw new IllegalArgumentException("Research Tech Tree economy inputs cannot be null");
         }
         if (!presentation.available()) {
-            return Audit.EMPTY;
+            return new Audit(
+                    COST_AUTHORITY,
+                    false,
+                    pointIncome,
+                    List.of(),
+                    researchCostMode == null
+                            ? ResearchCostMode.POINTS_AND_ITEMS : researchCostMode);
         }
         presentation.validateAgainst(graph);
         ResearchPointAwardEconomyProjection.Projection stableIncome = pointIncome == null
@@ -43,7 +58,13 @@ public final class ResearchTechTreeEconomyAudit {
         List<DomainEconomy> domains = presentation.domains().stream()
                 .map(domain -> auditDomain(graph, domain, domainByNode, stableIncome.maximumFinitePoints()))
                 .toList();
-        return new Audit(COST_AUTHORITY, false, stableIncome, domains);
+        return new Audit(
+                COST_AUTHORITY,
+                false,
+                stableIncome,
+                domains,
+                researchCostMode == null
+                        ? ResearchCostMode.POINTS_AND_ITEMS : researchCostMode);
     }
 
     private static DomainEconomy auditDomain(
@@ -56,10 +77,24 @@ public final class ResearchTechTreeEconomyAudit {
                 .map(ResearchTechTreePresentation.Member::nodeId)
                 .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
         Map<ResourceLocation, List<ResourceLocation>> prerequisites = new LinkedHashMap<>();
+        Map<ResourceLocation, List<DomainRequirementGroup>> requirementGroups =
+                new LinkedHashMap<>();
         Map<ResourceLocation, List<ResourceLocation>> dependents = new LinkedHashMap<>();
         members.forEach(id -> {
             prerequisites.put(id, new ArrayList<>());
             dependents.put(id, new ArrayList<>());
+            requirementGroups.put(id, graph.requirementGroupsOf(id).stream()
+                    .map(group -> new DomainRequirementGroup(
+                            group.visibleAlternativeIds().stream()
+                                    .filter(alternative ->
+                                            domainByNode.get(alternative) == domain.domain())
+                                    .toList(),
+                            group.hiddenAlternativeCount() > 0
+                                    || group.externalAlternativeCount() > 0
+                                    || group.visibleAlternativeIds().stream().anyMatch(
+                                            alternative -> domainByNode.get(alternative)
+                                                    != domain.domain())))
+                    .toList());
         });
         for (ResearchTreeGraph.Edge edge : graph.edges()) {
             if (members.contains(edge.dependentId())
@@ -68,8 +103,9 @@ public final class ResearchTechTreeEconomyAudit {
                 dependents.get(edge.prerequisiteId()).add(edge.dependentId());
             }
         }
-        List<ResourceLocation> foundations = prerequisites.entrySet().stream()
-                .filter(entry -> entry.getValue().isEmpty())
+        List<ResourceLocation> foundations = requirementGroups.entrySet().stream()
+                .filter(entry -> entry.getValue().stream()
+                        .allMatch(DomainRequirementGroup::externalAlternativeAvailable))
                 .map(Map.Entry::getKey)
                 .sorted(Comparator.comparing(ResourceLocation::toString))
                 .toList();
@@ -80,20 +116,22 @@ public final class ResearchTechTreeEconomyAudit {
                 .toList();
         Map<ResourceLocation, Integer> costs = new LinkedHashMap<>();
         members.forEach(id -> costs.put(id, graph.node(id).orElseThrow().pointCost()));
-        int totalCost = costs.values().stream().mapToInt(Integer::intValue).sum();
-        int foundationCost = foundations.stream().mapToInt(costs::get).sum();
-        Map<ResourceLocation, Integer> singlePathMemo = new LinkedHashMap<>();
-        List<Integer> singlePathCosts = leaves.stream()
+        long totalCost = costs.values().stream().mapToLong(Integer::longValue).sum();
+        long foundationCost = foundations.stream().mapToLong(costs::get).sum();
+        Map<ResourceLocation, Long> singlePathMemo = new LinkedHashMap<>();
+        List<Long> singlePathCosts = leaves.stream()
                 .map(id -> maximumSinglePathCost(
                         id, prerequisites, costs, singlePathMemo, new LinkedHashSet<>()))
                 .toList();
-        List<Integer> closureCosts = leaves.stream().map(id -> {
-            Set<ResourceLocation> closure = prerequisiteClosure(id, prerequisites);
-            return closure.stream().mapToInt(costs::get).sum();
+        Map<ResourceLocation, Set<ResourceLocation>> closureMemo = new LinkedHashMap<>();
+        List<Long> closureCosts = leaves.stream().map(id -> {
+            Set<ResourceLocation> closure = selectedRouteClosure(
+                    id, requirementGroups, costs, closureMemo, new LinkedHashSet<>());
+            return closure.stream().mapToLong(costs::get).sum();
         }).toList();
-        int mergeCount = (int) prerequisites.values().stream()
+        int mergeCount = (int) requirementGroups.values().stream()
                 .filter(values -> values.size() > 1).count();
-        int additionalMergePrerequisites = prerequisites.values().stream()
+        int additionalMergePrerequisites = requirementGroups.values().stream()
                 .mapToInt(values -> Math.max(0, values.size() - 1)).sum();
         int coverageBasisPoints = totalCost == 0
                 ? 10_000
@@ -106,65 +144,124 @@ public final class ResearchTechTreeEconomyAudit {
                 foundations.size(),
                 foundationCost,
                 leaves.size(),
-                singlePathCosts.stream().mapToInt(Integer::intValue).min().orElse(0),
-                singlePathCosts.stream().mapToInt(Integer::intValue).max().orElse(0),
-                closureCosts.stream().mapToInt(Integer::intValue).min().orElse(0),
-                closureCosts.stream().mapToInt(Integer::intValue).max().orElse(0),
+                singlePathCosts.stream().mapToLong(Long::longValue).min().orElse(0L),
+                singlePathCosts.stream().mapToLong(Long::longValue).max().orElse(0L),
+                closureCosts.stream().mapToLong(Long::longValue).min().orElse(0L),
+                closureCosts.stream().mapToLong(Long::longValue).max().orElse(0L),
                 mergeCount,
                 additionalMergePrerequisites,
                 maximumFiniteIncome,
                 coverageBasisPoints);
     }
 
-    private static int maximumSinglePathCost(
+    private static long maximumSinglePathCost(
             ResourceLocation node,
             Map<ResourceLocation, List<ResourceLocation>> prerequisites,
             Map<ResourceLocation, Integer> costs,
-            Map<ResourceLocation, Integer> memo,
+            Map<ResourceLocation, Long> memo,
             Set<ResourceLocation> visiting) {
-        Integer known = memo.get(node);
+        Long known = memo.get(node);
         if (known != null) {
             return known;
         }
         if (!visiting.add(node)) {
             throw new IllegalArgumentException("Research Tech Tree economy graph contains a cycle");
         }
-        int parentCost = 0;
+        long parentCost = 0L;
         for (ResourceLocation parent : prerequisites.getOrDefault(node, List.of())) {
             parentCost = Math.max(parentCost, maximumSinglePathCost(
                     parent, prerequisites, costs, memo, visiting));
         }
         visiting.remove(node);
-        int result = Math.addExact(costs.getOrDefault(node, 0), parentCost);
+        long result = Math.addExact(parentCost, costs.getOrDefault(node, 0).longValue());
         memo.put(node, result);
         return result;
     }
 
-    private static Set<ResourceLocation> prerequisiteClosure(
-            ResourceLocation start,
-            Map<ResourceLocation, List<ResourceLocation>> prerequisites) {
-        Set<ResourceLocation> result = new LinkedHashSet<>();
-        Deque<ResourceLocation> pending = new ArrayDeque<>();
-        pending.add(start);
-        while (!pending.isEmpty()) {
-            ResourceLocation current = pending.removeFirst();
-            if (result.add(current)) {
-                pending.addAll(prerequisites.getOrDefault(current, List.of()));
+    /**
+     * Produces one valid deterministic unlock route: every mandatory group is
+     * retained and its cheapest standalone alternative closure is selected.
+     */
+    private static Set<ResourceLocation> selectedRouteClosure(
+            ResourceLocation node,
+            Map<ResourceLocation, List<DomainRequirementGroup>> requirementGroups,
+            Map<ResourceLocation, Integer> costs,
+            Map<ResourceLocation, Set<ResourceLocation>> memo,
+            Set<ResourceLocation> visiting) {
+        Set<ResourceLocation> known = memo.get(node);
+        if (known != null) {
+            return known;
+        }
+        if (!visiting.add(node)) {
+            throw new IllegalArgumentException(
+                    "Research Tech Tree grouped economy graph contains a cycle");
+        }
+        LinkedHashSet<ResourceLocation> result = new LinkedHashSet<>();
+        result.add(node);
+        for (DomainRequirementGroup group
+                : requirementGroups.getOrDefault(node, List.of())) {
+            List<Set<ResourceLocation>> candidates = new ArrayList<>();
+            group.localAlternatives().stream()
+                    .map(alternative -> selectedRouteClosure(
+                            alternative, requirementGroups, costs, memo, visiting))
+                    .forEach(candidates::add);
+            if (group.externalAlternativeAvailable()) {
+                candidates.add(Set.of());
+            }
+            Set<ResourceLocation> selected = candidates.stream()
+                    .min(Comparator
+                            .comparingLong((Set<ResourceLocation> closure) -> closure.stream()
+                                    .mapToLong(id -> costs.getOrDefault(id, 0)).sum())
+                            .thenComparing(closure -> closure.stream()
+                                    .map(ResourceLocation::toString)
+                                    .sorted()
+                                    .collect(java.util.stream.Collectors.joining("\u0000"))))
+                    .orElse(Set.of());
+            result.addAll(selected);
+        }
+        visiting.remove(node);
+        Set<ResourceLocation> immutable = Set.copyOf(result);
+        memo.put(node, immutable);
+        return immutable;
+    }
+
+    private record DomainRequirementGroup(
+            List<ResourceLocation> localAlternatives,
+            boolean externalAlternativeAvailable) {
+        private DomainRequirementGroup {
+            localAlternatives = List.copyOf(localAlternatives);
+            if (localAlternatives.isEmpty() && !externalAlternativeAvailable) {
+                throw new IllegalArgumentException(
+                        "Research Tech Tree domain requirement has no alternatives");
             }
         }
-        return result;
     }
 
     public record Audit(
             String costAuthority,
             boolean automaticCostCurveEnabled,
             ResearchPointAwardEconomyProjection.Projection pointIncome,
-            List<DomainEconomy> domains) {
+            List<DomainEconomy> domains,
+            ResearchCostMode researchCostMode) {
         public static final Audit EMPTY = new Audit(
                 COST_AUTHORITY,
                 false,
                 ResearchPointAwardEconomyProjection.Projection.EMPTY,
-                List.of());
+                List.of(),
+                ResearchCostMode.POINTS_AND_ITEMS);
+
+        public Audit(
+                String costAuthority,
+                boolean automaticCostCurveEnabled,
+                ResearchPointAwardEconomyProjection.Projection pointIncome,
+                List<DomainEconomy> domains) {
+            this(
+                    costAuthority,
+                    automaticCostCurveEnabled,
+                    pointIncome,
+                    domains,
+                    ResearchCostMode.POINTS_AND_ITEMS);
+        }
 
         public Audit {
             pointIncome = pointIncome == null
@@ -172,9 +269,14 @@ public final class ResearchTechTreeEconomyAudit {
             domains = domains == null ? List.of() : List.copyOf(domains);
             if (!COST_AUTHORITY.equals(costAuthority)
                     || automaticCostCurveEnabled
+                    || researchCostMode == null
                     || domains.stream().anyMatch(java.util.Objects::isNull)) {
                 throw new IllegalArgumentException("Invalid Research Tech Tree economy audit");
             }
+        }
+
+        public boolean pointCoverageApplicable() {
+            return researchCostMode.pointsEnabled();
         }
 
         public Optional<DomainEconomy> domain(Domain domain) {
@@ -185,14 +287,14 @@ public final class ResearchTechTreeEconomyAudit {
     public record DomainEconomy(
             Domain domain,
             int nodeCount,
-            int fullTreeCost,
+            long fullTreeCost,
             int foundationCount,
-            int foundationCost,
+            long foundationCost,
             int leafCount,
-            int minimumLeafSinglePathCost,
-            int maximumLeafSinglePathCost,
-            int minimumLeafUnlockClosureCost,
-            int maximumLeafUnlockClosureCost,
+            long minimumLeafSinglePathCost,
+            long maximumLeafSinglePathCost,
+            long minimumLeafUnlockClosureCost,
+            long maximumLeafUnlockClosureCost,
             int andMergeCount,
             int additionalMergePrerequisiteCount,
             int maximumFinitePointIncome,

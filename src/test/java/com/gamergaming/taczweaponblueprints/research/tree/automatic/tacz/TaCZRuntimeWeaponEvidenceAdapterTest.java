@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Test;
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
 import com.gamergaming.taczweaponblueprints.item.BlueprintKind;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.TaCZRuntimeWeaponEvidenceAdapter.RuntimeGun;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.CapabilityMetric;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.WeaponCapabilityMetrics;
 import com.tacz.guns.resource.CommonAssetsManager;
 import com.tacz.guns.resource.pojo.data.gun.GunData;
 
@@ -45,6 +47,10 @@ class TaCZRuntimeWeaponEvidenceAdapterTest {
         assertEquals(8.0, evidence.baseDamage());
         assertEquals(2.5, evidence.reloadSeconds());
         assertEquals(1000.0, evidence.effectiveRange());
+        assertEquals(1, evidence.projectileCount());
+        assertEquals(1.0, evidence.damageRetention());
+        assertEquals(2.0, evidence.tacticalReloadSeconds());
+        assertEquals(0.0, evidence.chargeSeconds());
         assertTrue(evidence.warnings().stream().anyMatch(value ->
                 value.contains("speed * life fallback")));
     }
@@ -95,6 +101,146 @@ class TaCZRuntimeWeaponEvidenceAdapterTest {
         assertTrue(evidence.scriptControlled());
         assertTrue(evidence.warnings().contains(
                 "scripted_behavior_requires_review:tacz:m1014_gun_logic"));
+    }
+
+    @Test
+    void explosiveProjectileCapabilitiesPreserveTaCZUnits() {
+        GunData gun = gun("""
+                {
+                  "ammo": "tacz:40mm",
+                  "ammo_amount": 1,
+                  "rpm": 150,
+                  "bullet": {
+                    "bullet_amount": 1,
+                    "damage": 10.0,
+                    "speed": 60.0,
+                    "life": 5.0,
+                    "gravity": 0.15,
+                    "pierce": 0,
+                    "ignite": false,
+                    "explosion": {
+                      "explode": true,
+                      "damage": 50.0,
+                      "radius": 6.0,
+                      "knockback": true,
+                      "delay": 30
+                    }
+                  },
+                  "reload": {
+                    "type": "magazine",
+                    "cooldown": {"empty": 3.0}
+                  },
+                  "aim_time": 0.1,
+                  "draw_time": 1.18,
+                  "weight": 3.6,
+                  "fire_mode": ["semi"],
+                  "inaccuracy": {"aim": 0.2},
+                  "movement_speed": {"aim": -0.1},
+                  "recoil": {"pitch": [{"time": 0.0, "value": [2.5]}]}
+                }
+                """);
+
+        var evidence = new TaCZRuntimeWeaponEvidenceAdapter().normalize(
+                "addon:launcher", new RuntimeGun("rpg", gun));
+
+        assertTrue(evidence.explosive());
+        assertEquals(50.0, evidence.explosionDamage());
+        assertEquals(6.0, evidence.explosionRadius());
+        assertEquals(30.0, evidence.explosionDelaySeconds());
+        assertTrue(evidence.explosionKnockback());
+        assertEquals(0.15, evidence.projectileGravity(), 0.0001);
+        assertFalse(evidence.projectileIgnitesEntities());
+    }
+
+    @Test
+    void modeAdjustmentsAndBurstTriggerIntervalDriveStrongestSustainedMode() {
+        GunData gun = gun("""
+                {
+                  "ammo_amount": 50,
+                  "rpm": 810,
+                  "bullet": {
+                    "damage": 9,
+                    "speed": 100,
+                    "extra_damage": {
+                      "armor_ignore": 0.2,
+                      "head_shot_multiplier": 1.5
+                    }
+                  },
+                  "reload": {"type":"inventory"},
+                  "fire_mode": ["auto", "burst"],
+                  "burst_data": {"count":5,"bpm":1200,"min_interval":0.6},
+                  "fire_mode_adjust": {
+                    "burst": {"damage":0.5,"head_shot_multiplier":-0.25,
+                              "aim_inaccuracy":0.08}
+                  },
+                  "inaccuracy": {"aim":0.2},
+                  "recoil": {"pitch":[{"value":[1]}]}
+                }
+                """);
+
+        var evidence = new TaCZRuntimeWeaponEvidenceAdapter().normalize(
+                "addon:p90", new RuntimeGun("smg", gun));
+        var modes = evidence.fireModes();
+        var burst = modes.stream().filter(mode -> mode.mode().equals("burst"))
+                .findFirst().orElseThrow();
+
+        assertEquals(2, modes.size());
+        assertEquals(5, burst.shotsPerTrigger());
+        assertEquals(0.6, burst.triggerIntervalSeconds());
+        assertEquals(9.5, burst.impactDamage());
+        assertEquals(1.25, burst.headshotMultiplier());
+        assertEquals(121.5, WeaponCapabilityMetrics.derive(evidence)
+                .value(CapabilityMetric.SUSTAINED_DPS).orElseThrow(), 0.0001);
+    }
+
+    @Test
+    void chargeAndHeatRecoveryReduceLongRunCadence() {
+        GunData heated = gun("""
+                {
+                  "rpm":1200,
+                  "bullet":{"damage":10,"speed":100},
+                  "reload":{"type":"inventory"},
+                  "fire_mode":["semi"],
+                  "charging":{"semi":{
+                    "type":"hold","increase_per_tick":0.1,
+                    "decrease_on_fire":0.6,"max_charge":1,
+                    "fire_threshold":0.6,"charge_during_cooldown":false
+                  }},
+                  "heat":{"max":20,"per_shot":2,"cooling_multiplier":5,
+                          "over_heat_time":1000,"min_rpm_mod":0.5,"max_rpm_mod":1,
+                          "min_inaccuracy":1,"max_inaccuracy":2},
+                  "inaccuracy":{"aim":0.2},
+                  "recoil":{"pitch":[{"value":[1]}]}
+                }
+                """);
+        GunData unheated = gun("""
+                {
+                  "rpm":1200,
+                  "bullet":{"damage":10,"speed":100},
+                  "reload":{"type":"inventory"},
+                  "fire_mode":["semi"],
+                  "inaccuracy":{"aim":0.2},
+                  "recoil":{"pitch":[{"value":[1]}]}
+                }
+                """);
+
+        var heatedEvidence = new TaCZRuntimeWeaponEvidenceAdapter().normalize(
+                "addon:heated", new RuntimeGun("special", heated));
+        var unheatedEvidence = new TaCZRuntimeWeaponEvidenceAdapter().normalize(
+                "addon:plain", new RuntimeGun("special", unheated));
+        double heatedDps = WeaponCapabilityMetrics.derive(heatedEvidence)
+                .value(CapabilityMetric.SUSTAINED_DPS).orElseThrow();
+        double plainDps = WeaponCapabilityMetrics.derive(unheatedEvidence)
+                .value(CapabilityMetric.SUSTAINED_DPS).orElseThrow();
+        double heatedInaccuracy = WeaponCapabilityMetrics.derive(heatedEvidence)
+                .value(CapabilityMetric.AIMED_INACCURACY).orElseThrow();
+        double plainInaccuracy = WeaponCapabilityMetrics.derive(unheatedEvidence)
+                .value(CapabilityMetric.AIMED_INACCURACY).orElseThrow();
+
+        assertEquals(0.3, heatedEvidence.chargeSeconds(), 0.0001);
+        assertEquals(3.0, heatedEvidence.heatRecoverySeconds(), 0.0001);
+        assertTrue(heatedDps < plainDps);
+        assertTrue(heatedInaccuracy > plainInaccuracy);
     }
 
     @Test

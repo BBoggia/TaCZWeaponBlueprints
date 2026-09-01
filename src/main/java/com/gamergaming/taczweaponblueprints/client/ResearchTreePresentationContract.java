@@ -1,5 +1,7 @@
 package com.gamergaming.taczweaponblueprints.client;
 
+import java.util.List;
+
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePresentation;
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
@@ -17,7 +19,13 @@ public final class ResearchTreePresentationContract {
      */
     public static final int FULLSCREEN_GRAPH_Z_OFFSET = -300;
     public static final int FULLSCREEN_OVERLAY_Z_OFFSET = 0;
-    public static final BrowseView DEFAULT_BROWSE_VIEW = BrowseView.BRANCHES;
+    /**
+     * Player-facing browse views. Branches and All Weapons remain implemented
+     * as dormant compatibility projections, but are intentionally absent from
+     * ordinary navigation until a future product decision exposes them again.
+     */
+    public static final List<BrowseView> PLAYER_BROWSE_VIEWS = List.of(BrowseView.TECH_TREE);
+    public static final BrowseView DEFAULT_BROWSE_VIEW = BrowseView.TECH_TREE;
     public static final ProgressionDirection PROGRESSION_DIRECTION =
             ProgressionDirection.BOTTOM_TO_TOP;
     public static final DetailSurface DEFAULT_DETAIL_SURFACE = DetailSurface.HOVER_TOOLTIP;
@@ -138,13 +146,27 @@ public final class ResearchTreePresentationContract {
         };
     }
 
-    /** Stable browse-cycle order with graceful fallback when no Tech Tree was published. */
+    /** Whether ordinary UI should expose a control for changing projections. */
+    public static boolean browseViewSelectorVisible() {
+        return PLAYER_BROWSE_VIEWS.size() > 1;
+    }
+
+    /** Whether dormant legacy projections are reachable through ordinary UI. */
+    public static boolean legacyBrowseViewsVisible() {
+        return PLAYER_BROWSE_VIEWS.contains(BrowseView.BRANCHES)
+                || PLAYER_BROWSE_VIEWS.contains(BrowseView.ALL_WEAPONS);
+    }
+
+    /** Keeps restored client state inside the current player-facing view set. */
+    public static BrowseView retainPlayerBrowseView(BrowseView candidate) {
+        return PLAYER_BROWSE_VIEWS.contains(candidate) ? candidate : DEFAULT_BROWSE_VIEW;
+    }
+
+    /** Stable cycle through only the views currently exposed to players. */
     public static BrowseView nextBrowseView(BrowseView currentView, boolean techTreeAvailable) {
-        return switch (fullscreenViewAction(currentView, techTreeAvailable)) {
-            case SHOW_BRANCHES -> BrowseView.BRANCHES;
-            case SHOW_ALL_WEAPONS -> BrowseView.ALL_WEAPONS;
-            case SHOW_TECH_TREE -> BrowseView.TECH_TREE;
-        };
+        BrowseView retained = retainPlayerBrowseView(currentView);
+        int current = PLAYER_BROWSE_VIEWS.indexOf(retained);
+        return PLAYER_BROWSE_VIEWS.get((current + 1) % PLAYER_BROWSE_VIEWS.size());
     }
 
     /** Keeps a restored per-view camera authoritative across projection changes. */
@@ -301,6 +323,8 @@ public final class ResearchTreePresentationContract {
     public enum RelationshipRole {
         SELECTED,
         DIRECT_REQUIREMENT,
+        /** One viable member of an inclusive any-of requirement group. */
+        ALTERNATIVE_REQUIREMENT,
         REQUIREMENT_PATH,
         DIRECT_UNLOCK,
         UNLOCK_PATH,

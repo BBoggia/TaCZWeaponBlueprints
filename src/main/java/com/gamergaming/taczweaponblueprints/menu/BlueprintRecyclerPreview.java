@@ -6,11 +6,14 @@ import java.util.Optional;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintRecyclingService;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintReverseEngineeringService;
+import com.gamergaming.taczweaponblueprints.progression.FoundWeaponRecoveryService;
+import com.gamergaming.taczweaponblueprints.item.PhysicalWeaponProvenance;
 import com.gamergaming.taczweaponblueprints.progression.ResearchDataRedemptionService;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchIngredient;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintReverseEngineeringPolicy;
 
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 
 /** Server-authored decision for the Analyzer input and extract-only output. */
 public record BlueprintRecyclerPreview(
@@ -31,7 +34,10 @@ public record BlueprintRecyclerPreview(
         boolean customizationWillBeLost,
         boolean alreadyKnown,
         Optional<BlueprintReverseEngineeringService.Status> reverseEngineeringStatus,
-        List<IngredientPreview> ingredients) {
+        List<IngredientPreview> ingredients,
+        WeaponOrigin weaponOrigin,
+        int recoveryPointValue,
+        Optional<FoundWeaponRecoveryService.Status> recoveryStatus) {
     public static final BlueprintRecyclerPreview EMPTY = empty(0, 0);
 
     public BlueprintRecyclerPreview {
@@ -42,7 +48,9 @@ public record BlueprintRecyclerPreview(
         reverseEngineeringStatus = reverseEngineeringStatus == null
                 ? Optional.empty()
                 : reverseEngineeringStatus;
+        recoveryStatus = recoveryStatus == null ? Optional.empty() : recoveryStatus;
         ingredients = ingredients == null ? List.of() : List.copyOf(ingredients);
+        weaponOrigin = weaponOrigin == null ? WeaponOrigin.UNKNOWN : weaponOrigin;
         if (inputKind == null || inputCount < 0
                 || inputCount > PlayerProgressionLimits.MAX_RESEARCH_DATA_REDEMPTIONS_PER_ACTION
                 || pointValue < 0 || pointValue > PlayerProgressionLimits.MAX_RESEARCH_POINTS
@@ -52,6 +60,8 @@ public record BlueprintRecyclerPreview(
                 || requiredInputCount < 0
                 || requiredInputCount > BlueprintReverseEngineeringPolicy.MAX_INPUT_COUNT
                 || pointCost < 0 || pointCost > PlayerProgressionLimits.MAX_RESEARCH_POINTS
+                || recoveryPointValue < 0
+                || recoveryPointValue > PlayerProgressionLimits.MAX_RESEARCH_POINTS
                 || ingredients.size() > com.gamergaming.taczweaponblueprints.resource.research
                         .BlueprintResearchCost.MAX_INGREDIENT_TYPES
                 || ingredients.stream().anyMatch(java.util.Objects::isNull)) {
@@ -65,7 +75,9 @@ public record BlueprintRecyclerPreview(
                         || recyclingStatus.isPresent() || researchDataStatus.isPresent()
                         || reverseEngineeringStatus.isPresent() || outputBlueprintId.isPresent()
                         || requiredInputCount != 0 || pointCost != 0 || !ingredients.isEmpty()
-                        || customizationWillBeLost || alreadyKnown) {
+                        || customizationWillBeLost || alreadyKnown
+                        || weaponOrigin != WeaponOrigin.UNKNOWN
+                        || recoveryPointValue != 0 || recoveryStatus.isPresent()) {
                     throw new IllegalArgumentException("empty Recycler preview contains input details");
                 }
             }
@@ -74,7 +86,9 @@ public record BlueprintRecyclerPreview(
                         || recyclingStatus.isPresent() || researchDataStatus.isPresent()
                         || reverseEngineeringStatus.isPresent() || outputBlueprintId.isPresent()
                         || requiredInputCount != 0 || pointCost != 0 || !ingredients.isEmpty()
-                        || customizationWillBeLost || alreadyKnown) {
+                        || customizationWillBeLost || alreadyKnown
+                        || weaponOrigin != WeaponOrigin.UNKNOWN
+                        || recoveryPointValue != 0 || recoveryStatus.isPresent()) {
                     throw new IllegalArgumentException("invalid Recycler input has an action decision");
                 }
             }
@@ -83,7 +97,9 @@ public record BlueprintRecyclerPreview(
                         || recyclingStatus.isEmpty() || researchDataStatus.isPresent()
                         || reverseEngineeringStatus.isPresent() || outputBlueprintId.isPresent()
                         || requiredInputCount != 0 || pointCost != 0 || !ingredients.isEmpty()
-                        || customizationWillBeLost || alreadyKnown) {
+                        || customizationWillBeLost || alreadyKnown
+                        || weaponOrigin != WeaponOrigin.UNKNOWN
+                        || recoveryPointValue != 0 || recoveryStatus.isPresent()) {
                     throw new IllegalArgumentException("blueprint Recycler preview is incomplete");
                 }
                 if (recyclingStatus.orElseThrow() == BlueprintRecyclingService.Status.SUCCESS
@@ -97,7 +113,9 @@ public record BlueprintRecyclerPreview(
                         || recyclingStatus.isPresent() || researchDataStatus.isEmpty()
                         || reverseEngineeringStatus.isPresent() || outputBlueprintId.isPresent()
                         || requiredInputCount != 0 || pointCost != 0 || !ingredients.isEmpty()
-                        || customizationWillBeLost || alreadyKnown) {
+                        || customizationWillBeLost || alreadyKnown
+                        || weaponOrigin != WeaponOrigin.UNKNOWN
+                        || recoveryPointValue != 0 || recoveryStatus.isPresent()) {
                     throw new IllegalArgumentException("Research Data Recycler preview is incomplete");
                 }
                 if (researchDataStatus.orElseThrow() == ResearchDataRedemptionService.Status.SUCCESS
@@ -129,8 +147,59 @@ public record BlueprintRecyclerPreview(
                     throw new IllegalArgumentException(
                             "already-known Analyzer preview is missing its knowledge marker");
                 }
+                if (recoveryStatus.filter(
+                                status -> status == FoundWeaponRecoveryService.Status.READY)
+                        .isPresent() && (weaponOrigin != WeaponOrigin.LOOT_GENERATED
+                                || recoveryPointValue < 1)) {
+                    throw new IllegalArgumentException(
+                            "ready found-weapon recovery preview lacks trusted value");
+                }
             }
         }
+    }
+
+    /** Compatibility constructor for Analyzer previews predating direct recovery. */
+    public BlueprintRecyclerPreview(
+            InputKind inputKind,
+            Optional<ResourceLocation> inputId,
+            int inputCount,
+            int pointValue,
+            int pointBalance,
+            int pointCap,
+            Optional<BlueprintRecyclingService.Status> recyclingStatus,
+            Optional<ResearchDataRedemptionService.Status> researchDataStatus,
+            long stateToken,
+            Optional<ResourceLocation> outputBlueprintId,
+            int requiredInputCount,
+            int pointCost,
+            boolean ingredientsSatisfied,
+            boolean outputAvailable,
+            boolean customizationWillBeLost,
+            boolean alreadyKnown,
+            Optional<BlueprintReverseEngineeringService.Status> reverseEngineeringStatus,
+            List<IngredientPreview> ingredients) {
+        this(
+                inputKind,
+                inputId,
+                inputCount,
+                pointValue,
+                pointBalance,
+                pointCap,
+                recyclingStatus,
+                researchDataStatus,
+                stateToken,
+                outputBlueprintId,
+                requiredInputCount,
+                pointCost,
+                ingredientsSatisfied,
+                outputAvailable,
+                customizationWillBeLost,
+                alreadyKnown,
+                reverseEngineeringStatus,
+                ingredients,
+                WeaponOrigin.UNKNOWN,
+                0,
+                Optional.empty());
     }
 
     /** Compatibility constructor for the pre-Analyzer Recycler decisions. */
@@ -186,7 +255,9 @@ public record BlueprintRecyclerPreview(
                 || researchDataStatus.filter(status ->
                         status == ResearchDataRedemptionService.Status.SUCCESS).isPresent()
                 || reverseEngineeringStatus.filter(status ->
-                        status == BlueprintReverseEngineeringService.Status.READY).isPresent();
+                        status == BlueprintReverseEngineeringService.Status.READY).isPresent()
+                || recoveryStatus.filter(status ->
+                        status == FoundWeaponRecoveryService.Status.READY).isPresent();
     }
 
     public BlueprintRecyclerPreview withStateToken(long token) {
@@ -208,7 +279,10 @@ public record BlueprintRecyclerPreview(
                 customizationWillBeLost,
                 alreadyKnown,
                 reverseEngineeringStatus,
-                ingredients);
+                ingredients,
+                weaponOrigin,
+                recoveryPointValue,
+                recoveryStatus);
     }
 
     private static void validateId(ResourceLocation id) {
@@ -223,6 +297,22 @@ public record BlueprintRecyclerPreview(
         BLUEPRINT,
         RESEARCH_DATA,
         PHYSICAL_ITEM
+    }
+
+    public enum WeaponOrigin {
+        UNKNOWN,
+        CRAFTED_SURVIVAL,
+        LOOT_GENERATED;
+
+        public static WeaponOrigin from(ItemStack stack) {
+            return PhysicalWeaponProvenance.from(stack)
+                    .map(PhysicalWeaponProvenance::origin)
+                    .map(origin -> switch (origin) {
+                        case CRAFTED_SURVIVAL -> CRAFTED_SURVIVAL;
+                        case LOOT_GENERATED -> LOOT_GENERATED;
+                    })
+                    .orElse(UNKNOWN);
+        }
     }
 
     public record IngredientPreview(

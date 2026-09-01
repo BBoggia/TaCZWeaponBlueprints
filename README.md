@@ -40,7 +40,10 @@ Install the same mod and dependency versions on both client and server. TaCZ con
   retain the legacy physical-blueprint result through synchronized config.
 - The dedicated Blueprint Analyzer handles physical TaCZ item reverse
   engineering, voluntary duplicate recycling, and configured Research Data
-  redemption. It owns one input plus an extract-only blueprint output, shows
+  redemption. Verified loot-generated weapons can also be configured to create
+  recyclable blueprints, convert directly to RP, or offer both actions; crafted
+  and unverified legacy weapons remain protected by default. It owns one input
+  plus an extract-only blueprint output, shows
   the server-resolved item/RP/material cost, and never sacrifices equipment
   until the player explicitly confirms the action.
   It has a datapack-replaceable survival recipe, appears in Functional Blocks,
@@ -57,20 +60,35 @@ Install the same mod and dependency versions on both client and server. TaCZ con
   list can also teach durable knowledge idempotently on login, reload, or a
   synchronized config update without replaying Research Point awards.
 - Research Bench tree topology is derived directly from those prerequisites, with hidden policies remaining undisclosed.
-- The built-in TaCZ 1.1.8 progression covers all 53 recipe-backed default weapons once in one server-enforced, weakest-to-strongest tree with seven directly accessible class branches. Glock 17 is preferred as the shared entry, with ordered pistol fallbacks if its recipe is unavailable.
+- The built-in TaCZ 1.1.8 progression covers all 53 recipe-backed default
+  weapons once in one server-enforced, capability-scored automatic tree. Every
+  default or add-on weapon receives its rank and grouped routes from
+  `capability_v3`; authored weapon positions and prerequisites never mix into
+  an automatic tree. Datapacks may instead choose an authored-only tree, where
+  only explicitly placed weapons appear and unspecified weapons are omitted.
 - All 95 recipe-backed default attachments and 24 ammunition types retain
   tier-scaled authored rules, placements, and catalog-aware entry candidates,
   but the built-in profile disables their Tech Tree publication and Research
   Bench research by default. Their physical-blueprint and reverse-engineering
   routes remain available. Datapack profiles can opt either domain back in.
-- Branches and All Weapons views support mouse pan/zoom, an overlaid tree
-  sidebar, cross-branch portals, relationship-first arrow-key browsing with
-  explicit Enter selection, and keyboard-selectable search results.
+- The Research Bench exposes one authoritative Tech Tree view with mouse
+  pan/zoom, an overlaid domain sidebar, cross-domain portals,
+  relationship-first arrow-key browsing with explicit Enter selection, and
+  keyboard-selectable search results. The older Branches and All Weapons
+  projections remain dormant internally but are hidden from players.
 - Players can track one revealed blueprint as a session goal. Its complete
   prerequisite route remains highlighted across Research Bench views, `Next`
   stays on that route, and the tooltip summarizes remaining published RP and
   material needs without revealing server-hidden policy details.
 - Branch and portal lookup uses bounded per-group indexes at the published 4,096-node and 65,536-edge limits.
+- Grouped automatic routes include an operator-only motif decision gate. It
+  reports whether semantic evidence supports the current routes or warrants a
+  named future prototype; it never changes prerequisites from visual crossing
+  estimates alone.
+- Branch-aware visual wrapping keeps the shared base dense, prefers responsive
+  row boundaries between mature weapon families, and reserves bounded lanes
+  for multiple grouped-route junctions without changing semantic ranks or
+  prerequisites.
 
 ## Configuration
 
@@ -83,7 +101,10 @@ The synchronized Fzzy Config screen exposes:
 - gun, ammo, and attachment blacklists.
 - Journal, discovery tracking, research, the direct/physical tree result, and
   manual recycling enablement;
-- undiscovered visibility, Research Point cap, Creative cost bypass, and active research profile.
+- research cost mode (`POINTS_AND_ITEMS`, `POINTS_ONLY`, or `ITEMS_ONLY`) and
+  found-weapon recovery mode (protected blueprint, recyclable blueprint,
+  direct RP, or player choice);
+- undiscovered visibility, Research Point cap, Creative cost bypass, and active research profile;
 - progression-exempt exact IDs, coarse categories, and TaCZ item subgroups;
   plus an additive exact list of starting blueprints.
 
@@ -123,21 +144,26 @@ All `/gg` commands require permission level 2.
 | `/gg research awards status` | Inspect the immutable RP award publication, trigger counts, and last rejected reload. |
 | `/gg research awards inspect <definition_id>` | Inspect one RP award's trigger, group, reward, repeat policy, profile scope, and budget. |
 | `/gg research inspect <blueprint_id>` | Inspect the selected rule, visibility, cost, prerequisites, and authored placement. |
-| `/gg research export` | Export a sorted format-12 authoring catalog with topology, resolved-width evidence, planned/published ranks, per-weapon decisions, and economy review inside the current world folder. |
+| `/gg research export` | Export a sorted format-18 authoring catalog with canonical prerequisite groups, explicit generated relationship shapes, automatic prerequisite-strategy identity, group-aware route-selection evidence, grouped-route quality and motif evidence, topology, resolved-width evidence, planned/published ranks, per-weapon decisions, and economy review inside the current world folder. |
 
 Use vanilla `/reload` after changing blueprint loot datapacks. A successful reload advances the revision reported by `/gg loot status`; an invalid reload leaves the last-known-good revision active.
 
-The current client/server network protocol is `36`; matching mod versions are
-required on both sides. Protocol 36 publishes each disclosure-safe research
+The current client/server network protocol is `40`; matching mod versions are
+required on both sides. Protocol 40 publishes each disclosure-safe research
 graph, its weapon-only legacy group subset, optional identity-safe Tech Tree
 metadata (including rank, long sibling order, optional visual-band references,
 canonical automatic branch coordinates, and a bounded ordered custom-band
-label table), including the opt-in 21–28 layout-capacity envelope, and
+label table), canonical AND-of-OR prerequisite groups with redacted-alternative
+counts and disclosure-safe satisfaction state, including the opt-in 21–28
+layout-capacity envelope, and
 the server-resolved curated-overview flags atomically. It also
 synchronizes each catalog entry's coarse gun/ammo/attachment kind, transfers
-research-only, live-inventory Research Bench previews, correlates
+research-only, live-inventory Research Bench previews, including bounded
+shortest-path unlock counts, aggregate RP/material costs, the effective cost
+mode, and truncated-material totals, correlates
 selection and research results with their requests, sends the Analyzer's
-bounded contextual preview and opaque state token, sends bounded server-filtered
+bounded contextual preview, trusted weapon-origin classification, direct-RP
+recovery decision, and opaque state token, sends bounded server-filtered
 RP earning help and short award feedback, and rejects stale or conflicting
 progression chunks. Analyzer previews also carry the authoritative learned
 state needed to present allowed physical blueprint copies without inferring
@@ -161,7 +187,51 @@ data/<namespace>/taczweaponblueprints/research_automatic_placement_profiles/<pat
 data/<namespace>/taczweaponblueprints/research_point_awards/<path>.json
 ```
 
-Format 1 provides exact weighted pools and exact loot-table rules. Format 2 adds reusable composition, current-catalog selection, table-family selection, and runtime predicates. Research profiles provide defaults while deterministic exact, tag, namespace, category, and catalog-selector rules provide per-blueprint overrides. Separate research-tree group resources author presentation without changing progression. See the [research-tree authoring guide](docs/research-tree-authoring.md), [grouped-navigation contract](docs/development/research-tree-navigation-phase-0.md), [Phase 1 group-data implementation](docs/development/research-tree-navigation-phase-1.md), [Phase 2 publication boundary](docs/development/research-tree-navigation-phase-2.md), [Phase 3 synchronization](docs/development/research-tree-navigation-phase-3.md), [Phase 5 navigation and layout](docs/development/research-tree-navigation-phase-5.md), [Phase 6 default progression](docs/development/research-tree-navigation-phase-6.md), [Phase 7 adversarial hardening](docs/development/research-tree-navigation-phase-7.md), [Phase 8 release preparation](docs/development/research-tree-navigation-phase-8.md), [unified-overview Phase 6](docs/development/research-tree-unified-overview-phase-6.md), [unified-overview Phase 7](docs/development/research-tree-unified-overview-phase-7.md), [unified-overview Phase 8 validation](docs/development/research-tree-unified-overview-phase-8.md), [fullscreen Phase 8 validation](docs/development/research-tree-fullscreen-phase-8.md), [Journal/research Phase 8](docs/development/journal-research-phase-8.md), and [operations and migration](docs/operations-and-migration.md).
+Format 1 provides exact weighted pools and exact loot-table rules. Format 2 adds
+reusable composition, current-catalog selection, table-family selection, and
+runtime predicates. Research profiles provide defaults while deterministic
+exact, tag, namespace, category, and catalog-selector rules provide
+per-blueprint overrides. Research-rule format 2 may author strict
+`prerequisite_groups`; legacy `prerequisites` remains supported as mandatory
+singleton groups, and the two fields are mutually exclusive.
+Automatic-placement format 3 may select `grouped_routes_v1`, which publishes a
+generated two-parent selection as one inclusive any-of route group, or the
+explicit opt-in `hybrid_routes_v1`, which can additionally publish sparse
+`[[A,B],[C]]` alternate-route-plus-gateway requirements during the shared and
+transition phases. The packaged profile remains grouped, and `legacy_and`
+compatibility is retained. Separate
+research-tree group resources author presentation without changing progression.
+Format 4 additionally selects a versioned scoring model. Existing profiles
+default to `mechanical_v2`; the packaged profile opts into `capability_v3`,
+which scores lethality, sustained pressure, precision/reach, area control,
+handling, and versatility from expanded TaCZ evidence. See the
+[capability-v3 scoring contract](docs/research-capability-scoring-v3.md).
+See the [research-tree authoring guide](docs/research-tree-authoring.md),
+[grouped-prerequisite Phase 2 contract](docs/research-grouped-prerequisites-phase-2.md),
+[automatic grouped-route Phase 3 contract](docs/research-grouped-prerequisites-phase-3.md),
+[truthful grouped-route UI Phase 4 contract](docs/research-grouped-prerequisites-phase-4.md),
+[group-aware route-quality Phase 5 contract](docs/research-grouped-prerequisites-phase-5.md),
+[route-motif evidence Phase 6 contract](docs/research-grouped-prerequisites-phase-6.md),
+[semantic acceptance Phase 7 contract](docs/research-grouped-prerequisites-phase-7.md),
+[grouped-route rollout Phase 8 contract](docs/research-grouped-prerequisites-phase-8.md),
+[group-aware selection Phase 9 contract](docs/research-grouped-prerequisites-phase-9.md),
+[stabilization and default rollout Phase 10 contract](docs/research-grouped-prerequisites-phase-10.md),
+[opt-in hybrid generation Phase 11 contract](docs/research-grouped-prerequisites-phase-11.md),
+[branch-aware visual refinement Phase 12 contract](docs/research-grouped-prerequisites-phase-12.md),
+[grouped-navigation contract](docs/development/research-tree-navigation-phase-0.md),
+[Phase 1 group-data implementation](docs/development/research-tree-navigation-phase-1.md),
+[Phase 2 publication boundary](docs/development/research-tree-navigation-phase-2.md),
+[Phase 3 synchronization](docs/development/research-tree-navigation-phase-3.md),
+[Phase 5 navigation and layout](docs/development/research-tree-navigation-phase-5.md),
+[Phase 6 default progression](docs/development/research-tree-navigation-phase-6.md),
+[Phase 7 adversarial hardening](docs/development/research-tree-navigation-phase-7.md),
+[Phase 8 release preparation](docs/development/research-tree-navigation-phase-8.md),
+[unified-overview Phase 6](docs/development/research-tree-unified-overview-phase-6.md),
+[unified-overview Phase 7](docs/development/research-tree-unified-overview-phase-7.md),
+[unified-overview Phase 8 validation](docs/development/research-tree-unified-overview-phase-8.md),
+[fullscreen Phase 8 validation](docs/development/research-tree-fullscreen-phase-8.md),
+[Journal/research Phase 8](docs/development/journal-research-phase-8.md), and
+[operations and migration](docs/operations-and-migration.md).
 
 Research Point awards use a separate strict format-1 publication. Definitions
 select one typed server event, a bounded target, fixed RP, repeat behavior,
@@ -278,7 +348,7 @@ opt-in profiles, release gates no longer freeze legacy tier assumptions, and
 versioned topology fingerprints guard deliberate graph changes. The subsequent
 [dynamic-width contract](docs/research-tree-dynamic-width.md)
 lets a format-2 tree resolve its semantic layer capacity from the complete
-authored-plus-eligible weapon population within a configured 8–28 range. The
+eligible automatic weapon population within a configured 8–28 range. The
 built-in tree uses a landscape-biased 9–20 range while fixed-width datapacks
 remain compatible, and manual zoom can reach 15% for very large trees.
 The tapered branch redesign is recorded in
@@ -303,8 +373,12 @@ hardens publication and adds an explicit end-to-end completeness summary for
 canonical branch coordinates, prerequisite decisions, and finalized ranks.
 [Phase 10](docs/research-tree-tapered-branches-phase-10.md) makes that summary
 an atomic production invariant and adds a versioned packaged release gate.
-[Phase 12](docs/research-tree-tapered-branches-phase-12.md) adds staged failure
-diagnostics and revision-safe recovery states for post-rollout operation.
+The historical publication-health
+[Phase 12 snapshot](docs/research-tree-tapered-branches-phase-12.md) adds staged
+failure diagnostics and revision-safe recovery states for post-rollout
+operation; its version numbers describe the release line at the time it landed,
+while the grouped-prerequisite Phase 12 contract above records current client
+visual refinement.
 
 ## Building
 
@@ -312,6 +386,8 @@ Use JDK 17:
 
 ```text
 ./gradlew cleanTest build
+./gradlew verifyGroupedPrerequisiteAcceptanceContract
+./gradlew verifyGroupedVisualRefinementContract
 ./gradlew certifyReleaseCandidate
 ```
 

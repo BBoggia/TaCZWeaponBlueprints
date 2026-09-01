@@ -38,6 +38,8 @@ public final class SyncResearchTreePacket {
     private static final int HEADER_RESERVE = 96;
     private static final int NODE_FIXED_RESERVE = 40;
     private static final int EDGE_RESERVE = 10;
+    private static final int REQUIREMENT_GROUP_FIXED_RESERVE = 7;
+    private static final int REQUIREMENT_ALTERNATIVE_RESERVE = 3;
     private static final int GROUP_FIXED_RESERVE = 25;
     private static final int MEMBER_RESERVE = 15;
     private static final int TECH_TREE_FIXED_RESERVE = 64;
@@ -51,11 +53,13 @@ public final class SyncResearchTreePacket {
     private final int chunkCount;
     private final int totalNodes;
     private final int totalEdges;
+    private final int totalRequirementGroups;
     private final int totalGroups;
     private final int totalMembers;
     private final int totalTechTrees;
     private final List<ResearchTreeGraph.Node> nodes;
     private final List<WireEdge> edges;
+    private final List<WireRequirementGroup> requirementGroups;
     private final List<WireGroup> groups;
     private final List<WireTechTree> techTrees;
 
@@ -65,11 +69,13 @@ public final class SyncResearchTreePacket {
             int chunkCount,
             int totalNodes,
             int totalEdges,
+            int totalRequirementGroups,
             int totalGroups,
             int totalMembers,
             int totalTechTrees,
             List<ResearchTreeGraph.Node> nodes,
             List<WireEdge> edges,
+            List<WireRequirementGroup> requirementGroups,
             List<WireGroup> groups,
             List<WireTechTree> techTrees) {
         this.syncId = syncId;
@@ -77,11 +83,15 @@ public final class SyncResearchTreePacket {
         this.chunkCount = chunkCount;
         this.totalNodes = totalNodes;
         this.totalEdges = totalEdges;
+        this.totalRequirementGroups = totalRequirementGroups;
         this.totalGroups = totalGroups;
         this.totalMembers = totalMembers;
         this.totalTechTrees = totalTechTrees;
         this.nodes = nodes == null ? List.of() : List.copyOf(nodes);
         this.edges = edges == null ? List.of() : List.copyOf(edges);
+        this.requirementGroups = requirementGroups == null
+                ? List.of()
+                : List.copyOf(requirementGroups);
         this.groups = groups == null ? List.of() : List.copyOf(groups);
         this.techTrees = techTrees == null ? List.of() : List.copyOf(techTrees);
         validateCommonState();
@@ -97,11 +107,18 @@ public final class SyncResearchTreePacket {
         chunkCount = buf.readVarInt();
         totalNodes = buf.readVarInt();
         totalEdges = buf.readVarInt();
+        totalRequirementGroups = buf.readVarInt();
         totalGroups = buf.readVarInt();
         totalMembers = buf.readVarInt();
         totalTechTrees = buf.readVarInt();
         validateChunkMetadata(chunkIndex, chunkCount);
-        validateTotals(totalNodes, totalEdges, totalGroups, totalMembers, totalTechTrees);
+        validateTotals(
+                totalNodes,
+                totalEdges,
+                totalRequirementGroups,
+                totalGroups,
+                totalMembers,
+                totalTechTrees);
 
         int nodeCount = readBoundedCount(buf, totalNodes, "Research tree node");
         List<ResearchTreeGraph.Node> decodedNodes = new ArrayList<>(nodeCount);
@@ -119,6 +136,13 @@ public final class SyncResearchTreePacket {
             }
             decodedEdges.add(edge);
         }
+        int requirementGroupCount = readBoundedCount(
+                buf, totalRequirementGroups, "Research requirement group");
+        List<WireRequirementGroup> decodedRequirementGroups =
+                new ArrayList<>(requirementGroupCount);
+        for (int index = 0; index < requirementGroupCount; index++) {
+            decodedRequirementGroups.add(readRequirementGroup(buf, totalNodes));
+        }
         int groupCount = readBoundedCount(buf, totalGroups, "Research tree group");
         List<WireGroup> decodedGroups = new ArrayList<>(groupCount);
         int remainingMembers = totalMembers;
@@ -134,6 +158,7 @@ public final class SyncResearchTreePacket {
         }
         nodes = List.copyOf(decodedNodes);
         edges = List.copyOf(decodedEdges);
+        requirementGroups = List.copyOf(decodedRequirementGroups);
         groups = List.copyOf(decodedGroups);
         techTrees = List.copyOf(decodedTechTrees);
         validateCommonState();
@@ -149,6 +174,7 @@ public final class SyncResearchTreePacket {
         buf.writeVarInt(chunkCount);
         buf.writeVarInt(totalNodes);
         buf.writeVarInt(totalEdges);
+        buf.writeVarInt(totalRequirementGroups);
         buf.writeVarInt(totalGroups);
         buf.writeVarInt(totalMembers);
         buf.writeVarInt(totalTechTrees);
@@ -159,6 +185,8 @@ public final class SyncResearchTreePacket {
             buf.writeVarInt(edge.prerequisiteOrdinal());
             buf.writeVarInt(edge.dependentOrdinal());
         });
+        buf.writeVarInt(requirementGroups.size());
+        requirementGroups.forEach(group -> writeRequirementGroup(buf, group));
         buf.writeVarInt(groups.size());
         groups.forEach(group -> writeGroup(buf, group));
         buf.writeVarInt(techTrees.size());
@@ -193,10 +221,12 @@ public final class SyncResearchTreePacket {
             }
             ordinals.put(node.blueprintId(), node.ordinal());
         });
-        List<WireEdge> wireEdges = graph.edges().stream()
-                .map(edge -> new WireEdge(
-                        ordinalFor(ordinals, edge.prerequisiteId()),
-                        ordinalFor(ordinals, edge.dependentId())))
+        // Protocol 39 retains canonical requirement groups and derives the
+        // compatibility edge table on receipt. Keeping edges out of the wire
+        // avoids paying for every visible alternative twice.
+        List<WireEdge> wireEdges = List.of();
+        List<WireRequirementGroup> wireRequirementGroups = graph.requirementGroups().stream()
+                .map(group -> WireRequirementGroup.from(group, ordinals))
                 .toList();
         List<WireGroup> wireGroups = presentation.groups().stream()
                 .map(group -> WireGroup.from(group, ordinals))
@@ -228,6 +258,21 @@ public final class SyncResearchTreePacket {
             }
             current.edges.add(edge);
             current.estimatedBytes += EDGE_RESERVE;
+        }
+        for (WireRequirementGroup group : wireRequirementGroups) {
+            int bytes = estimatedRequirementGroupBytes(group);
+            if (HEADER_RESERVE + bytes > BlueprintSyncLimits.MAX_CHUNK_BYTES) {
+                throw new IllegalArgumentException(
+                        "One Research requirement group exceeds the chunk byte budget");
+            }
+            if (!current.empty()
+                    && current.estimatedBytes + bytes
+                            > BlueprintSyncLimits.MAX_CHUNK_BYTES) {
+                chunks.add(current);
+                current = new Chunk();
+            }
+            current.requirementGroups.add(group);
+            current.estimatedBytes += bytes;
         }
         for (WireGroup group : wireGroups) {
             int bytes = estimatedGroupBytes(group);
@@ -269,11 +314,13 @@ public final class SyncResearchTreePacket {
                     chunks.size(),
                     graph.nodes().size(),
                     graph.edges().size(),
+                    wireRequirementGroups.size(),
                     presentation.groups().size(),
                     memberCount,
                     wireTechTrees.size(),
                     chunk.nodes,
                     chunk.edges,
+                    chunk.requirementGroups,
                     chunk.groups,
                     chunk.techTrees));
         }
@@ -286,6 +333,9 @@ public final class SyncResearchTreePacket {
             bytes += estimatedNodeBytes(node);
         }
         bytes += edges.size() * EDGE_RESERVE;
+        for (WireRequirementGroup group : requirementGroups) {
+            bytes += estimatedRequirementGroupBytes(group);
+        }
         for (WireGroup group : groups) {
             bytes += estimatedGroupBytes(group);
         }
@@ -297,9 +347,20 @@ public final class SyncResearchTreePacket {
 
     private void validateCommonState() {
         validateChunkMetadata(chunkIndex, chunkCount);
-        validateTotals(totalNodes, totalEdges, totalGroups, totalMembers, totalTechTrees);
+        validateTotals(
+                totalNodes,
+                totalEdges,
+                totalRequirementGroups,
+                totalGroups,
+                totalMembers,
+                totalTechTrees);
         int chunkMembers = groups.stream().mapToInt(group -> group.members().size()).sum();
+        if (!edges.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Protocol 39 Research tree chunks must derive edges from requirement groups");
+        }
         if (nodes.size() > totalNodes || edges.size() > totalEdges
+                || requirementGroups.size() > totalRequirementGroups
                 || groups.size() > totalGroups || chunkMembers > totalMembers
                 || techTrees.size() > totalTechTrees) {
             throw new IllegalArgumentException("Research tree chunk contains more entries than declared");
@@ -308,6 +369,9 @@ public final class SyncResearchTreePacket {
             if (edge.prerequisiteOrdinal() >= totalNodes || edge.dependentOrdinal() >= totalNodes) {
                 throw new IllegalArgumentException("Research tree edge ordinal is outside the node table");
             }
+        }
+        for (WireRequirementGroup group : requirementGroups) {
+            group.validateOrdinals(totalNodes);
         }
         for (WireGroup group : groups) {
             if (group.iconOrdinal() >= totalNodes
@@ -374,6 +438,43 @@ public final class SyncResearchTreePacket {
         buf.writeVarInt(node.ingredientTypeCount());
         buf.writeVarInt(node.prerequisiteCount());
         buf.writeVarInt(node.hiddenPrerequisiteCount());
+    }
+
+    private static WireRequirementGroup readRequirementGroup(
+            FriendlyByteBuf buf,
+            int totalNodes) {
+        int dependentOrdinal = buf.readVarInt();
+        int groupOrdinal = buf.readVarInt();
+        int alternativeCount = readBoundedCount(
+                buf,
+                com.gamergaming.taczweaponblueprints.resource.research
+                        .ResearchPrerequisiteGroup.MAX_ALTERNATIVES,
+                "Research requirement alternative");
+        List<Integer> alternativeOrdinals = new ArrayList<>(alternativeCount);
+        for (int index = 0; index < alternativeCount; index++) {
+            alternativeOrdinals.add(buf.readVarInt());
+        }
+        WireRequirementGroup group = new WireRequirementGroup(
+                dependentOrdinal,
+                groupOrdinal,
+                alternativeOrdinals,
+                buf.readVarInt(),
+                buf.readBoolean(),
+                buf.readBoolean());
+        group.validateOrdinals(totalNodes);
+        return group;
+    }
+
+    private static void writeRequirementGroup(
+            FriendlyByteBuf buf,
+            WireRequirementGroup group) {
+        buf.writeVarInt(group.dependentOrdinal());
+        buf.writeVarInt(group.groupOrdinal());
+        buf.writeVarInt(group.visibleAlternativeOrdinals().size());
+        group.visibleAlternativeOrdinals().forEach(buf::writeVarInt);
+        buf.writeVarInt(group.hiddenAlternativeCount());
+        buf.writeBoolean(group.satisfactionDisclosed());
+        buf.writeBoolean(group.satisfied());
     }
 
     private static WireGroup readGroup(FriendlyByteBuf buf, int maximumMembers) {
@@ -657,6 +758,12 @@ public final class SyncResearchTreePacket {
                 .orElse(0);
     }
 
+    private static int estimatedRequirementGroupBytes(WireRequirementGroup group) {
+        return REQUIREMENT_GROUP_FIXED_RESERVE
+                + group.visibleAlternativeOrdinals().size()
+                        * REQUIREMENT_ALTERNATIVE_RESERVE;
+    }
+
     private static int estimatedTechTreeBytes(WireTechTree tree) {
         int bytes = TECH_TREE_FIXED_RESERVE
                 + BlueprintSyncLimits.encodedUtfBytes(tree.treeId().toString())
@@ -735,11 +842,14 @@ public final class SyncResearchTreePacket {
     private static void validateTotals(
             int totalNodes,
             int totalEdges,
+            int totalRequirementGroups,
             int totalGroups,
             int totalMembers,
             int totalTechTrees) {
         if (totalNodes < 0 || totalNodes > ResearchTreeGraph.MAX_NODES
                 || totalEdges < 0 || totalEdges > ResearchTreeGraph.MAX_EDGES
+                || totalRequirementGroups < 0
+                || totalRequirementGroups > ResearchTreeGraph.MAX_REQUIREMENT_GROUPS
                 || totalGroups < 0 || totalGroups > ResearchTreePresentation.MAX_GROUPS
                 || totalMembers < 0 || totalMembers > totalNodes
                 || totalTechTrees < 0 || totalTechTrees > 1
@@ -753,12 +863,14 @@ public final class SyncResearchTreePacket {
     private static final class Chunk {
         private final List<ResearchTreeGraph.Node> nodes = new ArrayList<>();
         private final List<WireEdge> edges = new ArrayList<>();
+        private final List<WireRequirementGroup> requirementGroups = new ArrayList<>();
         private final List<WireGroup> groups = new ArrayList<>();
         private final List<WireTechTree> techTrees = new ArrayList<>();
         private int estimatedBytes = HEADER_RESERVE;
 
         private boolean empty() {
-            return nodes.isEmpty() && edges.isEmpty() && groups.isEmpty() && techTrees.isEmpty();
+            return nodes.isEmpty() && edges.isEmpty() && requirementGroups.isEmpty()
+                    && groups.isEmpty() && techTrees.isEmpty();
         }
     }
 
@@ -770,6 +882,86 @@ public final class SyncResearchTreePacket {
                     || prerequisiteOrdinal == dependentOrdinal) {
                 throw new IllegalArgumentException("Invalid synchronized Research tree edge");
             }
+        }
+    }
+
+    private record WireRequirementGroup(
+            int dependentOrdinal,
+            int groupOrdinal,
+            List<Integer> visibleAlternativeOrdinals,
+            int hiddenAlternativeCount,
+            boolean satisfactionDisclosed,
+            boolean satisfied) {
+        private WireRequirementGroup {
+            if (dependentOrdinal < 0
+                    || dependentOrdinal >= ResearchTreeGraph.MAX_NODES
+                    || groupOrdinal < 0
+                    || groupOrdinal >= com.gamergaming.taczweaponblueprints.resource.research
+                            .ResearchRequirements.MAX_GROUPS
+                    || visibleAlternativeOrdinals == null
+                    || visibleAlternativeOrdinals.stream()
+                            .anyMatch(value -> value == null || value < 0
+                                    || value >= ResearchTreeGraph.MAX_NODES)
+                    || visibleAlternativeOrdinals.stream().distinct().count()
+                            != visibleAlternativeOrdinals.size()
+                    || hiddenAlternativeCount < 0
+                    || hiddenAlternativeCount
+                            > com.gamergaming.taczweaponblueprints.resource.research
+                                    .ResearchPrerequisiteGroup.MAX_ALTERNATIVES
+                    || visibleAlternativeOrdinals.isEmpty()
+                            && hiddenAlternativeCount == 0
+                    || visibleAlternativeOrdinals.size() + hiddenAlternativeCount
+                            > com.gamergaming.taczweaponblueprints.resource.research
+                                    .ResearchPrerequisiteGroup.MAX_ALTERNATIVES
+                    || !satisfactionDisclosed && satisfied) {
+                throw new IllegalArgumentException(
+                        "Invalid synchronized Research requirement group");
+            }
+            visibleAlternativeOrdinals = List.copyOf(visibleAlternativeOrdinals);
+            if (visibleAlternativeOrdinals.contains(dependentOrdinal)) {
+                throw new IllegalArgumentException(
+                        "Synchronized Research requirement group contains a self alternative");
+            }
+        }
+
+        private static WireRequirementGroup from(
+                ResearchTreeGraph.RequirementGroup group,
+                Map<ResourceLocation, Integer> ordinals) {
+            if (group.externalAlternativeCount() != 0) {
+                throw new IllegalArgumentException(
+                        "Research tree synchronization requires a full, unprojected requirement graph");
+            }
+            return new WireRequirementGroup(
+                    ordinalFor(ordinals, group.dependentId()),
+                    group.ordinal(),
+                    group.visibleAlternativeIds().stream()
+                            .map(id -> ordinalFor(ordinals, id))
+                            .toList(),
+                    group.hiddenAlternativeCount(),
+                    group.satisfactionDisclosed(),
+                    group.satisfied());
+        }
+
+        private void validateOrdinals(int totalNodes) {
+            if (dependentOrdinal >= totalNodes
+                    || visibleAlternativeOrdinals.stream()
+                            .anyMatch(ordinal -> ordinal >= totalNodes)) {
+                throw new IllegalArgumentException(
+                        "Research requirement group ordinal is outside the node table");
+            }
+        }
+
+        private ResearchTreeGraph.RequirementGroup resolve(
+                List<ResearchTreeGraph.Node> nodes) {
+            return new ResearchTreeGraph.RequirementGroup(
+                    nodes.get(dependentOrdinal).blueprintId(),
+                    groupOrdinal,
+                    visibleAlternativeOrdinals.stream()
+                            .map(ordinal -> nodes.get(ordinal).blueprintId())
+                            .toList(),
+                    hiddenAlternativeCount,
+                    satisfactionDisclosed,
+                    satisfied);
         }
     }
 
@@ -1254,6 +1446,7 @@ public final class SyncResearchTreePacket {
         private int expectedChunks;
         private int totalNodes;
         private int totalEdges;
+        private int totalRequirementGroups;
         private int totalGroups;
         private int totalMembers;
         private int totalTechTrees;
@@ -1270,6 +1463,7 @@ public final class SyncResearchTreePacket {
                 expectedChunks = packet.chunkCount;
                 totalNodes = packet.totalNodes;
                 totalEdges = packet.totalEdges;
+                totalRequirementGroups = packet.totalRequirementGroups;
                 totalGroups = packet.totalGroups;
                 totalMembers = packet.totalMembers;
                 totalTechTrees = packet.totalTechTrees;
@@ -1281,6 +1475,7 @@ public final class SyncResearchTreePacket {
             if (expectedChunks != packet.chunkCount
                     || totalNodes != packet.totalNodes
                     || totalEdges != packet.totalEdges
+                    || totalRequirementGroups != packet.totalRequirementGroups
                     || totalGroups != packet.totalGroups
                     || totalMembers != packet.totalMembers
                     || totalTechTrees != packet.totalTechTrees) {
@@ -1290,6 +1485,7 @@ public final class SyncResearchTreePacket {
             if (existing != null
                     && (!existing.nodes.equals(packet.nodes)
                     || !existing.edges.equals(packet.edges)
+                    || !existing.requirementGroups.equals(packet.requirementGroups)
                     || !existing.groups.equals(packet.groups)
                     || !existing.techTrees.equals(packet.techTrees))) {
                 chunks.clear();
@@ -1298,6 +1494,8 @@ public final class SyncResearchTreePacket {
 
             long nodeCount = chunks.values().stream().mapToLong(chunk -> chunk.nodes.size()).sum();
             long edgeCount = chunks.values().stream().mapToLong(chunk -> chunk.edges.size()).sum();
+            long requirementGroupCount = chunks.values().stream()
+                    .mapToLong(chunk -> chunk.requirementGroups.size()).sum();
             long groupCount = chunks.values().stream().mapToLong(chunk -> chunk.groups.size()).sum();
             long memberCount = chunks.values().stream()
                     .flatMap(chunk -> chunk.groups.stream())
@@ -1307,6 +1505,7 @@ public final class SyncResearchTreePacket {
                     .mapToLong(chunk -> chunk.techTrees.size())
                     .sum();
             if (nodeCount > totalNodes || edgeCount > totalEdges
+                    || requirementGroupCount > totalRequirementGroups
                     || groupCount > totalGroups || memberCount > totalMembers
                     || techTreeCount > totalTechTrees) {
                 chunks.clear();
@@ -1316,7 +1515,8 @@ public final class SyncResearchTreePacket {
             if (chunks.size() != expectedChunks) {
                 return Optional.empty();
             }
-            if (nodeCount != totalNodes || edgeCount != totalEdges
+            if (nodeCount != totalNodes
+                    || requirementGroupCount != totalRequirementGroups
                     || groupCount != totalGroups || memberCount != totalMembers
                     || techTreeCount != totalTechTrees) {
                 chunks.clear();
@@ -1333,14 +1533,25 @@ public final class SyncResearchTreePacket {
                             "Completed Research tree synchronization has an invalid node table");
                 }
             }
-            List<WireEdge> wireEdges = chunks.values().stream()
-                    .flatMap(chunk -> chunk.edges.stream())
+            List<ResearchTreeGraph.RequirementGroup> requirementGroups = chunks.values().stream()
+                    .flatMap(chunk -> chunk.requirementGroups.stream())
+                    .map(group -> group.resolve(nodes))
+                    .sorted(Comparator
+                            .comparing((ResearchTreeGraph.RequirementGroup group) ->
+                                    group.dependentId().toString())
+                    .thenComparingInt(ResearchTreeGraph.RequirementGroup::ordinal))
                     .toList();
-            List<ResearchTreeGraph.Edge> edges = wireEdges.stream()
-                    .map(edge -> new ResearchTreeGraph.Edge(
-                            nodes.get(edge.prerequisiteOrdinal()).blueprintId(),
-                            nodes.get(edge.dependentOrdinal()).blueprintId()))
+            List<ResearchTreeGraph.Edge> edges = requirementGroups.stream()
+                    .flatMap(group -> group.visibleAlternativeIds().stream()
+                            .map(alternative -> new ResearchTreeGraph.Edge(
+                                    alternative, group.dependentId())))
+                    .distinct()
                     .toList();
+            if (edges.size() != totalEdges) {
+                chunks.clear();
+                throw new IllegalArgumentException(
+                        "Completed Research tree requirements do not match the declared edge total");
+            }
             List<WireGroup> wireGroups = chunks.values().stream()
                     .flatMap(chunk -> chunk.groups.stream())
                     .sorted(Comparator.comparingInt(WireGroup::order))
@@ -1349,7 +1560,8 @@ public final class SyncResearchTreePacket {
                     .flatMap(chunk -> chunk.techTrees.stream())
                     .toList();
             chunks.clear();
-            ResearchTreeGraph graph = new ResearchTreeGraph(nodes, edges);
+            ResearchTreeGraph graph = new ResearchTreeGraph(
+                    nodes, edges, requirementGroups);
             ResearchTreePresentation presentation = new ResearchTreePresentation(
                     wireGroups.stream().map(group -> group.resolve(nodes)).toList());
             ResearchTechTreePresentation techTree = wireTechTrees.isEmpty()
@@ -1368,6 +1580,7 @@ public final class SyncResearchTreePacket {
             expectedChunks = 0;
             totalNodes = 0;
             totalEdges = 0;
+            totalRequirementGroups = 0;
             totalGroups = 0;
             totalMembers = 0;
             totalTechTrees = 0;

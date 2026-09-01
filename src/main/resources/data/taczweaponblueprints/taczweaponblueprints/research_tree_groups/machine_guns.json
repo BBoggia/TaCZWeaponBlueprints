@@ -6,10 +6,8 @@
   "icon": "tacz:rpk",
   "order": 60,
   "ranks": [
+    ["tacz:rpk", "tacz:m249", "tacz:fn_evolys"],
     [],
-    ["tacz:rpk"],
-    ["tacz:m249"],
-    ["tacz:fn_evolys"],
     [],
     ["tacz:minigun"]
   ]

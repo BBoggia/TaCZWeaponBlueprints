@@ -4,7 +4,15 @@
 
 Release 1.2.0 is built for Minecraft 1.20.1, Forge 47.x, TaCZ 1.1.8-hotfix, and Fzzy Config 0.5.9. Declared dependency ranges intentionally stop before TaCZ 1.2 and Fzzy Config 0.6 because those API lines have not been validated.
 
-TaCZ 1.1.8 can inject a Model 943 revolver and ammunition into a world's optional bonus chest, but does not provide a gun-smithing recipe for that weapon. It is therefore not part of the recipe-backed blueprint tree. Glock 17 is the preferred shared research entry; if its recipe is removed, the server selects the first available configured pistol fallback.
+TaCZ 1.1.8 can inject a Model 943 revolver and ammunition into a world's optional bonus chest, but does not provide a gun-smithing recipe for that weapon. It is therefore not part of the recipe-backed blueprint tree. The automatic generator selects the live foundation from the complete recipe-backed weapon catalog.
+
+The packaged 53-weapon tree uses the same `capability_v3` automatic placement
+and grouped-route generator for every recipe-backed weapon, including add-on
+weapons. Its old authored coordinates and prerequisite declarations remain
+dormant compatibility data and never mix into the active automatic weapon
+graph. Research costs follow
+the generated capability tier (2/4/6/8/10/12 RP), while attachment and ammo
+research remains authored but disabled by default.
 
 Install the blueprint mod and required dependencies on both client and server. TaCZ gun content packs remain normal TaCZ resources and do not need to be declared as Forge mods.
 
@@ -13,6 +21,31 @@ Research Tree purchases use synchronized `treeResearchResultMode`. The packaged
 blueprint. `CREATE_BLUEPRINT` retains the former two-step result for a server
 that needs a temporary compatibility window. Changing the setting requires no
 world conversion and does not rewrite existing knowledge or physical items.
+In `DIRECT_LEARN`, selecting a higher locked node previews and can purchase a
+globally shortest viable prerequisite closure. Among equally short closures,
+the server prefers one affordable with the current inventory and RP, then uses
+stable economic and resource-ID ties. Progression-exempt alternatives satisfy
+their groups without being purchased. The server charges every
+distinct newly learned node's aggregate RP and materials exactly once and
+commits the complete path atomically. `CREATE_BLUEPRINT` intentionally retains
+single-node behavior because creating one physical item cannot represent a
+multi-node permanent unlock.
+
+Learned knowledge does not by itself become a shortcut through the tree. A
+weapon acquired out of order remains learned and usable, but it satisfies a
+later prerequisite only when its own effective requirements contain a complete
+learned route back to a root. Mandatory groups retain AND semantics and each
+choice group needs one root-connected alternative. Selecting a higher node in
+`DIRECT_LEARN` may therefore include missing nodes below an already-learned
+weapon; the already-learned support is validated but is not charged or learned
+again. Connectivity is recalculated from current knowledge and policy, so old
+worlds need no save conversion and automatically become connected when the
+missing ancestry is later learned.
+
+One path purchase is capped at 1,024 unlocks. Exact planning retains at most
+4,096 nondominated closures per node and explores at most 262,144 route states;
+oversized or combinatorially excessive authored routes fail closed with a
+specific action result and consume nothing.
 
 Synchronized progression exemptions are live access policy, not saved
 knowledge. Exact IDs, coarse `gun`/`ammo`/`attachment` kinds, and TaCZ item
@@ -27,6 +60,34 @@ idempotently on login, successful resource reload, and synchronized config
 update. Removing a configured starter never revokes it, and repeated callbacks
 do not issue Research Point awards. Audit missing IDs and unmatched subgroup
 selectors with `/gg research status` after changing packs or configuration.
+
+## Research costs and found-weapon recovery
+
+`researchCostMode` is a synchronized server policy. `POINTS_AND_ITEMS` is the
+compatibility default; `POINTS_ONLY` suppresses authored item/tag ingredients,
+and `ITEMS_ONLY` suppresses authored RP costs. The source datapack costs are not
+rewritten, so changing the mode or returning to the default restores them. The
+same effective cost is used by single-node research, shortest-path purchases,
+server previews, commands, and economy exports.
+
+`foundWeaponRecoveryMode` defaults to `PROTECTED_BLUEPRINT_ONLY`. Newly crafted
+survival guns are stamped as crafted by the TaCZ gun-smithing transaction, and
+guns observed in TaCZ's generated-loot pass are stamped with a versioned loot
+origin. Recovery trusts only a valid positive loot-origin marker. Unknown guns,
+including guns created before this feature or supplied through an unobserved
+third-party path, fail closed and retain protected behavior.
+
+The other modes are `RECYCLABLE_BLUEPRINT`, `DIRECT_RP_ONLY`, and
+`PLAYER_CHOICE`. Direct conversion uses the target's existing recycling value,
+still pays the target's reverse-engineering RP/material cost, applies the RP cap
+after that cost, consumes the weapon once, and does not learn the blueprint.
+The Analyzer requires a second confirmation before directly converting an
+unlearned weapon. Target recycling gates and the global duplicate-recycling
+policy remain economy controls; a recovery mode does not silently override
+them. Disabling `physical_blueprint_learning` blocks protected blueprint
+learning, but it does not block direct RP recovery or an explicitly
+recyclable-only output because neither path teaches the recipe. See
+`docs/research-cost-and-found-weapon-recovery.md` for the full matrix.
 
 ## Balance presets and setup assistant
 
@@ -76,25 +137,33 @@ ledger. Version-1 saves migrate automatically with an empty ledger; learned and
 discovered blueprint IDs, Research Points, and legacy recipe aliases remain
 unchanged and require no world conversion. The ledger is copied across every
 player clone and is not sent to clients. The custom network protocol is
-`36`, so clients and servers must update together. Protocol 36 transfers each
+`40`, so clients and servers must update together. Protocol 40 transfers each
 disclosure-safe research graph, matching group presentation, and optional
-identity-safe Tech Tree metadata as one bounded atomic publication. It retains
+identity-safe Tech Tree metadata as one bounded atomic publication. It also
+transfers canonical prerequisite-group boundaries, visible alternatives,
+hidden-alternative counts, and only disclosure-safe satisfaction state. It retains
 the server-resolved curated-overview flag and the coarse gun/ammo/attachment
 kind used by research selectors, plus bounded Tech Tree rank, long sibling
 order, optional visual-band references, placement-origin metadata, an ordered
 bounded table of custom band labels, and the tree-owned resolved 8–28 node
 layer capacity.
 It retains hardened progression chunk generations and uses a research-only,
-live-inventory Research Bench preview; Blueprint Analyzer previews independently carry
-duplicate, Research Data, and physical-item reverse-engineering decisions plus an
-opaque workstation-state token. It correlates Research Bench
+live-inventory Research Bench preview, including multi-node unlock count,
+aggregate path costs, and the complete material-type count even when only the
+first six bounded material rows are shown. The preview also carries the
+effective research-cost mode. Blueprint Analyzer previews independently carry
+duplicate, Research Data, physical-item reverse-engineering, trusted weapon
+origin, and direct found-weapon recovery decisions plus an opaque
+workstation-state token. It correlates Research Bench
 selection/research results and sends
 bounded disclosure-filtered RP help plus aggregated award feedback. This
 compatibility change does not alter learned
 blueprints, discoveries, Research Points, or the required format number of
-existing research-tree group datapacks. Tech Tree resources remain optional;
-missing or unusable presentation data hides the optional view without changing
-the established Branches or All Weapons graph.
+existing research-tree group datapacks. The Research Bench now requires a
+publishable Tech Tree presentation: missing or unusable presentation data keeps
+the player in an explicit unavailable Tech Tree state and records the failure
+server-side. Dormant Branches and All Weapons data remains internal and is not
+used as a player-facing fallback.
 
 Cross-domain Tech Tree navigation adds no packet or migration field. Clients
 derive one immutable reciprocal relationship index from the graph and placement
@@ -148,7 +217,7 @@ data/<namespace>/taczweaponblueprints/research_point_awards/<path>.json
 Roll out group resources after their referenced profile and rules. Group ranks
 organize the UI only; they never replace prerequisite rules. After `/reload`,
 use `research status`, inspect representative members, and run `research
-export`. Export format 12 retains the format-2 research and presentation fields
+export`. Export format 18 retains the format-2 research and presentation fields
 and the revision-matched automatic-placement summary and per-weapon
 decision: authored, automatic, excluded automatic, or legacy-compatible
 unplaced. Automatic entries
@@ -178,9 +247,44 @@ provenance, format 11 adds gradual-merge and closure-guard evidence, and format
 also adds an automatic `publication` summary with exact canonical-branch,
 decision, and finalized-rank counts and a combined completeness result. A false
 result is actionable for a current connected publication; legacy compatibility
-plans report unavailable branch coordinates instead of fabricating them. Strict
-format-3 through format-10 consumers must explicitly
+plans report unavailable branch coordinates instead of fabricating them. Format
+13 adds canonical `prerequisite_groups` to every entry while retaining the
+legacy conservative `prerequisites` union for existing tools. Strict
+format-3 through format-13 consumers must explicitly
 migrate instead of receiving new fields or enum values under an older schema.
+Format 14 adds the automatic `prerequisite_strategy`, authoritative generated
+group counts, alternate-route group counts, and per-entry
+`planned_prerequisite_groups`. The flat planned-prerequisite list remains its
+conservative compatibility union. The grouped field is copied from the
+canonical runtime plan rather than reconstructed from selection order. Legacy
+branch-summary field names containing `merge` remain available, while the
+operator status and format-14 aliases describe the same values as multi-parent
+sets so both mandatory AND and alternative OR strategies are represented
+accurately.
+Format 15 adds the live `grouped_route_quality` report. It contains
+requirement-aware mandatory ancestry, effective-alternative and route-cost
+distributions, branch-entry redundancy/overlap, phase fan-out and family OR
+density, single-route chains, per-terminal minimum-route bounds, configured-
+income affordability, and non-blocking warning codes. Strict format-14
+consumers must migrate explicitly; the underlying format-14 group and strategy
+fields retain their meanings.
+Format 16 adds `grouped_route_motif_assessment`. It records the versioned
+retain/prototype/insufficient-evidence decision, every semantic review signal,
+the bounded motif families a future prototype would target, and the explicit
+boundary between pre-junction crossing estimates and unavailable rendered-
+junction evidence. The assessment is read-only and cannot change generation,
+research, or layout authority. Strict format-15 consumers must migrate
+explicitly; the format-15 quality report retains its meaning.
+Format 17 adds the strategy-specific grouped `alternative_route_review` for
+automatic prerequisite decisions and aggregate reviewed/accepted/proven-cost-
+rejected counts. Each review carries lower/upper route costs, lower/upper cost
+ratios, mandatory-ancestry overlap, divergent-node count, outcome, and
+exactness. Legacy closure-inflation evidence remains available for
+`legacy_and`; strict format-16 consumers must migrate explicitly.
+Format 18 adds the explicit automatic `requirement_shape` and aggregate
+pure-alternative, mandatory-convergence, and mixed hybrid relationship counts.
+Strict format-17 consumers must migrate explicitly; the canonical group and
+route-review fields retain their meanings.
 Tech Tree-only members still record
 their domain/lane/tier/order, and groups still record authored IDs absent from
 the live TaCZ catalog. A malformed group,
@@ -259,19 +363,24 @@ recipe-backed TaCZ 1.1.8 catalog: 53 weapons, 95 attachments, and 24 ammunition
 types. Profile format 2 now activates only the 53-weapon tree by default;
 attachment and ammunition rules, placements, and RK-6/9mm entry candidates
 remain authored but dormant. The legacy Branches and All Weapons projections
-remain weapon-only. Servers can opt either dormant domain back in with a
-format-2 profile whose matching `domain_policies` entry is enabled.
+remain weapon-only and are retained only as hidden compatibility data; the
+Research Bench exposes Tech Tree alone. Servers can opt either dormant domain
+back in with a format-2 profile whose matching `domain_policies` entry is enabled.
 Adding these prerequisite edges does not change persisted learned IDs, so
 servers do not need a progression migration and already learned content remains
 learned. Disabled domains do not resolve or rebase entry candidates. Once a
 domain is enabled, its ordered candidates again select the first usable
 fallback. Existing format-1 profiles retain their previous all-domain behavior.
 
-Existing Tech Tree resources remain format 1 compatible. The built-in active
-weapon bundle now uses format 2 with 53 explicit placements on contiguous
-ranks 0–12. Its prerequisite graph, costs, lanes, sibling order, and manual
-authority are unchanged. The 95 attachment and 24 ammunition placements remain
-authored in format 1 and can be enabled by an opt-in format-2 profile. Lane and
+Existing Tech Tree resources remain format 1 compatible and are always
+`authored_only`. Tree format 2 adds explicit `weapon_placement_mode` authority.
+In `authored_only`, only non-fallback exact, tag, and selector placements appear;
+all unspecified weapons are omitted. In `automatic`, every catalog weapon is
+generated and all authored weapon positions and prerequisites are ignored. An
+automatic tree must have exactly one placement profile; an authored-only tree
+must have none. This intentionally removes hybrid population and prerequisite
+behavior. The 95 attachment and 24 ammunition placements remain authored in
+format 1 and can be enabled by an opt-in format-2 profile. Lane and
 sibling metadata is still accepted and remains useful as a deterministic authoring
 hint, but the client no longer promises one visible lane, column, or box per
 classification. A custom pack that depended on the old lane-shaped layout
@@ -284,7 +393,7 @@ every prerequisite must have a strictly smaller value. Format-1 resources must
 omit `rank`; the server converts their tier/level positions with a wide stride
 and topologically lifts legacy same-position dependents without changing their
 rules, costs, or stored progression. Format-2 equal/backward edges reject the
-reload rather than being repaired. Protocol 36 publishes rank, sibling order,
+reload rather than being repaired. Protocol 39 publishes rank, sibling order,
 an optional visual-band reference, its bounded label table, and the tree-owned
 layer capacity. The client
 compresses sparse ranks into contiguous visual rows; band metadata cannot
@@ -300,13 +409,18 @@ its six score tiers and `levels_per_tier` behavior. Omitting `review_handling`
 uses `exclude`, so warning-bearing estimates retain their legacy fallback
 position. Format 2 creates contiguous stat-sorted ranks under the selected
 format-2 tree's layout policy. A fixed policy supports 8–28 nodes. A dynamic
-policy resolves `ceil(sqrt(4 × (authored + eligible automatic weapons) / 3))`
+policy resolves `ceil(sqrt(4 × eligible automatic weapons / 3))`
 inside its configured minimum/maximum (the built-in range is 9–20), and may
 define an ordered set of custom score bands or omit bands entirely. The legacy
-automatic-profile width remains readable for format-1-tree compatibility. The
-bundled tree uses format 2,
+automatic-profile width remains readable for format-1-tree compatibility.
+Format 4 adds `scoring_model`: omission preserves `mechanical_v2`, while the
+packaged profile explicitly selects `capability_v3`. This changes only generated
+placement evidence and topology; it does not rewrite player progress, research
+costs, learned blueprints, items, or packets. To roll back scoring, override the
+profile with `"scoring_model":"mechanical_v2"` and reload. The
+bundled tree uses format 2 and its automatic profile uses format 4,
 `connected`, `place_connected`, at most two generated prerequisites, a
-two-weapon foundation, a configured bounded merge interval of four, a dynamic
+one-weapon foundation, a configured bounded merge interval of four, a dynamic
 9–20-node layer range, and dynamic three-rank presentation bands. It omits the legacy
 `levels_per_tier` field because format-2 rank count is dynamic. Its lower ranks
 form a shared multi-parent mesh; second-parent opportunities then taper
@@ -316,16 +430,14 @@ usable runtime evidence for an add-on gun, the bundled policy assigns an
 explicitly review-marked conservative band based on its weapon type and a
 stable ID hash instead of placing every such gun at Basic level zero.
 
-Custom profiles may choose `review_handling: "exclude"`,
-`"place_independent"`, or `"place_connected"`. The middle option publishes the
-reviewed tier/level but never creates a generated prerequisite for it and never
-uses it as an anchor for another generated edge; the last allows reviewed
-proposals to participate in connected-mode planning. The
-profile `mode` still controls the overall capability: `independent` publishes
-no automatic positions, `distributed` publishes positions without generated
-edges, and `connected` may publish both. Roll authority changes out against a
-world copy and verify the tree after `/reload`; stale or unsafe plans fail open
-to the authored/legacy policy instead of stranding the add-on weapon.
+Automatic-tree profiles may use `review_handling: "place_independent"` or
+`"place_connected"`; `exclude` is rejected because automatic authority must
+place the complete weapon population. Likewise, profile `mode` must be
+`distributed` or `connected`; `independent` does not assign positions and is
+rejected. `place_independent` permits a reviewed position without making it an
+anchor, while `place_connected` permits connected-mode planning. Roll authority
+changes out against a world copy and verify the tree after `/reload`; stale or
+unsafe automatic plans never restore authored weapon positions or prerequisites.
 Use `/gg research status` to confirm the automatic mode and revision pair, then
 `/gg research inspect <blueprint>` to compare its effective policy with the
 automatic proposal. For a current connected tree, the publication line should
@@ -359,8 +471,9 @@ To roll back the mod version, stop the server, restore the previous JAR and matc
 - `preview` applies the current catalog, predicates, defaults, overrides, and immutable blacklist snapshot without consuming RNG.
 - `research status` audits rule assignment plus authored group coverage and missing members for the active profile.
 - `research inspect` reports the selected rule, visibility, cost, prerequisites, and authored group placement for one live blueprint.
-- `research export` writes a sorted format-12 authoring catalog with group,
-  fallback, revision-matched automatic-placement, topology, configured/effective
+- `research export` writes a sorted format-17 authoring catalog with canonical
+  prerequisite groups, presentation groups, fallback, revision-matched
+  automatic-placement, topology, configured/effective
   width, per-weapon decision, and economy evidence under the current world directory.
 - `research awards status` reports the independent last-known-good RP award
   revision, definition/group/budget/index counts, trigger totals, and the last
@@ -389,6 +502,7 @@ Run with JDK 17:
 ```text
 ./gradlew cleanTest test build
 ./gradlew verifyTaperedAutomaticTopologyContract
+./gradlew verifyHybridRouteGenerationContract
 ./gradlew verifyAutomaticPublicationRecoveryContract
 ./gradlew verifyReleaseArtifact
 ./gradlew verifyPublicationReadiness
@@ -414,9 +528,73 @@ bundled `connected` mode with `place_connected` review handling, the three
 version identities, dynamic layering with a configured 9–20-node range and its
 baseline resolved width, optional
 tree-owned optional/dynamic/configured presentation bands, the 4,096-candidate
-limit, protocol 36, and export format 12 unless the
+limit, protocol 40, export format 18, and automatic prerequisite strategy
+`grouped_routes_v1` unless the
 corresponding contract and compatibility documentation are deliberately
 revised.
+
+The grouped-prerequisite acceptance gate writes
+`build/reports/grouped-prerequisite-acceptance.json`. It rejects a missing,
+renamed, skipped, failed, or errored Phase 7 acceptance case, and pins the
+`truth-tables-integration-v1` contract in the JAR manifest and release-candidate
+report. A deliberate change to legacy AND, grouped OR/AND, filtering,
+publication, synchronization, parent bounds, or determinism must update the
+affected tests, the acceptance contract version, and the migration notes
+together.
+
+The Phase 8 grouped-route rollout gate writes
+`build/reports/grouped-route-rollout.json`. It consumes the Phase 7 acceptance
+report, verifies the packaged format-4 `grouped_routes_v1`/`capability_v3`
+profile and
+default-disabled Attachment/Ammunition domains, and requires the exact rollout
+evidence spanning planner, authority, publication, network, client, export, and
+economy behavior. The report must identify `merge_interval` as
+`ignored_grouped_routes_v1` for the grouped strategy and the generated-parent
+cost guard as `group_aware_route_balance_v1`, while separately retaining
+`conservative_legacy_and_union_closure_v1` for `legacy_and`. A deliberate
+change to either control requires a rollout-contract version and
+migration-note update.
+
+The Phase 9 grouped route-selection gate writes
+`build/reports/grouped-route-selection.json`. It consumes the Phase 8 rollout
+report, rejects missing or non-clean selection/economy/client evidence, and
+pins `group-aware-route-balance-v1`. Grouped selection rejects only a route
+cost imbalance above the 8.0x extreme-review ceiling proven by its lower bound;
+the 4.0x p95 value remains diagnostic. Uncertain authored AND-of-OR paths
+remain eligible and retain explicit lower/upper bounds. The JAR manifest and
+release-candidate report carry the same contract.
+
+The Phase 10 stabilization gate writes
+`build/reports/grouped-route-stabilization.json`. It consumes the Phase 7–9
+reports and pins `default-rollout-migration-v1` after checking the packaged
+format-4 `grouped_routes_v1`/`capability_v3` default, explicit and omitted
+`legacy_and`
+fallbacks, save compatibility, disclosure and packet bounds, cache
+invalidation, and the 53/287/4,096-node scale matrix. Existing learned
+blueprints are preserved and require no save migration. A grouped-generation
+failure never silently switches semantics to legacy AND. The report records
+the remaining screenshot/manual-acceptance checklist as a release gate rather
+than treating visual judgment as an automated assertion. The JAR manifest and
+release-candidate report carry the same stabilization contract.
+The Phase 11 hybrid-generation gate writes
+`build/reports/hybrid-route-generation.json`. It pins
+`deliberate-hybrid-generation-v1`, verifies that `hybrid_routes_v1` remains an
+explicit format-3 connected-mode opt-in, and requires deterministic mandatory,
+OR, and mixed AND-of-OR planner evidence. The packaged profile remains the
+bounded `grouped_routes_v1` default. A deliberate change to relationship-shape
+semantics, gateway scheduling, hybrid cost/ancestry safeguards, or export
+identity must update this contract and its migration notes together.
+
+The grouped-prerequisite Phase 12 visual-refinement gate writes
+`build/reports/grouped-visual-refinement.json`. It pins
+`branch-aware-visual-refinement-v1` and verifies client-only family-preserving
+responsive wrapping, bounded grouped-junction clearance, branch-seam pressure,
+and deterministic 287/4,096-node geometry. It does not migrate saves or change
+the published graph: prerequisite groups, semantic ranks, costs, protocol 40,
+export format 18, and the packaged `grouped_routes_v1` strategy remain
+authoritative. Before public release, retain the gate report and complete its
+linked before/after screenshot checks at normal and maximum zoom-out.
+
 The report's research-workstation split must record the research-only permanent
 fullscreen Bench, dedicated one-input Recycler, exact action ownership, final
 model/texture contract, recipe discovery route, and manual-QA evidence path.

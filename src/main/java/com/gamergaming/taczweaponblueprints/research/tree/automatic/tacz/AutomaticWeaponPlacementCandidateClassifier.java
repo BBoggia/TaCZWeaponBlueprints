@@ -2,7 +2,6 @@ package com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -10,22 +9,19 @@ import java.util.Set;
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
 import com.gamergaming.taczweaponblueprints.item.BlueprintKind;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain;
-import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.PlacementOrigin;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponBranchAnalyzer;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPlan;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPlanner;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPolicy;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementProposal;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponRoleAnalyzer;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponScoringModel;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchSnapshot;
-import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchSnapshot.TechTreeEntryBinding;
 import com.gamergaming.taczweaponblueprints.resource.research.ResearchAutomaticPlacementProfile;
-import com.gamergaming.taczweaponblueprints.resource.research.ResearchTechTreePlacementResolver;
-import com.gamergaming.taczweaponblueprints.resource.research.ResearchTechTreePlacementResolver.Placement;
 
 import net.minecraft.resources.ResourceLocation;
 
-/** Pure non-authored weapon classifier used before any automatic placement is trusted. */
+/** Classifies every catalog weapon for an automatic-authority tree. */
 public final class AutomaticWeaponPlacementCandidateClassifier {
     private AutomaticWeaponPlacementCandidateClassifier() {
     }
@@ -59,35 +55,23 @@ public final class AutomaticWeaponPlacementCandidateClassifier {
                 .sorted(Map.Entry.comparingByKey(
                         java.util.Comparator.comparing(ResourceLocation::toString)))
                 .toList();
-        Set<String> authored = new LinkedHashSet<>();
-        List<String> automaticCandidates = new ArrayList<>();
-        for (Map.Entry<ResourceLocation, BlueprintData> weapon : weapons) {
-            ResearchTechTreePlacementResolver.Selection selection =
-                    ResearchTechTreePlacementResolver.resolve(
-                            research, profile.tree(), weapon.getKey(), weapon.getValue());
-            if (selection.placement().isEmpty()) {
-                automaticCandidates.add(weapon.getKey().toString());
-                continue;
-            }
-            Placement placement = selection.placement().orElseThrow();
-            if (placement.origin().authored()) {
-                authored.add(weapon.getKey().toString());
-            } else if (placement.origin() == PlacementOrigin.LEGACY_FALLBACK) {
-                validateGenuineFallback(research, placement);
-                automaticCandidates.add(weapon.getKey().toString());
-            } else {
-                throw new IllegalStateException(
-                        "Unexpected placement origin during automatic classification: "
-                                + placement.origin());
-            }
+        var tree = research.techTrees().get(profile.tree());
+        if (tree == null || !tree.usesAutomaticWeaponPlacement()) {
+            throw new IllegalArgumentException(
+                    "Automatic placement requires an automatic-authority Research Tech Tree");
         }
+        Set<String> authored = Set.of();
+        List<String> automaticCandidates = weapons.stream()
+                .map(entry -> entry.getKey().toString())
+                .toList();
 
         Map<String, String> excluded = new LinkedHashMap<>();
         Map<String, AutomaticWeaponPlacementProposal> eligible = new LinkedHashMap<>();
         List<String> scoreable = new ArrayList<>();
         AutomaticWeaponPlacementPlanner planner = new AutomaticWeaponPlacementPlanner();
-        var tree = research.techTrees().get(profile.tree());
-        boolean hasWeaponsDomain = tree != null && tree.domain(Domain.WEAPONS).isPresent();
+        boolean capabilityScoring = profile.scoringModel()
+                == AutomaticWeaponScoringModel.CAPABILITY_V3;
+        boolean hasWeaponsDomain = tree.domain(Domain.WEAPONS).isPresent();
         AutomaticWeaponPlacementPolicy basePlacementPolicy = profile.placementPolicy();
         for (String id : automaticCandidates) {
             if (!profile.mode().assignsPlacement()) {
@@ -104,10 +88,14 @@ public final class AutomaticWeaponPlacementCandidateClassifier {
                         planner,
                         eligible,
                         excluded);
-            } else if (!evidence.scoresByBlueprint().containsKey(id)) {
+            } else if (capabilityScoring
+                    ? !evidence.capabilityScoresByBlueprint().containsKey(id)
+                    : !evidence.scoresByBlueprint().containsKey(id)) {
                 publishConservativeProposalOrExclude(
                         id,
-                        "missing_mechanical_score",
+                        capabilityScoring
+                                ? "missing_capability_score"
+                                : "missing_mechanical_score",
                         catalog,
                         profile,
                         basePlacementPolicy,
@@ -119,8 +107,11 @@ public final class AutomaticWeaponPlacementCandidateClassifier {
             }
         }
 
-        AutomaticWeaponPlacementPlan plan = planner.plan(
-                evidence.scoresByBlueprint(), scoreable, basePlacementPolicy);
+        AutomaticWeaponPlacementPlan plan = capabilityScoring
+                ? planner.planCapabilities(
+                        evidence.capabilityScoresByBlueprint(), scoreable, basePlacementPolicy)
+                : planner.plan(
+                        evidence.scoresByBlueprint(), scoreable, basePlacementPolicy);
         plan.rejectedCandidates().forEach((id, reason) ->
                 excluded.put(id, "proposal_rejected:" + reason));
         plan.proposals().forEach((id, proposal) -> {
@@ -145,10 +136,17 @@ public final class AutomaticWeaponPlacementCandidateClassifier {
                     id,
                     itemType == null || itemType.isBlank() ? "unknown" : itemType.trim());
         });
-        var roleSignatures = new AutomaticWeaponRoleAnalyzer().analyze(
-                eligible, evidence.scoresByBlueprint(), fallbackArchetypes);
-        var authoredRoleSignatures = new AutomaticWeaponRoleAnalyzer().analyzeAuthored(
-                authored, evidence.scoresByBlueprint(), fallbackArchetypes);
+        AutomaticWeaponRoleAnalyzer roleAnalyzer = new AutomaticWeaponRoleAnalyzer();
+        var roleSignatures = capabilityScoring
+                ? roleAnalyzer.analyzeCapabilities(
+                        eligible, evidence.capabilityScoresByBlueprint(), fallbackArchetypes)
+                : roleAnalyzer.analyze(
+                        eligible, evidence.scoresByBlueprint(), fallbackArchetypes);
+        var authoredRoleSignatures = capabilityScoring
+                ? roleAnalyzer.analyzeCapabilitiesAuthored(
+                        authored, evidence.capabilityScoresByBlueprint(), fallbackArchetypes)
+                : roleAnalyzer.analyzeAuthored(
+                        authored, evidence.scoresByBlueprint(), fallbackArchetypes);
         int topologyWeaponCount = Math.addExact(authored.size(), eligible.size());
         AutomaticWeaponPlacementPolicy resolvedPolicy =
                 AutomaticWeaponCandidatePositioner.resolvePolicy(
@@ -202,26 +200,8 @@ public final class AutomaticWeaponPlacementCandidateClassifier {
                 blueprintId,
                 data.getItemType(),
                 reason,
-                placementPolicy));
+                placementPolicy,
+                profile.scoringModel()));
     }
 
-    private static void validateGenuineFallback(
-            BlueprintResearchSnapshot snapshot,
-            Placement placement) {
-        TechTreeEntryBinding binding = snapshot.techTreeEntriesFor(placement.treeId()).stream()
-                .filter(value -> value.bundleId().equals(placement.source().bundleId())
-                        && value.entryIndex() == placement.source().entryIndex())
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException(
-                        "Resolved fallback source is absent from its research snapshot"));
-        var target = binding.entry().target();
-        if (!binding.entry().fallback()
-                || binding.bundle().priority() != 0
-                || target.selector().isEmpty()
-                || !target.blueprints().isEmpty()
-                || !target.tags().isEmpty()) {
-            throw new IllegalStateException(
-                    "Automatic placement candidate did not originate from a selector-only legacy fallback");
-        }
-    }
 }

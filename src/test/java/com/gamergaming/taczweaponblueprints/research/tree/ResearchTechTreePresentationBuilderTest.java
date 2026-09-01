@@ -27,6 +27,7 @@ import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContra
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.WeaponRating;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementPolicy;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementProposal;
+import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPrerequisitePlan;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponPlacementCandidateSnapshot;
 import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintCatalogSelector;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCost;
@@ -357,7 +358,7 @@ class ResearchTechTreePresentationBuilderTest {
                 new ResearchAutomaticPlacementProfile(
                         2,
                         TREE,
-                        AutomaticPlacementMode.DISTRIBUTED,
+                        AutomaticPlacementMode.CONNECTED,
                         3,
                         0,
                         AutomaticWeaponPlacementPolicy.ReviewHandling.PLACE_CONNECTED,
@@ -374,7 +375,7 @@ class ResearchTechTreePresentationBuilderTest {
                         id("test:high_score_rule"), rule(
                                 high, JournalVisibility.FULL, List.of())),
                 Map.of(),
-                Map.of(TREE, formatTwoDefinition(scoreBands)),
+                Map.of(TREE, automaticDefinition(formatTwoDefinition(scoreBands))),
                 Map.of(id("test:score_fallback"), fallback),
                 Map.of(id("test:automatic"), automaticProfile));
         AutomaticWeaponPlacementPolicy policy = new AutomaticWeaponPlacementPolicy(
@@ -392,7 +393,7 @@ class ResearchTechTreePresentationBuilderTest {
         AutomaticWeaponPlacementCandidateSnapshot candidates =
                 new AutomaticWeaponPlacementCandidateSnapshot(
                         TREE,
-                        AutomaticPlacementMode.DISTRIBUTED,
+                        AutomaticPlacementMode.CONNECTED,
                         policy,
                         5L,
                         7L,
@@ -444,13 +445,22 @@ class ResearchTechTreePresentationBuilderTest {
                         true)));
         ResearchAutomaticPlacementProfile automaticProfile =
                 new ResearchAutomaticPlacementProfile(
-                        1, TREE, AutomaticPlacementMode.DISTRIBUTED, 4, 0);
+                        2,
+                        TREE,
+                        AutomaticPlacementMode.DISTRIBUTED,
+                        4,
+                        0,
+                        AutomaticWeaponPlacementPolicy.ReviewHandling.PLACE_CONNECTED,
+                        2,
+                        4,
+                        9,
+                        List.of());
         BlueprintResearchSnapshot snapshot = BlueprintResearchSnapshot.create(
                 Map.of(),
                 Map.of(PROFILE, profile()),
                 Map.of(id("test:addon_rule"), rule(addOn, JournalVisibility.FULL, List.of())),
                 Map.of(),
-                Map.of(TREE, definition(Optional.empty())),
+                Map.of(TREE, automaticDefinition(definition(Optional.empty()))),
                 Map.of(id("test:fallback"), fallback),
                 Map.of(id("test:automatic"), automaticProfile));
         int score = 50;
@@ -502,7 +512,7 @@ class ResearchTechTreePresentationBuilderTest {
     }
 
     @Test
-    void automaticPositionIsLiftedAboveItsPublishedPrerequisite() {
+    void automaticTopologyOwnsPlacementAndLiftsItsDependent() {
         ResourceLocation prerequisite = id("test:reviewed_pistol");
         ResourceLocation addOn = id("test:addon_pistol");
         BlueprintCatalogSelector testGuns = new BlueprintCatalogSelector(
@@ -531,7 +541,16 @@ class ResearchTechTreePresentationBuilderTest {
                                 true)));
         ResearchAutomaticPlacementProfile automaticProfile =
                 new ResearchAutomaticPlacementProfile(
-                        1, TREE, AutomaticPlacementMode.DISTRIBUTED, 4, 0);
+                        2,
+                        TREE,
+                        AutomaticPlacementMode.CONNECTED,
+                        4,
+                        0,
+                        AutomaticWeaponPlacementPolicy.ReviewHandling.PLACE_CONNECTED,
+                        2,
+                        4,
+                        9,
+                        List.of());
         BlueprintResearchSnapshot snapshot = BlueprintResearchSnapshot.create(
                 Map.of(),
                 Map.of(PROFILE, profile()),
@@ -541,7 +560,7 @@ class ResearchTechTreePresentationBuilderTest {
                         id("test:addon_rule"), rule(
                                 addOn, JournalVisibility.FULL, List.of(prerequisite))),
                 Map.of(),
-                Map.of(TREE, definition(Optional.empty())),
+                Map.of(TREE, automaticDefinition(definition(Optional.empty()))),
                 Map.of(id("test:entries"), entries),
                 Map.of(id("test:automatic"), automaticProfile));
 
@@ -560,18 +579,44 @@ class ResearchTechTreePresentationBuilderTest {
                 ResearchTechTreeContract.AUTOMATIC_REFERENCE_VERSION,
                 ResearchTechTreeContract.AUTOMATIC_PLACEMENT_VERSION,
                 List.of());
+        AutomaticWeaponPlacementProposal prerequisiteProposal =
+                new AutomaticWeaponPlacementProposal(
+                        prerequisite.toString(),
+                        5,
+                        100,
+                        new ProgressionPosition(
+                                Tier.forScore(5),
+                                ResearchTechTreeContract.levelForScore(5, 4),
+                                0L),
+                        4,
+                        ResearchTechTreeContract.AUTOMATIC_FORMULA_VERSION,
+                        ResearchTechTreeContract.AUTOMATIC_REFERENCE_VERSION,
+                        ResearchTechTreeContract.AUTOMATIC_PLACEMENT_VERSION,
+                        List.of());
         AutomaticWeaponPlacementCandidateSnapshot candidates =
                 new AutomaticWeaponPlacementCandidateSnapshot(
                         TREE,
-                        AutomaticPlacementMode.DISTRIBUTED,
+                        AutomaticPlacementMode.CONNECTED,
                         new AutomaticWeaponPlacementPolicy(4, 0),
                         5L,
                         7L,
                         2,
-                        Map.of(addOn.toString(), proposal),
+                        Map.of(
+                                prerequisite.toString(), prerequisiteProposal,
+                                addOn.toString(), proposal),
                         Map.of(),
-                        java.util.Set.of(prerequisite.toString()),
+                        java.util.Set.of(),
                         java.util.Set.of());
+        AutomaticWeaponPrerequisitePlan prerequisites =
+                new AutomaticWeaponPrerequisitePlan(
+                        PROFILE,
+                        TREE,
+                        AutomaticPlacementMode.CONNECTED,
+                        5L,
+                        7L,
+                        2,
+                        Map.of(addOn, List.of(prerequisite)),
+                        Map.of(prerequisite, "generated_root"));
 
         ResearchTreePublication publication = ResearchTreeBuilder.buildPublication(
                 Map.of(
@@ -581,26 +626,177 @@ class ResearchTechTreePresentationBuilderTest {
                 config(),
                 new PlayerRecipeData(),
                 ignored -> false,
-                candidates);
+                candidates,
+                prerequisites);
 
         assertTrue(publication.techTree().available());
         assertEquals(List.of(new ResearchTreeGraph.Edge(prerequisite, addOn)),
                 publication.graph().edges());
-        ResearchTechTreePresentation.Member member = publication.techTree()
+        Map<ResourceLocation, ResearchTechTreePresentation.Member> members =
+                publication.techTree()
                 .domain(Domain.WEAPONS).orElseThrow()
                 .lanes().get(0).members().stream()
-                .filter(value -> value.nodeId().equals(addOn))
-                .findFirst()
-                .orElseThrow();
+                .collect(java.util.stream.Collectors.toMap(
+                        ResearchTechTreePresentation.Member::nodeId,
+                        value -> value));
+        ResearchTechTreePresentation.Member member = members.get(addOn);
         assertEquals(PlacementOrigin.AUTOMATIC, member.origin());
-        assertEquals(Tier.BASIC, member.tier());
-        assertEquals(ResearchTechTreeContract.LEGACY_RANK_STRIDE + 1, member.rank());
+        assertEquals(PlacementOrigin.AUTOMATIC, members.get(prerequisite).origin());
+        assertTrue(member.rank() > members.get(prerequisite).rank());
         assertEquals(1L, member.siblingOrder());
     }
 
     @Test
-    void inconsistentAutomaticEligibilityCannotReplaceAnAuthoredPlacement() {
+    void automaticAuthorityOmitsWeaponsWithoutAutomaticProposals() {
+        ResourceLocation foundation = id("test:foundation");
+        ResourceLocation automaticPrerequisite = id("test:automatic_prerequisite");
+        ResourceLocation authoredDependent = id("test:authored_dependent");
+        ResourceLocation laterAutomatic = id("test:later_automatic");
+        BlueprintCatalogSelector testGuns = new BlueprintCatalogSelector(
+                List.of("test"),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(BlueprintKind.GUN),
+                1.0F);
+        ResearchTechTreeEntryBundle entries = new ResearchTechTreeEntryBundle(
+                2,
+                TREE,
+                0,
+                List.of(
+                        rankedEntry(foundation, Tier.STARTER, 0, 0),
+                        rankedEntry(authoredDependent, Tier.BASIC, 2, 0),
+                        new ResearchTechTreeEntryBundle.Entry(
+                                new BlueprintResearchTarget(
+                                        List.of(), List.of(), Optional.of(testGuns)),
+                                Domain.WEAPONS,
+                                WEAPONS,
+                                Tier.STARTER,
+                                0,
+                                Optional.of(0),
+                                900_000,
+                                Optional.empty(),
+                                Optional.empty(),
+                                true)));
+        ResearchAutomaticPlacementProfile automaticProfile =
+                new ResearchAutomaticPlacementProfile(
+                        2,
+                        TREE,
+                        AutomaticPlacementMode.CONNECTED,
+                        3,
+                        0,
+                        AutomaticWeaponPlacementPolicy.ReviewHandling.PLACE_CONNECTED,
+                        2,
+                        4,
+                        9,
+                        List.of());
+        BlueprintResearchSnapshot snapshot = BlueprintResearchSnapshot.create(
+                Map.of(),
+                Map.of(PROFILE, profile()),
+                Map.of(
+                        id("test:foundation_rule"), rule(
+                                foundation, JournalVisibility.FULL, List.of()),
+                        id("test:automatic_prerequisite_rule"), rule(
+                                automaticPrerequisite, JournalVisibility.FULL, List.of()),
+                        id("test:authored_dependent_rule"), rule(
+                                authoredDependent,
+                                JournalVisibility.FULL,
+                                List.of(automaticPrerequisite)),
+                        id("test:later_automatic_rule"), rule(
+                                laterAutomatic, JournalVisibility.FULL, List.of())),
+                Map.of(),
+                Map.of(TREE, automaticDefinition(
+                        formatTwoDefinition(BandPolicyDefinition.NONE))),
+                Map.of(id("test:entries"), entries),
+                Map.of(id("test:automatic"), automaticProfile));
+        AutomaticWeaponPlacementPolicy policy = new AutomaticWeaponPlacementPolicy(
+                3,
+                0,
+                AutomaticWeaponPlacementPolicy.ReviewHandling.PLACE_CONNECTED,
+                2,
+                4,
+                AutomaticWeaponPlacementPolicy.LayeringStrategy.DYNAMIC_STAT_LAYERS,
+                9,
+                List.of());
+        AutomaticWeaponPlacementProposal prerequisiteProposal =
+                scoreProposal(automaticPrerequisite, 25, 1L)
+                        .withProgressionCoordinate(new ProgressionCoordinate(
+                                1, 1L, Optional.empty()));
+        AutomaticWeaponPlacementProposal laterProposal =
+                scoreProposal(laterAutomatic, 75, 2L)
+                        .withProgressionCoordinate(new ProgressionCoordinate(
+                                3, 2L, Optional.empty()));
+        AutomaticWeaponPlacementCandidateSnapshot candidates =
+                new AutomaticWeaponPlacementCandidateSnapshot(
+                        TREE,
+                        AutomaticPlacementMode.CONNECTED,
+                        policy,
+                        5L,
+                        7L,
+                        4,
+                        Map.of(
+                                automaticPrerequisite.toString(), prerequisiteProposal,
+                                laterAutomatic.toString(), laterProposal),
+                        Map.of(),
+                        java.util.Set.of(),
+                        java.util.Set.of(
+                                foundation.toString(), authoredDependent.toString()));
+        AutomaticWeaponPrerequisitePlan prerequisites =
+                new AutomaticWeaponPrerequisitePlan(
+                        PROFILE,
+                        TREE,
+                        AutomaticPlacementMode.CONNECTED,
+                        5L,
+                        7L,
+                        2,
+                        Map.of(
+                                automaticPrerequisite, List.of(foundation),
+                                laterAutomatic, List.of(foundation)),
+                        Map.of(),
+                        Map.of(),
+                        Map.of(
+                                automaticPrerequisite,
+                                new AutomaticWeaponPrerequisitePlan.BranchCoordinate(
+                                        0, 0, 0, 0),
+                                laterAutomatic,
+                                new AutomaticWeaponPrerequisitePlan.BranchCoordinate(
+                                        0, 0, 0, 0)));
+
+        ResearchTreePublication publication = ResearchTreeBuilder.buildPublication(
+                Map.of(
+                        foundation, data(foundation, BlueprintKind.GUN),
+                        automaticPrerequisite,
+                                data(automaticPrerequisite, BlueprintKind.GUN),
+                        authoredDependent, data(authoredDependent, BlueprintKind.GUN),
+                        laterAutomatic, data(laterAutomatic, BlueprintKind.GUN)),
+                snapshot,
+                config(),
+                new PlayerRecipeData(),
+                ignored -> false,
+                candidates,
+                prerequisites);
+
+        assertTrue(publication.techTree().available());
+        Map<ResourceLocation, ResearchTechTreePresentation.Member> members =
+                publication.techTree().domains().stream()
+                        .flatMap(domain -> domain.lanes().stream())
+                        .flatMap(lane -> lane.members().stream())
+                        .collect(java.util.stream.Collectors.toMap(
+                                ResearchTechTreePresentation.Member::nodeId,
+                                member -> member));
+        assertEquals(PlacementOrigin.AUTOMATIC,
+                members.get(automaticPrerequisite).origin());
+        assertEquals(1, members.get(automaticPrerequisite).rank());
+        assertFalse(members.containsKey(foundation));
+        assertFalse(members.containsKey(authoredDependent));
+        assertEquals(2, members.size());
+        assertEquals(3, members.get(laterAutomatic).rank());
+    }
+
+    @Test
+    void authoredAuthorityIgnoresAnAutomaticPlacementCandidate() {
         ResourceLocation authored = id("test:authored_pistol");
+        ResourceLocation unspecified = id("test:unspecified_rifle");
         ResearchTechTreeEntryBundle entries = new ResearchTechTreeEntryBundle(
                 1,
                 TREE,
@@ -612,18 +808,17 @@ class ResearchTechTreePresentationBuilderTest {
                         Tier.BASIC,
                         42,
                         Optional.empty())));
-        ResearchAutomaticPlacementProfile automaticProfile =
-                new ResearchAutomaticPlacementProfile(
-                        1, TREE, AutomaticPlacementMode.DISTRIBUTED, 4, 0);
         BlueprintResearchSnapshot snapshot = BlueprintResearchSnapshot.create(
                 Map.of(),
                 Map.of(PROFILE, profile()),
-                Map.of(id("test:authored_rule"), rule(
-                        authored, JournalVisibility.FULL, List.of())),
+                Map.of(
+                        id("test:authored_rule"), rule(
+                                authored, JournalVisibility.FULL, List.of()),
+                        id("test:unspecified_rule"), rule(
+                                unspecified, JournalVisibility.FULL, List.of())),
                 Map.of(),
                 Map.of(TREE, definition(Optional.empty())),
-                Map.of(id("test:entries"), entries),
-                Map.of(id("test:automatic"), automaticProfile));
+                Map.of(id("test:entries"), entries));
 
         int score = 50;
         AutomaticWeaponPlacementProposal proposal = new AutomaticWeaponPlacementProposal(
@@ -646,14 +841,16 @@ class ResearchTechTreePresentationBuilderTest {
                         new AutomaticWeaponPlacementPolicy(4, 0),
                         5L,
                         7L,
-                        1,
+                        2,
                         Map.of(authored.toString(), proposal),
                         Map.of(),
                         java.util.Set.of(),
-                        java.util.Set.of());
+                        java.util.Set.of(unspecified.toString()));
 
         ResearchTreePublication publication = ResearchTreeBuilder.buildPublication(
-                Map.of(authored, data(authored, BlueprintKind.GUN)),
+                Map.of(
+                        authored, data(authored, BlueprintKind.GUN),
+                        unspecified, data(unspecified, BlueprintKind.GUN)),
                 snapshot,
                 config(),
                 new PlayerRecipeData(),
@@ -661,6 +858,9 @@ class ResearchTechTreePresentationBuilderTest {
                 inconsistentCandidates);
 
         assertTrue(publication.techTree().available());
+        assertEquals(List.of(authored), publication.graph().nodes().stream()
+                .map(ResearchTreeGraph.Node::blueprintId)
+                .toList());
         ResearchTechTreePresentation.Member member = publication.techTree()
                 .domain(Domain.WEAPONS).orElseThrow()
                 .lanes().get(0).members().get(0);
@@ -668,6 +868,57 @@ class ResearchTechTreePresentationBuilderTest {
         assertEquals(Tier.BASIC, member.tier());
         assertEquals(0, member.level());
         assertEquals(42L, member.siblingOrder());
+    }
+
+    @Test
+    void authoredAuthorityIgnoresAnUnrelatedAutomaticPublication() {
+        ResourceLocation weapon = id("test:authored_failure_guard");
+        ResearchTechTreeEntryBundle entries = new ResearchTechTreeEntryBundle(
+                1,
+                TREE,
+                0,
+                List.of(entry(
+                        weapon,
+                        Domain.WEAPONS,
+                        WEAPONS,
+                        Tier.BASIC,
+                        42,
+                        Optional.empty())));
+        BlueprintResearchSnapshot snapshot = BlueprintResearchSnapshot.create(
+                Map.of(),
+                Map.of(PROFILE, profile()),
+                Map.of(id("test:failure_guard_rule"), rule(
+                        weapon, JournalVisibility.FULL, List.of())),
+                Map.of(),
+                Map.of(TREE, definition(Optional.empty())),
+                Map.of(id("test:failure_guard_entries"), entries));
+        AutomaticWeaponPlacementCandidateSnapshot wrongTreeCandidates =
+                new AutomaticWeaponPlacementCandidateSnapshot(
+                        id("test:different_tree"),
+                        AutomaticPlacementMode.DISTRIBUTED,
+                        new AutomaticWeaponPlacementPolicy(4, 0),
+                        5L,
+                        7L,
+                        1,
+                        Map.of(),
+                        Map.of(),
+                        java.util.Set.of(weapon.toString()),
+                        java.util.Set.of());
+
+        ResearchTreePublication publication = ResearchTreeBuilder.buildPublication(
+                Map.of(weapon, data(weapon, BlueprintKind.GUN)),
+                snapshot,
+                config(),
+                new PlayerRecipeData(),
+                ignored -> false,
+                wrongTreeCandidates);
+
+        assertTrue(publication.techTree().available());
+        assertFalse(publication.presentation().groups().isEmpty());
+        assertEquals(1, publication.graph().nodes().size());
+        assertEquals(PlacementOrigin.EXACT, publication.techTree()
+                .domain(Domain.WEAPONS).orElseThrow()
+                .lanes().get(0).members().get(0).origin());
     }
 
     @Test
@@ -854,6 +1105,24 @@ class ResearchTechTreePresentationBuilderTest {
                         "Weapons",
                         WEAPONS,
                         Optional.empty())));
+    }
+
+    private static ResearchTechTreeDefinition automaticDefinition(
+            ResearchTechTreeDefinition definition) {
+        return new ResearchTechTreeDefinition(
+                ResearchTechTreeDefinition.CURRENT_FORMAT,
+                definition.title(),
+                definition.translationKey(),
+                definition.icon(),
+                ResearchTechTreeDefinition.WeaponPlacementMode.AUTOMATIC,
+                definition.format() == ResearchTechTreeDefinition.CURRENT_FORMAT
+                        ? definition.layout()
+                        : new ResearchTechTreeDefinition.LayoutDefinition(9),
+                definition.format() == ResearchTechTreeDefinition.CURRENT_FORMAT
+                        ? definition.bandPolicy()
+                        : ResearchTechTreeDefinition.BandPolicyDefinition.NONE,
+                definition.tiers(),
+                definition.domains());
     }
 
     private static AutomaticWeaponPlacementProposal scoreProposal(

@@ -2,6 +2,7 @@
   "format": 2,
   "title": "Example Dynamic Weapon Tree",
   "icon": "example_guns:starter_pistol",
+  "weapon_placement_mode": "automatic",
   "layout": {"max_nodes_per_layer": 9},
   "bands": {"mode": "dynamic", "ranks_per_band": 3},
   "domains": [

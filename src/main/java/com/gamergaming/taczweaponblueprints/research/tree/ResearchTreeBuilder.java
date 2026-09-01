@@ -3,6 +3,7 @@ package com.gamergaming.taczweaponblueprints.research.tree;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -10,11 +11,16 @@ import java.util.function.Predicate;
 
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
+import com.gamergaming.taczweaponblueprints.item.BlueprintKind;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionConfigSnapshot;
+import com.gamergaming.taczweaponblueprints.progression.ResearchProgressionConnectivity;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchPolicy;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchPolicyResolver;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchProfile;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchSnapshot;
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
+import com.gamergaming.taczweaponblueprints.resource.research.ResearchTechTreeDefinition;
+import com.gamergaming.taczweaponblueprints.resource.research.ResearchTechTreePlacementResolver;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph.Availability;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponPlacementCandidateSnapshot;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPrerequisiteOverlay;
@@ -109,10 +115,28 @@ public final class ResearchTreeBuilder {
         Predicate<ResourceLocation> exempt = progressionExemptPredicate == null
                 ? ignored -> false
                 : progressionExemptPredicate;
+        BlueprintResearchProfile activeProfile = researchSnapshot.profiles()
+                .get(config.activeProfileId());
+        ResourceLocation activeTreeId = activeProfile == null
+                ? null
+                : activeProfile.techTree().orElse(null);
+        ResearchTechTreeDefinition activeTree = activeTreeId == null
+                ? null
+                : researchSnapshot.techTrees().get(activeTreeId);
+        boolean automaticWeaponAuthority = activeTree != null
+                && activeTree.usesAutomaticWeaponPlacement();
+        Map<ResourceLocation, ResourceLocation> entryPointReplacements =
+                BlueprintResearchPolicyResolver.entryPointReplacements(
+                        researchSnapshot,
+                        catalog,
+                        config.activeProfileId(),
+                        blocked,
+                        exempt);
         List<Map.Entry<ResourceLocation, BlueprintData>> sortedCatalog = new ArrayList<>(catalog.entrySet());
         sortedCatalog.sort(Map.Entry.comparingByKey(Comparator.comparing(ResourceLocation::toString)));
 
-        Map<ResourceLocation, Candidate> candidates = new LinkedHashMap<>();
+        Map<ResourceLocation, BlueprintResearchPolicy> structuralPolicies =
+                new LinkedHashMap<>();
         for (Map.Entry<ResourceLocation, BlueprintData> entry : sortedCatalog) {
             if (exempt.test(entry.getKey())) {
                 continue;
@@ -132,12 +156,47 @@ public final class ResearchTreeBuilder {
                     blocked,
                     config.maximumUndiscoveredVisibility().allowsServerSelection(),
                     catalog::containsKey,
-                    exempt);
+                    exempt,
+                    entryPointReplacements,
+                    automaticWeaponAuthority
+                            && entry.getValue().getKind() == BlueprintKind.GUN);
+            structuralPolicies.put(entry.getKey(), policy);
+        }
+        ResearchProgressionConnectivity connectivity =
+                new ResearchProgressionConnectivity(
+                        playerData, structuralPolicies::get, exempt);
+
+        Map<ResourceLocation, Candidate> candidates = new LinkedHashMap<>();
+        for (Map.Entry<ResourceLocation, BlueprintData> entry : sortedCatalog) {
+            BlueprintResearchPolicy structuralPolicy = structuralPolicies.get(entry.getKey());
+            if (structuralPolicy == null) {
+                continue;
+            }
+            BlueprintResearchPolicy policy = structuralPolicy.withPrerequisitesSatisfied(
+                    connectivity.requirementsSatisfied(structuralPolicy));
             if (!policy.journalEnabled()
                     || !policy.treeEnabled()
                     || policy.blocked()
                     || !policy.visibility().appearsInTree()) {
                 continue;
+            }
+            if (activeTree != null && entry.getValue().getKind() == BlueprintKind.GUN) {
+                if (automaticWeaponAuthority) {
+                    if (automaticCandidates == null
+                            || automaticCandidates.eligibleProposal(entry.getKey()).isEmpty()) {
+                        continue;
+                    }
+                } else {
+                    var placement = ResearchTechTreePlacementResolver.resolveForProfile(
+                            researchSnapshot,
+                            config.activeProfileId(),
+                            activeTreeId,
+                            entry.getKey(),
+                            entry.getValue()).placement();
+                    if (placement.filter(value -> value.origin().authored()).isEmpty()) {
+                        continue;
+                    }
+                }
             }
             candidates.put(entry.getKey(), new Candidate(entry.getValue(), policy));
         }
@@ -159,7 +218,8 @@ public final class ResearchTreeBuilder {
             publicOrdinal++;
         }
         List<ResearchTreeGraph.Node> nodes = new ArrayList<>(candidates.size());
-        List<ResearchTreeGraph.Edge> edges = new ArrayList<>();
+        Set<ResearchTreeGraph.Edge> edges = new LinkedHashSet<>();
+        List<ResearchTreeGraph.RequirementGroup> requirementGroups = new ArrayList<>();
         for (Map.Entry<ResourceLocation, Candidate> entry : candidates.entrySet()) {
             ResourceLocation blueprintId = entry.getKey();
             BlueprintData data = entry.getValue().data();
@@ -167,14 +227,32 @@ public final class ResearchTreeBuilder {
             JournalVisibility visibility = policy.visibility();
             boolean showTopology = policy.researchEnabled();
             boolean showResearch = showTopology && visibility.revealsResearchSummary();
-            int visiblePrerequisiteCount = 0;
+            Set<ResourceLocation> visiblePrerequisites = new LinkedHashSet<>();
+            int hiddenPrerequisiteCount = 0;
             if (showTopology) {
-                for (ResourceLocation prerequisite : policy.prerequisites()) {
-                    if (visibleIds.contains(prerequisite)) {
-                        edges.add(new ResearchTreeGraph.Edge(
-                                publicIds.get(prerequisite), publicIds.get(blueprintId)));
-                        visiblePrerequisiteCount++;
+                int groupOrdinal = 0;
+                for (var group : policy.requirements().allOf()) {
+                    List<ResourceLocation> visibleAlternatives = new ArrayList<>();
+                    for (ResourceLocation prerequisite : group.anyOf()) {
+                        if (visibleIds.contains(prerequisite)) {
+                            ResourceLocation publicPrerequisite = publicIds.get(prerequisite);
+                            visibleAlternatives.add(publicPrerequisite);
+                            visiblePrerequisites.add(publicPrerequisite);
+                            edges.add(new ResearchTreeGraph.Edge(
+                                    publicPrerequisite, publicIds.get(blueprintId)));
+                        }
                     }
+                    int hiddenAlternatives = group.anyOf().size()
+                            - visibleAlternatives.size();
+                    hiddenPrerequisiteCount += hiddenAlternatives;
+                    requirementGroups.add(new ResearchTreeGraph.RequirementGroup(
+                            publicIds.get(blueprintId),
+                            groupOrdinal++,
+                            visibleAlternatives,
+                            hiddenAlternatives,
+                            visibility.revealsExactPolicy(),
+                            visibility.revealsExactPolicy()
+                                    && connectivity.groupSatisfied(group)));
                 }
             }
             Availability availability = !visibility.revealsResearchSummary()
@@ -200,11 +278,12 @@ public final class ResearchTreeBuilder {
                     visibility.revealsExactPolicy() && availability == Availability.AVAILABLE,
                     showResearch ? policy.researchCost().points() : 0,
                     showResearch ? policy.researchCost().ingredients().size() : 0,
-                    showTopology ? visiblePrerequisiteCount : 0,
-                    0,
+                    showTopology ? visiblePrerequisites.size() : 0,
+                    showTopology ? hiddenPrerequisiteCount : 0,
                     availability));
         }
-        ResearchTreeGraph graph = new ResearchTreeGraph(nodes, edges);
+        ResearchTreeGraph graph = new ResearchTreeGraph(
+                nodes, List.copyOf(edges), requirementGroups);
         Map<ResourceLocation, ResourceLocation> legacyPublicIds = new LinkedHashMap<>();
         for (Map.Entry<ResourceLocation, Candidate> entry : candidates.entrySet()) {
             if (ResearchTechTreeContract.includesKind(
@@ -222,44 +301,21 @@ public final class ResearchTreeBuilder {
                 legacyPublicIds);
         ResearchTechTreePresentation techTree;
         try {
-            if (automaticCandidates == null) {
-                techTree = ResearchTechTreePresentationBuilder.build(
-                        graph,
-                        researchSnapshot,
-                        config.activeProfileId(),
-                        catalog,
-                        publicIds,
-                        null);
-            } else {
-                try {
-                    techTree = ResearchTechTreePresentationBuilder.build(
-                            graph,
-                            researchSnapshot,
-                            config.activeProfileId(),
-                            catalog,
-                            publicIds,
-                            automaticCandidates,
-                            automaticPrerequisites);
-                } catch (IllegalArgumentException | IllegalStateException automaticException) {
-                    com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.LOGGER.warn(
-                            "Automatic placements could not be applied safely to the current public Research Tech Tree; "
-                                    + "publishing the complete legacy-fallback presentation instead",
-                            automaticException);
-                    techTree = ResearchTechTreePresentationBuilder.build(
-                            graph,
-                            researchSnapshot,
-                            config.activeProfileId(),
-                            catalog,
-                            publicIds,
-                            null);
-                }
-            }
-        } catch (IllegalArgumentException exception) {
-            // Tech Tree data is an optional presentation overlay. A catalog-specific
-            // selector conflict must not take the established Branches and All Weapons
-            // publication down with it.
-            com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.LOGGER.warn(
-                    "Could not publish the selected Research Tech Tree; hiding that view",
+            techTree = ResearchTechTreePresentationBuilder.build(
+                    graph,
+                    researchSnapshot,
+                    config.activeProfileId(),
+                    catalog,
+                    publicIds,
+                    automaticCandidates,
+                    automaticPrerequisites);
+        } catch (IllegalArgumentException | IllegalStateException exception) {
+            // The Tech Tree is the sole player-facing projection. Never replace a
+            // failed automatic tree with a smaller legacy-authored presentation:
+            // that would look valid while silently omitting generated content.
+            com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.LOGGER.error(
+                    "Could not publish the player-facing Research Tech Tree; clients will show "
+                            + "an unavailable-tree state while dormant legacy projections remain internal",
                     exception);
             techTree = ResearchTechTreePresentation.EMPTY;
         }

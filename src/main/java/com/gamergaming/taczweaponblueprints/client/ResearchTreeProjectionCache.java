@@ -374,12 +374,6 @@ public final class ResearchTreeProjectionCache {
         ResearchTreeGroupSkeleton skeleton = groupSkeletons.group(groupId)
                 .orElseThrow();
 
-        Map<ResourceLocation, Integer> internalPrerequisiteCounts = new LinkedHashMap<>();
-        skeleton.nodes().forEach(node ->
-                internalPrerequisiteCounts.put(node.nodeId(), 0));
-        List<ResearchTreeGraph.Edge> internalEdges = skeleton.internalEdges();
-        internalEdges.forEach(edge -> internalPrerequisiteCounts.compute(
-                edge.dependentId(), (ignored, count) -> count == null ? 1 : count + 1));
         List<ResearchTreeProjection.CrossGroupLink> crossGroupLinks = new ArrayList<>();
         for (ResearchTreeGroupSkeletonCatalog.CrossGroupEdge edge
                 : groupSkeletons.incidentEdges(groupId)) {
@@ -398,17 +392,10 @@ public final class ResearchTreeProjectionCache {
             }
         }
 
-        List<ResearchTreeGraph.Node> nodes = new ArrayList<>(skeleton.nodes().size());
-        for (ResearchTreeGroupSkeleton.PositionedNode positioned : skeleton.nodes()) {
-            ResearchTreeGraph.Node source = legacyPublication.graph()
-                    .node(positioned.nodeId())
-                    .orElseThrow();
-            nodes.add(copyNode(
-                    source,
-                    nodes.size(),
-                    internalPrerequisiteCounts.getOrDefault(source.blueprintId(), 0)));
-        }
-        ResearchTreeGraph graph = new ResearchTreeGraph(nodes, internalEdges);
+        ResearchTreeGraph graph = legacyPublication.graph().orderedInducedSubgraph(
+                skeleton.nodes().stream()
+                        .map(ResearchTreeGroupSkeleton.PositionedNode::nodeId)
+                        .toList());
         int minimumPortalWidth = Math.addExact(
                 ResearchTreeCanvas.maximumPortalBankWidth(crossGroupLinks),
                 Math.multiplyExact(2, ResearchTreeLayout.PORTAL_BANK_SIDE_PADDING));
@@ -422,28 +409,6 @@ public final class ResearchTreeProjectionCache {
                 graph,
                 layout,
                 crossGroupLinks);
-    }
-
-    private static ResearchTreeGraph.Node copyNode(
-            ResearchTreeGraph.Node node,
-            int ordinal,
-            int prerequisiteCount) {
-        return new ResearchTreeGraph.Node(
-                ordinal,
-                node.sourceOrdinal(),
-                node.blueprintId(),
-                node.nameKey(),
-                node.itemType(),
-                node.displaySlotId(),
-                node.visibility(),
-                node.learned(),
-                node.discovered(),
-                node.policyEligible(),
-                node.pointCost(),
-                node.ingredientTypeCount(),
-                prerequisiteCount,
-                0,
-                node.availability());
     }
 
     private static ResearchTreeLayout ensurePortalWidth(

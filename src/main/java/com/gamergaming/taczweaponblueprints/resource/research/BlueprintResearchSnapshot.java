@@ -246,6 +246,15 @@ public final class BlueprintResearchSnapshot {
                 : java.util.Optional.ofNullable(automaticPlacementProfilesByTree.get(treeId));
     }
 
+    public boolean usesAutomaticWeaponPlacement(ResourceLocation profileId) {
+        BlueprintResearchProfile profile = profileId == null ? null : profiles.get(profileId);
+        return profile != null
+                && profile.techTree()
+                        .map(techTrees::get)
+                        .filter(ResearchTechTreeDefinition::usesAutomaticWeaponPlacement)
+                        .isPresent();
+    }
+
     public Map<ResourceLocation, List<RuleBinding>> rulesByProfile() {
         return rulesByProfile;
     }
@@ -298,6 +307,13 @@ public final class BlueprintResearchSnapshot {
     List<TechTreeEntryBinding> selectorTechTreeEntriesFor(ResourceLocation treeId) {
         TechTreeIndex index = techTreeIndexes.get(treeId);
         return index == null ? List.of() : index.selectors();
+    }
+
+    java.util.Optional<TechTreeEntryBinding> staticTechTreeEntryFor(
+            ResourceLocation treeId,
+            ResourceLocation blueprintId) {
+        TechTreeIndex index = techTreeIndexes.get(treeId);
+        return selectStaticTechTreeEntry(blueprintId, index);
     }
 
     public java.util.Optional<ResearchTreeGroupPlacement> placementFor(
@@ -358,10 +374,10 @@ public final class BlueprintResearchSnapshot {
         for (BlueprintResearchRule rule : rules.values()) {
             targetTerms += rule.target().blueprints().size() + rule.target().tags().size();
             targetTerms += rule.target().selector().map(selector -> selector.termCount()).orElse(0);
-            prerequisiteIds += rule.prerequisites()
+            prerequisiteIds += rule.prerequisiteRequirements()
                     .map(values -> Math.multiplyExact(
                             (long) rule.target().blueprints().size(),
-                            values.size()))
+                            values.alternativeCount()))
                     .orElse(0L);
             ingredientTerms += rule.researchCost()
                     .map(BlueprintResearchSnapshot::ingredientTermCount)
@@ -509,10 +525,28 @@ public final class BlueprintResearchSnapshot {
         for (Map.Entry<ResourceLocation, ResearchAutomaticPlacementProfile> entry : profiles.entrySet()) {
             ResourceLocation profileId = entry.getKey();
             ResearchAutomaticPlacementProfile profile = entry.getValue();
-            if (!techTrees.containsKey(profile.tree())) {
+            ResearchTechTreeDefinition tree = techTrees.get(profile.tree());
+            if (tree == null) {
                 throw new IllegalArgumentException(
                         "automatic-placement profile " + profileId
                                 + " references missing Research Tech Tree " + profile.tree());
+            }
+            if (!tree.usesAutomaticWeaponPlacement()) {
+                throw new IllegalArgumentException(
+                        "automatic-placement profile " + profileId
+                                + " references authored-only Research Tech Tree " + profile.tree());
+            }
+            if (tree.domain(com.gamergaming.taczweaponblueprints.research.tree
+                    .ResearchTechTreeContract.Domain.WEAPONS).isEmpty()) {
+                throw new IllegalArgumentException(
+                        "automatic Research Tech Tree " + profile.tree()
+                                + " must define a Weapons domain");
+            }
+            if (!profile.mode().assignsPlacement()
+                    || !profile.reviewHandling().assignsPlacement()) {
+                throw new IllegalArgumentException(
+                        "automatic-placement profile " + profileId
+                                + " must place normal and review-bearing weapons");
             }
             ResourceLocation previous = owners.putIfAbsent(profile.tree(), profileId);
             if (previous != null) {
@@ -523,6 +557,13 @@ public final class BlueprintResearchSnapshot {
             }
             byTree.put(profile.tree(), profile);
         }
+        techTrees.forEach((treeId, tree) -> {
+            if (tree.usesAutomaticWeaponPlacement() && !byTree.containsKey(treeId)) {
+                throw new IllegalArgumentException(
+                        "automatic Research Tech Tree " + treeId
+                                + " requires exactly one automatic-placement profile");
+            }
+        });
         return Collections.unmodifiableMap(byTree);
     }
 
@@ -675,11 +716,8 @@ public final class BlueprintResearchSnapshot {
             return java.util.Optional.empty();
         }
         List<TechTreeEntryBinding> exact = index.exact().getOrDefault(blueprintId, List.of());
-        if (!exact.isEmpty()) {
-            return java.util.Optional.of(exact.get(0));
-        }
         List<TechTreeEntryBinding> tags = index.tags().getOrDefault(blueprintId, List.of());
-        return tags.isEmpty() ? java.util.Optional.empty() : java.util.Optional.of(tags.get(0));
+        return ResearchTechTreePlacementResolver.selectStaticBinding(exact, tags);
     }
 
     @SafeVarargs
@@ -717,17 +755,25 @@ public final class BlueprintResearchSnapshot {
             }
         }
 
-        Map<ResourceLocation, List<ResourceLocation>> graph = new LinkedHashMap<>();
+        Map<ResourceLocation, ResearchRequirements> requirements = new LinkedHashMap<>();
         for (Map.Entry<ResourceLocation, List<RuleBinding>> entry : exactRules.entrySet()) {
             RuleBinding selected = selectExact(entry.getValue());
-            List<ResourceLocation> prerequisites = selected.rule().prerequisites().orElse(List.of());
-            if (prerequisites.contains(entry.getKey())) {
+            ResearchRequirements selectedRequirements = selected.rule()
+                    .prerequisiteRequirements().orElse(ResearchRequirements.EMPTY);
+            try {
+                selectedRequirements.validateFor(entry.getKey());
+            } catch (IllegalArgumentException exception) {
                 throw new IllegalArgumentException(
-                        "research prerequisite self-reference for " + entry.getKey()
-                                + " in rule " + selected.ruleId());
+                        exception.getMessage() + " in rule " + selected.ruleId(),
+                        exception);
             }
-            graph.put(entry.getKey(), prerequisites);
+            requirements.put(entry.getKey(), selectedRequirements);
         }
+        ResearchRequirements.validateConservativeGraph(
+                requirements, MAX_PREREQUISITE_DEPTH);
+        Map<ResourceLocation, List<ResourceLocation>> graph = new LinkedHashMap<>();
+        requirements.forEach((dependent, value) ->
+                graph.put(dependent, value.conservativeAlternatives()));
         return graph;
     }
 

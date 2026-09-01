@@ -1,0 +1,643 @@
+{
+  "format": 1,
+  "weapons": [
+    {
+      "blueprint": "tacz:aa12",
+      "archetype": "shotgun",
+      "score": 57,
+      "packages": {
+        "lethality": 47,
+        "sustained_pressure": 75,
+        "precision_reach": 41,
+        "handling": 31,
+        "versatility": 68
+      }
+    },
+    {
+      "blueprint": "tacz:ai_awp",
+      "archetype": "sniper",
+      "score": 80,
+      "packages": {
+        "lethality": 92,
+        "sustained_pressure": 28,
+        "precision_reach": 75,
+        "handling": 33,
+        "versatility": 41
+      }
+    },
+    {
+      "blueprint": "tacz:ak47",
+      "archetype": "rifle",
+      "score": 67,
+      "packages": {
+        "lethality": 41,
+        "sustained_pressure": 81,
+        "precision_reach": 53,
+        "handling": 49,
+        "versatility": 57
+      }
+    },
+    {
+      "blueprint": "tacz:aug",
+      "archetype": "rifle",
+      "score": 50,
+      "packages": {
+        "lethality": 30,
+        "sustained_pressure": 61,
+        "precision_reach": 56,
+        "handling": 46,
+        "versatility": 57
+      }
+    },
+    {
+      "blueprint": "tacz:b93r",
+      "archetype": "pistol",
+      "score": 60,
+      "packages": {
+        "lethality": 32,
+        "sustained_pressure": 73,
+        "precision_reach": 36,
+        "handling": 76,
+        "versatility": 44
+      }
+    },
+    {
+      "blueprint": "tacz:cz75",
+      "archetype": "pistol",
+      "score": 25,
+      "packages": {
+        "lethality": 10,
+        "sustained_pressure": 34,
+        "precision_reach": 35,
+        "handling": 81,
+        "versatility": 22
+      }
+    },
+    {
+      "blueprint": "tacz:db_long",
+      "archetype": "shotgun",
+      "score": 45,
+      "packages": {
+        "lethality": 60,
+        "sustained_pressure": 18,
+        "precision_reach": 40,
+        "handling": 61,
+        "versatility": 36
+      }
+    },
+    {
+      "blueprint": "tacz:db_short",
+      "archetype": "shotgun",
+      "score": 40,
+      "packages": {
+        "lethality": 55,
+        "sustained_pressure": 12,
+        "precision_reach": 32,
+        "handling": 71,
+        "versatility": 55
+      }
+    },
+    {
+      "blueprint": "tacz:deagle",
+      "archetype": "pistol",
+      "score": 58,
+      "packages": {
+        "lethality": 64,
+        "sustained_pressure": 45,
+        "precision_reach": 55,
+        "handling": 67,
+        "versatility": 41
+      }
+    },
+    {
+      "blueprint": "tacz:deagle_golden",
+      "archetype": "pistol",
+      "score": 52,
+      "packages": {
+        "lethality": 55,
+        "sustained_pressure": 42,
+        "precision_reach": 56,
+        "handling": 67,
+        "versatility": 41
+      }
+    },
+    {
+      "blueprint": "tacz:fn_evolys",
+      "archetype": "mg",
+      "score": 68,
+      "packages": {
+        "lethality": 58,
+        "sustained_pressure": 88,
+        "precision_reach": 43,
+        "handling": 21,
+        "versatility": 46
+      }
+    },
+    {
+      "blueprint": "tacz:fn_fal",
+      "archetype": "rifle",
+      "score": 67,
+      "packages": {
+        "lethality": 68,
+        "sustained_pressure": 73,
+        "precision_reach": 57,
+        "handling": 42,
+        "versatility": 62
+      }
+    },
+    {
+      "blueprint": "tacz:g36k",
+      "archetype": "rifle",
+      "score": 55,
+      "packages": {
+        "lethality": 27,
+        "sustained_pressure": 62,
+        "precision_reach": 59,
+        "handling": 51,
+        "versatility": 67
+      }
+    },
+    {
+      "blueprint": "tacz:glock_17",
+      "archetype": "pistol",
+      "score": 25,
+      "packages": {
+        "lethality": 18,
+        "sustained_pressure": 36,
+        "precision_reach": 29,
+        "handling": 76,
+        "versatility": 41
+      }
+    },
+    {
+      "blueprint": "tacz:hk416d",
+      "archetype": "rifle",
+      "score": 67,
+      "packages": {
+        "lethality": 24,
+        "sustained_pressure": 80,
+        "precision_reach": 46,
+        "handling": 59,
+        "versatility": 67
+      }
+    },
+    {
+      "blueprint": "tacz:hk_g3",
+      "archetype": "rifle",
+      "score": 58,
+      "packages": {
+        "lethality": 64,
+        "sustained_pressure": 62,
+        "precision_reach": 53,
+        "handling": 37,
+        "versatility": 74
+      }
+    },
+    {
+      "blueprint": "tacz:hk_mk23",
+      "archetype": "pistol",
+      "score": 60,
+      "packages": {
+        "lethality": 58,
+        "sustained_pressure": 17,
+        "precision_reach": 65,
+        "handling": 69,
+        "versatility": 57
+      }
+    },
+    {
+      "blueprint": "tacz:hk_mp5a5",
+      "archetype": "smg",
+      "score": 40,
+      "packages": {
+        "lethality": 10,
+        "sustained_pressure": 52,
+        "precision_reach": 35,
+        "handling": 67,
+        "versatility": 76
+      }
+    },
+    {
+      "blueprint": "tacz:kar98",
+      "archetype": "sniper",
+      "score": 60,
+      "packages": {
+        "lethality": 77,
+        "sustained_pressure": 11,
+        "precision_reach": 66,
+        "handling": 28,
+        "versatility": 34
+      }
+    },
+    {
+      "blueprint": "tacz:lonetrail",
+      "archetype": "pistol",
+      "score": 60,
+      "packages": {
+        "lethality": 72,
+        "sustained_pressure": 9,
+        "precision_reach": 69,
+        "handling": 35,
+        "versatility": 33
+      }
+    },
+    {
+      "blueprint": "tacz:m1014",
+      "archetype": "shotgun",
+      "score": 47,
+      "packages": {
+        "lethality": 60,
+        "sustained_pressure": 51,
+        "precision_reach": 43,
+        "handling": 39,
+        "versatility": 43
+      }
+    },
+    {
+      "blueprint": "tacz:m107",
+      "archetype": "sniper",
+      "score": 75,
+      "packages": {
+        "lethality": 87,
+        "sustained_pressure": 75,
+        "precision_reach": 75,
+        "handling": 18,
+        "versatility": 42
+      }
+    },
+    {
+      "blueprint": "tacz:m16a1",
+      "archetype": "rifle",
+      "score": 57,
+      "packages": {
+        "lethality": 44,
+        "sustained_pressure": 63,
+        "precision_reach": 57,
+        "handling": 58,
+        "versatility": 50
+      }
+    },
+    {
+      "blueprint": "tacz:m16a4",
+      "archetype": "rifle",
+      "score": 55,
+      "packages": {
+        "lethality": 37,
+        "sustained_pressure": 58,
+        "precision_reach": 61,
+        "handling": 57,
+        "versatility": 67
+      }
+    },
+    {
+      "blueprint": "tacz:m1911",
+      "archetype": "pistol",
+      "score": 32,
+      "packages": {
+        "lethality": 42,
+        "sustained_pressure": 28,
+        "precision_reach": 38,
+        "handling": 71,
+        "versatility": 28
+      }
+    },
+    {
+      "blueprint": "tacz:m249",
+      "archetype": "mg",
+      "score": 42,
+      "packages": {
+        "lethality": 31,
+        "sustained_pressure": 63,
+        "precision_reach": 46,
+        "handling": 22,
+        "versatility": 41
+      }
+    },
+    {
+      "blueprint": "tacz:m320",
+      "archetype": "rpg",
+      "score": 38,
+      "packages": {
+        "lethality": 56,
+        "sustained_pressure": 14,
+        "precision_reach": 46,
+        "area_control": 35,
+        "handling": 49,
+        "versatility": 18
+      }
+    },
+    {
+      "blueprint": "tacz:m4a1",
+      "archetype": "rifle",
+      "score": 70,
+      "packages": {
+        "lethality": 24,
+        "sustained_pressure": 78,
+        "precision_reach": 54,
+        "handling": 66,
+        "versatility": 67
+      }
+    },
+    {
+      "blueprint": "tacz:m700",
+      "archetype": "sniper",
+      "score": 63,
+      "packages": {
+        "lethality": 80,
+        "sustained_pressure": 14,
+        "precision_reach": 59,
+        "handling": 38,
+        "versatility": 40
+      }
+    },
+    {
+      "blueprint": "tacz:m870",
+      "archetype": "shotgun",
+      "score": 40,
+      "packages": {
+        "lethality": 59,
+        "sustained_pressure": 15,
+        "precision_reach": 36,
+        "handling": 50,
+        "versatility": 38
+      }
+    },
+    {
+      "blueprint": "tacz:m95",
+      "archetype": "sniper",
+      "score": 83,
+      "packages": {
+        "lethality": 98,
+        "sustained_pressure": 32,
+        "precision_reach": 78,
+        "handling": 21,
+        "versatility": 42
+      }
+    },
+    {
+      "blueprint": "tacz:m9a4",
+      "archetype": "pistol",
+      "score": 22,
+      "packages": {
+        "lethality": 18,
+        "sustained_pressure": 34,
+        "precision_reach": 29,
+        "handling": 74,
+        "versatility": 35
+      }
+    },
+    {
+      "blueprint": "tacz:minigun",
+      "archetype": "mg",
+      "score": 70,
+      "packages": {
+        "lethality": 42,
+        "sustained_pressure": 92,
+        "precision_reach": 56,
+        "handling": 23,
+        "versatility": 47
+      }
+    },
+    {
+      "blueprint": "tacz:mk14",
+      "archetype": "rifle",
+      "score": 72,
+      "packages": {
+        "lethality": 76,
+        "sustained_pressure": 48,
+        "precision_reach": 69,
+        "handling": 43,
+        "versatility": 75
+      }
+    },
+    {
+      "blueprint": "tacz:p320",
+      "archetype": "pistol",
+      "score": 28,
+      "packages": {
+        "lethality": 40,
+        "sustained_pressure": 36,
+        "precision_reach": 34,
+        "handling": 61,
+        "versatility": 41
+      }
+    },
+    {
+      "blueprint": "tacz:p90",
+      "archetype": "smg",
+      "score": 50,
+      "packages": {
+        "lethality": 29,
+        "sustained_pressure": 66,
+        "precision_reach": 41,
+        "handling": 50,
+        "versatility": 50
+      }
+    },
+    {
+      "blueprint": "tacz:qbz_191",
+      "archetype": "rifle",
+      "score": 75,
+      "packages": {
+        "lethality": 45,
+        "sustained_pressure": 86,
+        "precision_reach": 53,
+        "handling": 54,
+        "versatility": 67
+      }
+    },
+    {
+      "blueprint": "tacz:qbz_95",
+      "archetype": "rifle",
+      "score": 60,
+      "packages": {
+        "lethality": 40,
+        "sustained_pressure": 73,
+        "precision_reach": 47,
+        "handling": 49,
+        "versatility": 72
+      }
+    },
+    {
+      "blueprint": "tacz:rhino357",
+      "archetype": "pistol",
+      "score": 37,
+      "packages": {
+        "lethality": 55,
+        "sustained_pressure": 8,
+        "precision_reach": 42,
+        "handling": 48,
+        "versatility": 33
+      }
+    },
+    {
+      "blueprint": "tacz:rpg7",
+      "archetype": "rpg",
+      "score": 47,
+      "packages": {
+        "lethality": 58,
+        "sustained_pressure": 54,
+        "precision_reach": 48,
+        "area_control": 65,
+        "handling": 21,
+        "versatility": 18
+      }
+    },
+    {
+      "blueprint": "tacz:rpk",
+      "archetype": "mg",
+      "score": 68,
+      "packages": {
+        "lethality": 46,
+        "sustained_pressure": 86,
+        "precision_reach": 45,
+        "handling": 38,
+        "versatility": 63
+      }
+    },
+    {
+      "blueprint": "tacz:scar_h",
+      "archetype": "rifle",
+      "score": 80,
+      "packages": {
+        "lethality": 70,
+        "sustained_pressure": 83,
+        "precision_reach": 65,
+        "handling": 44,
+        "versatility": 74
+      }
+    },
+    {
+      "blueprint": "tacz:scar_l",
+      "archetype": "rifle",
+      "score": 70,
+      "packages": {
+        "lethality": 39,
+        "sustained_pressure": 79,
+        "precision_reach": 53,
+        "handling": 58,
+        "versatility": 76
+      }
+    },
+    {
+      "blueprint": "tacz:sks_tactical",
+      "archetype": "rifle",
+      "score": 52,
+      "packages": {
+        "lethality": 59,
+        "sustained_pressure": 32,
+        "precision_reach": 62,
+        "handling": 42,
+        "versatility": 46
+      }
+    },
+    {
+      "blueprint": "tacz:spas_12",
+      "archetype": "shotgun",
+      "score": 47,
+      "packages": {
+        "lethality": 65,
+        "sustained_pressure": 40,
+        "precision_reach": 36,
+        "handling": 38,
+        "versatility": 66
+      }
+    },
+    {
+      "blueprint": "tacz:spr15hb",
+      "archetype": "rifle",
+      "score": 68,
+      "packages": {
+        "lethality": 64,
+        "sustained_pressure": 41,
+        "precision_reach": 71,
+        "handling": 62,
+        "versatility": 62
+      }
+    },
+    {
+      "blueprint": "tacz:springfield1873",
+      "archetype": "sniper",
+      "score": 40,
+      "packages": {
+        "lethality": 62,
+        "sustained_pressure": 9,
+        "precision_reach": 40,
+        "handling": 40,
+        "versatility": 28
+      }
+    },
+    {
+      "blueprint": "tacz:taurus500",
+      "archetype": "pistol",
+      "score": 65,
+      "packages": {
+        "lethality": 86,
+        "sustained_pressure": 37,
+        "precision_reach": 48,
+        "handling": 37,
+        "versatility": 41
+      }
+    },
+    {
+      "blueprint": "tacz:timeless50",
+      "archetype": "pistol",
+      "score": 53,
+      "packages": {
+        "lethality": 61,
+        "sustained_pressure": 39,
+        "precision_reach": 54,
+        "handling": 65,
+        "versatility": 41
+      }
+    },
+    {
+      "blueprint": "tacz:type_81",
+      "archetype": "rifle",
+      "score": 75,
+      "packages": {
+        "lethality": 53,
+        "sustained_pressure": 87,
+        "precision_reach": 52,
+        "handling": 56,
+        "versatility": 44
+      }
+    },
+    {
+      "blueprint": "tacz:ump45",
+      "archetype": "smg",
+      "score": 57,
+      "packages": {
+        "lethality": 34,
+        "sustained_pressure": 71,
+        "precision_reach": 42,
+        "handling": 59,
+        "versatility": 62
+      }
+    },
+    {
+      "blueprint": "tacz:uzi",
+      "archetype": "smg",
+      "score": 28,
+      "packages": {
+        "lethality": 10,
+        "sustained_pressure": 39,
+        "precision_reach": 40,
+        "handling": 64,
+        "versatility": 33
+      }
+    },
+    {
+      "blueprint": "tacz:vector45",
+      "archetype": "smg",
+      "score": 45,
+      "packages": {
+        "lethality": 20,
+        "sustained_pressure": 62,
+        "precision_reach": 30,
+        "handling": 63,
+        "versatility": 76
+      }
+    }
+  ]
+}

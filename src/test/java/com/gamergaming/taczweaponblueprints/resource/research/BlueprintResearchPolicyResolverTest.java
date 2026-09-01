@@ -276,6 +276,68 @@ class BlueprintResearchPolicyResolverTest {
     }
 
     @Test
+    void groupedRequirementsUseAndAcrossGroupsAndOrWithinEachGroup() {
+        ResourceLocation advanced = id("test:advanced");
+        ResourceLocation routeA = id("test:route_a");
+        ResourceLocation routeB = id("test:route_b");
+        ResourceLocation supportA = id("test:support_a");
+        ResourceLocation supportB = id("test:support_b");
+        ResearchRequirements requirements = new ResearchRequirements(List.of(
+                new ResearchPrerequisiteGroup(List.of(routeA, routeB)),
+                new ResearchPrerequisiteGroup(List.of(supportA, supportB))));
+        BlueprintResearchRule grouped = new BlueprintResearchRule(
+                BlueprintResearchRule.CURRENT_FORMAT,
+                profileId(),
+                0,
+                target(List.of(advanced), List.of(), null),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.of(requirements),
+                Optional.empty(),
+                Optional.empty());
+        BlueprintResearchSnapshot snapshot = BlueprintResearchSnapshot.create(
+                Map.of(),
+                Map.of(profileId(), profile(false)),
+                Map.of(id("test:advanced_rule"), grouped));
+        Map<ResourceLocation, BlueprintData> catalog = new java.util.LinkedHashMap<>();
+        for (ResourceLocation id : List.of(
+                advanced, routeA, routeB, supportA, supportB)) {
+            catalog.putAll(catalog(id, "rifle"));
+        }
+
+        PlayerRecipeData incomplete = new PlayerRecipeData();
+        incomplete.addBlueprint(routeA.toString());
+        assertFalse(resolve(snapshot, catalog, advanced, incomplete)
+                .prerequisitesSatisfied());
+
+        PlayerRecipeData complete = new PlayerRecipeData();
+        complete.addBlueprint(routeB.toString());
+        complete.addBlueprint(supportA.toString());
+        BlueprintResearchPolicy policy = resolve(snapshot, catalog, advanced, complete);
+        assertTrue(policy.prerequisitesSatisfied());
+        assertEquals(requirements, policy.requirements());
+        assertEquals(4, policy.prerequisites().size());
+
+        PlayerRecipeData exemptRoute = new PlayerRecipeData();
+        exemptRoute.addBlueprint(supportB.toString());
+        assertTrue(BlueprintResearchPolicyResolver.resolve(
+                snapshot,
+                catalog,
+                profileId(),
+                advanced,
+                exemptRoute,
+                ignored -> false,
+                routeA::equals).prerequisitesSatisfied());
+    }
+
+    @Test
     void explicitRestrictiveRuleCanHideDiscoveredMetadata() {
         ResourceLocation blueprintId = id("test:hidden");
         BlueprintResearchRule hidden = rule(

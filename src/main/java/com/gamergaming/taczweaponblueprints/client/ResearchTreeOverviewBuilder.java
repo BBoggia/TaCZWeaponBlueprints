@@ -49,20 +49,11 @@ public final class ResearchTreeOverviewBuilder {
             return new Result(publication, List.of(), true);
         }
 
-        List<ResearchTreeGraph.Edge> internalEdges = new ArrayList<>();
         List<ResearchTreeProjection.CrossGroupLink> boundaryLinks = new ArrayList<>();
-        java.util.Map<ResourceLocation, Integer> internalPrerequisiteCounts =
-                new java.util.LinkedHashMap<>();
-        includedNodeIds.forEach(id -> internalPrerequisiteCounts.put(id, 0));
         for (ResearchTreeGraph.Edge edge : publication.graph().edges()) {
             boolean prerequisiteIncluded = includedNodeIds.contains(edge.prerequisiteId());
             boolean dependentIncluded = includedNodeIds.contains(edge.dependentId());
-            if (prerequisiteIncluded && dependentIncluded) {
-                internalEdges.add(edge);
-                internalPrerequisiteCounts.compute(
-                        edge.dependentId(),
-                        (ignored, count) -> count == null ? 1 : count + 1);
-            } else if (prerequisiteIncluded != dependentIncluded) {
+            if (prerequisiteIncluded != dependentIncluded) {
                 ResourceLocation localId = prerequisiteIncluded
                         ? edge.prerequisiteId() : edge.dependentId();
                 ResourceLocation remoteId = prerequisiteIncluded
@@ -81,44 +72,18 @@ public final class ResearchTreeOverviewBuilder {
             }
         }
 
-        List<ResearchTreeGraph.Node> nodes = new ArrayList<>(includedNodeIds.size());
-        for (ResearchTreeGraph.Node node : publication.graph().nodes()) {
-            if (includedNodeIds.contains(node.blueprintId())) {
-                nodes.add(copyNode(
-                        node,
-                        nodes.size(),
-                        internalPrerequisiteCounts.getOrDefault(node.blueprintId(), 0)));
-            }
-        }
+        ResearchTreeGraph overviewGraph = publication.graph().orderedInducedSubgraph(
+                publication.graph().nodes().stream()
+                        .map(ResearchTreeGraph.Node::blueprintId)
+                        .filter(includedNodeIds::contains)
+                        .toList());
         ResearchTreePublication overview = new ResearchTreePublication(
-                new ResearchTreeGraph(nodes, internalEdges),
+                overviewGraph,
                 new ResearchTreePresentation(includedGroups));
         return new Result(
                 overview,
                 boundaryLinks,
                 includedNodeIds.size() == publication.graph().nodes().size());
-    }
-
-    private static ResearchTreeGraph.Node copyNode(
-            ResearchTreeGraph.Node node,
-            int ordinal,
-            int prerequisiteCount) {
-        return new ResearchTreeGraph.Node(
-                ordinal,
-                node.sourceOrdinal(),
-                node.blueprintId(),
-                node.nameKey(),
-                node.itemType(),
-                node.displaySlotId(),
-                node.visibility(),
-                node.learned(),
-                node.discovered(),
-                node.policyEligible(),
-                node.pointCost(),
-                node.ingredientTypeCount(),
-                prerequisiteCount,
-                0,
-                node.availability());
     }
 
     public record Result(

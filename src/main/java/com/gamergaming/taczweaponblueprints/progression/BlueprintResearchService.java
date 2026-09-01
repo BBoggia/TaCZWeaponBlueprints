@@ -1,13 +1,17 @@
 package com.gamergaming.taczweaponblueprints.progression;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
+import com.gamergaming.taczweaponblueprints.capabilities.BlueprintLearningMutation;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
@@ -24,7 +28,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 
-/** Atomic server authority for one Research Bench blueprint transaction. */
+/** Atomic server authority for one Research Bench target or prerequisite path. */
 public final class BlueprintResearchService {
     private BlueprintResearchService() {
     }
@@ -61,23 +65,40 @@ public final class BlueprintResearchService {
                     playerData.getResearchPoints(),
                     resultMode);
         }
-        Result result = research(
-                blueprintId,
-                playerData,
-                id -> BlueprintResearchDataManager.INSTANCE.policyFor(id, playerData),
+        Function<ResourceLocation, BlueprintResearchPolicy> policyResolver =
+                BlueprintResearchDataManager.INSTANCE.policyResolverFor(playerData);
+        Function<ResourceLocation, LearningTarget> targetResolver =
                 id -> BlueprintLearningService.targetFromCatalog(
-                        BlueprintDataManager.SERVER, id),
-                input,
-                player.isCreative(),
-                config.blueprintsEnabled(),
-                resultMode);
+                        BlueprintDataManager.SERVER, id);
+        Result result = resultMode.learnsDirectly()
+                ? researchPath(
+                        blueprintId,
+                        playerData,
+                        policyResolver,
+                        targetResolver,
+                        input,
+                        player.isCreative(),
+                        config.blueprintsEnabled(),
+                        BlueprintProgressionAccess::isProgressionExempt)
+                : research(
+                        blueprintId,
+                        playerData,
+                        policyResolver,
+                        targetResolver,
+                        input,
+                        player.isCreative(),
+                        config.blueprintsEnabled(),
+                        resultMode);
         if (result.successful() && resultMode.learnsDirectly()) {
-            ResearchPointAwardDispatcher.blueprintTransitions(
+            ResearchPointAwardDispatcher.blueprintTransitionBatch(
                     player,
                     playerData,
-                    blueprintId,
-                    result.discoveredChanged(),
-                    result.learnedChanged());
+                    result.transitions().stream()
+                            .map(transition -> new ResearchPointAwardDispatcher.BlueprintTransition(
+                                    transition.blueprintId(),
+                                    transition.discoveredChanged(),
+                                    transition.learnedChanged()))
+                            .toList());
         } else if (result.successful()) {
             BlueprintDiscoveryService.discoverInventoryBlueprint(
                     player, BlueprintItem.createBlueprint(blueprintId.toString()));
@@ -88,6 +109,271 @@ public final class BlueprintResearchService {
                     resultMode.learnsDirectly() || migration.changed());
         }
         return result;
+    }
+
+    static Result researchPath(
+            ResourceLocation blueprintId,
+            IPlayerRecipeData playerData,
+            Function<ResourceLocation, BlueprintResearchPolicy> policyResolver,
+            Function<ResourceLocation, LearningTarget> targetResolver,
+            ResearchInput input,
+            boolean creativePlayer,
+            boolean blueprintsEnabled,
+            Predicate<ResourceLocation> progressionExempt) {
+        Optional<ResourceLocation> id = Optional.ofNullable(blueprintId)
+                .filter(BlueprintResearchService::validId);
+        if (id.isEmpty() || input == null || progressionExempt == null) {
+            return Result.failure(
+                    Status.INVALID_INPUT,
+                    id,
+                    playerData == null ? 0 : playerData.getResearchPoints(),
+                    TreeResearchResultMode.DIRECT_LEARN);
+        }
+        if (playerData == null) {
+            return Result.failure(
+                    Status.PLAYER_DATA_UNAVAILABLE,
+                    id,
+                    0,
+                    TreeResearchResultMode.DIRECT_LEARN);
+        }
+        if (policyResolver == null || targetResolver == null) {
+            return Result.failure(
+                    Status.POLICY_UNAVAILABLE,
+                    id,
+                    playerData.getResearchPoints(),
+                    TreeResearchResultMode.DIRECT_LEARN);
+        }
+        List<ItemStack> inputSnapshot;
+        try {
+            inputSnapshot = input.stacks();
+        } catch (RuntimeException exception) {
+            return Result.failure(
+                    Status.TRANSACTION_FAILED,
+                    id,
+                    playerData.getResearchPoints(),
+                    TreeResearchResultMode.DIRECT_LEARN);
+        }
+        if (inputSnapshot == null
+                || inputSnapshot.stream().anyMatch(java.util.Objects::isNull)) {
+            return Result.failure(
+                    Status.INVALID_INPUT,
+                    id,
+                    playerData.getResearchPoints(),
+                    TreeResearchResultMode.DIRECT_LEARN);
+        }
+        ResearchPathUnlockPlanner.Result planned = ResearchPathUnlockPlanner.plan(
+                blueprintId,
+                playerData,
+                policyResolver,
+                progressionExempt,
+                creativePlayer,
+                inputSnapshot);
+        if (!planned.successful()) {
+            return Result.failure(
+                    planned.status(),
+                    id,
+                    playerData.getResearchPoints(),
+                    TreeResearchResultMode.DIRECT_LEARN);
+        }
+        return commitPath(
+                blueprintId,
+                playerData,
+                planned.plan().orElseThrow(),
+                targetResolver,
+                input,
+                inputSnapshot,
+                blueprintsEnabled);
+    }
+
+    private static Result commitPath(
+            ResourceLocation blueprintId,
+            IPlayerRecipeData playerData,
+            ResearchPathUnlockPlanner.Plan path,
+            Function<ResourceLocation, LearningTarget> targetResolver,
+            ResearchInput input,
+            List<ItemStack> inputSnapshot,
+            boolean blueprintsEnabled) {
+        int currentPoints = playerData.getResearchPoints();
+        Optional<ResourceLocation> id = Optional.of(blueprintId);
+        if (!blueprintsEnabled) {
+            return Result.failure(
+                    Status.CONTENT_UNAVAILABLE,
+                    id,
+                    currentPoints,
+                    TreeResearchResultMode.DIRECT_LEARN);
+        }
+
+        if (inputSnapshot == null
+                || inputSnapshot.stream().anyMatch(java.util.Objects::isNull)) {
+            return Result.failure(
+                    Status.INVALID_INPUT,
+                    id,
+                    currentPoints,
+                    TreeResearchResultMode.DIRECT_LEARN);
+        }
+        if (currentPoints < path.pointCost()) {
+            return Result.failure(
+                    Status.POINTS_REQUIRED,
+                    id,
+                    currentPoints,
+                    TreeResearchResultMode.DIRECT_LEARN);
+        }
+        Optional<ResearchIngredientPlanner.Plan> ingredientPlan =
+                ResearchIngredientPlanner.plan(inputSnapshot, path.ingredients());
+        if (ingredientPlan.isEmpty()) {
+            return Result.failure(
+                    Status.INGREDIENTS_REQUIRED,
+                    id,
+                    currentPoints,
+                    TreeResearchResultMode.DIRECT_LEARN);
+        }
+
+        KnowledgeSnapshot knowledgeSnapshot;
+        try {
+            knowledgeSnapshot = KnowledgeSnapshot.capture(playerData);
+        } catch (RuntimeException exception) {
+            return Result.failure(
+                    Status.TRANSACTION_FAILED,
+                    id,
+                    currentPoints,
+                    TreeResearchResultMode.DIRECT_LEARN);
+        }
+        List<LearningTarget> targets = new ArrayList<>(path.unlockCount());
+        Set<String> learnedAfter = new LinkedHashSet<>(knowledgeSnapshot.learnedBlueprints());
+        Set<String> discoveredAfter = new LinkedHashSet<>(knowledgeSnapshot.discoveredBlueprints());
+        Set<String> recipesAfter = new LinkedHashSet<>(knowledgeSnapshot.learnedRecipes());
+        for (ResearchPathUnlockPlanner.PlannedNode node : path.nodes()) {
+            LearningTarget target;
+            try {
+                target = targetResolver.apply(node.blueprintId());
+            } catch (RuntimeException exception) {
+                return Result.failure(
+                        Status.POLICY_UNAVAILABLE,
+                        id,
+                        currentPoints,
+                        TreeResearchResultMode.DIRECT_LEARN);
+            }
+            if (target == null) {
+                return Result.failure(
+                        Status.CONTENT_UNAVAILABLE,
+                        id,
+                        currentPoints,
+                        TreeResearchResultMode.DIRECT_LEARN);
+            }
+            if (!node.blueprintId().equals(target.blueprintId())
+                    || !validId(target.blueprintId())
+                    || !validId(target.legacyRecipeId())) {
+                return Result.failure(
+                        Status.INVALID_INPUT,
+                        id,
+                        currentPoints,
+                        TreeResearchResultMode.DIRECT_LEARN);
+            }
+            BlueprintLearningMutation.Result preflight;
+            try {
+                preflight = playerData.applyBlueprintLearning(
+                        BlueprintLearningMutation.Request.preflight(
+                                target.blueprintId().toString(),
+                                target.legacyRecipeId().toString()));
+            } catch (RuntimeException exception) {
+                return Result.failure(
+                        Status.TRANSACTION_FAILED,
+                        id,
+                        currentPoints,
+                        TreeResearchResultMode.DIRECT_LEARN);
+            }
+            if (preflight.status() == BlueprintLearningMutation.Status.CAPACITY_REACHED) {
+                return Result.failure(
+                        Status.PROGRESSION_CAPACITY_EXHAUSTED,
+                        id,
+                        currentPoints,
+                        TreeResearchResultMode.DIRECT_LEARN);
+            }
+            if (!preflight.ready()) {
+                return Result.failure(
+                        preflight.status() == BlueprintLearningMutation.Status.INVALID_IDENTITY
+                                ? Status.INVALID_INPUT
+                                : Status.STALE_POLICY,
+                        id,
+                        currentPoints,
+                        TreeResearchResultMode.DIRECT_LEARN);
+            }
+            learnedAfter.add(target.blueprintId().toString());
+            discoveredAfter.add(target.blueprintId().toString());
+            recipesAfter.add(target.legacyRecipeId().toString());
+            if (learnedAfter.size() > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION
+                    || discoveredAfter.size() > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION
+                    || recipesAfter.size() > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION) {
+                return Result.failure(
+                        Status.PROGRESSION_CAPACITY_EXHAUSTED,
+                        id,
+                        currentPoints,
+                        TreeResearchResultMode.DIRECT_LEARN);
+            }
+            targets.add(target);
+        }
+
+        if (path.pointCost() > 0 && !playerData.spendResearchPoints(path.pointCost())) {
+            return Result.failure(
+                    Status.STALE_POLICY,
+                    id,
+                    playerData.getResearchPoints(),
+                    TreeResearchResultMode.DIRECT_LEARN);
+        }
+        try {
+            input.consume(ingredientPlan.orElseThrow());
+        } catch (RuntimeException exception) {
+            boolean restored = rollbackPath(
+                    playerData, input, inputSnapshot, knowledgeSnapshot);
+            return Result.failure(
+                    restored ? Status.TRANSACTION_FAILED : Status.ROLLBACK_FAILED,
+                    id,
+                    playerData.getResearchPoints(),
+                    TreeResearchResultMode.DIRECT_LEARN);
+        }
+
+        List<LearningTransition> transitions = new ArrayList<>(targets.size());
+        for (LearningTarget target : targets) {
+            BlueprintLearningMutation.Result committed;
+            try {
+                committed = playerData.applyBlueprintLearning(
+                        BlueprintLearningMutation.Request.commit(
+                                target.blueprintId().toString(),
+                                target.legacyRecipeId().toString()));
+            } catch (RuntimeException exception) {
+                committed = null;
+            }
+            if (committed == null || !committed.committed() || !committed.learnedChanged()) {
+                boolean restored = rollbackPath(
+                        playerData, input, inputSnapshot, knowledgeSnapshot);
+                Status failure = committed != null
+                                && committed.status()
+                                        == BlueprintLearningMutation.Status.CAPACITY_REACHED
+                        ? Status.PROGRESSION_CAPACITY_EXHAUSTED
+                        : Status.TRANSACTION_FAILED;
+                return Result.failure(
+                        restored ? failure : Status.ROLLBACK_FAILED,
+                        id,
+                        playerData.getResearchPoints(),
+                        TreeResearchResultMode.DIRECT_LEARN);
+            }
+            transitions.add(new LearningTransition(
+                    target.blueprintId(),
+                    committed.learnedChanged(),
+                    committed.discoveredChanged(),
+                    committed.legacyRecipeChanged()));
+        }
+        return new Result(
+                Status.SUCCESS,
+                id,
+                path.pointCost(),
+                playerData.getResearchPoints(),
+                path.costBypassed(),
+                TreeResearchResultMode.DIRECT_LEARN,
+                transitions.stream().anyMatch(LearningTransition::learnedChanged),
+                transitions.stream().anyMatch(LearningTransition::discoveredChanged),
+                transitions.stream().anyMatch(LearningTransition::legacyRecipeChanged),
+                transitions);
     }
 
     private static void syncPostCommitBestEffort(
@@ -388,6 +674,48 @@ public final class BlueprintResearchService {
         return inventoryRestored && pointsRestored;
     }
 
+    private static boolean rollbackPath(
+            IPlayerRecipeData playerData,
+            ResearchInput input,
+            List<ItemStack> inputSnapshot,
+            KnowledgeSnapshot knowledgeSnapshot) {
+        boolean inventoryRestored = true;
+        try {
+            input.restore(inputSnapshot);
+        } catch (RuntimeException exception) {
+            inventoryRestored = false;
+            TaCZWeaponBlueprints.LOGGER.error(
+                    "Research path transaction failed and its inventory snapshot could not be restored",
+                    exception);
+        }
+        boolean progressionRestored;
+        try {
+            progressionRestored = playerData.replaceProgression(
+                    knowledgeSnapshot.learnedBlueprints(),
+                    knowledgeSnapshot.discoveredBlueprints(),
+                    knowledgeSnapshot.researchPoints());
+        } catch (RuntimeException exception) {
+            progressionRestored = false;
+            TaCZWeaponBlueprints.LOGGER.error(
+                    "Research path transaction failed and restoring progression threw",
+                    exception);
+        }
+        boolean recipesRestored = true;
+        try {
+            playerData.replaceRecipes(knowledgeSnapshot.learnedRecipes());
+        } catch (RuntimeException exception) {
+            recipesRestored = false;
+            TaCZWeaponBlueprints.LOGGER.error(
+                    "Research path transaction failed and restoring recipes threw",
+                    exception);
+        }
+        if (!progressionRestored) {
+            TaCZWeaponBlueprints.LOGGER.error(
+                    "Research path transaction failed and its progression snapshot could not be restored");
+        }
+        return inventoryRestored && progressionRestored && recipesRestored;
+    }
+
     private static ResearchInput playerInventoryInput(ServerPlayer player) {
         return new ResearchInput() {
             @Override
@@ -502,7 +830,9 @@ public final class BlueprintResearchService {
         POLICY_INELIGIBLE,
         TRANSACTION_FAILED,
         PROGRESSION_CAPACITY_EXHAUSTED,
-        ROLLBACK_FAILED
+        ROLLBACK_FAILED,
+        PATH_TOO_LARGE,
+        ROUTE_TOO_COMPLEX
     }
 
     /**
@@ -520,7 +850,8 @@ public final class BlueprintResearchService {
             TreeResearchResultMode resultMode,
             boolean learnedChanged,
             boolean discoveredChanged,
-            boolean legacyRecipeChanged) {
+            boolean legacyRecipeChanged,
+            List<LearningTransition> transitions) {
         public Result {
             if (status == null || resultMode == null
                     || spentPoints < 0 || balanceAfterCost < 0
@@ -529,9 +860,14 @@ public final class BlueprintResearchService {
                 throw new IllegalArgumentException("invalid blueprint research result");
             }
             blueprintId = blueprintId == null ? Optional.empty() : blueprintId;
+            transitions = transitions == null ? List.of() : List.copyOf(transitions);
             if (blueprintId.filter(id -> id.toString().length()
-                    > PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH).isPresent()) {
-                throw new IllegalArgumentException("research result blueprint ID is oversized");
+                    > PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH).isPresent()
+                    || transitions.size() > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION
+                    || transitions.stream().anyMatch(java.util.Objects::isNull)
+                    || transitions.stream().map(LearningTransition::blueprintId).distinct().count()
+                            != transitions.size()) {
+                throw new IllegalArgumentException("research result contains invalid transitions");
             }
             if (status == Status.SUCCESS) {
                 if (blueprintId.isEmpty()
@@ -539,16 +875,61 @@ public final class BlueprintResearchService {
                         || spentPoints > PlayerProgressionLimits.MAX_RESEARCH_POINTS
                                 - balanceAfterCost
                         || (resultMode.learnsDirectly() && !learnedChanged)
+                        || (resultMode.learnsDirectly() && transitions.isEmpty())
+                        || (resultMode.learnsDirectly()
+                                && (!blueprintId.orElseThrow().equals(
+                                        transitions.get(transitions.size() - 1).blueprintId())
+                                        || learnedChanged != transitions.stream()
+                                                .anyMatch(LearningTransition::learnedChanged)
+                                        || discoveredChanged != transitions.stream()
+                                                .anyMatch(LearningTransition::discoveredChanged)
+                                        || legacyRecipeChanged != transitions.stream()
+                                                .anyMatch(LearningTransition::legacyRecipeChanged)))
                         || (resultMode.createsPhysicalBlueprint()
                                 && (learnedChanged
                                         || discoveredChanged
-                                        || legacyRecipeChanged))) {
+                                        || legacyRecipeChanged
+                                        || !transitions.isEmpty()))) {
                     throw new IllegalArgumentException("successful research result is inconsistent");
                 }
             } else if (spentPoints != 0 || costBypassed
-                    || learnedChanged || discoveredChanged || legacyRecipeChanged) {
+                    || learnedChanged || discoveredChanged || legacyRecipeChanged
+                    || !transitions.isEmpty()) {
                 throw new IllegalArgumentException("failed research cannot spend or bypass costs");
             }
+        }
+
+        /** Compatibility constructor for the original single-node result shape. */
+        public Result(
+                Status status,
+                Optional<ResourceLocation> blueprintId,
+                int spentPoints,
+                int balanceAfterCost,
+                boolean costBypassed,
+                TreeResearchResultMode resultMode,
+                boolean learnedChanged,
+                boolean discoveredChanged,
+                boolean legacyRecipeChanged) {
+            this(
+                    status,
+                    blueprintId,
+                    spentPoints,
+                    balanceAfterCost,
+                    costBypassed,
+                    resultMode,
+                    learnedChanged,
+                    discoveredChanged,
+                    legacyRecipeChanged,
+                    status == Status.SUCCESS && resultMode != null
+                                    && resultMode.learnsDirectly()
+                                    && learnedChanged && blueprintId != null
+                                    && blueprintId.isPresent()
+                            ? List.of(new LearningTransition(
+                                    blueprintId.orElseThrow(),
+                                    learnedChanged,
+                                    discoveredChanged,
+                                    legacyRecipeChanged))
+                            : List.of());
         }
 
         /** Compatibility constructor for menu-generated failures. */
@@ -605,6 +986,32 @@ public final class BlueprintResearchService {
                     false,
                     false,
                     false);
+        }
+    }
+
+    public record LearningTransition(
+            ResourceLocation blueprintId,
+            boolean learnedChanged,
+            boolean discoveredChanged,
+            boolean legacyRecipeChanged) {
+        public LearningTransition {
+            if (!validId(blueprintId) || !learnedChanged) {
+                throw new IllegalArgumentException("invalid research learning transition");
+            }
+        }
+    }
+
+    private record KnowledgeSnapshot(
+            Set<String> learnedBlueprints,
+            Set<String> discoveredBlueprints,
+            Set<String> learnedRecipes,
+            int researchPoints) {
+        private static KnowledgeSnapshot capture(IPlayerRecipeData playerData) {
+            return new KnowledgeSnapshot(
+                    Set.copyOf(playerData.getLearnedBlueprints()),
+                    Set.copyOf(playerData.getDiscoveredBlueprints()),
+                    Set.copyOf(playerData.getLearnedRecipes()),
+                    playerData.getResearchPoints());
         }
     }
 }

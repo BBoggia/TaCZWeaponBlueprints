@@ -12,6 +12,8 @@ import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeAuthor
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeEconomyAudit;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeTopologyAudit;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchGroupedRouteMotifAssessment;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchGroupedRouteQualityAudit;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPlacementDiagnostics;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPrerequisiteDecision;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponEvidenceSnapshot;
@@ -25,10 +27,10 @@ import net.minecraft.resources.ResourceLocation;
 /** Creates a deterministic, author-friendly view of the live research catalog. */
 public final class BlueprintResearchCatalogExporter {
     /**
-     * Format 12 distinguishes planned rank ordinals from finalized publication
-     * ranks. Legacy tier/level diagnostic fields remain for compatibility.
+     * Format 18 records explicit generated relationship shape and hybrid-route
+     * aggregate evidence. The legacy prerequisite union remains for older tools.
      */
-    public static final int CURRENT_FORMAT = 12;
+    public static final int CURRENT_FORMAT = 18;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private BlueprintResearchCatalogExporter() {
@@ -60,7 +62,9 @@ public final class BlueprintResearchCatalogExporter {
                 automaticDiagnostics,
                 authoring,
                 ResearchTechTreeTopologyAudit.Audit.EMPTY,
-                ResearchTechTreeEconomyAudit.Audit.EMPTY);
+                ResearchTechTreeEconomyAudit.Audit.EMPTY,
+                ResearchGroupedRouteQualityAudit.Audit.EMPTY,
+                ResearchGroupedRouteMotifAssessment.Assessment.EMPTY);
     }
 
     public static String exportWithDiagnostics(
@@ -71,6 +75,49 @@ public final class BlueprintResearchCatalogExporter {
             ResearchTechTreeAuthoringReport authoringReport,
             ResearchTechTreeTopologyAudit.Audit topologyAudit,
             ResearchTechTreeEconomyAudit.Audit economyAudit) {
+        return exportWithDiagnostics(
+                snapshot,
+                catalog,
+                profileId,
+                automaticDiagnostics,
+                authoringReport,
+                topologyAudit,
+                economyAudit,
+                ResearchGroupedRouteQualityAudit.Audit.EMPTY,
+                ResearchGroupedRouteMotifAssessment.Assessment.EMPTY);
+    }
+
+    public static String exportWithDiagnostics(
+            BlueprintResearchSnapshot snapshot,
+            Map<ResourceLocation, BlueprintData> catalog,
+            ResourceLocation profileId,
+            AutomaticWeaponPlacementDiagnostics automaticDiagnostics,
+            ResearchTechTreeAuthoringReport authoringReport,
+            ResearchTechTreeTopologyAudit.Audit topologyAudit,
+            ResearchTechTreeEconomyAudit.Audit economyAudit,
+            ResearchGroupedRouteQualityAudit.Audit groupedRouteQualityAudit) {
+        return exportWithDiagnostics(
+                snapshot,
+                catalog,
+                profileId,
+                automaticDiagnostics,
+                authoringReport,
+                topologyAudit,
+                economyAudit,
+                groupedRouteQualityAudit,
+                ResearchGroupedRouteMotifAssessment.Assessment.EMPTY);
+    }
+
+    public static String exportWithDiagnostics(
+            BlueprintResearchSnapshot snapshot,
+            Map<ResourceLocation, BlueprintData> catalog,
+            ResourceLocation profileId,
+            AutomaticWeaponPlacementDiagnostics automaticDiagnostics,
+            ResearchTechTreeAuthoringReport authoringReport,
+            ResearchTechTreeTopologyAudit.Audit topologyAudit,
+            ResearchTechTreeEconomyAudit.Audit economyAudit,
+            ResearchGroupedRouteQualityAudit.Audit groupedRouteQualityAudit,
+            ResearchGroupedRouteMotifAssessment.Assessment motifAssessment) {
         if (profileId == null) {
             throw new IllegalArgumentException("profileId cannot be null");
         }
@@ -87,6 +134,21 @@ public final class BlueprintResearchCatalogExporter {
                 ? ResearchTechTreeTopologyAudit.Audit.EMPTY : topologyAudit;
         ResearchTechTreeEconomyAudit.Audit stableEconomy = economyAudit == null
                 ? ResearchTechTreeEconomyAudit.Audit.EMPTY : economyAudit;
+        ResearchGroupedRouteQualityAudit.Audit stableGroupedRouteQuality =
+                groupedRouteQualityAudit == null
+                        ? ResearchGroupedRouteQualityAudit.Audit.EMPTY
+                        : groupedRouteQualityAudit;
+        ResearchGroupedRouteMotifAssessment.Assessment stableMotifAssessment =
+                motifAssessment == null
+                        ? ResearchGroupedRouteMotifAssessment.Assessment.EMPTY
+                        : motifAssessment;
+        if (stableMotifAssessment.available()
+                && (!stableGroupedRouteQuality.available()
+                        || stableMotifAssessment.weaponNodeCount()
+                                != stableGroupedRouteQuality.weaponNodeCount())) {
+            throw new IllegalArgumentException(
+                    "motif assessment does not match grouped-route quality evidence");
+        }
         List<Map.Entry<ResourceLocation, BlueprintData>> entries = new ArrayList<>(stableCatalog.entrySet());
         entries.removeIf(entry -> entry.getKey() == null || entry.getValue() == null);
         entries.sort(Map.Entry.comparingByKey(Comparator.comparing(ResourceLocation::toString)));
@@ -127,6 +189,12 @@ public final class BlueprintResearchCatalogExporter {
         }
         root.add("topology_audit", exportTopology(stableTopology));
         root.add("economy_review", exportEconomy(stableEconomy));
+        root.add(
+                "grouped_route_quality",
+                exportGroupedRouteQuality(stableGroupedRouteQuality));
+        root.add(
+                "grouped_route_motif_assessment",
+                exportGroupedRouteMotifAssessment(stableMotifAssessment));
         if (automaticDiagnostics != null) {
             JsonObject automatic = new JsonObject();
             automatic.addProperty("tree", automaticDiagnostics.treeId().toString());
@@ -140,6 +208,9 @@ public final class BlueprintResearchCatalogExporter {
                     "layering_strategy",
                     automaticDiagnostics.layeringStrategy().name().toLowerCase(
                             java.util.Locale.ROOT));
+            automatic.addProperty(
+                    "prerequisite_strategy",
+                    automaticDiagnostics.prerequisiteStrategy().serializedName());
             automatic.addProperty(
                     "max_generated_prerequisites",
                     automaticDiagnostics.maxGeneratedPrerequisites());
@@ -169,6 +240,21 @@ public final class BlueprintResearchCatalogExporter {
             automatic.addProperty(
                     "planned_prerequisite_count",
                     automaticDiagnostics.generatedPrerequisiteCount());
+            automatic.addProperty(
+                    "planned_requirement_group_count",
+                    automaticDiagnostics.generatedRequirementGroupCount());
+            automatic.addProperty(
+                    "planned_alternative_group_count",
+                    automaticDiagnostics.generatedAlternativeGroupCount());
+            automatic.addProperty(
+                    "planned_alternative_route_decision_count",
+                    automaticDiagnostics.generatedAlternativeRouteDecisionCount());
+            automatic.addProperty(
+                    "planned_mandatory_convergence_count",
+                    automaticDiagnostics.generatedMandatoryConvergenceCount());
+            automatic.addProperty(
+                    "planned_mixed_requirement_count",
+                    automaticDiagnostics.generatedMixedRequirementCount());
             automatic.add(
                     "branch_prerequisites",
                     exportBranchTopologySummary(
@@ -189,6 +275,9 @@ public final class BlueprintResearchCatalogExporter {
                         automatic.addProperty(
                                 "foundation_count",
                                 automaticProfile.foundationCount());
+                        automatic.addProperty(
+                                "scoring_model",
+                                automaticProfile.scoringModel().serializedName());
                     });
             ResearchTechTreeDefinition automaticTree = stableSnapshot.techTrees().get(
                     automaticDiagnostics.treeId());
@@ -273,6 +362,15 @@ public final class BlueprintResearchCatalogExporter {
             JsonArray prerequisites = new JsonArray();
             definition.prerequisites().forEach(id -> prerequisites.add(id.toString()));
             exported.add("prerequisites", prerequisites);
+            JsonArray prerequisiteGroups = new JsonArray();
+            definition.requirements().allOf().forEach(group -> {
+                JsonObject exportedRequirementGroup = new JsonObject();
+                JsonArray alternatives = new JsonArray();
+                group.anyOf().forEach(id -> alternatives.add(id.toString()));
+                exportedRequirementGroup.add("any_of", alternatives);
+                prerequisiteGroups.add(exportedRequirementGroup);
+            });
+            exported.add("prerequisite_groups", prerequisiteGroups);
             stableSnapshot.placementFor(profileId, blueprintId).ifPresentOrElse(placement -> {
                 ResearchTreeGroupDefinition group = stableSnapshot.groups()
                         .get(placement.groupId());
@@ -352,6 +450,18 @@ public final class BlueprintResearchCatalogExporter {
                     decision.generatedPrerequisites().forEach(value ->
                             plannedPrerequisites.add(value.toString()));
                     automatic.add("planned_prerequisites", plannedPrerequisites);
+                    JsonArray plannedRequirementGroups = new JsonArray();
+                    decision.generatedRequirements().allOf().forEach(requirement -> {
+                        JsonObject group = new JsonObject();
+                        JsonArray alternatives = new JsonArray();
+                        requirement.anyOf().forEach(value ->
+                                alternatives.add(value.toString()));
+                        group.add("any_of", alternatives);
+                        plannedRequirementGroups.add(group);
+                    });
+                    automatic.add(
+                            "planned_prerequisite_groups",
+                            plannedRequirementGroups);
                     decision.prerequisiteDecision().ifPresent(value ->
                             automatic.add(
                                     "prerequisite_decision",
@@ -419,6 +529,10 @@ public final class BlueprintResearchCatalogExporter {
     private static JsonObject exportEconomy(ResearchTechTreeEconomyAudit.Audit audit) {
         JsonObject result = new JsonObject();
         result.addProperty("cost_authority", audit.costAuthority());
+        result.addProperty("research_cost_mode", audit.researchCostMode().name());
+        result.addProperty(
+                "point_income_coverage_applicable",
+                audit.pointCoverageApplicable());
         result.addProperty("automatic_cost_curve_enabled", audit.automaticCostCurveEnabled());
         result.addProperty(
                 "maximum_finite_point_income",
@@ -456,11 +570,257 @@ public final class BlueprintResearchCatalogExporter {
         return result;
     }
 
+    private static JsonObject exportGroupedRouteQuality(
+            ResearchGroupedRouteQualityAudit.Audit audit) {
+        JsonObject result = new JsonObject();
+        result.addProperty("available", audit.available());
+        result.addProperty("interpretation", audit.interpretation());
+        result.addProperty("weapon_node_count", audit.weaponNodeCount());
+        result.addProperty("automatic_target_count", audit.automaticTargetCount());
+        result.addProperty(
+                "matched_automatic_target_count",
+                audit.matchedAutomaticTargetCount());
+        result.addProperty(
+                "unmatched_automatic_target_count",
+                audit.unmatchedAutomaticTargetCount());
+        result.addProperty("alternative_group_count", audit.alternativeGroupCount());
+        result.addProperty(
+                "effective_alternative_group_count",
+                audit.effectiveAlternativeGroupCount());
+        result.addProperty(
+                "maximum_finite_point_income",
+                audit.maximumFinitePointIncome());
+        result.addProperty(
+                "affordable_terminal_count",
+                audit.affordableTerminalCount());
+        result.addProperty(
+                "unaffordable_terminal_count",
+                audit.unaffordableTerminalCount());
+        result.addProperty(
+                "indeterminate_terminal_count",
+                audit.indeterminateTerminalCount());
+        result.addProperty("warning_occurrence_count", audit.warningOccurrenceCount());
+
+        ResearchGroupedRouteQualityAudit.AlternativeEvidence alternatives =
+                audit.alternatives();
+        JsonObject alternativeEvidence = new JsonObject();
+        alternativeEvidence.addProperty("group_count", alternatives.groupCount());
+        alternativeEvidence.addProperty(
+                "effective_group_count", alternatives.effectiveGroupCount());
+        alternativeEvidence.addProperty(
+                "dependent_alternative_pair_count",
+                alternatives.dependentAlternativePairCount());
+        alternativeEvidence.addProperty(
+                "exact_route_cost_group_count",
+                alternatives.exactRouteCostGroupCount());
+        alternativeEvidence.addProperty(
+                "zero_cost_imbalanced_group_count",
+                alternatives.zeroCostImbalancedGroupCount());
+        alternativeEvidence.add(
+                "mandatory_ancestry_overlap_basis_points",
+                exportDistribution(alternatives.mandatoryAncestryOverlapBasisPoints()));
+        alternativeEvidence.add(
+                "ancestry_divergence_basis_points",
+                exportDistribution(alternatives.ancestryDivergenceBasisPoints()));
+        alternativeEvidence.add(
+                "route_cost_ratio_lower_bound_basis_points",
+                exportDistribution(
+                        alternatives.routeCostRatioLowerBoundBasisPoints()));
+        alternativeEvidence.add(
+                "route_cost_ratio_upper_bound_basis_points",
+                exportDistribution(
+                        alternatives.routeCostRatioUpperBoundBasisPoints()));
+        result.add("alternatives", alternativeEvidence);
+        result.add(
+                "mandatory_ancestor_shares_basis_points",
+                exportDistribution(audit.mandatoryAncestorSharesBasisPoints()));
+        result.add(
+                "single_route_chain_lengths",
+                exportDistribution(audit.singleRouteChainLengths()));
+        result.add(
+                "branch_entry_redundancy",
+                exportDistribution(audit.branchEntryRedundancy()));
+        result.add(
+                "branch_entry_ancestry_overlap_basis_points",
+                exportDistribution(audit.branchEntryAncestryOverlapBasisPoints()));
+
+        JsonArray phases = new JsonArray();
+        for (ResearchGroupedRouteQualityAudit.PhaseSummary phase : audit.phases()) {
+            JsonObject value = new JsonObject();
+            value.addProperty("phase", phase.phase().serializedName());
+            value.addProperty("target_count", phase.targetCount());
+            value.addProperty("alternative_group_count", phase.alternativeGroupCount());
+            value.addProperty(
+                    "effective_alternative_group_count",
+                    phase.effectiveAlternativeGroupCount());
+            value.addProperty(
+                    "same_family_alternative_group_count",
+                    phase.sameFamilyAlternativeGroupCount());
+            value.addProperty(
+                    "cross_family_alternative_group_count",
+                    phase.crossFamilyAlternativeGroupCount());
+            value.addProperty(
+                    "unclassified_alternative_group_count",
+                    phase.unclassifiedAlternativeGroupCount());
+            value.addProperty(
+                    "alternative_density_basis_points",
+                    phase.alternativeDensityBasisPoints());
+            value.addProperty(
+                    "same_family_density_basis_points",
+                    phase.sameFamilyDensityBasisPoints());
+            value.addProperty(
+                    "cross_family_density_basis_points",
+                    phase.crossFamilyDensityBasisPoints());
+            value.add("parent_fan_out", exportDistribution(phase.parentFanOut()));
+            value.add(
+                    "mandatory_ancestor_shares_basis_points",
+                    exportDistribution(phase.mandatoryAncestorSharesBasisPoints()));
+            phases.add(value);
+        }
+        result.add("phases", phases);
+
+        JsonArray branchEntries = new JsonArray();
+        for (ResearchGroupedRouteQualityAudit.BranchEntrySummary branch
+                : audit.branchEntries()) {
+            JsonObject value = new JsonObject();
+            value.addProperty("branch_index", branch.branchIndex());
+            value.addProperty("target_count", branch.targetCount());
+            value.addProperty("distinct_entrance_count", branch.distinctEntranceCount());
+            value.addProperty("redundant_entrance_count", branch.redundantEntranceCount());
+            value.addProperty("alternative_group_count", branch.alternativeGroupCount());
+            value.addProperty(
+                    "effective_alternative_group_count",
+                    branch.effectiveAlternativeGroupCount());
+            value.addProperty(
+                    "mandatory_ancestry_overlap_basis_points",
+                    branch.mandatoryAncestryOverlapBasisPoints());
+            branchEntries.add(value);
+        }
+        result.add("branch_entries", branchEntries);
+
+        JsonArray terminalRoutes = new JsonArray();
+        for (ResearchGroupedRouteQualityAudit.TerminalRoute route
+                : audit.terminalRoutes()) {
+            JsonObject value = new JsonObject();
+            value.addProperty("terminal", route.terminalId().toString());
+            value.addProperty(
+                    "minimum_route_lower_bound",
+                    route.minimumRouteLowerBound());
+            value.addProperty(
+                    "minimum_route_upper_bound",
+                    route.minimumRouteUpperBound());
+            value.addProperty("exact", route.exact());
+            value.addProperty("affordability", route.affordability().serializedName());
+            terminalRoutes.add(value);
+        }
+        result.add("terminal_routes", terminalRoutes);
+
+        JsonArray warnings = new JsonArray();
+        for (ResearchGroupedRouteQualityAudit.Warning warning : audit.warnings()) {
+            JsonObject value = new JsonObject();
+            value.addProperty("code", warning.code().serializedName());
+            value.addProperty("occurrence_count", warning.occurrenceCount());
+            warnings.add(value);
+        }
+        result.add("warnings", warnings);
+        return result;
+    }
+
+    private static JsonObject exportGroupedRouteMotifAssessment(
+            ResearchGroupedRouteMotifAssessment.Assessment assessment) {
+        JsonObject result = new JsonObject();
+        result.addProperty("available", assessment.available());
+        result.addProperty("contract", assessment.contract());
+        result.addProperty("decision", assessment.decision().serializedName());
+        result.addProperty("weapon_node_count", assessment.weaponNodeCount());
+        result.addProperty(
+                "ladder_p95_review_limit",
+                assessment.ladderP95ReviewLimit());
+        result.addProperty(
+                "route_cost_ratio_p95_review_limit_basis_points",
+                assessment.routeCostRatioP95ReviewLimitBasisPoints());
+        result.addProperty(
+                "decisive_signal_count",
+                assessment.decisiveSignalCount());
+        result.addProperty(
+                "motif_prototype_recommended",
+                assessment.motifPrototypeRecommended());
+
+        JsonArray signals = new JsonArray();
+        for (ResearchGroupedRouteMotifAssessment.Signal signal
+                : assessment.signals()) {
+            JsonObject value = new JsonObject();
+            value.addProperty("code", signal.code().serializedName());
+            value.addProperty("observed", signal.observed());
+            value.addProperty("review_limit", signal.reviewLimit());
+            value.addProperty("triggered", signal.triggered());
+            value.addProperty("decision_relevant", signal.decisionRelevant());
+            signals.add(value);
+        }
+        result.add("signals", signals);
+
+        JsonArray motifs = new JsonArray();
+        assessment.recommendedMotifs().stream()
+                .map(ResearchGroupedRouteMotifAssessment.Motif::serializedName)
+                .forEach(motifs::add);
+        result.add("recommended_motifs", motifs);
+
+        ResearchGroupedRouteMotifAssessment.VisualEvidence visual =
+                assessment.visualEvidence();
+        JsonObject visualEvidence = new JsonObject();
+        visualEvidence.addProperty(
+                "pre_junction_approximate_crossing_count",
+                visual.preJunctionApproximateCrossingCount());
+        visualEvidence.addProperty(
+                "post_junction_measurement_available",
+                visual.postJunctionMeasurementAvailable());
+        visualEvidence.addProperty(
+                "post_junction_crossing_count",
+                visual.postJunctionCrossingCount());
+        visualEvidence.addProperty(
+                "manual_review_required",
+                visual.manualReviewRequired());
+        result.add("visual_evidence", visualEvidence);
+        return result;
+    }
+
+    private static JsonObject exportDistribution(
+            ResearchGroupedRouteQualityAudit.IntDistribution distribution) {
+        JsonObject result = new JsonObject();
+        result.addProperty("sample_count", distribution.sampleCount());
+        result.addProperty("minimum", distribution.minimum());
+        result.addProperty("median", distribution.median());
+        result.addProperty("percentile_90", distribution.percentile90());
+        result.addProperty("percentile_95", distribution.percentile95());
+        result.addProperty("maximum", distribution.maximum());
+        return result;
+    }
+
+    private static JsonObject exportDistribution(
+            ResearchGroupedRouteQualityAudit.LongDistribution distribution) {
+        JsonObject result = new JsonObject();
+        result.addProperty("sample_count", distribution.sampleCount());
+        result.addProperty("minimum", distribution.minimum());
+        result.addProperty("median", distribution.median());
+        result.addProperty("percentile_90", distribution.percentile90());
+        result.addProperty("percentile_95", distribution.percentile95());
+        result.addProperty("maximum", distribution.maximum());
+        return result;
+    }
+
     private static JsonObject exportAuthoringEntry(
             ResearchTechTreeAuthoringReport.Entry entry) {
         JsonObject result = new JsonObject();
         result.addProperty("state", entry.state());
         entry.mechanicalScore().ifPresent(value -> result.addProperty("mechanical_score", value));
+        entry.capabilityScore().ifPresent(value -> result.addProperty("capability_v3_score", value));
+        entry.capabilityConfidence().ifPresent(value ->
+                result.addProperty("capability_v3_confidence", value));
+        entry.capabilitySuggestedTier().ifPresent(value -> result.addProperty(
+                "capability_v3_suggested_tier",
+                value.name().toLowerCase(java.util.Locale.ROOT)));
+        entry.authoredCapabilityTierDelta().ifPresent(value -> result.addProperty(
+                "authored_capability_v3_tier_delta", value));
         entry.assignedRank().ifPresent(value -> result.addProperty("assigned_rank", value));
         entry.bandId().ifPresent(value -> result.addProperty("band", value.toString()));
         entry.similarityScore().ifPresent(value -> result.addProperty("similarity_score", value));
@@ -483,6 +843,9 @@ public final class BlueprintResearchCatalogExporter {
         JsonArray reasons = new JsonArray();
         entry.reviewFallbackReasons().forEach(reasons::add);
         result.add("review_fallback_reasons", reasons);
+        JsonArray capabilityWarnings = new JsonArray();
+        entry.capabilityWarnings().forEach(capabilityWarnings::add);
+        result.add("capability_v3_warnings", capabilityWarnings);
         return result;
     }
 
@@ -490,6 +853,9 @@ public final class BlueprintResearchCatalogExporter {
             AutomaticWeaponPrerequisiteDecision decision) {
         JsonObject result = new JsonObject();
         result.addProperty("strategy", decision.strategy().serializedName());
+        result.addProperty(
+                "requirement_shape",
+                decision.generatedRequirementShape().serializedName());
         decision.branchIndex().ifPresent(value -> result.addProperty("branch", value));
         result.addProperty("rank_index", decision.rankIndex());
         decision.publishedRank().ifPresent(value ->
@@ -531,6 +897,37 @@ public final class BlueprintResearchCatalogExporter {
                     rejection.maximumAllowedClosureCost());
             result.add("merge_rejection", value);
         });
+        decision.alternativeRouteReview().ifPresent(review -> {
+            JsonObject value = new JsonObject();
+            value.addProperty("blueprint", review.parentId().toString());
+            value.addProperty("outcome", review.outcome().serializedName());
+            value.addProperty(
+                    "existing_route_cost_lower_bound",
+                    review.existingRouteCostLowerBound());
+            value.addProperty(
+                    "existing_route_cost_upper_bound",
+                    review.existingRouteCostUpperBound());
+            value.addProperty(
+                    "candidate_route_cost_lower_bound",
+                    review.candidateRouteCostLowerBound());
+            value.addProperty(
+                    "candidate_route_cost_upper_bound",
+                    review.candidateRouteCostUpperBound());
+            value.addProperty(
+                    "route_cost_ratio_lower_bound_basis_points",
+                    review.routeCostRatioLowerBoundBasisPoints());
+            value.addProperty(
+                    "route_cost_ratio_upper_bound_basis_points",
+                    review.routeCostRatioUpperBoundBasisPoints());
+            value.addProperty(
+                    "mandatory_ancestry_overlap_basis_points",
+                    review.mandatoryAncestryOverlapBasisPoints());
+            value.addProperty(
+                    "divergent_mandatory_node_count",
+                    review.divergentMandatoryNodeCount());
+            value.addProperty("exact", review.exact());
+            result.add("alternative_route_review", value);
+        });
         return result;
     }
 
@@ -553,11 +950,29 @@ public final class BlueprintResearchCatalogExporter {
         result.addProperty("unclassified_edge_count", summary.unclassifiedEdgeCount());
         result.addProperty("same_family_merge_count", summary.sameFamilyMergeCount());
         result.addProperty("cross_family_merge_count", summary.crossFamilyMergeCount());
+        result.addProperty(
+                "same_family_multi_parent_set_count",
+                summary.sameFamilyMergeCount());
+        result.addProperty(
+                "cross_family_multi_parent_set_count",
+                summary.crossFamilyMergeCount());
         result.addProperty("depth_shortcut_count", summary.depthShortcutCount());
         result.addProperty("terminal_peer_count", summary.terminalPeerCount());
         result.addProperty(
                 "closure_inflation_rejection_count",
                 summary.closureInflationRejectionCount());
+        result.addProperty(
+                "closure_rejected_additional_parent_count",
+                summary.closureInflationRejectionCount());
+        result.addProperty(
+                "alternative_route_review_count",
+                summary.alternativeRouteReviewCount());
+        result.addProperty(
+                "accepted_alternative_route_count",
+                summary.acceptedAlternativeRouteCount());
+        result.addProperty(
+                "rejected_alternative_route_cost_imbalance_count",
+                summary.rejectedAlternativeRouteCostImbalanceCount());
         result.addProperty("maximum_fan_out", summary.maximumFanOut());
         return result;
     }
@@ -589,6 +1004,12 @@ public final class BlueprintResearchCatalogExporter {
         result.addProperty(
                 "rank_reconciliation_complete",
                 summary.rankReconciliationComplete());
+        result.addProperty(
+                "unexpected_parentless_candidate_count",
+                summary.unexpectedParentlessCandidateCount());
+        result.addProperty(
+                "connected_topology_complete",
+                summary.connectedTopologyComplete());
         result.addProperty("complete", summary.complete());
         return result;
     }

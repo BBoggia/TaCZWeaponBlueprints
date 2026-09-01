@@ -94,6 +94,40 @@ class ResearchTreeRecommendationEngineTest {
     }
 
     @Test
+    void eitherAlternativeInOneAnyOfGroupCanOpenTheDependent() {
+        ResourceLocation preferred = id("test:preferred");
+        ResourceLocation alternative = id("test:alternative");
+        ResourceLocation dependent = id("test:dependent");
+        ResearchTreeGraph graph = ResearchTreeGraph.withRequirementGroups(
+                List.of(
+                        available(0, preferred, 2, 0),
+                        available(1, alternative, 2, 0),
+                        node(2, dependent, JournalVisibility.FULL,
+                                ResearchTreeGraph.Availability.PREREQUISITES_REQUIRED,
+                                4, 0, 2)),
+                List.of(new ResearchTreeGraph.RequirementGroup(
+                        dependent,
+                        0,
+                        List.of(preferred, alternative),
+                        0,
+                        false)));
+
+        ResearchTreeRecommendationEngine.Recommendation recommendation =
+                ResearchTreeRecommendationEngine.recommend(
+                        graph,
+                        Set.of(preferred, alternative),
+                        Set.of(preferred),
+                        10).orElseThrow();
+
+        assertEquals(preferred, recommendation.blueprintId());
+        assertEquals(1, recommendation.immediateUnlockCount());
+        assertEquals(ResearchTreeRecommendationEngine.Reason.OPENS_PATHS,
+                recommendation.reason());
+        assertEquals(1, ResearchTreeUnlockIndex.create(graph)
+                .unlocksAfterLearning(alternative));
+    }
+
+    @Test
     void learnedPrerequisitesCountOnlyCurrentlyAvailableDependents() {
         ResourceLocation left = id("test:left");
         ResourceLocation right = id("test:right");

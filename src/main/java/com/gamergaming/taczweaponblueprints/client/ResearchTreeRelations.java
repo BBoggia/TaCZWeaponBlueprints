@@ -16,19 +16,24 @@ import net.minecraft.resources.ResourceLocation;
 /** Indexed public topology and bounded relationship paths for one focused node. */
 public final class ResearchTreeRelations {
     public static final ResearchTreeRelations EMPTY = new ResearchTreeRelations(
-            ResearchTreeGraph.EMPTY, Map.of(), Map.of());
+            ResearchTreeGraph.EMPTY, Map.of(), Map.of(), Map.of());
 
     private final ResearchTreeGraph graph;
     private final Map<ResourceLocation, List<ResourceLocation>> requirements;
     private final Map<ResourceLocation, List<ResourceLocation>> unlocks;
+    private final Map<ResourceLocation, List<ResearchTreeGraph.Edge>>
+            alternativeEdgesByDependent;
 
     private ResearchTreeRelations(
             ResearchTreeGraph graph,
             Map<ResourceLocation, List<ResourceLocation>> requirements,
-            Map<ResourceLocation, List<ResourceLocation>> unlocks) {
+            Map<ResourceLocation, List<ResourceLocation>> unlocks,
+            Map<ResourceLocation, List<ResearchTreeGraph.Edge>>
+                    alternativeEdgesByDependent) {
         this.graph = graph;
         this.requirements = requirements;
         this.unlocks = unlocks;
+        this.alternativeEdgesByDependent = alternativeEdgesByDependent;
     }
 
     public static ResearchTreeRelations create(ResearchTreeGraph graph) {
@@ -48,10 +53,28 @@ public final class ResearchTreeRelations {
             requirements.get(edge.dependentId()).add(edge.prerequisiteId());
             unlocks.get(edge.prerequisiteId()).add(edge.dependentId());
         }
+        Map<ResourceLocation, List<ResearchTreeGraph.Edge>> alternativeEdges =
+                new LinkedHashMap<>();
+        for (ResearchTreeGraph.RequirementGroup group : graph.requirementGroups()) {
+            int alternativeCount = group.visibleAlternativeIds().size()
+                    + group.hiddenAlternativeCount()
+                    + group.externalAlternativeCount();
+            if (alternativeCount > 1) {
+                group.visibleAlternativeIds().forEach(alternative ->
+                        alternativeEdges.computeIfAbsent(
+                                group.dependentId(), ignored -> new ArrayList<>())
+                                .add(new ResearchTreeGraph.Edge(
+                                        alternative, group.dependentId())));
+            }
+        }
+        alternativeEdges.replaceAll((ignored, edges) -> edges.stream()
+                .distinct()
+                .toList());
         return new ResearchTreeRelations(
                 graph,
                 immutableLists(requirements),
-                immutableLists(unlocks));
+                immutableLists(unlocks),
+                Collections.unmodifiableMap(alternativeEdges));
     }
 
     public List<ResourceLocation> directRequirements(ResourceLocation blueprintId) {
@@ -86,12 +109,22 @@ public final class ResearchTreeRelations {
                 : new LinkedHashSet<>(directUnlocks);
         requirementPath.removeAll(directRequirements);
         unlockPath.removeAll(directUnlocks);
+        LinkedHashSet<ResourceLocation> requirementSide = new LinkedHashSet<>();
+        requirementSide.add(blueprintId);
+        requirementSide.addAll(directRequirements);
+        requirementSide.addAll(requirementPath);
+        Set<ResearchTreeGraph.Edge> focusedAlternativeEdges = requirementSide.stream()
+                .flatMap(dependent -> alternativeEdgesByDependent
+                        .getOrDefault(dependent, List.of()).stream())
+                .filter(edge -> requirementSide.contains(edge.prerequisiteId()))
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
         return new FocusPath(
                 blueprintId,
                 directRequirements,
                 requirementPath,
                 directUnlocks,
-                unlockPath);
+                unlockPath,
+                focusedAlternativeEdges);
     }
 
     private static Set<ResourceLocation> traverse(
@@ -131,19 +164,22 @@ public final class ResearchTreeRelations {
             Set<ResourceLocation> directRequirements,
             Set<ResourceLocation> requirementPath,
             Set<ResourceLocation> directUnlocks,
-            Set<ResourceLocation> unlockPath) {
+            Set<ResourceLocation> unlockPath,
+            Set<ResearchTreeGraph.Edge> alternativeRequirementEdges) {
         public static final FocusPath EMPTY = new FocusPath(
-                null, Set.of(), Set.of(), Set.of(), Set.of());
+                null, Set.of(), Set.of(), Set.of(), Set.of(), Set.of());
 
         public FocusPath {
             directRequirements = immutableSet(directRequirements);
             requirementPath = immutableSet(requirementPath);
             directUnlocks = immutableSet(directUnlocks);
             unlockPath = immutableSet(unlockPath);
+            alternativeRequirementEdges = immutableEdgeSet(alternativeRequirementEdges);
             if (focusedId == null && (!directRequirements.isEmpty()
                     || !requirementPath.isEmpty()
                     || !directUnlocks.isEmpty()
-                    || !unlockPath.isEmpty())) {
+                    || !unlockPath.isEmpty()
+                    || !alternativeRequirementEdges.isEmpty())) {
                 throw new IllegalArgumentException("empty Research Tree focus contains relationships");
             }
         }
@@ -176,7 +212,9 @@ public final class ResearchTreeRelations {
             }
             if (edge.dependentId().equals(focusedId)
                     && directRequirements.contains(edge.prerequisiteId())) {
-                return ResearchTreePresentationContract.RelationshipRole.DIRECT_REQUIREMENT;
+                return alternativeRequirementEdges.contains(edge)
+                        ? ResearchTreePresentationContract.RelationshipRole.ALTERNATIVE_REQUIREMENT
+                        : ResearchTreePresentationContract.RelationshipRole.DIRECT_REQUIREMENT;
             }
             if (edge.prerequisiteId().equals(focusedId)
                     && directUnlocks.contains(edge.dependentId())) {
@@ -186,7 +224,9 @@ public final class ResearchTreeRelations {
                     || directRequirements.contains(edge.prerequisiteId()))
                     && (requirementPath.contains(edge.dependentId())
                     || directRequirements.contains(edge.dependentId()))) {
-                return ResearchTreePresentationContract.RelationshipRole.REQUIREMENT_PATH;
+                return alternativeRequirementEdges.contains(edge)
+                        ? ResearchTreePresentationContract.RelationshipRole.ALTERNATIVE_REQUIREMENT
+                        : ResearchTreePresentationContract.RelationshipRole.REQUIREMENT_PATH;
             }
             if ((unlockPath.contains(edge.prerequisiteId())
                     || directUnlocks.contains(edge.prerequisiteId()))
@@ -203,6 +243,18 @@ public final class ResearchTreeRelations {
             }
             if (values.stream().anyMatch(java.util.Objects::isNull)) {
                 throw new IllegalArgumentException("Research Tree relationship set contains null IDs");
+            }
+            return Collections.unmodifiableSet(new LinkedHashSet<>(values));
+        }
+
+        private static Set<ResearchTreeGraph.Edge> immutableEdgeSet(
+                Set<ResearchTreeGraph.Edge> values) {
+            if (values == null || values.isEmpty()) {
+                return Set.of();
+            }
+            if (values.stream().anyMatch(java.util.Objects::isNull)) {
+                throw new IllegalArgumentException(
+                        "Research Tree alternative-edge set contains null edges");
             }
             return Collections.unmodifiableSet(new LinkedHashSet<>(values));
         }

@@ -89,8 +89,8 @@ public final class BlueprintResearchPolicyResolver {
         boolean discovered = playerDataAvailable && playerData.hasDiscoveredBlueprint(blueprintId.toString());
         int points = playerDataAvailable ? playerData.getResearchPoints() : 0;
         boolean prerequisitesSatisfied = playerDataAvailable
-                && definition.prerequisites().stream()
-                        .allMatch(id -> playerData.hasBlueprint(id.toString())
+                && definition.requirements().satisfiedBy(id ->
+                        playerData.hasBlueprint(id.toString())
                                 || stableExempt.test(id));
 
         JournalVisibility visibility = definition.visibility();
@@ -120,7 +120,10 @@ public final class BlueprintResearchPolicyResolver {
                 definition.recyclingValue(),
                 definition.researchCost(),
                 definition.requiresDiscovery(),
+                definition.requirements(),
                 definition.prerequisites(),
+                runtimeEntryPoints.stream().noneMatch(entryPoint ->
+                        entryPoint.resolved().filter(blueprintId::equals).isPresent()),
                 definition.creativeBypassesCost(),
                 definition.ruleId(),
                 definition.specificity());
@@ -342,6 +345,33 @@ public final class BlueprintResearchPolicyResolver {
                 id -> stableBlocked.test(id.toString()) || stableExempt.test(id));
     }
 
+    /**
+     * Returns the live preferred-to-resolved entry-point substitutions used by
+     * policy rebasing. Generated prerequisite overlays must apply the same map
+     * so a missing, blocked, or exempt foundation cannot remain as a dead edge.
+     */
+    public static Map<ResourceLocation, ResourceLocation> entryPointReplacements(
+            BlueprintResearchSnapshot snapshot,
+            Map<ResourceLocation, BlueprintData> catalog,
+            ResourceLocation profileId,
+            Predicate<String> blockedPredicate,
+            Predicate<ResourceLocation> progressionExemptPredicate) {
+        Map<ResourceLocation, ResourceLocation> replacements = new LinkedHashMap<>();
+        for (EntryPointResolution resolution : entryPointResolutions(
+                snapshot,
+                catalog,
+                profileId,
+                blockedPredicate,
+                progressionExemptPredicate)) {
+            if (resolution.usesFallback()) {
+                replacements.put(
+                        resolution.preferred().orElseThrow(),
+                        resolution.resolved().orElseThrow());
+            }
+        }
+        return Collections.unmodifiableMap(replacements);
+    }
+
     private static List<EntryPointResolution> resolveEntryPoints(
             BlueprintResearchSnapshot snapshot,
             Map<ResourceLocation, BlueprintData> catalog,
@@ -451,16 +481,28 @@ public final class BlueprintResearchPolicyResolver {
         ResourceLocation preferred = entryPoint.preferred().orElseThrow();
         ResourceLocation resolved = entryPoint.resolved().orElseThrow();
         if (blueprintId.equals(resolved)) {
-            return definition.withPrerequisites(List.of());
+            return definition.withRequirements(ResearchRequirements.EMPTY);
         }
-        List<ResourceLocation> rebased = definition.prerequisites().stream()
+        List<ResearchPrerequisiteGroup> rebasedGroups = definition.requirements().allOf().stream()
+                .map(group -> group.anyOf().stream()
+                        .map(id -> id.equals(preferred) ? resolved : id)
+                        .filter(id -> !id.equals(blueprintId))
+                        .distinct()
+                        .toList())
+                .filter(alternatives -> !alternatives.isEmpty())
+                .map(ResearchPrerequisiteGroup::new)
+                .distinct()
+                .toList();
+        ResearchRequirements rebased = new ResearchRequirements(rebasedGroups);
+        List<ResourceLocation> rebasedOrder = definition.prerequisites().stream()
                 .map(id -> id.equals(preferred) ? resolved : id)
                 .filter(id -> !id.equals(blueprintId))
                 .distinct()
                 .toList();
-        return rebased.equals(definition.prerequisites())
+        return rebased.equals(definition.requirements())
+                        && rebasedOrder.equals(definition.prerequisites())
                 ? definition
-                : definition.withPrerequisites(rebased);
+                : definition.withRequirements(rebased, rebasedOrder);
     }
 
     private static BlueprintResearchPolicyDefinition rebaseEntryPoints(

@@ -70,11 +70,11 @@ the complete canvas requires it.
 - Manually authored trees may choose either fixed or dynamic width; automatic
   generation is not required.
 - Attachment and ammunition research remains disabled by the packaged profile.
-- Protocol 36 carries the resolved server width and the opt-in 21–28 capacity
+- Protocol 39 carries the resolved server width and the opt-in 21–28 capacity
   envelope to the client.
-- Automatic topology version `tacz-gun-placement-v12` identifies the current
-  gradual branch, terminal-cohort, and prerequisite result.
-- Export format 12 records the topology population, resolved width, width mode,
+- Automatic topology version `tacz-gun-placement-v13` identifies the current
+  gradual branch, terminal-cohort, and bounded local-prerequisite result.
+- Export format 18 records the topology population, resolved width, width mode,
   configured bounds, canonical branch decisions, and finalized ranks.
   `/gg research status` reports the population and resolved visual-row capacity
   for the active revision-matched automatic publication.

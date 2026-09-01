@@ -1,8 +1,10 @@
 package com.gamergaming.taczweaponblueprints.client;
 
-import java.util.ArrayDeque;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -31,22 +33,20 @@ public final class ResearchTreePlanner {
             return Optional.empty();
         }
 
-        LinkedHashSet<ResourceLocation> pathNodeIds = new LinkedHashSet<>();
-        collectRequirements(graph, targetId, pathNodeIds);
-        LinkedHashSet<ResearchTreeGraph.Edge> pathEdges = new LinkedHashSet<>();
-        for (ResearchTreeGraph.Edge edge : graph.edges()) {
-            if (pathNodeIds.contains(edge.prerequisiteId())
-                    && pathNodeIds.contains(edge.dependentId())) {
-                pathEdges.add(edge);
-            }
-        }
+        Route route = selectRoute(
+                graph,
+                targetId,
+                new LinkedHashMap<>(),
+                new LinkedHashSet<>());
+        Set<ResourceLocation> pathNodeIds = route.nodeIds();
+        Set<ResearchTreeGraph.Edge> pathEdges = route.edges();
 
         boolean complete = target.orElseThrow().learned();
         long remainingPoints = 0L;
         long remainingIngredientTypes = 0L;
-        int remainingSteps = 0;
+        int remainingSteps = route.unresolvedRequirementGroups();
         int learnedSteps = 0;
-        int undisclosedSteps = 0;
+        int undisclosedSteps = route.unresolvedRequirementGroups();
         int summaryOnlySteps = 0;
         LinkedHashSet<ResourceLocation> recommendationCandidates = new LinkedHashSet<>();
         if (!complete) {
@@ -100,27 +100,146 @@ public final class ResearchTreePlanner {
                 learnedSteps,
                 undisclosedSteps,
                 summaryOnlySteps,
+                route.unresolvedRequirementGroups(),
                 costComplete,
                 complete));
     }
 
-    private static void collectRequirements(
+    private static Route selectRoute(
             ResearchTreeGraph graph,
             ResourceLocation blueprintId,
-            LinkedHashSet<ResourceLocation> collected) {
-        ArrayDeque<ResourceLocation> pending = new ArrayDeque<>();
-        pending.add(blueprintId);
-        while (!pending.isEmpty()) {
-            ResourceLocation current = pending.removeFirst();
-            if (!collected.add(current)) {
-                continue;
-            }
-            for (ResourceLocation prerequisite : graph.prerequisitesOf(current)) {
-                if (!collected.contains(prerequisite)) {
-                    pending.addLast(prerequisite);
+            Map<ResourceLocation, Route> memo,
+            Set<ResourceLocation> visiting) {
+        Route known = memo.get(blueprintId);
+        if (known != null) {
+            return known;
+        }
+        if (!visiting.add(blueprintId)) {
+            throw new IllegalArgumentException("Research Tree planner graph contains a cycle");
+        }
+        try {
+            ResearchTreeGraph.Node node = graph.node(blueprintId).orElseThrow();
+            LinkedHashSet<ResourceLocation> nodeIds = new LinkedHashSet<>();
+            LinkedHashSet<ResearchTreeGraph.Edge> edges = new LinkedHashSet<>();
+            LinkedHashSet<RequirementKey> unresolvedRequirements = new LinkedHashSet<>();
+            nodeIds.add(blueprintId);
+            if (!node.learned()) {
+                for (ResearchTreeGraph.RequirementGroup group
+                        : graph.requirementGroupsOf(blueprintId)) {
+                    Optional<ResourceLocation> learnedAlternative =
+                            group.visibleAlternativeIds().stream()
+                                    .filter(id -> graph.node(id).orElseThrow().learned())
+                                    .min(Comparator.comparing(ResourceLocation::toString));
+                    boolean satisfied = group.satisfactionDisclosed() && group.satisfied()
+                            || learnedAlternative.isPresent();
+                    if (satisfied && learnedAlternative.isEmpty()) {
+                        continue;
+                    }
+
+                    Optional<Route> selected = (satisfied
+                            ? learnedAlternative.stream()
+                            : group.visibleAlternativeIds().stream())
+                            .map(alternative -> selectRoute(
+                                    graph, alternative, memo, visiting))
+                            .min((left, right) -> compareRoutes(graph, left, right));
+                    if (selected.isEmpty()) {
+                        unresolvedRequirements.add(new RequirementKey(
+                                blueprintId, group.ordinal()));
+                        continue;
+                    }
+                    Route selectedRoute = selected.orElseThrow();
+                    nodeIds.addAll(selectedRoute.nodeIds());
+                    edges.addAll(selectedRoute.edges());
+                    ResourceLocation alternative = selectedRoute.nodeIds().iterator().next();
+                    edges.add(new ResearchTreeGraph.Edge(alternative, blueprintId));
+                    unresolvedRequirements.addAll(selectedRoute.unresolvedRequirements());
                 }
             }
+            Route route = new Route(nodeIds, edges, unresolvedRequirements);
+            memo.put(blueprintId, route);
+            return route;
+        } finally {
+            visiting.remove(blueprintId);
         }
+    }
+
+    private static int compareRoutes(
+            ResearchTreeGraph graph,
+            Route left,
+            Route right) {
+        return ROUTE_SCORE_ORDER.compare(routeScore(graph, left), routeScore(graph, right));
+    }
+
+    private static RouteScore routeScore(ResearchTreeGraph graph, Route route) {
+        int nonExactSteps = route.unresolvedRequirementGroups();
+        int remainingSteps = route.unresolvedRequirementGroups();
+        long remainingPoints = 0L;
+        long remainingIngredientTypes = 0L;
+        for (ResourceLocation id : route.nodeIds()) {
+            ResearchTreeGraph.Node node = graph.node(id).orElseThrow();
+            if (node.learned()) {
+                continue;
+            }
+            remainingSteps = Math.addExact(remainingSteps, 1);
+            if (!node.visibility().revealsExactPolicy()) {
+                nonExactSteps = Math.addExact(nonExactSteps, 1);
+            }
+            if (node.visibility().revealsResearchSummary()) {
+                remainingPoints = Math.addExact(remainingPoints, node.pointCost());
+                remainingIngredientTypes = Math.addExact(
+                        remainingIngredientTypes, node.ingredientTypeCount());
+            }
+        }
+        String signature = route.nodeIds().stream()
+                .map(ResourceLocation::toString)
+                .sorted()
+                .collect(java.util.stream.Collectors.joining("\u0000"));
+        return new RouteScore(
+                route.unresolvedRequirementGroups(),
+                nonExactSteps,
+                remainingPoints,
+                remainingIngredientTypes,
+                remainingSteps,
+                route.nodeIds().size(),
+                signature);
+    }
+
+    private static final Comparator<RouteScore> ROUTE_SCORE_ORDER = Comparator
+            .comparingInt(RouteScore::unresolvedRequirementGroups)
+            .thenComparingInt(RouteScore::nonExactSteps)
+            .thenComparingLong(RouteScore::remainingPoints)
+            .thenComparingLong(RouteScore::remainingIngredientTypes)
+            .thenComparingInt(RouteScore::remainingSteps)
+            .thenComparingInt(RouteScore::nodeCount)
+            .thenComparing(RouteScore::signature);
+
+    private record Route(
+            Set<ResourceLocation> nodeIds,
+            Set<ResearchTreeGraph.Edge> edges,
+            Set<RequirementKey> unresolvedRequirements) {
+        private Route {
+            nodeIds = Collections.unmodifiableSet(new LinkedHashSet<>(nodeIds));
+            edges = Collections.unmodifiableSet(new LinkedHashSet<>(edges));
+            unresolvedRequirements = Collections.unmodifiableSet(
+                    new LinkedHashSet<>(unresolvedRequirements));
+        }
+
+        private int unresolvedRequirementGroups() {
+            return unresolvedRequirements.size();
+        }
+    }
+
+    private record RequirementKey(ResourceLocation dependentId, int ordinal) {
+    }
+
+    private record RouteScore(
+            int unresolvedRequirementGroups,
+            int nonExactSteps,
+            long remainingPoints,
+            long remainingIngredientTypes,
+            int remainingSteps,
+            int nodeCount,
+            String signature) {
     }
 
     public record Plan(
@@ -134,6 +253,7 @@ public final class ResearchTreePlanner {
             int learnedSteps,
             int undisclosedSteps,
             int summaryOnlySteps,
+            int unresolvedRequirementGroups,
             boolean costComplete,
             boolean complete) {
         public Plan {
@@ -151,13 +271,17 @@ public final class ResearchTreePlanner {
                     || remainingPoints < 0L || remainingIngredientTypes < 0L
                     || remainingSteps < 0 || learnedSteps < 0
                     || undisclosedSteps < 0 || summaryOnlySteps < 0
+                    || unresolvedRequirementGroups < 0
+                    || unresolvedRequirementGroups > undisclosedSteps
                     || undisclosedSteps + summaryOnlySteps > remainingSteps
-                    || (!complete && remainingSteps + learnedSteps != pathNodeIds.size())
+                    || (!complete && remainingSteps + learnedSteps
+                            != pathNodeIds.size() + unresolvedRequirementGroups)
                     || complete && (remainingSteps != 0
                             || remainingPoints != 0L
                             || remainingIngredientTypes != 0L
                             || nextStepId.isPresent()
                             || learnedSteps != pathNodeIds.size())
+                    || complete && unresolvedRequirementGroups != 0
                     || costComplete != (undisclosedSteps == 0 && summaryOnlySteps == 0)) {
                 throw new IllegalArgumentException("invalid Research Tree plan");
             }

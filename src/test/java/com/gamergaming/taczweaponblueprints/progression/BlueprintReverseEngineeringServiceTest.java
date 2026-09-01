@@ -189,6 +189,26 @@ class BlueprintReverseEngineeringServiceTest {
         assertEquals(4, data.getResearchPoints());
     }
 
+    @Test
+    void verifiedFoundWeaponOverrideProducesARecyclableBlueprint() {
+        PlayerRecipeData data = new PlayerRecipeData();
+        data.setResearchPoints(10);
+        TestTransaction transaction = new TestTransaction(
+                new ItemStack(Items.PAPER, 12),
+                List.of(new ItemStack(Items.IRON_INGOT, 3)));
+        BlueprintReverseEngineeringService.Evaluation evaluation = evaluate(
+                transaction,
+                data,
+                policy(3, 2, false),
+                false).withFoundBlueprintRecyclable(true);
+
+        BlueprintReverseEngineeringService.Result result =
+                commit(evaluation, data, transaction);
+
+        assertTrue(result.successful());
+        assertTrue(BlueprintProvenance.allowsRecycling(transaction.output.getTag()));
+    }
+
     private static BlueprintReverseEngineeringService.Evaluation evaluate(
             TestTransaction transaction,
             PlayerRecipeData data,

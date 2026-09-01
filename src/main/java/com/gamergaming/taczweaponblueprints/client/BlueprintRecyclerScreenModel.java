@@ -6,6 +6,7 @@ import java.util.Optional;
 import com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerActionContract;
 import com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerPreview;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintReverseEngineeringService;
+import com.gamergaming.taczweaponblueprints.progression.FoundWeaponRecoveryService;
 
 /** Pure client presentation derived only from a server-authored Recycler preview. */
 public record BlueprintRecyclerScreenModel(
@@ -71,26 +72,48 @@ public record BlueprintRecyclerScreenModel(
     private static BlueprintRecyclerScreenModel physical(
             BlueprintRecyclerPreview preview,
             boolean requestPending) {
-        boolean knownCopy = preview.alreadyKnown() && preview.actionable();
+        boolean reverseReady = preview.reverseEngineeringStatus().filter(status ->
+                status == BlueprintReverseEngineeringService.Status.READY).isPresent();
+        boolean recoveryReady = preview.recoveryStatus().filter(status ->
+                status == FoundWeaponRecoveryService.Status.READY).isPresent();
+        boolean knownCopy = preview.alreadyKnown() && reverseReady;
         boolean knownBlocked = preview.reverseEngineeringStatus().filter(status ->
                 status == BlueprintReverseEngineeringService.Status.ALREADY_KNOWN).isPresent();
+        boolean directOnly = preview.reverseEngineeringStatus().filter(status ->
+                status == BlueprintReverseEngineeringService.Status.RECOVERY_MODE_DISABLED)
+                .isPresent();
+        String statusKey;
+        if (reverseReady && recoveryReady) {
+            statusKey = PREFIX + "reverse.status.choice_ready";
+        } else if (recoveryReady) {
+            statusKey = PREFIX + "reverse.status.direct_ready";
+        } else if (directOnly && preview.recoveryStatus().isPresent()) {
+            statusKey = PREFIX + "recovery.status."
+                    + enumKey(preview.recoveryStatus().orElseThrow());
+        } else if (knownCopy) {
+            statusKey = PREFIX + "reverse.status.known_copy";
+        } else {
+            statusKey = PREFIX + "reverse.status."
+                    + enumKey(preview.reverseEngineeringStatus().orElseThrow());
+        }
         return new BlueprintRecyclerScreenModel(
                 PREFIX + "reverse.title",
-                knownCopy
-                        ? PREFIX + "reverse.status.known_copy"
-                        : PREFIX + "reverse.status."
-                                + enumKey(preview.reverseEngineeringStatus().orElseThrow()),
-                preview.actionable()
+                statusKey,
+                reverseReady
                         ? Optional.of(BlueprintRecyclerActionContract.Action.REVERSE_ENGINEER)
+                        : recoveryReady
+                                ? Optional.of(BlueprintRecyclerActionContract.Action.RECOVER_POINTS)
+                                : Optional.empty(),
+                reverseReady && recoveryReady
+                        ? Optional.of(BlueprintRecyclerActionContract.Action.RECOVER_POINTS)
                         : Optional.empty(),
-                Optional.empty(),
-                preview.actionable() && !requestPending,
+                (reverseReady || recoveryReady) && !requestPending,
                 knownCopy || knownBlocked
                         ? StatusEmphasis.NOTICE
-                        : preview.actionable()
+                        : reverseReady || recoveryReady
                                 ? StatusEmphasis.POSITIVE
                                 : StatusEmphasis.MUTED,
-                !knownBlocked);
+                !knownBlocked || recoveryReady);
     }
 
     public static String actionKey(BlueprintRecyclerActionContract.Action action) {

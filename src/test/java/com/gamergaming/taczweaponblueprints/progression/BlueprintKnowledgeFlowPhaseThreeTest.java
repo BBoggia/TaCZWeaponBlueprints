@@ -48,10 +48,12 @@ class BlueprintKnowledgeFlowPhaseThreeTest {
                 19,
                 ResearchBenchMenu.ActionResultCode
                         .PROGRESSION_CAPACITY_EXHAUSTED.ordinal());
+        assertEquals(20, ResearchBenchMenu.ActionResultCode.ROLLBACK_FAILED.ordinal());
+        assertEquals(21, ResearchBenchMenu.ActionResultCode.PATH_TOO_LARGE.ordinal());
         assertEquals(
                 ResearchBenchMenu.ActionResultCode.values().length - 1,
-                ResearchBenchMenu.ActionResultCode.ROLLBACK_FAILED.ordinal());
-        assertEquals("36", NetworkHandler.PROTOCOL_VERSION);
+                ResearchBenchMenu.ActionResultCode.ROUTE_TOO_COMPLEX.ordinal());
+        assertEquals("40", NetworkHandler.PROTOCOL_VERSION);
         assertEquals(2, PlayerProgressionLimits.DATA_VERSION);
     }
 

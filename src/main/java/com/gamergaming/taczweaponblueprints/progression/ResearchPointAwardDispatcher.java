@@ -1,12 +1,14 @@
 package com.gamergaming.taczweaponblueprints.progression;
 
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
+import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
@@ -165,6 +167,132 @@ public final class ResearchPointAwardDispatcher {
                     exception);
             return DispatchResult.EMPTY;
         }
+    }
+
+    /**
+     * Dispatches one already-committed atomic learning path while reconstructing
+     * its transition-by-transition milestone counts and publishing help once.
+     */
+    public static DispatchResult blueprintTransitionBatch(
+            ServerPlayer player,
+            IPlayerRecipeData data,
+            List<BlueprintTransition> transitions) {
+        if (player == null || data == null || transitions == null || transitions.isEmpty()
+                || transitions.size() > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION
+                || transitions.stream().anyMatch(java.util.Objects::isNull)
+                || transitions.stream().map(BlueprintTransition::blueprintId).distinct().count()
+                        != transitions.size()) {
+            return DispatchResult.EMPTY;
+        }
+        try {
+            return dispatchBlueprintTransitionBatch(player, data, transitions);
+        } catch (RuntimeException exception) {
+            TaCZWeaponBlueprints.LOGGER.error(
+                    "Failed closed while dispatching a {}-blueprint RP award batch",
+                    transitions.size(),
+                    exception);
+            return DispatchResult.EMPTY;
+        }
+    }
+
+    private static DispatchResult dispatchBlueprintTransitionBatch(
+            ServerPlayer player,
+            IPlayerRecipeData data,
+            List<BlueprintTransition> transitions) {
+        ResearchPointAwardConfigSnapshot config = ModConfigs.BLUEPRINT.awardSnapshot();
+        if (config == null || !config.awardsEnabled()) {
+            ResearchPointPresentationService.syncHelp(player);
+            return DispatchResult.EMPTY;
+        }
+        var awardSnapshot = ResearchPointAwardDataManager.INSTANCE.snapshot();
+        Map<ResourceLocation, ResearchPointAwardBlueprintFacts> facts =
+                ResearchPointAwardBlueprintFacts.currentPublication().facts();
+        long gameTime = gameTime(player);
+        Set<ResourceLocation> discoveries = new LinkedHashSet<>(
+                parseIds(data.getDiscoveredBlueprints()));
+        Set<ResourceLocation> learned = new LinkedHashSet<>(
+                parseIds(data.getLearnedBlueprints()));
+        if (transitions.stream().anyMatch(transition ->
+                transition.discoveredChanged()
+                        && !discoveries.contains(transition.blueprintId())
+                || transition.learnedChanged()
+                        && !learned.contains(transition.blueprintId()))) {
+            return DispatchResult.EMPTY;
+        }
+        transitions.forEach(transition -> {
+            if (transition.discoveredChanged()) {
+                discoveries.remove(transition.blueprintId());
+            }
+            if (transition.learnedChanged()) {
+                learned.remove(transition.blueprintId());
+            }
+        });
+
+        int points = 0;
+        boolean changed = false;
+        for (BlueprintTransition transition : transitions) {
+            ResearchPointAwardBlueprintFacts changedFacts = facts.get(transition.blueprintId());
+            if (changedFacts == null) {
+                if (transition.discoveredChanged()) {
+                    discoveries.add(transition.blueprintId());
+                }
+                if (transition.learnedChanged()) {
+                    learned.add(transition.blueprintId());
+                }
+                continue;
+            }
+            try {
+                if (transition.discoveredChanged()) {
+                    DispatchResult direct = blueprintEvent(
+                            player, data, changedFacts, Type.BLUEPRINT_DISCOVERED,
+                            awardSnapshot, config, gameTime);
+                    discoveries.add(transition.blueprintId());
+                    DispatchResult milestone = milestoneEvent(
+                            player, data,
+                            transition.blueprintId(),
+                            Set.copyOf(discoveries),
+                            facts,
+                            MilestoneState.DISCOVERED,
+                            awardSnapshot,
+                            config,
+                            gameTime);
+                    points = Math.addExact(points,
+                            Math.addExact(direct.awardedPoints(), milestone.awardedPoints()));
+                    changed |= direct.changed() || milestone.changed();
+                }
+                if (transition.learnedChanged()) {
+                    DispatchResult direct = blueprintEvent(
+                            player, data, changedFacts, Type.BLUEPRINT_LEARNED,
+                            awardSnapshot, config, gameTime);
+                    learned.add(transition.blueprintId());
+                    DispatchResult milestone = milestoneEvent(
+                            player, data,
+                            transition.blueprintId(),
+                            Set.copyOf(learned),
+                            facts,
+                            MilestoneState.LEARNED,
+                            awardSnapshot,
+                            config,
+                            gameTime);
+                    points = Math.addExact(points,
+                            Math.addExact(direct.awardedPoints(), milestone.awardedPoints()));
+                    changed |= direct.changed() || milestone.changed();
+                }
+            } catch (RuntimeException exception) {
+                TaCZWeaponBlueprints.LOGGER.error(
+                        "Failed closed while dispatching blueprint RP award for {} in a path batch",
+                        transition.blueprintId(),
+                        exception);
+                if (transition.discoveredChanged()) {
+                    discoveries.add(transition.blueprintId());
+                }
+                if (transition.learnedChanged()) {
+                    learned.add(transition.blueprintId());
+                }
+            }
+        }
+        ResearchPointPresentationService.syncHelp(player);
+        return new DispatchResult(points, changed);
     }
 
     private static DispatchResult dispatchBlueprintTransitions(
@@ -338,6 +466,20 @@ public final class ResearchPointAwardDispatcher {
         public DispatchResult {
             if (awardedPoints < 0) {
                 throw new IllegalArgumentException("invalid Research Point dispatch result");
+            }
+        }
+    }
+
+    public record BlueprintTransition(
+            ResourceLocation blueprintId,
+            boolean discoveredChanged,
+            boolean learnedChanged) {
+        public BlueprintTransition {
+            if (blueprintId == null
+                    || blueprintId.toString().length()
+                            > PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH
+                    || (!discoveredChanged && !learnedChanged)) {
+                throw new IllegalArgumentException("invalid blueprint award transition");
             }
         }
     }

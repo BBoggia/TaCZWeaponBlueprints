@@ -25,6 +25,8 @@ import com.gamergaming.taczweaponblueprints.progression.ResearchPointAwardConfig
 import com.gamergaming.taczweaponblueprints.progression.ResearchPointAwardReconciliationScheduler;
 import com.gamergaming.taczweaponblueprints.progression.ResearchPointPresentationService;
 import com.gamergaming.taczweaponblueprints.progression.DuplicateBlueprintPolicy;
+import com.gamergaming.taczweaponblueprints.progression.FoundWeaponRecoveryMode;
+import com.gamergaming.taczweaponblueprints.progression.ResearchCostMode;
 import com.gamergaming.taczweaponblueprints.progression.TreeResearchResultMode;
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
 import com.tacz.guns.resource.CommonAssetsManager;
@@ -76,6 +78,10 @@ public class BlueprintConfig extends Config {
     public ValidatedBoolean enableResearch = new ValidatedBoolean(true);
 
     @WithPerms(opLevel = 2)
+    public ValidatedEnum<ResearchCostMode> researchCostMode =
+            new ValidatedEnum<>(ResearchCostMode.POINTS_AND_ITEMS);
+
+    @WithPerms(opLevel = 2)
     public ValidatedEnum<TreeResearchResultMode> treeResearchResultMode =
             new ValidatedEnum<>(TreeResearchResultMode.DIRECT_LEARN);
 
@@ -85,6 +91,10 @@ public class BlueprintConfig extends Config {
 
     @WithPerms(opLevel = 2)
     public ValidatedBoolean allowUnlearnedRecycling = new ValidatedBoolean(false);
+
+    @WithPerms(opLevel = 2)
+    public ValidatedEnum<FoundWeaponRecoveryMode> foundWeaponRecoveryMode =
+            new ValidatedEnum<>(FoundWeaponRecoveryMode.PROTECTED_BLUEPRINT_ONLY);
 
     @WithPerms(opLevel = 2)
     public ValidatedInt researchPointCap = new ValidatedInt(

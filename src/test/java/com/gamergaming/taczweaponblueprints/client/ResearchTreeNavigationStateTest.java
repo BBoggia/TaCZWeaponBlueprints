@@ -15,13 +15,16 @@ import net.minecraft.resources.ResourceLocation;
 
 class ResearchTreeNavigationStateTest {
     @Test
-    void defaultsToBranchesAndUsesViewSpecificGroupSelection() {
+    void defaultsToTechTreeAndDormantLegacyViewsKeepTheirSelectionSemantics() {
         ResearchTreePresentation presentation = presentation();
         ResearchTreeNavigationState state = new ResearchTreeNavigationState();
         state.retain(presentation, id("test:b"));
 
-        assertEquals(ResearchTreePresentationContract.BrowseView.BRANCHES, state.browseView());
+        assertEquals(ResearchTreePresentationContract.BrowseView.TECH_TREE, state.browseView());
         assertEquals(id("test:second"), state.selectedGroupId().orElseThrow());
+        state.setBrowseView(
+                ResearchTreePresentationContract.BrowseView.BRANCHES,
+                presentation);
         assertEquals(
                 ResearchTreePresentationContract.GroupSelectionAction.SHOW_GROUP,
                 state.selectGroup(id("test:first"), presentation));
@@ -42,6 +45,9 @@ class ResearchTreeNavigationStateTest {
         ResearchTreeNavigationState state = new ResearchTreeNavigationState();
         ResearchTreePresentation first = presentation();
         state.retain(first, id("test:a"));
+        state.setBrowseView(
+                ResearchTreePresentationContract.BrowseView.BRANCHES,
+                first);
         state.selectGroup(id("test:second"), first);
 
         ResearchTreePresentation replacement = new ResearchTreePresentation(List.of(
@@ -59,15 +65,17 @@ class ResearchTreeNavigationStateTest {
         ResearchTreeNavigationState state = new ResearchTreeNavigationState();
         ResearchTreePresentation presentation = presentation();
         state.retain(presentation, id("test:a"));
+        state.setBrowseView(
+                ResearchTreePresentationContract.BrowseView.BRANCHES,
+                presentation);
         state.selectGroup(id("test:second"), presentation);
 
         state.retain(ResearchTreePresentation.EMPTY, id("test:b"));
 
         assertEquals(ResearchTreePresentationContract.BrowseView.BRANCHES, state.browseView());
         assertTrue(state.selectedGroupId().isEmpty());
-        ResearchTreeProjection emptyProjection = new ResearchTreeProjectionCache().projection(
-                state.browseView(), state.selectedGroupId().orElse(null));
-        assertTrue(emptyProjection.graph().nodes().isEmpty());
+        assertTrue(new ResearchTreeProjectionCache()
+                .techTreeProjections().projections().isEmpty());
     }
 
     @Test
@@ -75,6 +83,9 @@ class ResearchTreeNavigationStateTest {
         ResearchTreePresentation presentation = presentation();
         ResearchTreeNavigationState state = new ResearchTreeNavigationState();
         state.retain(presentation, id("test:a"));
+        state.setBrowseView(
+                ResearchTreePresentationContract.BrowseView.BRANCHES,
+                presentation);
         state.selectGroup(id("test:second"), presentation);
 
         state.setBrowseView(

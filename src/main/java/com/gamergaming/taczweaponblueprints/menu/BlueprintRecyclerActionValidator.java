@@ -48,7 +48,8 @@ public final class BlueprintRecyclerActionValidator {
             case RESEARCH_DATA -> action == BlueprintRecyclerActionContract.Action.REDEEM
                     || action == BlueprintRecyclerActionContract.Action.REDEEM_STACK;
             case PHYSICAL_ITEM ->
-                    action == BlueprintRecyclerActionContract.Action.REVERSE_ENGINEER;
+                    action == BlueprintRecyclerActionContract.Action.REVERSE_ENGINEER
+                            || action == BlueprintRecyclerActionContract.Action.RECOVER_POINTS;
             case EMPTY, INVALID -> false;
         };
     }
