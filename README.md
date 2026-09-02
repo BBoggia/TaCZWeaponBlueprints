@@ -16,8 +16,10 @@ dimension changes, logout, and server restarts.
 - A Blueprint Journal for discoveries, learned recipes, recent unlocks,
   completion, active rules, and a reusable Getting Started guide.
 - An edge-to-edge Research Bench Tech Tree with search, pan, zoom, keyboard
-  navigation, route tracking, a minimap for large trees, and selected-weapon
+  navigation, an interactive minimap for large trees, and selected-weapon
   details.
+- Guided research tools for pinning a target, highlighting its complete route,
+  tracking RP and material progress, and filtering to affordable unlocks.
 - Automatic weapon placement based on strength, handling, range, and play
   style, including compatible weapons added by TaCZ content packs.
 - Authored-only Tech Trees for pack authors who want complete control over
@@ -144,7 +146,7 @@ last working data active.
 
 ## Documentation
 
-- [Current release notes](docs/releases/1.1.1.md)
+- [Current release notes](docs/releases/1.2.0.md)
 - [CurseForge description](docs/curseforge-description.md)
 - [Operations and migration](docs/operations-and-migration.md)
 - [Research-tree authoring](docs/research-tree-authoring.md)

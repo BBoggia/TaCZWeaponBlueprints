@@ -15,7 +15,11 @@ client recipe screen.
   learn the matching TaCZ recipes.<br><br>
 - **Research Bench Tech Tree** — Browse the available weapon collection in one
   edge-to-edge Tech Tree with search, pan, zoom, keyboard navigation, and
-  highlighted research routes.<br><br>
+  an interactive minimap for navigating large weapon collections.<br><br>
+- **Research Planning Tools** — Pin a weapon as your current goal, highlight
+  its complete research route, and track the RP and materials you still need.
+  The Affordable Now filter can narrow the tree to research you can purchase
+  with your current resources.<br><br>
 - **Automatic Weapon Placement** — The built-in tree organizes TaCZ weapons by
   strength, handling, range, and play style. Its width, layers, and branches
   adapt as compatible add-on guns enter or leave the server's weapon catalog.<br><br>
@@ -33,9 +37,9 @@ client recipe screen.
   learned duplicate blueprints, and redeem configured Research Data for RP.
   Servers can protect crafted guns while allowing guns found in loot to become
   a blueprint, convert directly into RP, or offer the player both choices.<br><br>
-- **Blueprint Journal** — Track discoveries, learned recipes, completion, and
-  the active server rules. A reusable Getting Started page explains the main
-  progression loop and available ways to earn RP.<br><br>
+- **Blueprint Journal** — Track discoveries, learned recipes, recent unlocks,
+  completion, and the active server rules. A reusable Getting Started page
+  explains the main progression loop and available ways to earn RP.<br><br>
 - **JEI and EMI Information** — Optional integrations explain the Research
   Bench, Blueprint Analyzer, blueprints, and Research Data without revealing
   hidden research targets or bypassing unlocks.
