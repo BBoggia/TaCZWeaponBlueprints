@@ -7,11 +7,17 @@ final class ResearchBenchRequestLimiter {
     static final int WINDOW_TICKS = 20;
     static final int MAX_PLANNED_SELECTIONS_PER_WINDOW = 8;
     static final int MAX_RESEARCH_REQUESTS_PER_WINDOW = 2;
+    static final int MAX_GUIDANCE_REQUESTS_PER_WINDOW = 4;
+    static final int MAX_AFFORDABILITY_BATCHES_PER_WINDOW = 4;
 
     private long windowStartTick = Long.MIN_VALUE;
     private int plannedSelections;
     private long researchWindowStartTick = Long.MIN_VALUE;
     private int researchRequests;
+    private long guidanceWindowStartTick = Long.MIN_VALUE;
+    private int guidanceRequests;
+    private long affordabilityWindowStartTick = Long.MIN_VALUE;
+    private int affordabilityBatches;
 
     Decision admitSelection(
             ResourceLocation requested,
@@ -53,6 +59,40 @@ final class ResearchBenchRequestLimiter {
             return Decision.THROTTLE;
         }
         researchRequests++;
+        return Decision.ALLOW;
+    }
+
+    Decision admitGuidance(long currentTick) {
+        if (currentTick < 0L) {
+            return Decision.THROTTLE;
+        }
+        if (guidanceWindowStartTick == Long.MIN_VALUE
+                || currentTick < guidanceWindowStartTick
+                || currentTick - guidanceWindowStartTick >= WINDOW_TICKS) {
+            guidanceWindowStartTick = currentTick;
+            guidanceRequests = 0;
+        }
+        if (guidanceRequests >= MAX_GUIDANCE_REQUESTS_PER_WINDOW) {
+            return Decision.THROTTLE;
+        }
+        guidanceRequests++;
+        return Decision.ALLOW;
+    }
+
+    Decision admitAffordability(long currentTick) {
+        if (currentTick < 0L) {
+            return Decision.THROTTLE;
+        }
+        if (affordabilityWindowStartTick == Long.MIN_VALUE
+                || currentTick < affordabilityWindowStartTick
+                || currentTick - affordabilityWindowStartTick >= WINDOW_TICKS) {
+            affordabilityWindowStartTick = currentTick;
+            affordabilityBatches = 0;
+        }
+        if (affordabilityBatches >= MAX_AFFORDABILITY_BATCHES_PER_WINDOW) {
+            return Decision.THROTTLE;
+        }
+        affordabilityBatches++;
         return Decision.ALLOW;
     }
 

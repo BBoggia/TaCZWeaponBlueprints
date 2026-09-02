@@ -10,6 +10,7 @@ import com.gamergaming.taczweaponblueprints.capabilities.PlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.capabilities.ResearchPointAwardLedger.ClaimKey;
 import com.gamergaming.taczweaponblueprints.capabilities.ResearchPointAwardLedger.Mutation;
+import com.gamergaming.taczweaponblueprints.capabilities.RecentBlueprintUnlockBatch;
 import com.gamergaming.taczweaponblueprints.progression.PlayerProgressionAdminService.ResetState;
 
 class PlayerProgressionAdminServiceTest {
@@ -24,6 +25,7 @@ class PlayerProgressionAdminServiceTest {
         assertEquals(2, data.getDiscoveredBlueprints().size());
         assertEquals(9, data.getResearchPoints());
         assertEquals(1, data.getResearchPointAwardLedger().claimCount());
+        assertTrue(data.getRecentUnlockBatches().isEmpty());
     }
 
     @Test
@@ -36,6 +38,7 @@ class PlayerProgressionAdminServiceTest {
         assertEquals(1, data.getDiscoveredBlueprints().size());
         assertEquals(9, data.getResearchPoints());
         assertEquals(1, data.getResearchPointAwardLedger().claimCount());
+        assertTrue(data.getRecentUnlockBatches().isEmpty());
     }
 
     @Test
@@ -45,12 +48,14 @@ class PlayerProgressionAdminServiceTest {
         assertEquals(0, pointsOnly.getResearchPoints());
         assertEquals(1, pointsOnly.getLearnedBlueprints().size());
         assertEquals(1, pointsOnly.getResearchPointAwardLedger().claimCount());
+        assertTrue(pointsOnly.getRecentUnlockBatches().isEmpty());
 
         PlayerRecipeData awardsOnly = populated();
         assertTrue(PlayerProgressionAdminService.reset(awardsOnly, ResetState.AWARDS));
         assertTrue(awardsOnly.getResearchPointAwardLedger().isEmpty());
         assertEquals(9, awardsOnly.getResearchPoints());
         assertEquals(1, awardsOnly.getLearnedBlueprints().size());
+        assertTrue(awardsOnly.getRecentUnlockBatches().isEmpty());
 
         PlayerRecipeData all = populated();
         var before = PlayerProgressionAdminService.inspect(all);
@@ -64,6 +69,7 @@ class PlayerProgressionAdminServiceTest {
         assertTrue(all.getLearnedRecipes().isEmpty());
         assertTrue(all.getResearchPointAwardLedger().isEmpty());
         assertEquals(0, all.getResearchPoints());
+        assertTrue(all.getRecentUnlockBatches().isEmpty());
         assertFalse(PlayerProgressionAdminService.reset(null, ResetState.ALL));
     }
 
@@ -94,6 +100,10 @@ class PlayerProgressionAdminServiceTest {
                 100,
                 Mutation.claim(ClaimKey.once(
                         new net.minecraft.resources.ResourceLocation("test:award_claim"))));
+        data.recordRecentUnlockBatch(
+                RecentBlueprintUnlockBatch.Source.PHYSICAL_BLUEPRINT,
+                "test:learned",
+                java.util.List.of("test:learned"));
         return data;
     }
 }

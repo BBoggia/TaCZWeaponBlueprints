@@ -31,7 +31,7 @@ public final class PlayerProgressionAdminService {
         Set<String> learned = Set.copyOf(data.getLearnedBlueprints());
         Set<String> discovered = Set.copyOf(data.getDiscoveredBlueprints());
         int points = data.getResearchPoints();
-        return switch (state) {
+        boolean reset = switch (state) {
             case LEARNED -> {
                 boolean replaced = data.replaceProgression(List.of(), discovered, points);
                 if (replaced) {
@@ -54,6 +54,10 @@ public final class PlayerProgressionAdminService {
                 yield replaced;
             }
         };
+        if (reset) {
+            data.clearRecentUnlockHistory();
+        }
+        return reset;
     }
 
     /** Adds operator-granted RP without bypassing configured or persisted bounds. */

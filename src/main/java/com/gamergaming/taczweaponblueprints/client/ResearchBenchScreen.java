@@ -18,8 +18,11 @@ import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchResearchAction;
 import com.gamergaming.taczweaponblueprints.menu.ResearchSelectionPreview;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
+import com.gamergaming.taczweaponblueprints.network.ResearchAffordabilityRequestPacket;
 import com.gamergaming.taczweaponblueprints.network.ResearchBenchActionPacket;
+import com.gamergaming.taczweaponblueprints.network.ResearchGuidanceRequestPacket;
 import com.gamergaming.taczweaponblueprints.progression.ResearchCostMode;
+import com.gamergaming.taczweaponblueprints.progression.ResearchGuidanceSnapshot;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayout;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayoutPolicy;
@@ -80,7 +83,12 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     private static final int EDGE = 0xFF536476;
     private static final int GRID = 0x403B4957;
     private static final int RAIL_COLLAPSE_DELAY_TICKS = 60;
+    private static final int GUIDANCE_INVENTORY_DEBOUNCE_TICKS = 3;
+    private static final int GUIDANCE_RETRY_TICKS = 20;
+    private static final int AFFORDABILITY_RETRY_TICKS = 20;
     private static final long REQUEST_TIMEOUT_MILLIS = 5_000L;
+    private static final long GUIDANCE_RESPONSE_TIMEOUT_MILLIS = 10_000L;
+    private static final long AFFORDABILITY_RESPONSE_TIMEOUT_MILLIS = 60_000L;
 
     private final ResearchTreeCanvas treeCanvas = new ResearchTreeCanvas(
             new ResearchTreeViewState(),
@@ -117,6 +125,8 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     private final ResearchTreeCameraStore cameraStates = new ResearchTreeCameraStore();
     private final ResearchTreeFullscreenOverlayState fullscreenOverlayState =
             new ResearchTreeFullscreenOverlayState();
+    private final ResearchTreeMinimap treeMinimap = new ResearchTreeMinimap();
+    private final Inventory playerInventory;
     private Map<ResourceLocation, BlueprintJournalEntry> journalEntries = Map.of();
     private Map<ResourceLocation, ItemStack> researchTreeIcons = Map.of();
     private int researchPoints;
@@ -142,9 +152,14 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     private boolean restoreSearchFocus;
     private int sidebarScroll;
     private int railIdleTicks;
+    private int guidanceInventoryDebounceTicks;
+    private int guidanceRetryTicks;
+    private int affordabilityRetryTicks;
+    private Boolean routeGuidanceAvailabilityIdentity;
     private double lastMouseX = -1.0D;
     private double lastMouseY = -1.0D;
     private long lastCameraFrameMillis;
+    private List<InventoryEntry> guidanceInventoryIdentity;
     private int nextActionRequestId = 1;
     private EditBox pendingSearchFocus;
     private EditBox searchBox;
@@ -152,6 +167,8 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     private Button primaryResearchButton;
     private Button returnToSelectionButton;
     private Button trackResearchButton;
+    private Button researchGoalButton;
+    private Button affordabilityButton;
     private Button zoomOutButton;
     private Button zoomInButton;
     private Button browseViewButton;
@@ -169,6 +186,8 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
 
     public ResearchBenchScreen(ResearchBenchMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
+        playerInventory = inventory;
+        guidanceInventoryIdentity = captureGuidanceInventory(inventory);
         imageWidth = ResearchTreeScreenLayout.COMPACT_WIDTH;
         imageHeight = ResearchTreeScreenLayout.COMPACT_HEIGHT;
         inventoryLabelX = 74;
@@ -377,6 +396,20 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                         trackBounds.height())
                 .createNarration(ignored -> trackResearchNarration())
                 .build());
+        ResearchTreeScreenLayout.Rect goalBounds = fullscreen
+                ? fullscreenOverlayLayout.coachmark()
+                : new ResearchTreeScreenLayout.Rect(0, 0, 1, 1);
+        researchGoalButton = addRenderableWidget(Button.builder(
+                Component.translatable(
+                        "gui.taczweaponblueprints.research_bench.tree.goal.checking"),
+                ignored -> focusTrackedResearchGoal())
+                .bounds(
+                        leftPos + goalBounds.x(),
+                        topPos + goalBounds.y(),
+                        goalBounds.width(),
+                        goalBounds.height())
+                .createNarration(ignored -> researchGoalNarration())
+                .build());
         ResearchTreeGuidanceLayout.Guide guidance = activeGuidanceLayout();
         guidanceDismissButton = addRenderableWidget(Button.builder(
                 Component.translatable("gui.taczweaponblueprints.research_bench.tree.guide.dismiss"),
@@ -402,6 +435,20 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                         recommendationBounds.width(),
                         recommendationBounds.height())
                 .createNarration(ignored -> recommendationNarration())
+                .build());
+        ResearchTreeScreenLayout.Rect affordabilityBounds = fullscreen
+                ? fullscreenRailLayout.affordability()
+                : new ResearchTreeScreenLayout.Rect(0, 0, 20, 20);
+        affordabilityButton = addRenderableWidget(Button.builder(
+                Component.translatable(
+                        "gui.taczweaponblueprints.research_bench.tree.affordable.button.off"),
+                ignored -> toggleAffordableNow())
+                .bounds(
+                        leftPos + affordabilityBounds.x(),
+                        topPos + affordabilityBounds.y(),
+                        affordabilityBounds.width(),
+                        affordabilityBounds.height())
+                .createNarration(ignored -> affordabilityNarration())
                 .build());
         ResearchTreeScreenLayout.Rect helpBounds = fullscreen
                 ? fullscreenRailLayout.help()
@@ -455,6 +502,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         } else {
             applyActiveProjection(treeCanvas.focusedId().orElse(null));
         }
+        synchronizeRouteGuidanceAvailability();
         applyTreeSearch();
         updateWidgets();
         if ((retainedSearchFocus
@@ -479,6 +527,14 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         super.resize(minecraft, width, height);
     }
 
+    @Override
+    public void removed() {
+        treeMinimap.cancelNavigation();
+        ClientResearchAffordabilityState.abandonPending();
+        ClientResearchGuidanceState.abandonPending();
+        super.removed();
+    }
+
     private void configureTabOrder() {
         searchToggleButton.setTabOrderGroup(0);
         searchBox.setTabOrderGroup(1);
@@ -490,14 +546,16 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         for (int index = 0; index < techTreeDomainButtons.size(); index++) {
             techTreeDomainButtons.get(index).setTabOrderGroup(34 + index);
         }
-        fullscreenButton.setTabOrderGroup(38);
-        trackResearchButton.setTabOrderGroup(39);
-        returnToSelectionButton.setTabOrderGroup(40);
-        primaryResearchButton.setTabOrderGroup(41);
-        guidanceDismissButton.setTabOrderGroup(42);
+        fullscreenButton.setTabOrderGroup(39);
+        trackResearchButton.setTabOrderGroup(40);
+        researchGoalButton.setTabOrderGroup(41);
+        returnToSelectionButton.setTabOrderGroup(42);
+        primaryResearchButton.setTabOrderGroup(43);
+        guidanceDismissButton.setTabOrderGroup(44);
         recommendationButton.setTabOrderGroup(35);
-        railPinButton.setTabOrderGroup(36);
-        helpButton.setTabOrderGroup(37);
+        affordabilityButton.setTabOrderGroup(36);
+        railPinButton.setTabOrderGroup(37);
+        helpButton.setTabOrderGroup(38);
     }
 
     private void createSidebarButtons() {
@@ -576,8 +634,13 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             reloadResearchTree(false);
             applyTreeSearch();
         }
-        treeCanvas.setAuthoritativeSelection(menu.selectedBlueprint().orElse(null));
+        synchronizeRouteGuidanceAvailability();
+        refreshGuidanceAfterInventoryChange();
         long nowMillis = Util.getMillis();
+        refreshAuthoritativeRequestTimeouts(nowMillis);
+        refreshGuidanceAfterThrottle();
+        refreshAffordabilityAfterThrottle();
+        treeCanvas.setAuthoritativeSelection(menu.selectedBlueprint().orElse(null));
         boolean feedbackExpired = selectionFeedback.expirePending(
                 nowMillis, REQUEST_TIMEOUT_MILLIS, "selection_timeout");
         feedbackExpired |= researchFeedback.expirePending(
@@ -588,6 +651,40 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         updateFullscreenHoldActivation(nowMillis);
         updateFullscreenOverlayLifecycle();
         updateWidgets();
+    }
+
+    private void refreshAuthoritativeRequestTimeouts(long nowMillis) {
+        boolean changed = false;
+        ClientResearchGuidanceState.TimeoutOutcome guidanceTimeout =
+                ClientResearchGuidanceState.expirePending(
+                        nowMillis, GUIDANCE_RESPONSE_TIMEOUT_MILLIS);
+        switch (guidanceTimeout) {
+            case NONE -> {
+            }
+            case RETRY -> {
+                refreshResearchPlan();
+                treeCanvas.setTrackedPlan(researchPlan.orElse(null));
+                changed = true;
+            }
+            case UNAVAILABLE -> {
+                refreshResearchPlan(false);
+                treeCanvas.setTrackedPlan(researchPlan.orElse(null));
+                changed = true;
+            }
+        }
+
+        ClientResearchAffordabilityState.ResponseOutcome affordabilityTimeout =
+                ClientResearchAffordabilityState.expirePending(
+                        nowMillis, AFFORDABILITY_RESPONSE_TIMEOUT_MILLIS);
+        if (affordabilityTimeout
+                != ClientResearchAffordabilityState.ResponseOutcome.IGNORED) {
+            requestNextAffordabilityBatch();
+            applyAffordabilityFilterToCanvas();
+            changed = true;
+        }
+        if (changed) {
+            uiUpdates.invalidateWidgets();
+        }
     }
 
     private void updateFullscreenHoldActivation(long nowMillis) {
@@ -674,6 +771,16 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             researchPublicationIdentity = publication;
             researchLayoutPolicyIdentity = requestedLayoutPolicy;
             researchTreePublicationRejected = true;
+            ClientResearchGuidanceState.invalidateResources();
+            ClientResearchAffordabilityState.setEnabled(
+                    false,
+                    treeProjections.publication().graph(),
+                    publication.generation());
+            researchPlan = Optional.empty();
+            treeCanvas.setTrackedPlan(null);
+            applyAffordabilityFilterToCanvas();
+            guidanceRetryTicks = 0;
+            affordabilityRetryTicks = 0;
             TaCZWeaponBlueprints.LOGGER.error(
                     "Rejected an invalid Research Tree publication; retaining the last valid tree",
                     exception);
@@ -713,6 +820,10 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 treeCanvas.focusedId().ifPresent(treeCanvas::focusNode);
             }
         }
+        ClientResearchAffordabilityState.retain(
+                treeProjections.publication().graph(), publication.generation());
+        applyAffordabilityFilterToCanvas();
+        requestNextAffordabilityBatch();
     }
 
     private boolean applyActiveProjection(ResourceLocation preferredFocus) {
@@ -750,6 +861,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 menu.selectedBlueprint().orElse(null),
                 projection.crossGroupLinks());
         treeCanvas.setTrackedPlan(researchPlan.orElse(null));
+        applyAffordabilityFilterToCanvas();
         projectionRevision++;
         fullscreenOverlayState.retainVisibleNodes(projection.graph().nodes().stream()
                 .map(ResearchTreeGraph.Node::blueprintId)
@@ -778,6 +890,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                     null,
                     null);
             treeCanvas.setTrackedPlan(null);
+            applyAffordabilityFilterToCanvas();
             projectionRevision++;
             fullscreenOverlayState.retainVisibleNodes(Set.of());
             fullscreenOverlayState.clearPinnedNode();
@@ -807,6 +920,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 domainFocus,
                 menu.selectedBlueprint().orElse(null));
         treeCanvas.setTrackedPlan(researchPlan.orElse(null));
+        applyAffordabilityFilterToCanvas();
         projectionRevision++;
         fullscreenOverlayState.retainVisibleNodes(projection.graph().nodes().stream()
                 .map(ResearchTreeGraph.Node::blueprintId)
@@ -835,6 +949,19 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             }
         }
         return projected;
+    }
+
+    private void applyAffordabilityFilterToCanvas() {
+        ClientResearchAffordabilityState.Snapshot affordability =
+                ClientResearchAffordabilityState.snapshot();
+        Map<ResourceLocation, com.gamergaming.taczweaponblueprints.progression
+                .ResearchAffordabilitySnapshot.Entry> visible = new LinkedHashMap<>();
+        affordability.results().forEach((id, result) -> {
+            if (treeCanvas.graph().node(id).isPresent()) {
+                visible.put(id, result);
+            }
+        });
+        treeCanvas.setAffordabilityFilter(affordability.enabled(), visible);
     }
 
     private ResearchTreeCameraStore.Key cameraKey() {
@@ -1013,10 +1140,197 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     }
 
     private void refreshResearchPlan() {
+        refreshResearchPlan(true);
+    }
+
+    private void refreshResearchPlan(boolean requestGuidance) {
         ResearchTreeGraph graph = treeProjections.publication().graph();
         ClientResearchPlannerState.retain(graph);
-        researchPlan = ClientResearchPlannerState.targetId()
-                .flatMap(target -> ResearchTreePlanner.plan(graph, target, researchPoints));
+        ClientResearchState.Publication publication = ClientResearchState.publication();
+        ClientResearchGuidanceState.retain(graph, publication.generation());
+        researchPlan = ClientResearchPlannerState.targetId().flatMap(target ->
+                ResearchTreePlanner.presentationPlan(
+                        graph,
+                        target,
+                        researchPoints,
+                        ClientResearchGuidanceState.snapshot(),
+                        ClientResearchGuidanceState.unavailable()));
+        if (!requestGuidance) {
+            return;
+        }
+        if (!menu.routeGuidanceAvailable()) {
+            ClientResearchGuidanceState.abandonPending();
+            return;
+        }
+        ClientResearchPlannerState.targetId().ifPresent(target ->
+                ClientResearchGuidanceState.begin(
+                                graph, target, publication.generation())
+                        .ifPresent(request -> NetworkHandler.INSTANCE.sendToServer(
+                                new ResearchGuidanceRequestPacket(
+                                        menu.containerId,
+                                        request.requestId(),
+                                        request.publicationGeneration(),
+                                request.targetId()))));
+    }
+
+    private void synchronizeRouteGuidanceAvailability() {
+        boolean available = menu.routeGuidanceAvailable();
+        if (routeGuidanceAvailabilityIdentity != null
+                && routeGuidanceAvailabilityIdentity == available) {
+            return;
+        }
+        routeGuidanceAvailabilityIdentity = available;
+        if (!available) {
+            ClientResearchGuidanceState.clear();
+            ClientResearchAffordabilityState.setEnabled(
+                    false,
+                    treeProjections.publication().graph(),
+                    ClientResearchState.publication().generation());
+            guidanceRetryTicks = 0;
+            affordabilityRetryTicks = 0;
+            refreshResearchPlan(false);
+            treeCanvas.setTrackedPlan(researchPlan.orElse(null));
+            applyAffordabilityFilterToCanvas();
+        } else {
+            refreshResearchPlan();
+        }
+        uiUpdates.invalidateWidgets();
+    }
+
+    private void refreshGuidanceAfterInventoryChange() {
+        List<InventoryEntry> latest = captureGuidanceInventory(playerInventory);
+        if (!latest.equals(guidanceInventoryIdentity)) {
+            guidanceInventoryIdentity = latest;
+            boolean guidanceActive = ClientResearchPlannerState.targetId().isPresent();
+            boolean affordabilityActive =
+                    ClientResearchAffordabilityState.snapshot().enabled();
+            if (guidanceActive || affordabilityActive) {
+                guidanceInventoryDebounceTicks = GUIDANCE_INVENTORY_DEBOUNCE_TICKS;
+                if (guidanceActive) {
+                    ClientResearchGuidanceState.invalidateResources();
+                    refreshResearchPlan(false);
+                    treeCanvas.setTrackedPlan(researchPlan.orElse(null));
+                }
+                if (affordabilityActive) {
+                    ClientResearchState.Publication publication =
+                            ClientResearchState.publication();
+                    ClientResearchAffordabilityState.invalidateResources(
+                            treeProjections.publication().graph(),
+                            publication.generation());
+                    affordabilityRetryTicks = 0;
+                    applyAffordabilityFilterToCanvas();
+                }
+                uiUpdates.invalidateWidgets();
+            }
+            return;
+        }
+        if (guidanceInventoryDebounceTicks <= 0
+                || ClientResearchPlannerState.targetId().isEmpty()
+                        && !ClientResearchAffordabilityState.snapshot().enabled()) {
+            guidanceInventoryDebounceTicks = 0;
+            return;
+        }
+        guidanceInventoryDebounceTicks--;
+        if (guidanceInventoryDebounceTicks == 0) {
+            if (ClientResearchPlannerState.targetId().isPresent()) {
+                refreshResearchPlan();
+            }
+            requestNextAffordabilityBatch();
+            uiUpdates.invalidateWidgets();
+        }
+    }
+
+    private static List<InventoryEntry> captureGuidanceInventory(Inventory inventory) {
+        if (inventory == null) {
+            return List.of();
+        }
+        return inventory.items.stream()
+                .map(stack -> stack.isEmpty()
+                        ? InventoryEntry.EMPTY
+                        : new InventoryEntry(stack.getItem(), stack.getCount()))
+                .toList();
+    }
+
+    private void refreshGuidanceAfterThrottle() {
+        if (guidanceRetryTicks <= 0) {
+            return;
+        }
+        if (ClientResearchPlannerState.targetId().isEmpty()) {
+            guidanceRetryTicks = 0;
+            return;
+        }
+        if (guidanceInventoryDebounceTicks > 0) {
+            return;
+        }
+        guidanceRetryTicks--;
+        if (guidanceRetryTicks == 0) {
+            refreshResearchPlan();
+            uiUpdates.invalidateWidgets();
+        }
+    }
+
+    /** Retries a server-throttled read after the limiter's one-second window. */
+    public void scheduleAuthoritativeGuidanceRetry() {
+        guidanceRetryTicks = Math.max(
+                guidanceRetryTicks,
+                GUIDANCE_RETRY_TICKS);
+        uiUpdates.invalidateWidgets();
+    }
+
+    private void refreshAffordabilityAfterThrottle() {
+        if (affordabilityRetryTicks <= 0) {
+            return;
+        }
+        if (!ClientResearchAffordabilityState.snapshot().enabled()) {
+            affordabilityRetryTicks = 0;
+            return;
+        }
+        if (guidanceInventoryDebounceTicks > 0) {
+            return;
+        }
+        affordabilityRetryTicks--;
+        if (affordabilityRetryTicks == 0) {
+            requestNextAffordabilityBatch();
+            uiUpdates.invalidateWidgets();
+        }
+    }
+
+    public void scheduleAffordabilityRetry() {
+        affordabilityRetryTicks = Math.max(
+                affordabilityRetryTicks, AFFORDABILITY_RETRY_TICKS);
+        applyAffordabilityFilterToCanvas();
+        uiUpdates.invalidateWidgets();
+    }
+
+    public void refreshAuthoritativeAffordability() {
+        affordabilityRetryTicks = 0;
+        applyAffordabilityFilterToCanvas();
+        requestNextAffordabilityBatch();
+        uiUpdates.invalidateWidgets();
+    }
+
+    private void requestNextAffordabilityBatch() {
+        if (!menu.routeGuidanceAvailable() || researchTreePublicationRejected) {
+            return;
+        }
+        ClientResearchState.Publication publication = ClientResearchState.publication();
+        ClientResearchAffordabilityState.beginNext(
+                        treeProjections.publication().graph(), publication.generation())
+                .ifPresent(request -> NetworkHandler.INSTANCE.sendToServer(
+                        new ResearchAffordabilityRequestPacket(
+                                menu.containerId,
+                                request.requestId(),
+                                request.publicationGeneration(),
+                                request.targetIds())));
+    }
+
+    /** Applies a correlated response without waiting for another tree publication. */
+    public void refreshAuthoritativeGuidance() {
+        guidanceRetryTicks = 0;
+        refreshResearchPlan();
+        treeCanvas.setTrackedPlan(researchPlan.orElse(null));
+        fullscreenCardWidgetState = null;
+        updateWidgets();
     }
 
     private String searchableText(ResearchTreeGraph.Node node) {
@@ -1043,6 +1357,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             refreshStaticWidgets();
             updateTreeSafeInsets();
         }
+        refreshMinimap();
         updateFullscreenContextCardWidgets();
         clearFocusIfHidden();
     }
@@ -1078,12 +1393,33 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         guidanceDismissButton.visible = guidanceVisible;
         recommendationButton.visible = !guidanceVisible
                 && (!fullscreen || railVisible);
+        affordabilityButton.visible = fullscreen && !guidanceVisible && railVisible
+                && menu.routeGuidanceAvailable() && !researchTreePublicationRejected;
+        affordabilityButton.active = affordabilityButton.visible;
         helpButton.visible = !guidanceVisible && (!fullscreen || railVisible);
         railPinButton.visible = fullscreen && railVisible;
         railPinButton.active = railPinButton.visible;
         primaryResearchButton.visible = !fullscreen;
         returnToSelectionButton.visible = false;
         trackResearchButton.visible = !fullscreen && !guidanceVisible;
+        Optional<ResourceLocation> trackedGoal = ClientResearchPlannerState.targetId();
+        researchGoalButton.visible = fullscreen && !guidanceVisible && trackedGoal.isPresent()
+                && menu.routeGuidanceAvailable() && !researchTreePublicationRejected;
+        researchGoalButton.active = researchGoalButton.visible;
+        if (researchGoalButton.visible) {
+            ResearchGoalProgressPresenter.Presentation goalProgress = researchGoalProgress();
+            Component goalName = treeProjections.publication().graph()
+                    .node(trackedGoal.orElseThrow())
+                    .map(this::nodeName)
+                    .orElse(Component.literal("?"));
+            researchGoalButton.setMessage(researchGoalButtonLabel(
+                    goalName,
+                    researchGoalButtonStatus(goalProgress)));
+            researchGoalButton.setTooltip(Tooltip.create(
+                    researchGoalDescription(goalName, goalProgress)));
+        } else {
+            researchGoalButton.setTooltip(null);
+        }
 
         boolean hasGroups = !treeProjections.publication().presentation().groups().isEmpty();
         boolean hasSidebarItems = sidebarItemCount() > 0;
@@ -1119,6 +1455,12 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 recommendation.map(this::recommendationDescription)
                         .orElseGet(() -> Component.translatable(
                                 "gui.taczweaponblueprints.research_bench.tree.recommendation.none"))));
+        ClientResearchAffordabilityState.Snapshot affordability =
+                ClientResearchAffordabilityState.snapshot();
+        affordabilityButton.setMessage(Component.translatable(
+                "gui.taczweaponblueprints.research_bench.tree.affordable.button."
+                        + (affordability.enabled() ? "on" : "off")));
+        affordabilityButton.setTooltip(Tooltip.create(affordabilityDescription(affordability)));
         Optional<ResearchTreeGraph.Node> focusedForTracking = focusedTreeNode()
                 .filter(node -> node.visibility().revealsIdentity());
         boolean focusedIsTracked = focusedForTracking
@@ -1202,6 +1544,11 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 researchTreePublicationRejected,
                 researchPoints,
                 researchPlan,
+                ClientResearchGuidanceState.currentSnapshot(),
+                ClientResearchGuidanceState.pending(),
+                ClientResearchGuidanceState.unavailable(),
+                menu.routeGuidanceAvailable(),
+                ClientResearchAffordabilityState.snapshot(),
                 projectionRevision,
                 sidebarScroll,
                 treeCanvas.viewport().scale(),
@@ -1227,7 +1574,33 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         int top = safe.y();
         int right = width - safe.right();
         int bottom = height - safe.bottom();
+        if (researchGoalButton != null && researchGoalButton.visible) {
+            bottom = Math.max(
+                    bottom,
+                    height - fullscreenOverlayLayout.coachmark().y() + 4);
+        }
         treeCanvas.setSafeInsets(new ResearchTreeViewport.Insets(left, top, right, bottom));
+    }
+
+    private void refreshMinimap() {
+        treeMinimap.prepare(
+                ModConfigs.RESEARCH_TREE_CLIENT.minimapMode(),
+                treeCanvas,
+                fullscreen,
+                fullscreenMinimapObstacles());
+    }
+
+    private List<ResearchTreeScreenLayout.Rect> fullscreenMinimapObstacles() {
+        if (!fullscreen || fullscreenOverlayLayout == null) {
+            return List.of();
+        }
+        ArrayList<ResearchTreeScreenLayout.Rect> obstacles =
+                new ArrayList<>(fullscreenContextObstacles());
+        ResearchTreeScreenLayout.Rect existing = treeMinimap.panelBounds();
+        if (existing != null) {
+            obstacles.remove(existing);
+        }
+        return List.copyOf(obstacles);
     }
 
     private void updateFullscreenContextCardWidgets() {
@@ -1368,9 +1741,17 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         if (searchBox != null && searchBox.visible) {
             obstacles.add(fullscreenOverlayLayout.searchField());
         }
+        if (affordabilityButton != null && affordabilityButton.visible) {
+            obstacles.add(fullscreenRailLayout.affordability());
+        }
         searchResultPanel().ifPresent(obstacles::add);
         if (guidanceVisible) {
             obstacles.add(activeGuidanceLayout().panel());
+        } else if (researchGoalButton != null && researchGoalButton.visible) {
+            obstacles.add(fullscreenOverlayLayout.coachmark());
+        }
+        if (treeMinimap.visible() && treeMinimap.panelBounds() != null) {
+            obstacles.add(treeMinimap.panelBounds());
         }
         return List.copyOf(obstacles);
     }
@@ -2116,6 +2497,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     }
 
     private void cancelTreeInteraction() {
+        treeMinimap.cancelNavigation();
         fullscreenGesture.cancel();
         fullscreenHoldActivation.cancel();
         pendingPortalActivation = null;
@@ -2147,6 +2529,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 : Math.max(0.0D, (cameraFrameMillis - lastCameraFrameMillis) / 1_000.0D);
         lastCameraFrameMillis = cameraFrameMillis;
         treeCanvas.tickCamera(cameraDeltaSeconds);
+        treeMinimap.updateViewport(treeCanvas.viewport());
         if (fullscreen) {
             updateFullscreenContextCardWidgets();
         }
@@ -2166,6 +2549,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         ResearchTreeInteractionPolicy.PointerTarget pointerTarget =
                 fullscreenPointerTarget(mouseX, mouseY);
         boolean graphHoverAllowed = !searchOverlayHovered
+                && !treeMinimap.contains(mouseX, mouseY)
                 && (!fullscreen
                         || ResearchTreeInteractionPolicy.allowsGraphHover(pointerTarget)
                                 && !fullscreenGesture.dragging());
@@ -2225,6 +2609,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         if (fullscreen) {
             renderFullscreenHoldProgress(graphics);
             renderFullscreenNavigationBackground(graphics);
+            treeMinimap.render(graphics);
             renderFullscreenContextCardBackground(graphics);
         }
     }
@@ -2457,7 +2842,10 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 && fullscreenContextCardLayout.card().contains(mouseX, mouseY))
                 || (returnToSelectionButton != null
                         && returnToSelectionButton.visible
-                        && returnToSelectionButton.isMouseOver(mouseX, mouseY));
+                        && returnToSelectionButton.isMouseOver(mouseX, mouseY))
+                || (researchGoalButton != null
+                        && researchGoalButton.visible
+                        && researchGoalButton.isMouseOver(mouseX, mouseY));
         boolean close = fullscreenButton != null
                 && fullscreenButton.visible
                 && fullscreenButton.isMouseOver(mouseX, mouseY);
@@ -2465,6 +2853,9 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         double localY = mouseY - topPos;
         sidebarButtons.forEach(button -> button.updatePointerState(mouseX, mouseY));
         boolean sidebar = fullscreenRailPointerRegion().contains(localX, localY)
+                || (affordabilityButton != null
+                        && affordabilityButton.visible
+                        && affordabilityButton.isMouseOver(mouseX, mouseY))
                 || sidebarButtons.stream().anyMatch(button ->
                         button.visible && button.ownsPointer(mouseX, mouseY));
         boolean search = searchBox != null
@@ -2503,6 +2894,9 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     private boolean pointerOverFullscreenRail(double mouseX, double mouseY) {
         sidebarButtons.forEach(button -> button.updatePointerState(mouseX, mouseY));
         return fullscreenRailPointerRegion().contains(mouseX - leftPos, mouseY - topPos)
+                || (affordabilityButton != null
+                        && affordabilityButton.visible
+                        && affordabilityButton.isMouseOver(mouseX, mouseY))
                 || sidebarButtons.stream().anyMatch(button ->
                         button.visible && button.ownsPointer(mouseX, mouseY));
     }
@@ -2513,6 +2907,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 || focused == zoomOutButton
                 || focused == zoomInButton
                 || focused == fitButton
+                || focused == affordabilityButton
                 || focused == recommendationButton
                 || focused == railPinButton
                 || focused == helpButton
@@ -3385,16 +3780,18 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         Set<ResourceLocation> preferred = treeCanvas.graph().nodes().stream()
                 .map(ResearchTreeGraph.Node::blueprintId)
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
-        if (researchPlan.filter(plan -> !plan.complete()).isPresent()) {
-            Set<ResourceLocation> plannedIds = researchPlan.orElseThrow().pathNodeIds();
-            publicGraph = publicGraph.inducedSubgraph(plannedIds);
-            navigable = navigable.stream()
+        Optional<ResearchTreePlanner.Plan> tracked = researchPlan
+                .filter(plan -> !plan.complete());
+        if (tracked.isPresent()) {
+            ResearchTreePlanner.Plan plan = tracked.orElseThrow();
+            Set<ResourceLocation> plannedIds = plan.pathNodeIds();
+            ResearchTreeGraph plannedGraph = publicGraph.inducedSubgraph(plannedIds);
+            Set<ResourceLocation> plannedNavigable = navigable.stream()
                     .filter(plannedIds::contains)
                     .collect(java.util.stream.Collectors.toUnmodifiableSet());
-            // Once a goal is tracked, every route step has equal navigation
-            // priority so this result stays identical across projections and
-            // matches the plan summary's disclosed next step.
-            preferred = plannedIds;
+            return plan.nextStepId().flatMap(nextStep ->
+                    ResearchTreeRecommendationEngine.recommendTrackedStep(
+                            plannedGraph, plannedNavigable, nextStep, researchPoints));
         }
         return ResearchTreeRecommendationEngine.recommend(
                 publicGraph, navigable, preferred, researchPoints);
@@ -3479,6 +3876,48 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         });
     }
 
+    private void toggleAffordableNow() {
+        if (!menu.routeGuidanceAvailable() || researchTreePublicationRejected) {
+            return;
+        }
+        ClientResearchAffordabilityState.Snapshot current =
+                ClientResearchAffordabilityState.snapshot();
+        ClientResearchState.Publication publication = ClientResearchState.publication();
+        ClientResearchAffordabilityState.setEnabled(
+                !current.enabled(),
+                treeProjections.publication().graph(),
+                publication.generation());
+        affordabilityRetryTicks = 0;
+        applyAffordabilityFilterToCanvas();
+        requestNextAffordabilityBatch();
+        uiUpdates.invalidateWidgets();
+        updateWidgets();
+    }
+
+    private Component affordabilityDescription(
+            ClientResearchAffordabilityState.Snapshot affordability) {
+        if (!affordability.enabled()) {
+            return Component.translatable(
+                    "gui.taczweaponblueprints.research_bench.tree.affordable.off");
+        }
+        if (affordability.totalTargets() == 0) {
+            return Component.translatable(
+                    "gui.taczweaponblueprints.research_bench.tree.affordable.empty");
+        }
+        String suffix = affordability.complete() ? "complete" : "checking";
+        return Component.translatable(
+                "gui.taczweaponblueprints.research_bench.tree.affordable." + suffix,
+                affordability.affordableTargets(),
+                affordability.checkedTargets(),
+                affordability.totalTargets());
+    }
+
+    private MutableComponent affordabilityNarration() {
+        return Component.translatable(
+                "gui.taczweaponblueprints.research_bench.tree.affordable.narration",
+                affordabilityDescription(ClientResearchAffordabilityState.snapshot()));
+    }
+
     private boolean nodeIsTrackable(ResourceLocation blueprintId) {
         return treeProjections.publication().graph().node(blueprintId)
                 .filter(node -> node.visibility().revealsIdentity())
@@ -3496,6 +3935,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         ResourceLocation targetId = target.orElseThrow();
         if (ClientResearchPlannerState.targetId().filter(targetId::equals).isPresent()) {
             ClientResearchPlannerState.clear();
+            ClientResearchGuidanceState.clear();
         } else {
             ClientResearchPlannerState.track(
                     treeProjections.publication().graph(), targetId);
@@ -3545,6 +3985,34 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             return Component.translatable(
                     "gui.taczweaponblueprints.research_bench.tree.plan.complete");
         }
+        Optional<ResearchGuidanceSnapshot> guidance =
+                ClientResearchGuidanceState.currentSnapshot()
+                        .filter(snapshot -> snapshot.targetId().equals(plan.targetId()));
+        if (guidance.isPresent()) {
+            Component nextStep = plan.nextStepId()
+                    .flatMap(treeProjections.publication().graph()::node)
+                    .map(this::nodeName)
+                    .orElseGet(() -> Component.translatable(
+                            "gui.taczweaponblueprints.research_bench.tree.plan.no_next"));
+            return Component.translatable(
+                    "gui.taczweaponblueprints.research_bench.tree.goal.plan_summary",
+                    plan.remainingSteps(),
+                    researchGoalProgressSummary(
+                            ResearchGoalProgressPresenter.present(guidance)),
+                    nextStep);
+        }
+        if (ClientResearchGuidanceState.unavailable()) {
+            return Component.translatable(
+                    "gui.taczweaponblueprints.research_bench.tree.goal.route_unavailable");
+        }
+        if (ClientResearchGuidanceState.pending()
+                || ClientResearchGuidanceState.snapshot()
+                        .filter(snapshot -> snapshot.targetId().equals(plan.targetId()))
+                        .isPresent()) {
+            return Component.translatable(
+                    "gui.taczweaponblueprints.research_bench.tree.goal.plan_checking",
+                    plan.remainingSteps());
+        }
         Component nextStep = plan.nextStepId()
                 .flatMap(treeProjections.publication().graph()::node)
                 .map(this::nodeName)
@@ -3572,6 +4040,149 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                     plan.remainingIngredientTypes(),
                     nextStep);
         };
+    }
+
+    private ResearchGoalProgressPresenter.Presentation researchGoalProgress() {
+        return ResearchGoalProgressPresenter.present(
+                ClientResearchGuidanceState.currentSnapshot(),
+                ClientResearchGuidanceState.unavailable());
+    }
+
+    private Component researchGoalShortStatus(
+            ResearchGoalProgressPresenter.Presentation presentation) {
+        String suffix = switch (presentation.status()) {
+            case CHECKING -> "checking";
+            case COMPLETE -> "complete";
+            case READY -> "ready";
+            case MISSING_POINTS -> "missing_points";
+            case MISSING_MATERIALS -> "missing_materials";
+            case MISSING_POINTS_AND_MATERIALS -> "missing_both";
+            case TRANSACTION_BLOCKED -> "capacity_blocked";
+            case POLICY_BLOCKED -> "policy_blocked";
+            case ROUTE_UNAVAILABLE -> "route_unavailable";
+        };
+        return Component.translatable(
+                "gui.taczweaponblueprints.research_bench.tree.goal." + suffix);
+    }
+
+    private Component researchGoalProgressSummary(
+            ResearchGoalProgressPresenter.Presentation presentation) {
+        if (presentation.costBypassed()) {
+            return Component.translatable(
+                    "gui.taczweaponblueprints.research_bench.tree.goal.costs_bypassed");
+        }
+        MutableComponent summary = Component.empty();
+        presentation.points().ifPresent(progress -> summary.append(Component.translatable(
+                "gui.taczweaponblueprints.research_bench.tree.goal.progress.points",
+                progress.available(),
+                progress.required())));
+        presentation.materials().ifPresent(progress -> {
+            if (!summary.getString().isEmpty()) {
+                summary.append(" · ");
+            }
+            summary.append(Component.translatable(
+                    "gui.taczweaponblueprints.research_bench.tree.goal.progress.materials",
+                    progress.available(),
+                    progress.required(),
+                    presentation.missingMaterialTypes()));
+        });
+        if (summary.getString().isEmpty()) {
+            return researchGoalShortStatus(presentation);
+        }
+        return summary;
+    }
+
+    private Component researchGoalButtonStatus(
+            ResearchGoalProgressPresenter.Presentation presentation) {
+        if (presentation.costBypassed()) {
+            return Component.translatable(
+                    "gui.taczweaponblueprints.research_bench.tree.goal.costs_bypassed");
+        }
+        if (presentation.status() == ResearchGoalProgressPresenter.Status.READY
+                || presentation.status() == ResearchGoalProgressPresenter.Status.MISSING_POINTS
+                || presentation.status()
+                        == ResearchGoalProgressPresenter.Status.MISSING_MATERIALS
+                || presentation.status()
+                        == ResearchGoalProgressPresenter.Status.MISSING_POINTS_AND_MATERIALS) {
+            MutableComponent progress = Component.empty();
+            presentation.points().ifPresent(value -> progress.append(Component.translatable(
+                    "gui.taczweaponblueprints.research_bench.tree.goal.progress.points",
+                    value.available(),
+                    value.required())));
+            presentation.materials().ifPresent(value -> {
+                if (!progress.getString().isEmpty()) {
+                    progress.append(" · ");
+                }
+                progress.append(Component.translatable(
+                        "gui.taczweaponblueprints.research_bench.tree.goal.progress.materials_short",
+                        value.available(),
+                        value.required()));
+            });
+            if (!progress.getString().isEmpty()) {
+                return progress;
+            }
+        }
+        return researchGoalShortStatus(presentation);
+    }
+
+    private Component researchGoalButtonLabel(Component goalName, Component status) {
+        int contentWidth = Math.max(1, researchGoalButton.getWidth() - 8);
+        int decorationWidth = font.width("◆  · ");
+        int nameWidth = Math.max(1, contentWidth - decorationWidth - font.width(status));
+        return Component.empty()
+                .append("◆ ")
+                .append(clipped(goalName, nameWidth))
+                .append(" · ")
+                .append(status);
+    }
+
+    private Component researchGoalDescription(
+            Component goalName,
+            ResearchGoalProgressPresenter.Presentation presentation) {
+        MutableComponent description = Component.empty()
+                .append(goalName)
+                .append(" — ")
+                .append(researchGoalShortStatus(presentation));
+        if (presentation.status() != ResearchGoalProgressPresenter.Status.CHECKING
+                && presentation.status() != ResearchGoalProgressPresenter.Status.COMPLETE
+                && presentation.status() != ResearchGoalProgressPresenter.Status.POLICY_BLOCKED
+                && presentation.status() != ResearchGoalProgressPresenter.Status.ROUTE_UNAVAILABLE) {
+            description.append("\n").append(researchGoalProgressSummary(presentation));
+        }
+        researchPlan.filter(plan -> !plan.complete()).ifPresent(plan -> {
+            Component nextStep = plan.nextStepId()
+                    .flatMap(treeProjections.publication().graph()::node)
+                    .map(this::nodeName)
+                    .orElseGet(() -> Component.translatable(
+                            "gui.taczweaponblueprints.research_bench.tree.plan.no_next"));
+            description.append("\n").append(Component.translatable(
+                    "gui.taczweaponblueprints.research_bench.tree.goal.route",
+                    plan.remainingSteps(),
+                    nextStep));
+        });
+        return description.append("\n").append(Component.translatable(
+                "gui.taczweaponblueprints.research_bench.tree.goal.focus"));
+    }
+
+    private MutableComponent researchGoalNarration() {
+        Component name = ClientResearchPlannerState.targetId()
+                .flatMap(treeProjections.publication().graph()::node)
+                .map(this::nodeName)
+                .orElse(Component.literal("?"));
+        return Component.translatable(
+                "gui.taczweaponblueprints.research_bench.tree.goal.narration",
+                researchGoalDescription(name, researchGoalProgress()));
+    }
+
+    private void focusTrackedResearchGoal() {
+        ClientResearchPlannerState.targetId().ifPresent(targetId -> {
+            cancelTreeInteraction();
+            navigateToPublicNode(targetId, true);
+            if (treeCanvas.graph().node(targetId).isPresent()) {
+                selectTreeNodeInPlace(targetId);
+            }
+            updateWidgets();
+        });
     }
 
     private MutableComponent trackResearchNarration() {
@@ -3631,6 +4242,14 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                     return true;
                 }
                 return false;
+            }
+            if (treeMinimap.contains(mouseX, mouseY)) {
+                cancelTreeInteraction();
+                setFocused(null);
+                fullscreenOverlayState.blurSearch();
+                treeMinimap.beginNavigation(
+                        mouseX, mouseY, button, treeCanvas.viewport());
+                return true;
             }
         } else {
             if (super.mouseClicked(mouseX, mouseY, button)) {
@@ -3724,6 +4343,11 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         switch (target) {
             case GUIDANCE -> clickGuidance(mouseX, mouseY, button);
             case CONTEXT_CARD -> {
+                if (researchGoalButton.visible
+                        && clickFullscreenWidget(
+                                researchGoalButton, mouseX, mouseY, button)) {
+                    return;
+                }
                 if (trackResearchButton.visible
                         && clickFullscreenWidget(
                                 trackResearchButton, mouseX, mouseY, button)) {
@@ -3762,6 +4386,11 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 }
                 if (fitButton.visible
                         && clickFullscreenWidget(fitButton, mouseX, mouseY, button)) {
+                    return;
+                }
+                if (affordabilityButton.visible
+                        && clickFullscreenWidget(
+                                affordabilityButton, mouseX, mouseY, button)) {
                     return;
                 }
                 if (recommendationButton.visible
@@ -3886,6 +4515,10 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             int button,
             double dragX,
             double dragY) {
+        if (fullscreen && treeMinimap.dragNavigation(
+                mouseX, mouseY, button, treeCanvas.viewport())) {
+            return true;
+        }
         if (fullscreen && fullscreenGesture.ownsButton(button)) {
             ResearchTreeGestureTracker.Movement movement =
                     fullscreenGesture.move(mouseX, mouseY);
@@ -3904,6 +4537,9 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (fullscreen && treeMinimap.endNavigation(button)) {
+            return true;
+        }
         if (fullscreen && fullscreenGesture.active()) {
             ResearchTreeProjection.CrossGroupLink portal = pendingPortalActivation;
             ResearchTechTreeLayout.PortalTarget techPortal =
@@ -4025,9 +4661,15 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             return true;
         }
         if (fullscreen) {
+            ResearchTreeInteractionPolicy.PointerTarget pointerTarget =
+                    fullscreenPointerTarget(mouseX, mouseY);
+            if (treeMinimap.contains(mouseX, mouseY)
+                    && ResearchTreeInteractionPolicy.allowsGraphHover(pointerTarget)) {
+                return true;
+            }
             ResearchTreeInteractionPolicy.ScrollTarget scrollTarget =
                     ResearchTreeInteractionPolicy.scrollTarget(
-                            fullscreenPointerTarget(mouseX, mouseY),
+                            pointerTarget,
                             false);
             if (scrollTarget == ResearchTreeInteractionPolicy.ScrollTarget.SIDEBAR) {
                 markFullscreenRailUsed();
@@ -4577,6 +5219,11 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             boolean publicationRejected,
             int researchPoints,
             Optional<ResearchTreePlanner.Plan> researchPlan,
+            Optional<ResearchGuidanceSnapshot> currentGuidance,
+            boolean guidancePending,
+            boolean guidanceUnavailable,
+            boolean routeGuidanceAvailable,
+            ClientResearchAffordabilityState.Snapshot affordability,
             long projectionRevision,
             int sidebarScroll,
             double viewportScale,
@@ -4593,6 +5240,8 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                     || browseView == null || selectedGroupId == null
                     || selectedTechTreeDomain == null
                     || researchPlan == null
+                    || currentGuidance == null
+                    || affordability == null
                     || focusedId == null || authoritativeSelection == null
                     || preview == null || selectionFeedback == null || researchFeedback == null
                     || searchMatchCount < 0 || researchPoints < 0
@@ -4607,6 +5256,16 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         private SelectedNodeUi {
             if (message == null) {
                 throw new IllegalArgumentException("selected Research Tree message cannot be null");
+            }
+        }
+    }
+
+    private record InventoryEntry(Item item, int count) {
+        private static final InventoryEntry EMPTY = new InventoryEntry(null, 0);
+
+        private InventoryEntry {
+            if (count < 0 || (item == null) != (count == 0)) {
+                throw new IllegalArgumentException("invalid guidance inventory entry");
             }
         }
     }

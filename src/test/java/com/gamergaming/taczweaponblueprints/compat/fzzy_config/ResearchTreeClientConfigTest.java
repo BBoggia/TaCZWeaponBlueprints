@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import com.gamergaming.taczweaponblueprints.client.ResearchTreeDisplayPolicy;
 import com.gamergaming.taczweaponblueprints.client.ResearchTreeLayoutPreset;
+import com.gamergaming.taczweaponblueprints.client.ResearchTreeMinimapMode;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayoutPolicy;
 
 class ResearchTreeClientConfigTest {
@@ -23,6 +24,7 @@ class ResearchTreeClientConfigTest {
                 ResearchTreeClientConfig.DEFAULT_HOLD_DURATION_MILLIS,
                 config.holdDurationMillis());
         assertEquals(ResearchTreeDisplayPolicy.DEFAULT, config.displayPolicy());
+        assertEquals(ResearchTreeMinimapMode.AUTOMATIC, config.minimapMode());
         assertTrue(config.showResearchPointNotifications.get());
     }
 
@@ -136,6 +138,7 @@ class ResearchTreeClientConfigTest {
     void restoreTreeAppearanceResetsPresetAndAdvancedValues() {
         ResearchTreeClientConfig config = new ResearchTreeClientConfig();
         config.layoutPreset.validateAndSet(ResearchTreeLayoutPreset.CUSTOM);
+        config.minimap.validateAndSet(ResearchTreeMinimapMode.HIDDEN);
         config.nodeGap.validateAndSet(99);
 
         config.restoreTreeAppearanceDefaults();
@@ -144,5 +147,6 @@ class ResearchTreeClientConfigTest {
         assertEquals(ResearchTreeLayoutPolicy.UNIFIED_OVERVIEW.nodeGap(),
                 config.nodeGap.getUnconditional());
         assertEquals(ResearchTreeLayoutPolicy.UNIFIED_OVERVIEW, config.layoutPolicy());
+        assertEquals(ResearchTreeMinimapMode.AUTOMATIC, config.minimapMode());
     }
 }

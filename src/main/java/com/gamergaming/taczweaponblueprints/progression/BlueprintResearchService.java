@@ -529,6 +529,11 @@ public final class BlueprintResearchService {
                     committed.discoveredChanged(),
                     committed.legacyRecipeChanged()));
         }
+        RecentBlueprintUnlockHistory.record(
+                playerData,
+                BlueprintUnlockOrigin.TREE_RESEARCH,
+                blueprintId,
+                transitions.stream().map(LearningTransition::blueprintId).toList());
         return new Result(
                 Status.SUCCESS,
                 id,

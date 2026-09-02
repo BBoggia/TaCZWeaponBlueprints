@@ -13,10 +13,11 @@ dimension changes, logout, and server restarts.
 
 - Configurable blueprint loot with live server settings and datapack support.
 - Permanent per-player recipe knowledge enforced by the server.
-- A Blueprint Journal for discoveries, learned recipes, completion, active
-  rules, and a reusable Getting Started guide.
+- A Blueprint Journal for discoveries, learned recipes, recent unlocks,
+  completion, active rules, and a reusable Getting Started guide.
 - An edge-to-edge Research Bench Tech Tree with search, pan, zoom, keyboard
-  navigation, route tracking, and selected-weapon details.
+  navigation, route tracking, a minimap for large trees, and selected-weapon
+  details.
 - Automatic weapon placement based on strength, handling, range, and play
   style, including compatible weapons added by TaCZ content packs.
 - Authored-only Tech Trees for pack authors who want complete control over
@@ -84,10 +85,11 @@ Server controls include:
 
 Each player also has Personal Settings for research confirmation, RP
 notifications, reduced motion, the optional background grid, and Compact,
-Balanced, Spacious, or Custom Tech Tree layouts. Advanced canvas, weapon,
-level, and connection spacing plus crossing-reduction and compaction controls
-remain available under the collapsed Custom section. These settings affect
-presentation only and do not change server progression.
+Balanced, Spacious, or Custom Tech Tree layouts. The fullscreen minimap can
+appear automatically for large trees, remain always visible, or stay hidden.
+Advanced canvas, weapon, level, and connection spacing plus crossing-reduction
+and compaction controls remain available under the collapsed Custom section.
+These settings affect presentation only and do not change server progression.
 
 ## Servers and Modpacks
 

@@ -21,11 +21,12 @@ different artifacts or environments.
 | Dedicated-server OS / Java | |
 | Window sizes / GUI scales | |
 
-Automated Phase 8 preflight is a JDK 17 `./gradlew cleanTest build`; the final
-versioned candidate additionally runs `./gradlew certifyReleaseCandidate` after
-the changelog release heading is finalized. Success certifies packaged
-structure, data, protocol, and report metadata. It does not certify any
-unchecked hands-on behavior below.
+Automated research-guidance Phase 10 preflight is a JDK 17
+`./gradlew verifyResearchGuidanceCandidateHandoff`; the final versioned
+candidate additionally runs `./gradlew certifyReleaseCandidate` after the
+changelog release heading is finalized. Success certifies packaged structure,
+data, protocol, report metadata, and their binding to the exact JAR. Success
+does not certify any unchecked hands-on behavior below.
 
 ## Display and localization
 
@@ -72,10 +73,22 @@ scales 1, 2, 3, 4, and Auto where the display supports them. Include 320x240,
   and both settings survive a client restart.
 - [ ] The background grid is absent by default, toggles immediately in the
   permanent Research Tree, and never removes connectors, status glyphs, or hit targets.
+- [ ] The minimap is absent for a tree that fits comfortably in the usable
+  screen area, appears automatically for a meaningfully larger tree, and
+  responds immediately when Personal Settings changes it to Always or Hidden.
+- [ ] The minimap contains only compact status, tracked-route, target, and
+  viewport marks. It never renders item icons, weapon names, or hidden IDs.
 
 ## Tree interaction and accessibility
 
 - [ ] Dragging empty canvas space pans smoothly and remains bounded.
+- [ ] Clicking and dragging the minimap moves the same bounded tree camera at
+  every supported zoom level without selecting, researching, hovering, or
+  showing a tooltip for a graph node underneath it.
+- [ ] Search results, Getting Started, the sidebar, and the selected-node card
+  remain visually and interactively above the minimap when their bounds meet.
+- [ ] Empty, one-node, ordinary, and maximum-size published trees keep the
+  minimap inside the screen at GUI scales 1 through 4.
 - [ ] Wheel, `+`, `-`, and Fit operate at both zoom limits in the permanent Research Tree.
 - [ ] Search highlights matches, and committing the active result centers it.
 - [ ] Typing a search query updates highlights and result count without panning, changing the focused node, or changing domains; Up/Down changes the active result and Enter or a result click navigates exactly once.
@@ -114,6 +127,15 @@ scales 1, 2, 3, 4, and Auto where the display supports them. Include 320x240,
   redacts the target.
 - [ ] The tracked prerequisite route remains highlighted when switching Tech
   Tree domains; only route nodes present in the active domain are drawn.
+- [ ] For an any-of requirement whose server-selected route differs from the
+  client's initial public estimate, the tracked highlight settles on exactly
+  the server-selected alternative and never highlights every alternative.
+- [ ] Reloading research data or changing the tracked target while route guidance
+  is in flight ignores the stale response; it must not replace the route for the
+  newer publication or target.
+- [ ] A route containing redacted topology or exceeding the bounded guidance
+  payload leaves authoritative guidance unavailable without revealing hidden
+  identifiers or displaying a partial route as authoritative.
 - [ ] While a goal is active, `Next` only recommends an available step on that
   goal's selected AND-of-OR route. An unsatisfied any-of group contributes one
   alternative rather than every member. Untracking restores the global recommendation.
@@ -228,6 +250,17 @@ scales 1, 2, 3, 4, and Auto where the display supports them. Include 320x240,
 - [ ] Research automatically consumes only the exact required amounts from the main inventory and hotbar and preserves unrelated stacks.
 - [ ] The Research button and configured hold shortcut produce identical server-authoritative results.
 - [ ] While a request is pending, repeated mouse or keyboard activation cannot submit a duplicate transaction.
+- [ ] A successful whole-path Tech Tree purchase adds exactly one Recent batch
+  to the Blueprint Journal. Its target is the selected weapon, its members are
+  only the newly learned path nodes, and its displayed total remains exact if
+  a very large path stores only a bounded representative member list.
+- [ ] Learning from a physical blueprint and an administrator grant each add a
+  Recent entry, while starting grants, migrations, discovery-only changes,
+  RP-only conversions, failed research, and rolled-back research add none.
+- [ ] Recent and Unavailable remain separate Journal views. Recent is newest
+  first and searchable by disclosed name, ID, source, and retained path member;
+  a progression `all` reset clears it without relabeling removed content as
+  recent activity.
 - [ ] Successful research provides visible card feedback and an audible cue; a rejected request leaves its reason visible near the selected weapon instead of relying only on the action bar.
 - [ ] The Research Bench contains no duplicate input; closing the dedicated Analyzer returns unused input and unclaimed output, dropping them only when inventory insertion is impossible.
 - [ ] Insufficient points, ingredients, or prerequisites consume nothing.
@@ -298,7 +331,7 @@ unchecked until that behavior has been confirmed in a real client/server run.
 - [ ] A datapack-authored prerequisite remains the complete effective prerequisite list for that gun and is never replaced or extended by the connected-mode heuristic.
 - [ ] A legacy rule with `prerequisites: [A, B]` still requires both A and B. A format-2 rule with one `prerequisite_groups` entry containing `any_of: [A, B]` becomes researchable after learning either A or B, while a second singleton group remains independently mandatory.
 - [ ] A partially disclosed any-of group shows its visible alternatives and a bounded hidden-choice count without exposing hidden IDs. Preview/name/silhouette visibility must not reveal whether the group is satisfied; full visibility may show the current satisfaction count.
-- [ ] A client or server still using an older protocol is rejected cleanly. Matching protocol-42 peers reconstruct identical group ordinals, alternatives, hidden counts, disclosure state, aggregate path-purchase previews, typed route-authority failures, and route fingerprints even when chunks arrive out of order.
+- [ ] A client or server still using an older protocol is rejected cleanly. Matching protocol-47 peers reconstruct identical group ordinals, alternatives, hidden counts, disclosure state, aggregate path-purchase previews, typed route-authority failures, route fingerprints, correlated authoritative guidance, bounded Affordable Now batches, and Recent unlock history even when chunks arrive out of order.
 - [ ] `/gg research status` reports the selected automatic mode and prerequisite strategy, tree, eligible/excluded counts, planned references/groups/alternate-route groups, omissions, branch boundaries, same/cross-family edges and merges, maximum fan-out, the current catalog/research revision pair, and complete candidate/branch-coordinate/decision/finalized-rank counts; a legacy tree may show the explicitly diagnostic Phase-0 counterfactual, while an authoritative grouped tree instead reports live effective-alternative, ancestry, route-cost, chain, branch-entry, per-phase fan-out/family-density, terminal-affordability, warning evidence, and the Phase-6 retain/prototype/insufficient motif decision with its review limits. A stale publication reports `awaiting_rebuild`, a failed rebuild reports its exact stage and bounded reason, and a later revision clears that stale failure.
 - [ ] `/gg research inspect <blueprint>` explains an add-on gun's automatic state, score, confidence, generated rank, optional band, stable sibling order, planned prerequisite or omission, exact branch strategy, parent-family counts, terminal/depth flags, and any grouped route-review outcome/cost bounds/ancestry diversity without adding a line for attachment/ammo entries.
 - [ ] `/gg research export` writes format 18 deterministically, preserves canonical prerequisite-group boundaries plus the legacy prerequisite union, records the automatic strategy, explicit generated relationship shapes and hybrid aggregate counts, planned generated groups, and exact/bounded alternative-route review evidence, includes the complete `grouped_route_quality` distributions/warnings/terminal bounds plus `grouped_route_motif_assessment` signals/recommendations/visual-evidence boundary, and its tree-owned band policy, configured/effective layer width, topology population, branch-prerequisite and publication-completeness summaries, planned and published ranks, topology/economy sections, second-parent quotas, strategy-specific rejection evidence, and per-weapon decision/parent relationships agree with status/inspect for representative authored, automatic, excluded, and unplaced weapons.
@@ -306,6 +339,16 @@ unchecked until that behavior has been confirmed in a real client/server run.
 - [ ] At normal zoom and maximum zoom-out, select targets behind singleton, grouped, and mixed requirements. Confirm route highlighting chooses one viable OR route, grouped junctions remain legible, learning an alternative updates satisfaction without resetting the camera, Fit still frames the full tree, and no new top-heavy or excessive-width regression is visible.
 - [ ] In `DIRECT_LEARN`, select a higher unlearned target. Confirm the action reads `Research Path (N)`, RP is the aggregate distinct-node cost, additional material types are disclosed when the six-row preview is truncated, and success learns the prerequisite-first shortest closure plus target. Missing RP/materials and an injected late learning rejection must leave all inventory, points, blueprint/discovery knowledge, and legacy recipe aliases unchanged. In `CREATE_BLUEPRINT`, the same locked target must retain ordinary unmet-prerequisite behavior.
 - [ ] In `DIRECT_LEARN`, change the selected route, Tech Tree publication, relevant configuration, or player knowledge after receiving a preview but before submitting its Research action. Confirm the server rejects the stale fingerprint, consumes no RP or items, and returns a fresh preview. Repeated clicks while one selection is pending and rapid selection changes must not create duplicate purchases or unbounded planning work.
+- [ ] Track an unlearned goal behind at least one any-of requirement. The compact bottom-edge goal chip must show the exact enabled RP/material progress, the highlighted edge must match the server-selected alternative, and pressing the chip must focus and select the goal without resetting its domain camera unnecessarily.
+- [ ] While that goal remains tracked, add, remove, split, and combine matching inventory stacks. The exact route and camera must remain stable, the goal chip must briefly report Checking, and its material totals must refresh after the short debounce without double-counting an item shared by two requirements.
+- [ ] Close the Research Bench while a tracked-goal request is pending, then reopen it without changing the target or inventory. The reopened Bench must issue a replacement request and must not remain in Checking indefinitely. A terminal route rejection must read as unavailable rather than Checking.
+- [ ] Repeat the tracked-goal check in `POINTS_ONLY`, `ITEMS_ONLY`, `POINTS_AND_ITEMS`, and Creative mode. Disabled channels must be absent, Creative must say costs are waived rather than inventing progress, a progression-capacity failure must remain distinct from missing resources, and a completed goal must remain visible until deliberately untracked.
+- [ ] Open tree help while a goal is tracked and test keyboard navigation plus GUI scales 1 through 4. The help coachmark and goal chip must never overlap, the chip must stay on-screen with long translated weapon names, narration must expose its status and next step, and focused nodes must not center behind it.
+- [ ] In fullscreen, enable Affordable Now beside search. The compact tooltip must report progressive checked/total and affordable counts; unchecked nodes remain visually neutral, learned nodes remain legible context, and unaffordable or blocked nodes dim without disappearing, moving, or resetting the camera.
+- [ ] While Affordable Now is checking a large tree, use search, hover relationships, select a node, and keep a goal route tracked. Those higher-priority states must remain readable above the affordability dimming, and the filter control must own its click area instead of selecting a covered graph node.
+- [ ] Add and remove RP or matching inventory materials with Affordable Now enabled. Results must return to neutral Checking after the short stability debounce and then refresh in bounded batches. Changing the tree generation, closing the Bench, reconnecting, or receiving a stale/out-of-order result must not retain or apply stale classifications.
+- [ ] Open the same large tree for two players and enable Affordable Now together. Both sweeps must make round-robin progress without a render-thread stall, unbounded packet, or one player monopolizing the shared one-target-per-tick planning fuse.
+- [ ] In `CREATE_BLUEPRINT`, confirm the tracked-goal price chip and Affordable Now control are hidden. Switch back to `DIRECT_LEARN` and confirm both become available after the server menu-data update without reopening the Bench.
 - [ ] For the Phase 12 visual-refinement check, use a large catalog with several mature weapon families and force at least one semantic rank to wrap. Include sharply uneven family sizes and a rank where authored nodes share space with only one mature automatic family. The client should keep the minimum required row count, prefer wrap boundaries between families when that does not leave a row below half its balanced target, keep each fitting family coherent even with ordering sweeps set to zero, retain a dense shared base, and avoid both a tall/thin column and a wide top-heavy slab.
 - [ ] Inspect a target with two or more drawable any-of groups. Its junction diamonds and outgoing approaches must occupy distinct small vertical lanes, remain associated with the correct alternatives, and neither overlap nor add extra height to unrelated ranks.
 - [ ] At the first mature branch split, confirm the branches have a small but noticeable seam that grows gradually toward the top. The seam must remain much smaller than a full empty branch corridor, and similarly scored terminal weapons may still end as a two- or three-node cohort on one layer.
@@ -331,7 +374,7 @@ unchecked until that behavior has been confirmed in a real client/server run.
 - [ ] Under the packaged profile, unmatched ammo and attachments retain their authored 4 RP Preview fallback rules but remain non-researchable and unpublished; enabling their domains makes the fallbacks selectable without fabricating prerequisites.
 - [ ] Large generated add-on weapon families wrap across Tech Tree rows instead of one ultra-wide strip, and repeated reloads produce the same placement.
 - [ ] Changing dormant legacy group metadata during `/reload` does not change the visible Tech Tree or reintroduce a hidden view selector.
-- [ ] Dedicated server rejects a client with any protocol other than `42`.
+- [ ] Dedicated server rejects a client with any protocol other than `47`.
 - [ ] Reconnect, dimension change, and respawn do not combine old and new tree chunks.
 
 ## Bench model and blocks

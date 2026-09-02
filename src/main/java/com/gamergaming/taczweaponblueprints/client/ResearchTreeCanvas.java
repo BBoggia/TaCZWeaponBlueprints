@@ -10,6 +10,7 @@ import java.util.function.Function;
 import java.util.function.IntFunction;
 import java.util.function.ToIntFunction;
 
+import com.gamergaming.taczweaponblueprints.progression.ResearchAffordabilitySnapshot;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayout;
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
@@ -52,8 +53,12 @@ public final class ResearchTreeCanvas {
     private Map<ResearchTreeEdgeIndex.RequirementGroupKey,
             ResearchTreeGraph.RequirementGroup> requirementGroupsByKey = Map.of();
     private ResourceLocation trackedTargetId;
+    private long trackedPlanRevision;
     private Set<ResourceLocation> trackedPathNodeIds = Set.of();
     private Set<ResearchTreeGraph.Edge> trackedPathEdges = Set.of();
+    private boolean affordabilityFilterEnabled;
+    private Map<ResourceLocation, ResearchAffordabilitySnapshot.Entry> affordabilityResults =
+            Map.of();
     private Map<ResourceLocation, ItemStack> icons = Map.of();
     private Map<ResourceLocation, Integer> boundaryRequirementCounts = Map.of();
     private Map<ResourceLocation, Integer> boundaryUnlockCounts = Map.of();
@@ -182,6 +187,11 @@ public final class ResearchTreeCanvas {
         // Commit only after every fallible derived object has been prepared.
         this.graph = graph;
         this.layout = layout;
+        this.affordabilityResults = affordabilityResults.entrySet().stream()
+                .filter(entry -> graph.node(entry.getKey()).isPresent())
+                .collect(java.util.stream.Collectors.toUnmodifiableMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue));
         this.icons = nextIcons;
         this.boundaryRequirementCounts = nextBoundaryCounts.requirements();
         this.boundaryUnlockCounts = nextBoundaryCounts.unlocks();
@@ -873,19 +883,30 @@ public final class ResearchTreeCanvas {
     /** Applies one full-publication plan to the currently projected canvas. */
     public void setTrackedPlan(ResearchTreePlanner.Plan plan) {
         if (plan == null) {
+            if (trackedTargetId != null || !trackedPathNodeIds.isEmpty()
+                    || !trackedPathEdges.isEmpty()) {
+                trackedPlanRevision++;
+            }
             trackedTargetId = null;
             trackedPathNodeIds = Set.of();
             trackedPathEdges = Set.of();
             return;
         }
-        trackedTargetId = plan.targetId();
-        trackedPathNodeIds = plan.pathNodeIds().stream()
+        Set<ResourceLocation> nextNodes = plan.pathNodeIds().stream()
                 .filter(id -> graph.node(id).isPresent())
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
         Set<ResearchTreeGraph.Edge> visibleEdges = Set.copyOf(graph.edges());
-        trackedPathEdges = plan.pathEdges().stream()
+        Set<ResearchTreeGraph.Edge> nextEdges = plan.pathEdges().stream()
                 .filter(visibleEdges::contains)
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        if (!plan.targetId().equals(trackedTargetId)
+                || !nextNodes.equals(trackedPathNodeIds)
+                || !nextEdges.equals(trackedPathEdges)) {
+            trackedPlanRevision++;
+        }
+        trackedTargetId = plan.targetId();
+        trackedPathNodeIds = nextNodes;
+        trackedPathEdges = nextEdges;
     }
 
     boolean isTrackedPathNode(ResourceLocation blueprintId) {
@@ -898,6 +919,43 @@ public final class ResearchTreeCanvas {
 
     Optional<ResourceLocation> trackedTargetId() {
         return Optional.ofNullable(trackedTargetId);
+    }
+
+    long trackedPlanRevision() {
+        return trackedPlanRevision;
+    }
+
+    /** Applies a presentation-only affordability lens without touching layout or camera. */
+    public void setAffordabilityFilter(
+            boolean enabled,
+            Map<ResourceLocation, ResearchAffordabilitySnapshot.Entry> results) {
+        if (results == null || results.entrySet().stream().anyMatch(entry ->
+                entry.getKey() == null || entry.getValue() == null
+                        || !entry.getKey().equals(entry.getValue().targetId())
+                        || graph.node(entry.getKey())
+                                .filter(node -> node.visibility().revealsIdentity())
+                                .isEmpty())) {
+            throw new IllegalArgumentException("invalid Research Tree affordability filter");
+        }
+        affordabilityFilterEnabled = enabled;
+        affordabilityResults = Map.copyOf(results);
+    }
+
+    AffordabilityTreatment affordabilityTreatment(ResourceLocation blueprintId) {
+        ResearchTreeGraph.Node node = graph.node(blueprintId).orElse(null);
+        if (!affordabilityFilterEnabled || node == null) {
+            return AffordabilityTreatment.NORMAL;
+        }
+        if (node.learned()) {
+            return AffordabilityTreatment.LEARNED_CONTEXT;
+        }
+        ResearchAffordabilitySnapshot.Entry result = affordabilityResults.get(blueprintId);
+        if (result == null) {
+            return AffordabilityTreatment.CHECKING;
+        }
+        return result.affordableNow()
+                ? AffordabilityTreatment.AFFORDABLE
+                : AffordabilityTreatment.DIMMED;
     }
 
     public Optional<ResourceLocation> activeSearchMatch() {
@@ -2018,6 +2076,25 @@ public final class ResearchTreeCanvas {
                     y + ResearchTreeLayout.NODE_HEIGHT,
                     style.categoryOverlay());
         }
+        AffordabilityTreatment affordability = affordabilityTreatment(node.blueprintId());
+        boolean affordabilityProtected = hoverRelated
+                || role != ResearchTreePresentationContract.RelationshipRole.NEUTRAL
+                        && role != ResearchTreePresentationContract.RelationshipRole.UNRELATED
+                || state.focusedId().filter(node.blueprintId()::equals).isPresent()
+                || node.blueprintId().equals(authoritativeSelectedId)
+                || trackedPathNodeIds.contains(node.blueprintId())
+                || state.searchMatches().contains(node.blueprintId());
+        if (!affordabilityProtected
+                && (affordability == AffordabilityTreatment.DIMMED
+                        || affordability == AffordabilityTreatment.LEARNED_CONTEXT)) {
+            graphics.fill(
+                    x, y,
+                    x + ResearchTreeLayout.NODE_WIDTH,
+                    y + ResearchTreeLayout.NODE_HEIGHT,
+                    affordability == AffordabilityTreatment.LEARNED_CONTEXT
+                            ? style.categoryOverlay()
+                            : style.unrelatedOverlay());
+        }
         int border = statusColor;
         if (hoverRole == ResearchTreePresentationContract.RelationshipRole.SELECTED) {
             border = style.hover();
@@ -2138,6 +2215,14 @@ public final class ResearchTreeCanvas {
             double visibleBottom) {
         return right >= visibleLeft && left <= visibleRight
                 && bottom >= visibleTop && top <= visibleBottom;
+    }
+
+    enum AffordabilityTreatment {
+        NORMAL,
+        CHECKING,
+        AFFORDABLE,
+        LEARNED_CONTEXT,
+        DIMMED
     }
 
     public record Style(

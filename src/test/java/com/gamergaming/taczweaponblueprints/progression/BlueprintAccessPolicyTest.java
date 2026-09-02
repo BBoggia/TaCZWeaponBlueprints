@@ -69,6 +69,11 @@ class BlueprintAccessPolicyTest {
         assertFalse(BlueprintUnlockOrigin.STARTING_GRANT.liveAwardsEligible());
         assertFalse(BlueprintUnlockOrigin.ADMINISTRATOR.liveAwardsEligible());
         assertFalse(BlueprintUnlockOrigin.MIGRATION.liveAwardsEligible());
+        assertTrue(BlueprintUnlockOrigin.TREE_RESEARCH.recentHistoryEligible());
+        assertTrue(BlueprintUnlockOrigin.PHYSICAL_BLUEPRINT.recentHistoryEligible());
+        assertTrue(BlueprintUnlockOrigin.ADMINISTRATOR.recentHistoryEligible());
+        assertFalse(BlueprintUnlockOrigin.STARTING_GRANT.recentHistoryEligible());
+        assertFalse(BlueprintUnlockOrigin.MIGRATION.recentHistoryEligible());
     }
 
     @Test

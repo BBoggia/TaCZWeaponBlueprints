@@ -10,6 +10,7 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 import com.gamergaming.taczweaponblueprints.client.ResearchTreeLayoutPreset;
+import com.gamergaming.taczweaponblueprints.client.ResearchTreeMinimapMode;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintBalancePreset;
 import me.fzzyhmstrs.fzzy_config.api.ConfigApi;
 
@@ -18,8 +19,9 @@ class SettingsSerializationCompatibilityTest {
     void clientGroupsAndActionsDoNotChangePersistedFieldPaths() {
         String serialized = ConfigApi.serializeConfig(new ResearchTreeClientConfig()).get();
 
-        assertTrue(serialized.contains("version = 2"));
+        assertTrue(serialized.contains("version = 3"));
         assertTrue(serialized.contains("layoutPreset = \"BALANCED\""));
+        assertTrue(serialized.contains("minimap = \"AUTOMATIC\""));
         assertTrue(serialized.contains("holdToResearch = true"));
         assertTrue(serialized.contains("nodeGap = "));
         assertFalse(serialized.contains("componentGap = "));
@@ -64,6 +66,17 @@ class SettingsSerializationCompatibilityTest {
         assertEquals(ResearchTreeLayoutPreset.CUSTOM, migrated.layoutPreset.get());
         assertEquals(47, migrated.layoutPolicy().nodeGap());
         assertEquals(73, migrated.layoutPolicy().interGroupGap());
+    }
+
+    @Test
+    void versionTwoClientFileReceivesTheAutomaticMinimapDefault() {
+        ResearchTreeClientConfig migrated = ConfigApi.deserializeConfig(
+                new ResearchTreeClientConfig(),
+                "version = 2\nlayoutPreset = \"SPACIOUS\"\n").get();
+        migrated.update(2);
+
+        assertEquals(ResearchTreeLayoutPreset.SPACIOUS, migrated.layoutPreset.get());
+        assertEquals(ResearchTreeMinimapMode.AUTOMATIC, migrated.minimapMode());
     }
 
     @Test

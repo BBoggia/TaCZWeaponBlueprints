@@ -76,6 +76,51 @@ class ResearchBenchRequestLimiterTest {
                 limiter.admitResearch(20L + ResearchBenchRequestLimiter.WINDOW_TICKS));
     }
 
+    @Test
+    void guidanceRequestsHaveAnIndependentBoundedWindow() {
+        ResearchBenchRequestLimiter limiter = new ResearchBenchRequestLimiter();
+
+        for (int index = 0;
+                index < ResearchBenchRequestLimiter.MAX_GUIDANCE_REQUESTS_PER_WINDOW;
+                index++) {
+            assertEquals(
+                    ResearchBenchRequestLimiter.Decision.ALLOW,
+                    limiter.admitGuidance(30L));
+        }
+        assertEquals(
+                ResearchBenchRequestLimiter.Decision.THROTTLE,
+                limiter.admitGuidance(30L));
+        assertEquals(
+                ResearchBenchRequestLimiter.Decision.ALLOW,
+                limiter.admitResearch(30L));
+        assertEquals(
+                ResearchBenchRequestLimiter.Decision.ALLOW,
+                limiter.admitGuidance(30L + ResearchBenchRequestLimiter.WINDOW_TICKS));
+    }
+
+    @Test
+    void affordabilityBatchesHaveAnIndependentBoundedWindow() {
+        ResearchBenchRequestLimiter limiter = new ResearchBenchRequestLimiter();
+
+        for (int index = 0;
+                index < ResearchBenchRequestLimiter.MAX_AFFORDABILITY_BATCHES_PER_WINDOW;
+                index++) {
+            assertEquals(
+                    ResearchBenchRequestLimiter.Decision.ALLOW,
+                    limiter.admitAffordability(40L));
+        }
+        assertEquals(
+                ResearchBenchRequestLimiter.Decision.THROTTLE,
+                limiter.admitAffordability(40L));
+        assertEquals(
+                ResearchBenchRequestLimiter.Decision.ALLOW,
+                limiter.admitGuidance(40L));
+        assertEquals(
+                ResearchBenchRequestLimiter.Decision.ALLOW,
+                limiter.admitAffordability(
+                        40L + ResearchBenchRequestLimiter.WINDOW_TICKS));
+    }
+
     private static ResourceLocation id(String value) {
         return new ResourceLocation(value);
     }

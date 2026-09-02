@@ -49,7 +49,7 @@ class ResearchWorkstationsPhaseEightTest {
         assertEquals(RECYCLER, ModItems.BLUEPRINT_RECYCLER_ITEM.getId());
         assertEquals(RECYCLER, ModMenus.BLUEPRINT_RECYCLER.getId());
         assertTrue(ResearchBenchPresentationPolicy.permanentFullscreen());
-        assertEquals("42", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("47", NetworkHandler.PROTOCOL_VERSION);
     }
 
     @Test
@@ -133,7 +133,7 @@ class ResearchWorkstationsPhaseEightTest {
         String validation = Files.readString(PROJECT.resolve("docs/release-validation.md"));
         String operations = Files.readString(PROJECT.resolve("docs/operations-and-migration.md"));
 
-        assertTrue(manual.contains("protocol other than `42`"));
+        assertTrue(manual.contains("protocol other than `47`"));
         assertFalse(manual.contains("protocol other than `20`"));
         assertTrue(manual.contains("does not certify any"));
         assertTrue(manual.contains("unchecked hands-on behavior below"));

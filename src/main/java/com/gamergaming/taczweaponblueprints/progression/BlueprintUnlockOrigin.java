@@ -7,16 +7,18 @@ package com.gamergaming.taczweaponblueprints.progression;
  * directly from an untrusted client payload.</p>
  */
 public enum BlueprintUnlockOrigin {
-    TREE_RESEARCH(true),
-    PHYSICAL_BLUEPRINT(true),
-    STARTING_GRANT(false),
-    ADMINISTRATOR(false),
-    MIGRATION(false);
+    TREE_RESEARCH(true, true),
+    PHYSICAL_BLUEPRINT(true, true),
+    STARTING_GRANT(false, false),
+    ADMINISTRATOR(false, true),
+    MIGRATION(false, false);
 
     private final boolean liveAwardsEligible;
+    private final boolean recentHistoryEligible;
 
-    BlueprintUnlockOrigin(boolean liveAwardsEligible) {
+    BlueprintUnlockOrigin(boolean liveAwardsEligible, boolean recentHistoryEligible) {
         this.liveAwardsEligible = liveAwardsEligible;
+        this.recentHistoryEligible = recentHistoryEligible;
     }
 
     /**
@@ -26,5 +28,10 @@ public enum BlueprintUnlockOrigin {
      */
     public boolean liveAwardsEligible() {
         return liveAwardsEligible;
+    }
+
+    /** Whether successful learning from this trusted origin appears in Recent. */
+    public boolean recentHistoryEligible() {
+        return recentHistoryEligible;
     }
 }

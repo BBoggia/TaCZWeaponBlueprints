@@ -302,11 +302,17 @@ public final class BlueprintLearningService {
         if (!committed.committed() || !committed.learnedChanged()) {
             return Result.failure(Status.TRANSACTION_FAILED, request.origin(), id);
         }
-        return Result.success(
+        Result result = Result.success(
                 request,
                 prepared.access,
                 committed.discoveredChanged(),
                 committed.legacyRecipeChanged());
+        RecentBlueprintUnlockHistory.record(
+                playerData,
+                request.origin(),
+                request.blueprintId(),
+                java.util.List.of(request.blueprintId()));
+        return result;
     }
 
     /**

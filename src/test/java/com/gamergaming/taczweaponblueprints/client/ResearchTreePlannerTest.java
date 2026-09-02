@@ -6,10 +6,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
+import com.gamergaming.taczweaponblueprints.progression.ResearchCostMode;
+import com.gamergaming.taczweaponblueprints.progression.ResearchGuidanceSnapshot;
+import com.gamergaming.taczweaponblueprints.progression.ResearchPathUnlockPlanner;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
 
@@ -241,6 +245,70 @@ class ResearchTreePlannerTest {
                 ResearchTreePlanner.plan(null, id("test:any"), 0));
         assertThrows(IllegalArgumentException.class, () ->
                 ResearchTreePlanner.plan(graph, id("test:any"), -1));
+    }
+
+    @Test
+    void authoritativePlanUsesTheServerSelectedOrEdgeInsteadOfClientInference() {
+        ResourceLocation left = id("test:left");
+        ResourceLocation right = id("test:right");
+        ResourceLocation target = id("test:target");
+        ResearchTreeGraph graph = ResearchTreeGraph.withRequirementGroups(
+                List.of(
+                        node(0, left, JournalVisibility.FULL,
+                                ResearchTreeGraph.Availability.AVAILABLE, 1, 0, 0),
+                        node(1, right, JournalVisibility.FULL,
+                                ResearchTreeGraph.Availability.AVAILABLE, 20, 0, 0),
+                        node(2, target, JournalVisibility.FULL,
+                                ResearchTreeGraph.Availability.PREREQUISITES_REQUIRED, 1, 0, 2)),
+                List.of(new ResearchTreeGraph.RequirementGroup(
+                        target, 0, List.of(left, right), 0, false)));
+        ResearchGuidanceSnapshot snapshot = new ResearchGuidanceSnapshot(
+                target,
+                ResearchGuidanceSnapshot.State.AFFORDABLE,
+                21,
+                100,
+                ResearchCostMode.POINTS_AND_ITEMS,
+                false,
+                true,
+                0,
+                List.of(),
+                List.of(right, target),
+                List.of(right, target),
+                List.of(new ResearchPathUnlockPlanner.SelectedRequirement(
+                        target, 0, right)),
+                Optional.of(right));
+
+        ResearchTreePlanner.Plan estimated = ResearchTreePlanner.plan(graph, target, 100)
+                .orElseThrow();
+        ResearchTreePlanner.Plan authoritative =
+                ResearchTreePlanner.authoritativePlan(graph, snapshot).orElseThrow();
+
+        assertEquals(Set.of(left, target), estimated.pathNodeIds());
+        assertEquals(Set.of(right, target), authoritative.pathNodeIds());
+        assertEquals(Set.of(new ResearchTreeGraph.Edge(right, target)),
+                authoritative.pathEdges());
+        assertEquals(right, authoritative.nextStepId().orElseThrow());
+        assertEquals(21L, authoritative.remainingPoints());
+    }
+
+    @Test
+    void terminalAuthorityFailureSuppressesTheTemporaryClientEstimate() {
+        ResourceLocation target = id("test:target");
+        ResearchTreeGraph graph = new ResearchTreeGraph(
+                List.of(node(
+                        0,
+                        target,
+                        JournalVisibility.FULL,
+                        ResearchTreeGraph.Availability.AVAILABLE,
+                        1,
+                        0,
+                        0)),
+                List.of());
+
+        assertTrue(ResearchTreePlanner.presentationPlan(
+                graph, target, 1, Optional.empty(), false).isPresent());
+        assertTrue(ResearchTreePlanner.presentationPlan(
+                graph, target, 1, Optional.empty(), true).isEmpty());
     }
 
     private static ResearchTreeGraph.Node node(

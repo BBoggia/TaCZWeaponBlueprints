@@ -12,6 +12,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
+import com.gamergaming.taczweaponblueprints.capabilities.RecentBlueprintUnlockBatch;
 import com.gamergaming.taczweaponblueprints.journal.BlueprintJournalEntry;
 import com.gamergaming.taczweaponblueprints.journal.BlueprintJournalSnapshot;
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
@@ -35,7 +36,17 @@ class SyncBlueprintJournalPacketTest {
                     false, false, false, false, false, 0, 0, 0, 0));
         }
         BlueprintJournalSnapshot snapshot = new BlueprintJournalSnapshot(
-                entries, List.of(), 25, 1_000_000, 0, 0, 0);
+                entries,
+                List.of(),
+                List.of(new BlueprintJournalSnapshot.RecentUnlockBatch(
+                        4L,
+                        RecentBlueprintUnlockBatch.Source.TREE_RESEARCH,
+                        new net.minecraft.resources.ResourceLocation("test:target"),
+                        List.of(
+                                new net.minecraft.resources.ResourceLocation("test:root"),
+                                new net.minecraft.resources.ResourceLocation("test:target")),
+                        2)),
+                25, 1_000_000, 0, 0, 0);
         List<SyncBlueprintJournalPacket> packets = SyncBlueprintJournalPacket.split(snapshot, 55L);
         assertTrue(packets.size() > 1);
 

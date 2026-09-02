@@ -18,6 +18,7 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
 /** Read-only presentation of the server-authored, disclosure-filtered Journal. */
@@ -27,12 +28,14 @@ public final class BlueprintJournalScreen extends Screen {
     private static final int CONTROL_HEIGHT = 20;
     private static final int PANEL_PADDING = 10;
     private static final int WIDE_THRESHOLD = 520;
+    private static final int MAX_RECENT_DETAIL_MEMBERS = 8;
     private static final ResearchTreeGuidancePreference ONBOARDING_PREFERENCE =
             ResearchTreeGuidancePreference.client();
 
     private BlueprintJournalSnapshot snapshot = BlueprintJournalSnapshot.EMPTY;
     private BlueprintJournalQuery.Result result;
     private BlueprintJournalQuery.HistoryResult historyResult;
+    private BlueprintJournalQuery.RecentResult recentResult;
     private final List<AbstractWidget> rowWidgets = new ArrayList<>();
     private final List<Row> rows = new ArrayList<>();
 
@@ -51,9 +54,10 @@ public final class BlueprintJournalScreen extends Screen {
     private List<String> categories = List.of();
     private int categoryIndex = -1;
     private int page;
-    private boolean historyView;
+    private JournalView view = JournalView.CURRENT;
     private BlueprintJournalEntry selectedEntry;
     private BlueprintJournalSnapshot.HistoryEntry selectedHistory;
+    private BlueprintJournalSnapshot.RecentUnlockBatch selectedRecent;
     private boolean onboardingView;
     private boolean onboardingInitialized;
 
@@ -124,10 +128,11 @@ public final class BlueprintJournalScreen extends Screen {
             resetAndRefresh();
         }).bounds(left, panelY + 85, half, CONTROL_HEIGHT).build());
         viewButton = addRenderableWidget(Button.builder(viewLabel(), ignored -> {
-            historyView = !historyView;
+            view = view.next(snapshot);
             page = 0;
             selectedEntry = null;
             selectedHistory = null;
+            selectedRecent = null;
             updateControlState();
             refreshRows();
         }).bounds(left + half + 4, panelY + 85, half, CONTROL_HEIGHT).build());
@@ -156,10 +161,10 @@ public final class BlueprintJournalScreen extends Screen {
     }
 
     private void updateControlState() {
-        statusButton.active = !historyView;
-        categoryButton.active = !historyView && !categories.isEmpty();
-        sortButton.active = !historyView;
-        viewButton.active = historyView || !snapshot.unavailableHistory().isEmpty();
+        statusButton.active = view == JournalView.CURRENT;
+        categoryButton.active = view == JournalView.CURRENT && !categories.isEmpty();
+        sortButton.active = view == JournalView.CURRENT;
+        viewButton.active = view.availableViewCount(snapshot) > 1;
         viewButton.setMessage(viewLabel());
         boolean compactDetails = compactDetailsOpen();
         boolean browseVisible = !onboardingView && !compactDetails;
@@ -185,6 +190,7 @@ public final class BlueprintJournalScreen extends Screen {
         page = 0;
         selectedEntry = null;
         selectedHistory = null;
+        selectedRecent = null;
         refreshRows();
     }
 
@@ -208,12 +214,19 @@ public final class BlueprintJournalScreen extends Screen {
 
         int pageSize = Math.max(1, (listBottom - listTop) / ROW_HEIGHT);
         String search = searchBox == null ? "" : searchBox.getValue();
-        if (historyView) {
+        if (view == JournalView.UNAVAILABLE) {
             historyResult = BlueprintJournalQuery.queryHistory(
                     snapshot.unavailableHistory(), search, page, pageSize);
             page = historyResult.page();
             for (BlueprintJournalSnapshot.HistoryEntry entry : historyResult.entries()) {
                 addHistoryRow(entry);
+            }
+        } else if (view == JournalView.RECENT) {
+            recentResult = BlueprintJournalQuery.queryRecent(
+                    snapshot.recentUnlocks(), search, page, pageSize, this::recentName);
+            page = recentResult.page();
+            for (BlueprintJournalSnapshot.RecentUnlockBatch entry : recentResult.entries()) {
+                addRecentRow(entry);
             }
         } else {
             result = BlueprintJournalQuery.query(
@@ -239,6 +252,7 @@ public final class BlueprintJournalScreen extends Screen {
         Button button = Button.builder(message, ignored -> {
             selectedEntry = entry;
             selectedHistory = null;
+            selectedRecent = null;
             updateControlState();
             if (compactDetailsOpen()) {
                 setInitialFocus(backButton);
@@ -260,6 +274,28 @@ public final class BlueprintJournalScreen extends Screen {
         Button button = Button.builder(message, ignored -> {
             selectedHistory = entry;
             selectedEntry = null;
+            selectedRecent = null;
+            updateControlState();
+            if (compactDetailsOpen()) {
+                setInitialFocus(backButton);
+            }
+            triggerImmediateNarration(true);
+        }).bounds(panelX + PANEL_PADDING, y, listWidth, ROW_HEIGHT - 2).build();
+        addRenderableWidget(button);
+        rowWidgets.add(button);
+        rows.add(new Row(button, null));
+    }
+
+    private void addRecentRow(BlueprintJournalSnapshot.RecentUnlockBatch entry) {
+        int y = listTop + rows.size() * ROW_HEIGHT;
+        Component message = Component.translatable(
+                "gui.taczweaponblueprints.journal.recent.row",
+                recentName(entry.targetBlueprintId()),
+                entry.totalMemberCount());
+        Button button = Button.builder(message, ignored -> {
+            selectedRecent = entry;
+            selectedEntry = null;
+            selectedHistory = null;
             updateControlState();
             if (compactDetailsOpen()) {
                 setInitialFocus(backButton);
@@ -272,16 +308,17 @@ public final class BlueprintJournalScreen extends Screen {
     }
 
     private void updatePagerState() {
-        int pageCount = historyView ? historyResult.pageCount() : result.pageCount();
+        int pageCount = activePageCount();
         previousButton.active = page > 0;
         nextButton.active = page + 1 < pageCount;
     }
 
     private void changePage(int direction) {
-        int pageCount = historyView ? historyResult.pageCount() : result.pageCount();
+        int pageCount = activePageCount();
         page = Math.max(0, Math.min(page + direction, pageCount - 1));
         selectedEntry = null;
         selectedHistory = null;
+        selectedRecent = null;
         refreshRows();
     }
 
@@ -296,11 +333,12 @@ public final class BlueprintJournalScreen extends Screen {
             String previousCategory = selectedCategory();
             categories = BlueprintJournalQuery.categories(snapshot.entries());
             categoryIndex = categories.indexOf(previousCategory);
-            if (historyView && snapshot.unavailableHistory().isEmpty()) {
-                historyView = false;
+            if (!view.available(snapshot)) {
+                view = JournalView.CURRENT;
             }
             selectedEntry = null;
             selectedHistory = null;
+            selectedRecent = null;
             updateControlState();
             categoryButton.setMessage(categoryLabel());
             refreshRows();
@@ -430,11 +468,13 @@ public final class BlueprintJournalScreen extends Screen {
                 panelX + PANEL_PADDING, listTop - 2,
                 panelX + PANEL_PADDING + listWidth, listBottom,
                 0x80202730);
-        int matches = historyView ? historyResult.totalMatches() : result.totalMatches();
+        int matches = activeTotalMatches();
         if (matches == 0) {
             String emptyKey;
-            if (historyView) {
+            if (view == JournalView.UNAVAILABLE) {
                 emptyKey = "gui.taczweaponblueprints.journal.history.empty";
+            } else if (view == JournalView.RECENT) {
+                emptyKey = "gui.taczweaponblueprints.journal.recent.empty";
             } else if (snapshot.entries().isEmpty()) {
                 emptyKey = "gui.taczweaponblueprints.journal.unavailable";
             } else {
@@ -460,7 +500,7 @@ public final class BlueprintJournalScreen extends Screen {
     }
 
     private void renderPagerLabel(GuiGraphics graphics) {
-        int pageCount = historyView ? historyResult.pageCount() : result.pageCount();
+        int pageCount = activePageCount();
         Component label = Component.translatable(
                 "gui.taczweaponblueprints.journal.page", page + 1, pageCount);
         graphics.drawCenteredString(
@@ -488,6 +528,8 @@ public final class BlueprintJournalScreen extends Screen {
             renderEntryDetails(graphics, x + 8, panelY + 66, detailWidth - 16, selectedEntry);
         } else if (selectedHistory != null) {
             renderHistoryDetails(graphics, x + 8, panelY + 66, detailWidth - 16, selectedHistory);
+        } else if (selectedRecent != null) {
+            renderRecentDetails(graphics, x + 8, panelY + 66, detailWidth - 16, selectedRecent);
         } else {
             graphics.drawWordWrap(
                     font,
@@ -576,6 +618,45 @@ public final class BlueprintJournalScreen extends Screen {
                         : "gui.taczweaponblueprints.journal.status.discovered"));
     }
 
+    private void renderRecentDetails(
+            GuiGraphics graphics,
+            int x,
+            int y,
+            int detailWidth,
+            BlueprintJournalSnapshot.RecentUnlockBatch entry) {
+        Component target = Component.translatable(
+                "gui.taczweaponblueprints.journal.recent.target",
+                recentName(entry.targetBlueprintId()));
+        graphics.drawWordWrap(font, target, x, y, detailWidth, 0xFFE4C56A);
+        int line = y + Math.max(1, font.split(target, detailWidth).size()) * font.lineHeight + 4;
+        line = detailLine(graphics, x, line, detailWidth,
+                Component.translatable("gui.taczweaponblueprints.journal.recent.source"),
+                recentSourceName(entry));
+        line = detailLine(graphics, x, line, detailWidth,
+                Component.translatable("gui.taczweaponblueprints.journal.recent.unlocked"),
+                Component.literal(Integer.toString(entry.totalMemberCount())));
+        line += 4;
+        graphics.drawString(font,
+                Component.translatable("gui.taczweaponblueprints.journal.recent.members"),
+                x, line, 0xFFCCCCCC);
+        line += font.lineHeight + 2;
+        List<ResourceLocation> displayedMembers = entry.memberBlueprintIds().stream()
+                .limit(MAX_RECENT_DETAIL_MEMBERS)
+                .toList();
+        for (ResourceLocation member : displayedMembers) {
+            Component memberName = Component.literal("• ").append(Component.literal(recentName(member)));
+            graphics.drawWordWrap(font, memberName, x, line, detailWidth, 0xFFFFFFFF);
+            line += Math.max(1, font.split(memberName, detailWidth).size()) * font.lineHeight + 1;
+        }
+        int undisplayed = entry.totalMemberCount() - displayedMembers.size();
+        if (undisplayed > 0) {
+            Component more = Component.translatable(
+                    "gui.taczweaponblueprints.journal.recent.more",
+                    undisplayed);
+            graphics.drawWordWrap(font, more, x, line, detailWidth, 0xFFAAAAAA);
+        }
+    }
+
     private int detailLine(
             GuiGraphics graphics,
             int x,
@@ -660,9 +741,43 @@ public final class BlueprintJournalScreen extends Screen {
     }
 
     private Component viewLabel() {
-        return Component.translatable(historyView
-                ? "gui.taczweaponblueprints.journal.view.current"
-                : "gui.taczweaponblueprints.journal.view.history");
+        return Component.translatable(
+                "gui.taczweaponblueprints.journal.view",
+                Component.translatable("gui.taczweaponblueprints.journal.view."
+                        + view.name().toLowerCase(Locale.ROOT)));
+    }
+
+    private String recentName(ResourceLocation id) {
+        if (id == null) {
+            return "";
+        }
+        return snapshot.entries().stream()
+                .filter(entry -> entry.blueprintId().filter(id::equals).isPresent())
+                .findFirst()
+                .map(this::resolvedName)
+                .filter(name -> !name.isBlank())
+                .orElse(id.toString());
+    }
+
+    private Component recentSourceName(BlueprintJournalSnapshot.RecentUnlockBatch batch) {
+        return Component.translatable("gui.taczweaponblueprints.journal.recent.source."
+                + batch.source().name().toLowerCase(Locale.ROOT));
+    }
+
+    private int activePageCount() {
+        return switch (view) {
+            case CURRENT -> result.pageCount();
+            case RECENT -> recentResult.pageCount();
+            case UNAVAILABLE -> historyResult.pageCount();
+        };
+    }
+
+    private int activeTotalMatches() {
+        return switch (view) {
+            case CURRENT -> result.totalMatches();
+            case RECENT -> recentResult.totalMatches();
+            case UNAVAILABLE -> historyResult.totalMatches();
+        };
     }
 
     private Component categoryName(String category) {
@@ -716,6 +831,13 @@ public final class BlueprintJournalScreen extends Screen {
                             ? "gui.taczweaponblueprints.journal.status.learned"
                             : "gui.taczweaponblueprints.journal.status.discovered"));
         }
+        if (selectedRecent != null) {
+            return Component.translatable(
+                    "gui.taczweaponblueprints.journal.recent.narration",
+                    recentName(selectedRecent.targetBlueprintId()),
+                    selectedRecent.totalMemberCount(),
+                    recentSourceName(selectedRecent));
+        }
         return super.getNarrationMessage();
     }
 
@@ -765,12 +887,14 @@ public final class BlueprintJournalScreen extends Screen {
     }
 
     private boolean compactDetailsOpen() {
-        return panelWidth < WIDE_THRESHOLD && (selectedEntry != null || selectedHistory != null);
+        return panelWidth < WIDE_THRESHOLD
+                && (selectedEntry != null || selectedHistory != null || selectedRecent != null);
     }
 
     private void closeCompactDetails() {
         selectedEntry = null;
         selectedHistory = null;
+        selectedRecent = null;
         updateControlState();
         setInitialFocus(searchBox);
     }
@@ -796,5 +920,38 @@ public final class BlueprintJournalScreen extends Screen {
     }
 
     private record Row(Button button, BlueprintJournalEntry entry) {
+    }
+
+    private enum JournalView {
+        CURRENT,
+        RECENT,
+        UNAVAILABLE;
+
+        private JournalView next(BlueprintJournalSnapshot snapshot) {
+            JournalView candidate = this;
+            do {
+                candidate = values()[(candidate.ordinal() + 1) % values().length];
+            } while (!candidate.available(snapshot) && candidate != this);
+            return candidate;
+        }
+
+        private boolean available(BlueprintJournalSnapshot snapshot) {
+            return switch (this) {
+                case CURRENT -> true;
+                case RECENT -> snapshot != null && !snapshot.recentUnlocks().isEmpty();
+                case UNAVAILABLE -> snapshot != null && !snapshot.unavailableHistory().isEmpty();
+            };
+        }
+
+        private int availableViewCount(BlueprintJournalSnapshot snapshot) {
+            int count = 1;
+            if (snapshot != null && !snapshot.recentUnlocks().isEmpty()) {
+                count++;
+            }
+            if (snapshot != null && !snapshot.unavailableHistory().isEmpty()) {
+                count++;
+            }
+            return count;
+        }
     }
 }

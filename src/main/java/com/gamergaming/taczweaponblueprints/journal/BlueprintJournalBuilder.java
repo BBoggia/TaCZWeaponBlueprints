@@ -155,9 +155,22 @@ public final class BlueprintJournalBuilder {
                         id,
                         playerData.hasBlueprint(id.toString())))
                 .toList();
+        List<BlueprintJournalSnapshot.RecentUnlockBatch> recentUnlocks =
+                playerData.getRecentUnlockBatches().stream()
+                        .map(batch -> new BlueprintJournalSnapshot.RecentUnlockBatch(
+                                batch.sequence(),
+                                batch.source(),
+                                ResourceLocation.tryParse(batch.targetBlueprintId()),
+                                batch.memberBlueprintIds().stream()
+                                        .map(ResourceLocation::tryParse)
+                                        .filter(java.util.Objects::nonNull)
+                                        .toList(),
+                                batch.totalMemberCount()))
+                        .toList();
         return new BlueprintJournalSnapshot(
                 entries,
                 history,
+                recentUnlocks,
                 playerData.getResearchPoints(),
                 config.pointCap(),
                 learned,

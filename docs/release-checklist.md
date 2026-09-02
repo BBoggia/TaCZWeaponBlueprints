@@ -42,6 +42,9 @@ Build and certify the exact release candidate:
   smoke tests in [Operations and migration](operations-and-migration.md).
 - Confirm `build/reports/release-candidate.json` describes the exact JAR in
   `build/libs` and records the expected version and SHA-256 digest.
+- Confirm `build/reports/research-guidance-candidate-handoff.json` references
+  the same JAR digest and remains marked `requires_manual_qa` until the linked
+  Research Tree runtime checks are completed.
 - Inspect the JAR for development files, local paths, logs, and editor output.
 - Run the release build again after any source, resource, metadata, or
   documentation correction that affects the candidate.

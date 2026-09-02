@@ -1,7 +1,9 @@
 package com.gamergaming.taczweaponblueprints.capabilities;
 
 import java.util.Collection;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.TreeSet;
@@ -23,13 +25,22 @@ public class PlayerRecipeData implements IPlayerRecipeData {
     private static final String DISCOVERED_BLUEPRINTS_TAG = "DiscoveredBlueprints";
     private static final String RESEARCH_POINTS_TAG = "ResearchPoints";
     private static final String RESEARCH_POINT_AWARDS_TAG = "ResearchPointAwards";
+    private static final String RECENT_UNLOCKS_TAG = "RecentUnlocks";
+    private static final String RECENT_UNLOCK_SEQUENCE_TAG = "RecentUnlockSequence";
+    private static final String SEQUENCE_TAG = "Sequence";
+    private static final String SOURCE_TAG = "Source";
+    private static final String TARGET_TAG = "Target";
+    private static final String MEMBERS_TAG = "Members";
+    private static final String TOTAL_MEMBERS_TAG = "TotalMembers";
 
     private final Set<String> learnedRecipes = new LinkedHashSet<>();
     private final Set<String> learnedBlueprints = new LinkedHashSet<>();
     private final Set<String> discoveredBlueprints = new LinkedHashSet<>();
     private final ResearchPointAwardLedger researchPointAwardLedger =
             new ResearchPointAwardLedger();
+    private final List<RecentBlueprintUnlockBatch> recentUnlockBatches = new ArrayList<>();
     private int researchPoints;
+    private long recentUnlockSequence;
 
     /**
      * Creates a detached, progression-free copy of the RP balance and award
@@ -71,6 +82,11 @@ public class PlayerRecipeData implements IPlayerRecipeData {
     @Override
     public ResearchPointAwardLedger getResearchPointAwardLedger() {
         return researchPointAwardLedger;
+    }
+
+    @Override
+    public List<RecentBlueprintUnlockBatch> getRecentUnlockBatches() {
+        return List.copyOf(recentUnlockBatches);
     }
 
     @Override
@@ -255,6 +271,56 @@ public class PlayerRecipeData implements IPlayerRecipeData {
     }
 
     @Override
+    public synchronized boolean recordRecentUnlockBatch(
+            RecentBlueprintUnlockBatch.Source source,
+            String targetBlueprintId,
+            Collection<String> memberBlueprintIds) {
+        String target = normalizeResourceId(targetBlueprintId);
+        if (source == null || target == null || memberBlueprintIds == null
+                || memberBlueprintIds.isEmpty()
+                || memberBlueprintIds.size() > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION) {
+            return false;
+        }
+        LinkedHashSet<String> normalizedMembers = new LinkedHashSet<>();
+        for (String member : memberBlueprintIds) {
+            String normalized = normalizeResourceId(member);
+            if (normalized == null) {
+                return false;
+            }
+            normalizedMembers.add(normalized);
+        }
+        if (!normalizedMembers.contains(target)) {
+            return false;
+        }
+        int totalMembers = normalizedMembers.size();
+        List<String> retained = new ArrayList<>(
+                Math.min(totalMembers, PlayerProgressionLimits.MAX_RECENT_UNLOCK_MEMBERS_PER_BATCH));
+        for (String member : normalizedMembers) {
+            if (retained.size()
+                    >= PlayerProgressionLimits.MAX_RECENT_UNLOCK_MEMBERS_PER_BATCH) {
+                break;
+            }
+            retained.add(member);
+        }
+        if (!retained.contains(target)) {
+            retained.set(retained.size() - 1, target);
+        }
+        if (recentUnlockSequence == Long.MAX_VALUE) {
+            rebaseRecentUnlockSequences();
+        }
+        recentUnlockBatches.add(new RecentBlueprintUnlockBatch(
+                ++recentUnlockSequence, source, target, retained, totalMembers));
+        trimRecentUnlockHistory();
+        return true;
+    }
+
+    @Override
+    public synchronized void clearRecentUnlockHistory() {
+        recentUnlockBatches.clear();
+        recentUnlockSequence = 0L;
+    }
+
+    @Override
     public void replaceRecipes(Collection<String> recipeIds) {
         Collection<String> snapshot = boundedNormalizedSnapshot(recipeIds);
         learnedRecipes.clear();
@@ -306,6 +372,18 @@ public class PlayerRecipeData implements IPlayerRecipeData {
         nbt.put(DISCOVERED_BLUEPRINTS_TAG, writeSortedIds(discoveredBlueprints));
         nbt.putInt(RESEARCH_POINTS_TAG, researchPoints);
         nbt.put(RESEARCH_POINT_AWARDS_TAG, researchPointAwardLedger.serializeNBT());
+        nbt.putLong(RECENT_UNLOCK_SEQUENCE_TAG, recentUnlockSequence);
+        ListTag recentUnlocks = new ListTag();
+        for (RecentBlueprintUnlockBatch batch : recentUnlockBatches) {
+            CompoundTag value = new CompoundTag();
+            value.putLong(SEQUENCE_TAG, batch.sequence());
+            value.putString(SOURCE_TAG, batch.source().name());
+            value.putString(TARGET_TAG, batch.targetBlueprintId());
+            value.put(MEMBERS_TAG, writeIds(batch.memberBlueprintIds()));
+            value.putInt(TOTAL_MEMBERS_TAG, batch.totalMemberCount());
+            recentUnlocks.add(value);
+        }
+        nbt.put(RECENT_UNLOCKS_TAG, recentUnlocks);
         return nbt;
     }
 
@@ -315,6 +393,8 @@ public class PlayerRecipeData implements IPlayerRecipeData {
         learnedBlueprints.clear();
         discoveredBlueprints.clear();
         researchPointAwardLedger.clear();
+        recentUnlockBatches.clear();
+        recentUnlockSequence = 0L;
         researchPoints = 0;
         if (nbt == null) {
             return;
@@ -345,6 +425,9 @@ public class PlayerRecipeData implements IPlayerRecipeData {
         }
         if (dataVersion >= 2 && nbt.contains(RESEARCH_POINT_AWARDS_TAG, Tag.TAG_COMPOUND)) {
             researchPointAwardLedger.deserializeNBT(nbt.getCompound(RESEARCH_POINT_AWARDS_TAG));
+        }
+        if (dataVersion >= 3) {
+            readRecentUnlockHistory(nbt);
         }
 
     }
@@ -390,6 +473,95 @@ public class PlayerRecipeData implements IPlayerRecipeData {
             list.add(StringTag.valueOf(value));
         }
         return list;
+    }
+
+    private static ListTag writeIds(Collection<String> values) {
+        ListTag list = new ListTag();
+        values.forEach(value -> list.add(StringTag.valueOf(value)));
+        return list;
+    }
+
+    private void readRecentUnlockHistory(CompoundTag nbt) {
+        if (!nbt.contains(RECENT_UNLOCKS_TAG, Tag.TAG_LIST)) {
+            return;
+        }
+        ListTag list = nbt.getList(RECENT_UNLOCKS_TAG, Tag.TAG_COMPOUND);
+        int start = Math.max(0, list.size() - PlayerProgressionLimits.MAX_RECENT_UNLOCK_BATCHES);
+        long previousSequence = 0L;
+        for (int index = start; index < list.size(); index++) {
+            CompoundTag value = list.getCompound(index);
+            long sequence = value.getLong(SEQUENCE_TAG);
+            String target = normalizeResourceId(value.getString(TARGET_TAG));
+            RecentBlueprintUnlockBatch.Source source;
+            try {
+                source = RecentBlueprintUnlockBatch.Source.valueOf(value.getString(SOURCE_TAG));
+            } catch (IllegalArgumentException exception) {
+                continue;
+            }
+            if (sequence <= previousSequence || target == null) {
+                continue;
+            }
+            LinkedHashSet<String> members = new LinkedHashSet<>();
+            ListTag memberTags = value.getList(MEMBERS_TAG, Tag.TAG_STRING);
+            int membersToInspect = Math.min(
+                    memberTags.size(),
+                    PlayerProgressionLimits.MAX_RECENT_UNLOCK_MEMBERS_PER_BATCH);
+            for (int memberIndex = 0; memberIndex < membersToInspect; memberIndex++) {
+                String member = normalizeResourceId(memberTags.getString(memberIndex));
+                if (member != null) {
+                    members.add(member);
+                }
+            }
+            if (!members.contains(target) || members.isEmpty()) {
+                continue;
+            }
+            int totalMembers = Math.min(
+                    PlayerProgressionLimits.MAX_IDS_PER_COLLECTION,
+                    Math.max(
+                    members.size(),
+                    value.contains(TOTAL_MEMBERS_TAG, Tag.TAG_ANY_NUMERIC)
+                            ? value.getInt(TOTAL_MEMBERS_TAG)
+                            : members.size()));
+            recentUnlockBatches.add(new RecentBlueprintUnlockBatch(
+                    sequence, source, target, List.copyOf(members), totalMembers));
+            previousSequence = sequence;
+        }
+        long persistedSequence = nbt.contains(RECENT_UNLOCK_SEQUENCE_TAG, Tag.TAG_ANY_NUMERIC)
+                ? Math.max(0L, nbt.getLong(RECENT_UNLOCK_SEQUENCE_TAG))
+                : 0L;
+        recentUnlockSequence = Math.max(
+                persistedSequence,
+                recentUnlockBatches.isEmpty()
+                        ? 0L
+                        : recentUnlockBatches.get(recentUnlockBatches.size() - 1).sequence());
+        trimRecentUnlockHistory();
+    }
+
+    private void trimRecentUnlockHistory() {
+        int memberIds = recentUnlockBatches.stream()
+                .mapToInt(batch -> batch.memberBlueprintIds().size())
+                .sum();
+        while (recentUnlockBatches.size() > PlayerProgressionLimits.MAX_RECENT_UNLOCK_BATCHES
+                || memberIds > PlayerProgressionLimits.MAX_RECENT_UNLOCK_MEMBER_IDS) {
+            RecentBlueprintUnlockBatch removed = recentUnlockBatches.remove(0);
+            memberIds -= removed.memberBlueprintIds().size();
+        }
+    }
+
+    private void rebaseRecentUnlockSequences() {
+        List<RecentBlueprintUnlockBatch> rebased = new ArrayList<>(recentUnlockBatches.size());
+        long sequence = 0L;
+        for (RecentBlueprintUnlockBatch batch : recentUnlockBatches) {
+            rebased.add(new RecentBlueprintUnlockBatch(
+                    ++sequence,
+                    batch.source(),
+                    batch.targetBlueprintId(),
+                    batch.memberBlueprintIds(),
+                    batch.totalMemberCount()));
+        }
+        recentUnlockBatches.clear();
+        recentUnlockBatches.addAll(rebased);
+        recentUnlockSequence = sequence;
     }
 
     private static Set<String> readSortedIds(CompoundTag nbt, String key) {

@@ -21,6 +21,7 @@ import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchI
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchPolicy;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchSnapshot;
 import com.gamergaming.taczweaponblueprints.resource.research.ResearchPrerequisiteGroup;
+import com.gamergaming.taczweaponblueprints.resource.research.ResearchRequirements;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
@@ -178,9 +179,7 @@ public final class ResearchPathUnlockPlanner {
                 } catch (RouteComplexityException exception) {
                     return Result.failure(BlueprintResearchService.Status.ROUTE_TOO_COMPLEX);
                 }
-                return mandatory.successful()
-                        ? Result.success(mandatory.plan().orElseThrow())
-                        : Result.failure(mandatory.status());
+                return finishIndexedResult(graph, mandatory.status(), mandatory.plan(), budget);
             }
             if (graph.shape() == ResolvedResearchPathGraph.GraphShape.OR_PATH_DAG) {
                 OrPathResearchSolver.Result orPath =
@@ -190,9 +189,7 @@ public final class ResearchPathUnlockPlanner {
                 } catch (RouteComplexityException exception) {
                     return Result.failure(BlueprintResearchService.Status.ROUTE_TOO_COMPLEX);
                 }
-                return orPath.successful()
-                        ? Result.success(orPath.plan().orElseThrow())
-                        : Result.failure(orPath.status());
+                return finishIndexedResult(graph, orPath.status(), orPath.plan(), budget);
             }
             if (graph.shape()
                     == ResolvedResearchPathGraph.GraphShape.SEPARABLE_AND_OR_DAG) {
@@ -204,9 +201,7 @@ public final class ResearchPathUnlockPlanner {
                 } catch (RouteComplexityException exception) {
                     return Result.failure(BlueprintResearchService.Status.ROUTE_TOO_COMPLEX);
                 }
-                return separable.successful()
-                        ? Result.success(separable.plan().orElseThrow())
-                        : Result.failure(separable.status());
+                return finishIndexedResult(graph, separable.status(), separable.plan(), budget);
             }
             if (graph.shape()
                     == ResolvedResearchPathGraph.GraphShape.GENERAL_AND_OR_DAG) {
@@ -250,9 +245,7 @@ public final class ResearchPathUnlockPlanner {
                         ResearchPathComplexityMemo.forget(memoKey);
                     }
                 }
-                return general.successful()
-                        ? Result.success(general.plan().orElseThrow())
-                        : Result.failure(general.status());
+                return finishIndexedResult(graph, general.status(), general.plan(), budget);
             }
         }
         Planner planner;
@@ -318,6 +311,121 @@ public final class ResearchPathUnlockPlanner {
                 ResolvedResearchPathGraph.MAX_CLASSIFICATION_BIT_WORDS,
                 BlueprintResearchSnapshot.MAX_PREREQUISITE_DEPTH,
                 limits.emergencyTimeoutNanos());
+    }
+
+    private static Result finishIndexedResult(
+            ResolvedResearchPathGraph.Graph graph,
+            BlueprintResearchService.Status status,
+            Optional<Plan> plan,
+            PlanningBudget budget) {
+        if (status != BlueprintResearchService.Status.SUCCESS || plan.isEmpty()) {
+            return Result.failure(status);
+        }
+        try {
+            Plan selected = plan.orElseThrow();
+            SelectedUnlockSolution solution = withSelectedRequirements(
+                    graph, selected.solution(), budget);
+            budget.checkDeadline();
+            return Result.success(new Plan(solution, selected.quote()));
+        } catch (RouteComplexityException exception) {
+            return Result.failure(BlueprintResearchService.Status.ROUTE_TOO_COMPLEX);
+        } catch (IllegalArgumentException exception) {
+            return Result.failure(BlueprintResearchService.Status.POLICY_INELIGIBLE);
+        }
+    }
+
+    /**
+     * Derives one canonical prerequisite proof from the solver's selected support
+     * closure. Solvers remain free to optimize closures without retaining search
+     * predecessors, while consumers receive the exact stable edges that prove the
+     * returned route.
+     */
+    private static SelectedUnlockSolution withSelectedRequirements(
+            ResolvedResearchPathGraph.Graph graph,
+            SelectedUnlockSolution solution,
+            PlanningBudget budget) {
+        LinkedHashSet<ResourceLocation> support = new LinkedHashSet<>(solution.supportIds());
+        Comparator<ResourceLocation> canonical = Comparator.comparing(ResourceLocation::toString);
+
+        // The graph's topological order is prerequisite-first. Walking it in reverse lets a
+        // connected learned prerequisite be added by a dependent before that prerequisite is
+        // visited, so its own ancestry is included in the same proof without recursion.
+        List<Integer> topologicalOrder = graph.topologicalOrder();
+        for (int position = topologicalOrder.size() - 1; position >= 0; position--) {
+            ResolvedResearchPathGraph.Node node = graph.nodes().get(
+                    topologicalOrder.get(position));
+            if (!support.contains(node.blueprintId())) {
+                continue;
+            }
+            for (ResolvedResearchPathGraph.RequirementGroup group : node.groups()) {
+                if (!requiresSelectedProof(group)) {
+                    continue;
+                }
+                ResourceLocation prerequisiteId = selectedPrerequisiteId(
+                        graph, group, support, canonical);
+                if (support.add(prerequisiteId)) {
+                    budget.countClosureReferences(1L);
+                }
+            }
+        }
+
+        List<SelectedRequirement> selected = new ArrayList<>();
+        for (int nodeIndex : graph.topologicalOrder()) {
+            ResolvedResearchPathGraph.Node node = graph.nodes().get(nodeIndex);
+            if (!support.contains(node.blueprintId())) {
+                continue;
+            }
+            for (int groupOrdinal = 0; groupOrdinal < node.groups().size(); groupOrdinal++) {
+                ResolvedResearchPathGraph.RequirementGroup group = node.groups().get(groupOrdinal);
+                if (!requiresSelectedProof(group)) {
+                    continue;
+                }
+                ResourceLocation prerequisiteId = selectedPrerequisiteId(
+                        graph, group, support, canonical);
+                selected.add(new SelectedRequirement(
+                        node.blueprintId(), groupOrdinal, prerequisiteId));
+                budget.countCanonicalWork(1L);
+            }
+        }
+        List<ResourceLocation> orderedSupport = graph.topologicalOrder().stream()
+                .map(index -> graph.nodes().get(index).blueprintId())
+                .filter(support::contains)
+                .toList();
+        if (orderedSupport.size() != support.size()) {
+            throw new IllegalArgumentException(
+                    "selected route contains support outside the resolved graph");
+        }
+        return new SelectedUnlockSolution(
+                orderedSupport, solution.nodes(), selected);
+    }
+
+    private static boolean requiresSelectedProof(
+            ResolvedResearchPathGraph.RequirementGroup group) {
+        return group.state()
+                        == ResolvedResearchPathGraph.GroupState.REQUIRES_ALTERNATIVE_SELECTION
+                || group.state()
+                        == ResolvedResearchPathGraph.GroupState.SATISFIED_BY_CONNECTED_SUPPORT;
+    }
+
+    private static ResourceLocation selectedPrerequisiteId(
+            ResolvedResearchPathGraph.Graph graph,
+            ResolvedResearchPathGraph.RequirementGroup group,
+            Set<ResourceLocation> support,
+            Comparator<ResourceLocation> canonical) {
+        boolean requiresSelection = group.state()
+                == ResolvedResearchPathGraph.GroupState.REQUIRES_ALTERNATIVE_SELECTION;
+        return group.alternatives().stream()
+                .filter(ResolvedResearchPathGraph.Alternative::usable)
+                .map(alternative -> graph.nodes().get(alternative.nodeIndex()))
+                .filter(alternative -> requiresSelection
+                        ? support.contains(alternative.blueprintId())
+                        : alternative.state()
+                                == ResolvedResearchPathGraph.NodeState.LEARNED_CONNECTED
+                                && alternative.connected())
+                .map(ResolvedResearchPathGraph.Node::blueprintId)
+                .min(canonical)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "selected route does not prove a requirement group"));
     }
 
     private static Result selectPlan(
@@ -877,14 +985,19 @@ public final class ResearchPathUnlockPlanner {
     /** The player-state-specific support proof and ordered nodes selected for purchase. */
     public record SelectedUnlockSolution(
             List<ResourceLocation> supportIds,
-            List<PlannedNode> nodes) {
+            List<PlannedNode> nodes,
+            List<SelectedRequirement> selectedRequirements) {
         public SelectedUnlockSolution {
             supportIds = supportIds == null
                     ? List.of()
                     : List.copyOf(supportIds);
             nodes = nodes == null ? List.of() : List.copyOf(nodes);
+            selectedRequirements = selectedRequirements == null
+                    ? List.of()
+                    : List.copyOf(selectedRequirements);
             Set<ResourceLocation> support = new LinkedHashSet<>();
             Set<ResourceLocation> purchases = new LinkedHashSet<>();
+            Set<String> selectedGroups = new LinkedHashSet<>();
             if (nodes.isEmpty()
                     || nodes.size() > MAX_UNLOCKS_PER_PURCHASE
                     || supportIds.isEmpty()
@@ -894,9 +1007,24 @@ public final class ResearchPathUnlockPlanner {
                     || nodes.stream().anyMatch(java.util.Objects::isNull)
                     || nodes.stream().anyMatch(node -> node.policy().learned())
                     || nodes.stream().anyMatch(node -> !purchases.add(node.blueprintId()))
-                    || !support.containsAll(purchases)) {
+                    || !support.containsAll(purchases)
+                    || selectedRequirements.size()
+                            > BlueprintResearchSnapshot.MAX_TOTAL_PREREQUISITES
+                    || selectedRequirements.stream().anyMatch(java.util.Objects::isNull)
+                    || selectedRequirements.stream().anyMatch(requirement ->
+                            !support.contains(requirement.dependentId())
+                                    || !support.contains(requirement.prerequisiteId())
+                                    || !selectedGroups.add(
+                                            requirement.dependentId() + "\u0000"
+                                                    + requirement.groupOrdinal()))) {
                 throw new IllegalArgumentException("invalid selected research unlock solution");
             }
+        }
+
+        public SelectedUnlockSolution(
+                List<ResourceLocation> supportIds,
+                List<PlannedNode> nodes) {
+            this(supportIds, nodes, List.of());
         }
 
         public SelectedUnlockSolution(List<PlannedNode> nodes) {
@@ -905,11 +1033,26 @@ public final class ResearchPathUnlockPlanner {
                             ? List.of()
                             : nodes.stream().filter(java.util.Objects::nonNull)
                                     .map(PlannedNode::blueprintId).toList(),
-                    nodes);
+                    nodes,
+                    List.of());
         }
 
         public int unlockCount() {
             return nodes.size();
+        }
+    }
+
+    /** One stable edge selected to satisfy an ordered prerequisite group. */
+    public record SelectedRequirement(
+            ResourceLocation dependentId,
+            int groupOrdinal,
+            ResourceLocation prerequisiteId) {
+        public SelectedRequirement {
+            if (!validId(dependentId) || !validId(prerequisiteId)
+                    || dependentId.equals(prerequisiteId)
+                    || groupOrdinal < 0 || groupOrdinal >= ResearchRequirements.MAX_GROUPS) {
+                throw new IllegalArgumentException("invalid selected research requirement");
+            }
         }
     }
 

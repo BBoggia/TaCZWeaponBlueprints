@@ -25,6 +25,7 @@ import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchT
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
 import com.gamergaming.taczweaponblueprints.resource.research.ResearchPrerequisiteGroup;
 import com.gamergaming.taczweaponblueprints.resource.research.ResearchRequirements;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
 
 import net.minecraft.SharedConstants;
 import net.minecraft.resources.ResourceLocation;
@@ -77,6 +78,88 @@ class ResearchPathUnlockPlannerTest {
                 spec(B, 3, ResearchRequirements.EMPTY),
                 spec(TARGET, 1, anyOf(B, A)));
         assertEquals(List.of(A, TARGET), ids(plan(data, lexical, TARGET)));
+    }
+
+    @Test
+    void selectedSolutionCarriesTheCanonicalRequirementEdgeForEachChosenGroup() {
+        ResourceLocation root = id("test:proof_root");
+        ResourceLocation left = id("test:proof_left");
+        ResourceLocation right = id("test:proof_right");
+        PlayerRecipeData data = data(100);
+        Map<ResourceLocation, BlueprintResearchPolicy> policies = policies(data,
+                spec(root, 1, ResearchRequirements.EMPTY),
+                spec(left, 1, legacy(root)),
+                spec(right, 20, legacy(root)),
+                spec(TARGET, 1, anyOf(left, right)));
+
+        ResearchPathUnlockPlanner.Plan plan = plan(data, policies, TARGET);
+
+        assertEquals(
+                List.of(
+                        new ResearchPathUnlockPlanner.SelectedRequirement(left, 0, root),
+                        new ResearchPathUnlockPlanner.SelectedRequirement(TARGET, 0, left)),
+                plan.solution().selectedRequirements());
+    }
+
+    @Test
+    void sharedAlternativeIsReportedOnceForEachDependentRequirementGroup() {
+        ResourceLocation shared = id("test:proof_shared");
+        ResourceLocation expensive = id("test:proof_expensive");
+        PlayerRecipeData data = data(100);
+        Map<ResourceLocation, BlueprintResearchPolicy> policies = policies(data,
+                spec(shared, 1, ResearchRequirements.EMPTY),
+                spec(A, 1, legacy(shared)),
+                spec(B, 1, legacy(shared)),
+                spec(expensive, 20, ResearchRequirements.EMPTY),
+                spec(TARGET, 1, grouped(anyOf(A, B), anyOf(A, B, expensive))));
+
+        ResearchPathUnlockPlanner.Plan plan = plan(data, policies, TARGET);
+
+        assertEquals(List.of(shared, A, TARGET), ids(plan));
+        assertEquals(
+                List.of(
+                        new ResearchPathUnlockPlanner.SelectedRequirement(A, 0, shared),
+                        new ResearchPathUnlockPlanner.SelectedRequirement(TARGET, 0, A),
+                        new ResearchPathUnlockPlanner.SelectedRequirement(TARGET, 1, A)),
+                plan.solution().selectedRequirements());
+    }
+
+    @Test
+    void connectedLearnedSupportRetainsItsExactEdgeWithoutBeingRepurchased() {
+        PlayerRecipeData data = data(100);
+        data.addBlueprint(A.toString());
+        Map<ResourceLocation, BlueprintResearchPolicy> policies = policies(data,
+                spec(A, 1, ResearchRequirements.EMPTY),
+                spec(TARGET, 1, legacy(A)));
+
+        ResearchPathUnlockPlanner.Plan plan = plan(data, policies, TARGET);
+
+        assertEquals(List.of(TARGET), ids(plan));
+        assertEquals(Set.of(A, TARGET), Set.copyOf(plan.solution().supportIds()));
+        assertEquals(
+                List.of(new ResearchPathUnlockPlanner.SelectedRequirement(TARGET, 0, A)),
+                plan.solution().selectedRequirements());
+    }
+
+    @Test
+    void nestedConnectedLearnedSupportRetainsItsCompleteAncestryProof() {
+        PlayerRecipeData data = data(100);
+        data.addBlueprint(A.toString());
+        data.addBlueprint(B.toString());
+        Map<ResourceLocation, BlueprintResearchPolicy> policies = policies(data,
+                spec(A, 1, ResearchRequirements.EMPTY),
+                spec(B, 1, legacy(A)),
+                spec(TARGET, 1, legacy(B)));
+
+        ResearchPathUnlockPlanner.Plan plan = plan(data, policies, TARGET);
+
+        assertEquals(List.of(TARGET), ids(plan));
+        assertEquals(List.of(A, B, TARGET), plan.solution().supportIds());
+        assertEquals(
+                List.of(
+                        new ResearchPathUnlockPlanner.SelectedRequirement(B, 0, A),
+                        new ResearchPathUnlockPlanner.SelectedRequirement(TARGET, 0, B)),
+                plan.solution().selectedRequirements());
     }
 
     @Test
@@ -1035,7 +1118,7 @@ class ResearchPathUnlockPlannerTest {
         ResearchPathUnlockPlanner.Plan plan = plan(data, policies, TARGET);
 
         assertEquals(List.of(B, TARGET), ids(plan));
-        assertEquals(List.of(B, C, TARGET), plan.solution().supportIds());
+        assertEquals(List.of(A, B, C, TARGET), plan.solution().supportIds());
         assertEquals(11, plan.pointCost());
     }
 
@@ -1110,6 +1193,11 @@ class ResearchPathUnlockPlannerTest {
         assertTrue(data.hasBlueprint(A.toString()));
         assertTrue(data.hasBlueprint(TARGET.toString()));
         assertTrue(input.stacks.stream().allMatch(ItemStack::isEmpty));
+        assertEquals(1, data.getRecentUnlockBatches().size());
+        assertEquals(TARGET.toString(),
+                data.getRecentUnlockBatches().get(0).targetBlueprintId());
+        assertEquals(List.of(A.toString(), TARGET.toString()),
+                data.getRecentUnlockBatches().get(0).memberBlueprintIds());
     }
 
     @Test
@@ -1316,6 +1404,7 @@ class ResearchPathUnlockPlannerTest {
         assertTrue(data.getLearnedRecipes().isEmpty());
         assertEquals(1, input.stacks.get(0).getCount());
         assertEquals(1, input.stacks.get(1).getCount());
+        assertTrue(data.getRecentUnlockBatches().isEmpty());
     }
 
     @Test
@@ -1342,6 +1431,244 @@ class ResearchPathUnlockPlannerTest {
         assertFalse(data.hasBlueprint(A.toString()));
         assertEquals(1, input.stacks.get(0).getCount());
         assertEquals(1, input.stacks.get(1).getCount());
+    }
+
+    @Test
+    void routeEvaluationOwnsTheSamePathQuoteAllocationAndReadinessDecision() {
+        PlayerRecipeData data = data(10);
+        Map<ResourceLocation, BlueprintResearchPolicy> policies = policies(data,
+                spec(A, 2, ResearchRequirements.EMPTY, false, paper(2)),
+                spec(TARGET, 3, legacy(A), false, paper(3)));
+        ResearchRouteEvaluationService.Evaluation evaluation =
+                ResearchRouteEvaluationService.evaluate(
+                        evaluationRequest(
+                                data,
+                                policies,
+                                TARGET,
+                                List.of(new ItemStack(Items.PAPER, 4))))
+                        .orElseThrow();
+
+        assertEquals(List.of(A, TARGET), ids(evaluation.path().orElseThrow()));
+        assertEquals(5, evaluation.pointCost());
+        assertEquals(1, evaluation.requirements().size());
+        assertEquals(5, evaluation.requirements().get(0).count());
+        assertEquals(4, evaluation.allocation().allocatedForIngredient(0));
+        assertFalse(evaluation.ingredientsSatisfied());
+        assertFalse(evaluation.ready());
+        assertTrue(evaluation.policyEligible());
+        assertTrue(evaluation.transactionCapacityAvailable());
+        assertTrue(evaluation.routeFingerprint().isPresent());
+    }
+
+    @Test
+    void routeEvaluationChangesLiveAllocationWithoutChangingItsStructuralRoute() {
+        PlayerRecipeData data = data(10);
+        Map<ResourceLocation, BlueprintResearchPolicy> policies = policies(data,
+                spec(A, 2, ResearchRequirements.EMPTY, false, paper(1)),
+                spec(TARGET, 3, legacy(A), false, iron(1)));
+        ResearchRouteEvaluationService.Evaluation empty =
+                ResearchRouteEvaluationService.evaluate(
+                        evaluationRequest(data, policies, TARGET, List.of()))
+                        .orElseThrow();
+        ResearchRouteEvaluationService.Evaluation supplied =
+                ResearchRouteEvaluationService.evaluate(
+                        evaluationRequest(
+                                data,
+                                policies,
+                                TARGET,
+                                List.of(new ItemStack(Items.PAPER),
+                                        new ItemStack(Items.IRON_INGOT))))
+                        .orElseThrow();
+
+        assertEquals(empty.path(), supplied.path());
+        assertEquals(empty.routeFingerprint(), supplied.routeFingerprint());
+        assertFalse(empty.ingredientsSatisfied());
+        assertTrue(supplied.ingredientsSatisfied());
+        assertTrue(supplied.ready());
+    }
+
+    @Test
+    void guidanceSnapshotPublishesOnlyTheExactSelectedRouteAndAllocation() {
+        PlayerRecipeData data = data(10);
+        Map<ResourceLocation, BlueprintResearchPolicy> policies = policies(data,
+                spec(A, 2, ResearchRequirements.EMPTY, false, paper(1)),
+                spec(TARGET, 3, legacy(A), false, iron(1)));
+        ResearchRouteEvaluationService.Evaluation evaluation =
+                ResearchRouteEvaluationService.evaluate(
+                        evaluationRequest(
+                                data,
+                                policies,
+                                TARGET,
+                                List.of(new ItemStack(Items.PAPER))))
+                        .orElseThrow();
+        ResearchTreeGraph publicGraph = new ResearchTreeGraph(
+                List.of(
+                        guidanceNode(0, A, ResearchTreeGraph.Availability.AVAILABLE, 0),
+                        guidanceNode(
+                                1,
+                                TARGET,
+                                ResearchTreeGraph.Availability.PREREQUISITES_REQUIRED,
+                                1)),
+                List.of(new ResearchTreeGraph.Edge(A, TARGET)));
+
+        ResearchGuidanceSnapshot snapshot =
+                ResearchRouteEvaluationService.guidanceSnapshot(
+                        evaluation, publicGraph, ResearchCostMode.POINTS_AND_ITEMS)
+                        .orElseThrow();
+
+        assertEquals(ResearchGuidanceSnapshot.State.MISSING_MATERIALS, snapshot.state());
+        assertEquals(List.of(A, TARGET), snapshot.supportIds());
+        assertEquals(List.of(A, TARGET), snapshot.purchaseIds());
+        assertEquals(A, snapshot.nextStepId().orElseThrow());
+        assertEquals(2, snapshot.materials().size());
+        assertEquals(2, snapshot.totalMaterialTypes());
+        assertEquals(2, snapshot.totalMaterialUnits());
+        assertEquals(1, snapshot.allocatedMaterialUnits());
+        assertEquals(1, snapshot.missingMaterialTypes());
+        assertEquals(1, snapshot.materials().stream()
+                .mapToInt(ResearchGuidanceSnapshot.MaterialProgress::allocated)
+                .sum());
+        assertEquals(
+                List.of(new ResearchPathUnlockPlanner.SelectedRequirement(TARGET, 0, A)),
+                snapshot.selectedRequirements());
+    }
+
+    @Test
+    void guidanceSnapshotOmitsDisabledCostChannels() {
+        PlayerRecipeData data = data(1);
+        Map<ResourceLocation, BlueprintResearchPolicy> policies = policies(data,
+                spec(A, 2, ResearchRequirements.EMPTY, false, paper(2)),
+                spec(TARGET, 3, legacy(A), false, iron(2)));
+        ResearchRouteEvaluationService.Evaluation evaluation =
+                ResearchRouteEvaluationService.evaluate(
+                        evaluationRequest(
+                                data,
+                                policies,
+                                TARGET,
+                                List.of(new ItemStack(Items.PAPER))))
+                        .orElseThrow();
+        ResearchTreeGraph publicGraph = new ResearchTreeGraph(
+                List.of(
+                        guidanceNode(0, A, ResearchTreeGraph.Availability.AVAILABLE, 0),
+                        guidanceNode(
+                                1,
+                                TARGET,
+                                ResearchTreeGraph.Availability.PREREQUISITES_REQUIRED,
+                                1)),
+                List.of(new ResearchTreeGraph.Edge(A, TARGET)));
+
+        ResearchGuidanceSnapshot pointsOnly =
+                ResearchRouteEvaluationService.guidanceSnapshot(
+                        evaluation, publicGraph, ResearchCostMode.POINTS_ONLY)
+                        .orElseThrow();
+        assertEquals(ResearchGuidanceSnapshot.State.MISSING_POINTS, pointsOnly.state());
+        assertEquals(5, pointsOnly.pointCost());
+        assertEquals(0, pointsOnly.totalMaterialTypes());
+        assertEquals(0, pointsOnly.totalMaterialUnits());
+        assertTrue(pointsOnly.materials().isEmpty());
+
+        ResearchGuidanceSnapshot itemsOnly =
+                ResearchRouteEvaluationService.guidanceSnapshot(
+                        evaluation, publicGraph, ResearchCostMode.ITEMS_ONLY)
+                        .orElseThrow();
+        assertEquals(ResearchGuidanceSnapshot.State.MISSING_MATERIALS, itemsOnly.state());
+        assertEquals(0, itemsOnly.pointCost());
+        assertEquals(0, itemsOnly.pointBalance());
+        assertEquals(4, itemsOnly.totalMaterialUnits());
+        assertEquals(1, itemsOnly.allocatedMaterialUnits());
+        assertEquals(2, itemsOnly.missingMaterialTypes());
+    }
+
+    @Test
+    void guidanceSnapshotDoesNotDiscloseASelectedEdgeAbsentFromThePublicGraph() {
+        PlayerRecipeData data = data(10);
+        Map<ResourceLocation, BlueprintResearchPolicy> policies = policies(data,
+                spec(A, 2, ResearchRequirements.EMPTY),
+                spec(TARGET, 3, legacy(A)));
+        ResearchRouteEvaluationService.Evaluation evaluation =
+                ResearchRouteEvaluationService.evaluate(
+                        evaluationRequest(data, policies, TARGET, List.of()))
+                        .orElseThrow();
+        ResearchTreeGraph redactedGraph = new ResearchTreeGraph(
+                List.of(
+                        guidanceNode(0, A, ResearchTreeGraph.Availability.AVAILABLE, 0),
+                        guidanceNode(
+                                1,
+                                TARGET,
+                                ResearchTreeGraph.Availability.PREREQUISITES_REQUIRED,
+                                0)),
+                List.of());
+
+        ResearchGuidanceSnapshot snapshot =
+                ResearchRouteEvaluationService.guidanceSnapshot(
+                        evaluation, redactedGraph, ResearchCostMode.POINTS_AND_ITEMS)
+                        .orElseThrow();
+
+        assertEquals(ResearchGuidanceSnapshot.State.ROUTE_UNAVAILABLE, snapshot.state());
+        assertEquals(List.of(TARGET), snapshot.supportIds());
+        assertTrue(snapshot.purchaseIds().isEmpty());
+        assertTrue(snapshot.selectedRequirements().isEmpty());
+    }
+
+    @Test
+    void routeEvaluationFailsClosedWhenTheSelectedClosureCannotBeResolved() {
+        PlayerRecipeData data = data(10);
+        Map<ResourceLocation, BlueprintResearchPolicy> policies = policies(data,
+                spec(TARGET, 3, legacy(A)));
+
+        ResearchRouteEvaluationService.Evaluation evaluation =
+                ResearchRouteEvaluationService.evaluate(
+                        evaluationRequest(data, policies, TARGET, List.of()))
+                        .orElseThrow();
+
+        assertEquals(BlueprintResearchService.Status.PREREQUISITES_REQUIRED,
+                evaluation.planningStatus());
+        assertTrue(evaluation.path().isEmpty());
+        assertTrue(evaluation.routeFingerprint().isEmpty());
+        assertFalse(evaluation.policyEligible());
+        assertFalse(evaluation.ready());
+    }
+
+    private static ResearchRouteEvaluationService.Request evaluationRequest(
+            PlayerRecipeData data,
+            Map<ResourceLocation, BlueprintResearchPolicy> policies,
+            ResourceLocation target,
+            List<ItemStack> inventory) {
+        return new ResearchRouteEvaluationService.Request(
+                target,
+                data,
+                policies.get(target),
+                policies::get,
+                ignored -> false,
+                ResearchPathAuthority.authored(),
+                fingerprintContext(1L, 1L, 1L),
+                ResearchPathUnlockPlannerTest::learningTarget,
+                inventory,
+                false,
+                true,
+                true);
+    }
+
+    private static ResearchTreeGraph.Node guidanceNode(
+            int ordinal,
+            ResourceLocation id,
+            ResearchTreeGraph.Availability availability,
+            int prerequisiteCount) {
+        return new ResearchTreeGraph.Node(
+                ordinal,
+                id,
+                "name." + id.getPath(),
+                "gun",
+                new ResourceLocation("test:slot/" + id.getPath()),
+                JournalVisibility.FULL,
+                availability == ResearchTreeGraph.Availability.LEARNED,
+                true,
+                availability == ResearchTreeGraph.Availability.AVAILABLE,
+                1,
+                1,
+                prerequisiteCount,
+                0,
+                availability);
     }
 
     private static ResearchPathUnlockPlanner.Plan plan(
