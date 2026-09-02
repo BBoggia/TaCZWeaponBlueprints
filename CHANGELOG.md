@@ -29,6 +29,9 @@ documentation.
   Tree while continuing to read older client configuration files.
 - Made dependent settings visibly inactive when their parent feature or preset
   is unavailable, with an explanation of how to enable them.
+- Made Starting Blueprints, Blueprint-Free Item IDs, and gun, ammo, and
+  attachment loot blacklists searchable by loaded item names or resource IDs.
+  Stored IDs from temporarily unavailable content packs remain valid.
 - Made Balanced the default discovery and loot preset for new installations.
   Existing servers retain their prior custom visibility and loot values.
 - Updated the required Fzzy Config version to 0.7.6.

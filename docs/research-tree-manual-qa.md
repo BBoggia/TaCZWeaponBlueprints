@@ -187,7 +187,7 @@ scales 1, 2, 3, 4, and Auto where the display supports them. Include 320x240,
 
 ### Blueprint Analyzer lifecycle
 
-- [ ] The Recycler uses its worn-steel final model rather than an iron-block
+- [ ] The Blueprint Analyzer uses its worn-steel final model rather than an iron-block
   placeholder in-world, in the inventory, as a dropped item, and in JEI/REI if
   installed.
 - [ ] North/east/south/west placement keeps the paper intake on the interaction
@@ -350,7 +350,7 @@ Capture clean, HUD-appropriate PNGs at native resolution:
 3. Fullscreen overlay with the world visible behind the tree and the floating Research action enabled.
 4. Blueprint Analyzer screen showing a physical TaCZ item, its exact reverse-engineering cost, and the extract-only blueprint output.
 5. Research Bench model placed in a representative TaCZ workshop.
-6. Blueprint Recycler model placed beside the Research Bench with its paper
+6. Blueprint Analyzer model placed beside the Research Bench with its paper
    intake, top blueprint inset, output drawer, and control face visible.
 
 For redesign comparisons, capture the same state and camera at 320 x 240,

@@ -33,9 +33,31 @@ jobs:
       - name: Test and verify build
         run: ./gradlew cleanTest build --warning-mode all
 
+      - name: Verify release tag matches build version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          mod_version="$(awk -F= '$1 == "mod_version" {print substr($0, index($0, "=") + 1); exit}' gradle.properties)"
+          if [[ -z "$mod_version" || "$mod_version" == *-dev ]]; then
+            echo "Release tags require a non-development mod_version; found '$mod_version'." >&2
+            exit 1
+          fi
+          if [[ "$GITHUB_REF_NAME" != "v$mod_version" ]]; then
+            echo "Tag '$GITHUB_REF_NAME' does not match mod_version '$mod_version'." >&2
+            exit 1
+          fi
+
       - name: Certify release candidate
         if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
         run: ./gradlew certifyReleaseCandidate --warning-mode all
+
+      - name: Write release artifact checksum
+        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          mod_version="$(awk -F= '$1 == "mod_version" {print substr($0, index($0, "=") + 1); exit}' gradle.properties)"
+          sha256sum "build/libs/taczweaponblueprints-$mod_version.jar" \
+            > "build/reports/taczweaponblueprints-$mod_version.jar.sha256"
 
       - name: Upload release-candidate evidence
         if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
@@ -45,3 +67,4 @@ jobs:
           path: |
             build/libs/taczweaponblueprints-*.jar
             build/reports/release-candidate.json
+            build/reports/*.sha256

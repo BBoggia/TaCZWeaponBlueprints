@@ -153,6 +153,8 @@ last working data active.
 - [Guided progression](docs/research-tree-guided-progression.md)
 - [Research-tree manual QA](docs/research-tree-manual-qa.md)
 - [Release checklist](docs/release-checklist.md)
+- [Release validation reference](docs/release-validation.md)
+- [Example Research Tree datapack](examples/research-tree-datapack/README.md)
 
 ## Building
 

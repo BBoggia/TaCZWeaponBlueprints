@@ -1,0 +1,46 @@
+def verifyVersionState = tasks.register('verifyVersionState') {
+    group = 'verification'
+    description = 'Prevents unreleased work from being packaged with a finalized release version.'
+
+    inputs.file('CHANGELOG.md')
+    inputs.property('modVersion', project.version.toString())
+
+    doLast {
+        def changelogLines = file('CHANGELOG.md').readLines('UTF-8')
+        def unreleasedIndex = changelogLines.findIndexOf {
+            it.trim() == '## Unreleased'
+        }
+        if (unreleasedIndex < 0) {
+            throw new GradleException('CHANGELOG.md has no Unreleased section.')
+        }
+
+        def nextReleaseIndex = changelogLines.size()
+        for (int index = unreleasedIndex + 1;
+             index < changelogLines.size();
+             index++) {
+            if (changelogLines[index].startsWith('## ')) {
+                nextReleaseIndex = index
+                break
+            }
+        }
+
+        def hasUnreleasedContent = changelogLines
+                .subList(unreleasedIndex + 1, nextReleaseIndex)
+                .any {
+                    def line = it.trim()
+                    !line.isEmpty()
+                            && !line.startsWith('### ')
+                            && !line.startsWith('<!--')
+                }
+        def developmentVersion = project.version.toString().endsWith('-dev')
+        if (hasUnreleasedContent && !developmentVersion) {
+            throw new GradleException(
+                    "Unreleased changes require a -dev mod_version; found ${project.version}.")
+        }
+        if (developmentVersion
+                && file("docs/releases/${project.version}.md").exists()) {
+            throw new GradleException(
+                    'Development versions must not have platform release notes.')
+        }
+    }
+}

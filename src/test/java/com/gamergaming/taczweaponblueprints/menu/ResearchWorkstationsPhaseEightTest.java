@@ -126,18 +126,20 @@ class ResearchWorkstationsPhaseEightTest {
     }
 
     @Test
-    void releaseEvidenceUsesTheCurrentProtocolAndKeepsManualQaExplicit()
+    void releaseDocumentsUseTheCurrentProtocolAndKeepManualQaExplicit()
             throws IOException {
         String manual = Files.readString(PROJECT.resolve("docs/research-tree-manual-qa.md"));
         String checklist = Files.readString(PROJECT.resolve("docs/release-checklist.md"));
+        String validation = Files.readString(PROJECT.resolve("docs/release-validation.md"));
         String operations = Files.readString(PROJECT.resolve("docs/operations-and-migration.md"));
 
         assertTrue(manual.contains("protocol other than `42`"));
         assertFalse(manual.contains("protocol other than `20`"));
         assertTrue(manual.contains("does not certify any"));
         assertTrue(manual.contains("unchecked hands-on behavior below"));
-        assertTrue(checklist.contains("research-workstation ownership"));
-        assertTrue(checklist.contains("presentation contract"));
+        assertTrue(checklist.contains("[release validation reference](release-validation.md)"));
+        assertTrue(validation.contains("research-workstation ownership"));
+        assertTrue(validation.contains("presentation contract"));
         assertTrue(operations.contains("research-workstation split"));
     }
 

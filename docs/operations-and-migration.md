@@ -627,5 +627,5 @@ authoritative. Before public release, retain the gate report and complete its
 linked before/after screenshot checks at normal and maximum zoom-out.
 
 The report's research-workstation split must record the research-only permanent
-fullscreen Bench, dedicated one-input Recycler, exact action ownership, final
+fullscreen Bench, dedicated one-input Blueprint Analyzer, exact action ownership, final
 model/texture contract, recipe discovery route, and manual-QA evidence path.

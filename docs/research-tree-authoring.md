@@ -1,8 +1,7 @@
 # Research Tree Datapack Authoring
 
-> Research-tree groups are loaded, validated, audited, exported, synchronized
-> with their disclosure-safe graph, and rendered as selectable branches or a
-> complete identity-visible All Weapons overview.
+> Research Tree data is loaded, validated, audited, exported, synchronized,
+> and rendered in the unified Tech Tree view.
 
 [TaCZ] Weapon Research & Blueprints builds the Research Bench tree from the active research
 profile and its research rules. A server or modpack can replace the entire

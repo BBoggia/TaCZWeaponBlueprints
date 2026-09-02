@@ -1,49 +1,42 @@
-# eclipse
-bin
+# Eclipse
+/bin/
+/eclipse/
+/.settings/
+/.metadata/
+/.classpath
+/.project
 *.launch
-.settings
-.metadata
-.classpath
-.project
 
-# idea
-out
+# IntelliJ IDEA
+/.idea/
+/out/
+*.iml
 *.ipr
 *.iws
-*.iml
-.idea
 
-# gradle
-build
-.gradle
+# Gradle and generated caches
+/.gradle/
+/build/
+/mcmodsrepo/
 /src/generated/resources/.cache/
 
-# other
-eclipse
-run
-/test/
-logs
-.luarc.json
+# Forge development runtimes
+/run/
+/run-data/
+/logs/
 
-# Files from Forge MDK
-forge*changelog.txt
-/temp/
+# Generated editor launch metadata
+/.vscode/launch.json
 
-
-# Not related misc files
-/misc_files/
-/misc_files/villagerTradeData/
-/misc_files/gunPropertyBalancing/
-/misc_files/villagerTradeData/
-/misc_files/balanced_weapon_data.json
-
-# MacOS specific files
-.DS_Store
-.DS_Store?
-/**/.DS_Store
-
-/run-data
-
-# Local agent working notes and phased development records
+# Local scratch data
 /.local/
-/docs/development/
+/misc_files/
+/temp/
+/test/
+/.luarc.json
+
+# Forge MDK leftovers
+forge*changelog.txt
+
+# macOS
+.DS_Store
