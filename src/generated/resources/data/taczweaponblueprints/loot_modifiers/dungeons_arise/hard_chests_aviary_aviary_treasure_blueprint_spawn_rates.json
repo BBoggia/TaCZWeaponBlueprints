@@ -232,6 +232,16 @@
         "Count": 1,
         "id": "taczweaponblueprints:blueprint",
         "tag": {
+          "bpId": "classicr:minigun"
+        }
+      },
+      "weight": 6.717
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
           "bpId": "classicr:m60"
         }
       },
@@ -278,9 +288,9 @@
       "weight": 8.965
     }
   ],
-  "poolProbability": 0.1,
+  "poolProbability": 0.2,
   "rolls": {
-    "max": 1,
+    "max": 2,
     "min": 1
   }
 }

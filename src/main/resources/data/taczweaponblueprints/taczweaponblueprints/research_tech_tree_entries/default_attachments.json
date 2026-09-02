@@ -1,0 +1,1052 @@
+{
+  "format": 1,
+  "tree": "taczweaponblueprints:default",
+  "priority": 100,
+  "entries": [
+    {
+      "target": {
+        "blueprints": [
+          "tacz:ammo_mod_slug"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/ammo_mods",
+      "tier": "established",
+      "order": 1901
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:ammo_mod_hp"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/ammo_mods",
+      "tier": "advanced",
+      "order": 6703
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:ammo_mod_i"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/ammo_mods",
+      "tier": "elite",
+      "order": 700
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:ammo_mod_fmj"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/ammo_mods",
+      "tier": "elite",
+      "order": 8204
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:ammo_mod_he"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/ammo_mods",
+      "tier": "apex",
+      "order": 3502
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:grip_rk6"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/grips",
+      "tier": "starter",
+      "order": 700
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:grip_magpul_afg_2"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/grips",
+      "tier": "basic",
+      "order": 3401
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:grip_osovets_black"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/grips",
+      "tier": "basic",
+      "order": 3402
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:grip_se_5"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/grips",
+      "tier": "basic",
+      "order": 3403
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:grip_td"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/grips",
+      "tier": "basic",
+      "order": 3404
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:grip_cobra"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/grips",
+      "tier": "established",
+      "order": 3605
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:grip_rk0"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/grips",
+      "tier": "advanced",
+      "order": 3706
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:grip_vertical_talon"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/grips",
+      "tier": "advanced",
+      "order": 3707
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:grip_vertical_military"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/grips",
+      "tier": "elite",
+      "order": 4708
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:grip_rk1_b25u"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/grips",
+      "tier": "elite",
+      "order": 5309
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:grip_vertical_ranger"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/grips",
+      "tier": "apex",
+      "order": 6010
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:laser_nightstick"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/lasers",
+      "tier": "starter",
+      "order": 2800
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:laser_compact"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/lasers",
+      "tier": "established",
+      "order": 3401
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:laser_lopro"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/lasers",
+      "tier": "advanced",
+      "order": 4602
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:laser_peq6"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/lasers",
+      "tier": "apex",
+      "order": 6503
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:light_extended_mag_1"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/magazines",
+      "tier": "starter",
+      "order": 2400
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:shotgun_extended_mag_1"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/magazines",
+      "tier": "basic",
+      "order": 3001
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:extended_mag_1"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/magazines",
+      "tier": "basic",
+      "order": 8005
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:light_extended_mag_2"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/magazines",
+      "tier": "established",
+      "order": 4402
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:sniper_extended_mag_1"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/magazines",
+      "tier": "established",
+      "order": 10206
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:shotgun_extended_mag_2"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/magazines",
+      "tier": "advanced",
+      "order": 6404
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:extended_mag_2"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/magazines",
+      "tier": "advanced",
+      "order": 13208
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:light_extended_mag_3"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/magazines",
+      "tier": "elite",
+      "order": 6003
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:shotgun_extended_mag_3"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/magazines",
+      "tier": "elite",
+      "order": 12007
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:sniper_extended_mag_2"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/magazines",
+      "tier": "elite",
+      "order": 18609
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:extended_mag_3"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/magazines",
+      "tier": "apex",
+      "order": 24010
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:sniper_extended_mag_3"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/magazines",
+      "tier": "apex",
+      "order": 32411
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:bayonet_6h3"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/muzzles",
+      "tier": "starter",
+      "order": 2800
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:bayonet_m9"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/muzzles",
+      "tier": "starter",
+      "order": 3401
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:muzzle_silencer_wraith"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/muzzles",
+      "tier": "basic",
+      "order": 3602
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:muzzle_silencer_mirage"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/muzzles",
+      "tier": "basic",
+      "order": 3803
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:muzzle_silencer_ptilopsis"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/muzzles",
+      "tier": "basic",
+      "order": 5004
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:muzzle_brake_cyclone_d2"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/muzzles",
+      "tier": "established",
+      "order": 6205
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:muzzle_compensator_trident"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/muzzles",
+      "tier": "established",
+      "order": 6206
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:muzzle_silencer_knight_qd"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/muzzles",
+      "tier": "established",
+      "order": 6207
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:muzzle_silencer_phantom_s1"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/muzzles",
+      "tier": "established",
+      "order": 6208
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:muzzle_silencer_ursus"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/muzzles",
+      "tier": "established",
+      "order": 6209
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:muzzle_silencer_vulture"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/muzzles",
+      "tier": "established",
+      "order": 6210
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:muzzle_brake_timeless50"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/muzzles",
+      "tier": "advanced",
+      "order": 6511
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:muzzle_silencer_sg"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/muzzles",
+      "tier": "advanced",
+      "order": 6712
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:muzzle_brake_pioneer"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/muzzles",
+      "tier": "elite",
+      "order": 8213
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:muzzle_brake_mastiff_sg"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/muzzles",
+      "tier": "elite",
+      "order": 8614
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:muzzle_brake_cthulhu"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/muzzles",
+      "tier": "elite",
+      "order": 8815
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:muzzle_brake_trex"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/muzzles",
+      "tier": "elite",
+      "order": 10216
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:muzzle_choke_sg"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/muzzles",
+      "tier": "apex",
+      "order": 10817
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:deagle_golden_long_barrel"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/muzzles",
+      "tier": "apex",
+      "order": 27018
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:sight_acro_pistol"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "starter",
+      "order": 1600
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:sight_deltapoint_pistol"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "starter",
+      "order": 1601
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:sight_fastfire_pistol"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "starter",
+      "order": 1602
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:sight_pk06_pistol"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "starter",
+      "order": 1603
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:sight_rmr_dot"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "starter",
+      "order": 1604
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:sight_sro_dot"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "starter",
+      "order": 1605
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:sight_t1"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "basic",
+      "order": 1706
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:sight_acro_rifle"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "basic",
+      "order": 2207
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:sight_deltapoint_rifle"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "basic",
+      "order": 2208
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:sight_fastfire_rifle"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "basic",
+      "order": 2209
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:sight_pk06_rifle"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "basic",
+      "order": 2210
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:sight_t2"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "established",
+      "order": 2311
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:scope_retro_2x"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "established",
+      "order": 2512
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:sight_srs_02"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "established",
+      "order": 2813
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:sight_okp7"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "established",
+      "order": 3014
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:scope_98k"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "advanced",
+      "order": 3115
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:scope_contender"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "advanced",
+      "order": 3216
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:sight_coyote"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "advanced",
+      "order": 4217
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:scope_1873_6x"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "advanced",
+      "order": 6418
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:scope_acog_ta31"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "advanced",
+      "order": 6519
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:scope_qmk152"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "advanced",
+      "order": 8420
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:scope_elcan_4x"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "elite",
+      "order": 9321
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:scope_hamr"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "elite",
+      "order": 9822
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:scope_lpvo_1_6"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "elite",
+      "order": 10223
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:scope_vudu"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "elite",
+      "order": 10224
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:sight_552"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "elite",
+      "order": 10425
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:sight_exp3"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "elite",
+      "order": 11826
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:scope_standard_8x"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "apex",
+      "order": 12627
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:sight_uh1"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "apex",
+      "order": 12928
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:scope_mk5hd"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/optics",
+      "tier": "apex",
+      "order": 14629
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:oem_stock_light"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/stocks",
+      "tier": "starter",
+      "order": 2600
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:stock_m4ss"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/stocks",
+      "tier": "starter",
+      "order": 2901
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:stock_carbon_bone_c5"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/stocks",
+      "tier": "basic",
+      "order": 3902
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:stock_moe"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/stocks",
+      "tier": "basic",
+      "order": 4103
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:stock_ripstock"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/stocks",
+      "tier": "basic",
+      "order": 4104
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:oem_stock_heavy"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/stocks",
+      "tier": "established",
+      "order": 4205
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:oem_stock_tactical"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/stocks",
+      "tier": "established",
+      "order": 4606
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:stock_ak12"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/stocks",
+      "tier": "advanced",
+      "order": 4707
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:stock_sba3"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/stocks",
+      "tier": "advanced",
+      "order": 4708
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:stock_tactical_spas_12"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/stocks",
+      "tier": "advanced",
+      "order": 5109
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:stock_hk_slim_line"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/stocks",
+      "tier": "elite",
+      "order": 5310
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:stock_militech_b5"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/stocks",
+      "tier": "elite",
+      "order": 5311
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:stock_heavy_spas_12"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/stocks",
+      "tier": "apex",
+      "order": 7412
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:stock_tactical_ar"
+        ]
+      },
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/stocks",
+      "tier": "apex",
+      "order": 9013
+    }
+  ]
+}

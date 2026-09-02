@@ -10,11 +10,16 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 
 public class ModLootModifier {
-    public static final DeferredRegister<Codec<? extends IGlobalLootModifier>> LOOT_MODIFIER_SERIALIZERS =
-        DeferredRegister.create(ForgeRegistries.Keys.GLOBAL_LOOT_MODIFIER_SERIALIZERS, TaCZWeaponBlueprints.MODID);
+    public static final DeferredRegister<Codec<? extends IGlobalLootModifier>> LOOT_MODIFIER_SERIALIZERS = DeferredRegister.create(ForgeRegistries.Keys.GLOBAL_LOOT_MODIFIER_SERIALIZERS, TaCZWeaponBlueprints.MODID);
     
     public static final RegistryObject<Codec<AddItemsModifier>> ADD_ITEMS_MODIFIER =
         LOOT_MODIFIER_SERIALIZERS.register("add_items", AddItemsModifier.CODEC);
+
+    public static final RegistryObject<Codec<DynamicBlueprintLootModifier>> DYNAMIC_BLUEPRINTS_MODIFIER =
+        LOOT_MODIFIER_SERIALIZERS.register("dynamic_blueprints", DynamicBlueprintLootModifier.CODEC);
+
+    public static final RegistryObject<Codec<ResearchDataLootModifier>> RESEARCH_DATA_MODIFIER =
+        LOOT_MODIFIER_SERIALIZERS.register("research_data", ResearchDataLootModifier.CODEC);
 
     public static void register(IEventBus eventBus) {
         LOOT_MODIFIER_SERIALIZERS.register(eventBus);

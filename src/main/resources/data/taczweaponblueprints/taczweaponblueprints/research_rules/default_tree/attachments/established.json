@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "profile": "taczweaponblueprints:duplicate_recovery",
+  "priority": 100,
+  "target": {
+    "blueprints": [
+      "tacz:ammo_mod_slug",
+      "tacz:grip_cobra",
+      "tacz:laser_compact",
+      "tacz:light_extended_mag_2",
+      "tacz:sniper_extended_mag_1",
+      "tacz:muzzle_brake_cyclone_d2",
+      "tacz:muzzle_compensator_trident",
+      "tacz:muzzle_silencer_knight_qd",
+      "tacz:muzzle_silencer_phantom_s1",
+      "tacz:muzzle_silencer_ursus",
+      "tacz:muzzle_silencer_vulture",
+      "tacz:sight_t2",
+      "tacz:scope_retro_2x",
+      "tacz:sight_srs_02",
+      "tacz:sight_okp7",
+      "tacz:oem_stock_heavy",
+      "tacz:oem_stock_tactical"
+    ]
+  },
+  "visibility": "full",
+  "tree_enabled": true,
+  "research_enabled": true,
+  "requires_discovery": false,
+  "research_cost": {
+    "points": 6,
+    "ingredients": [
+      { "items": ["minecraft:paper"], "count": 3 },
+      { "items": ["minecraft:iron_ingot"], "count": 2 }
+    ]
+  },
+  "prerequisites": ["tacz:sight_t1"]
+}

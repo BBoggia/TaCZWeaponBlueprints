@@ -1,0 +1,21 @@
+{
+  "format": 1,
+  "profile": "taczweaponblueprints:duplicate_recovery",
+  "priority": 0,
+  "target": {
+    "selector": {
+      "blueprint_kinds": ["attachment"]
+    }
+  },
+  "visibility": "preview",
+  "tree_enabled": true,
+  "research_enabled": true,
+  "requires_discovery": false,
+  "research_cost": {
+    "points": 4,
+    "ingredients": [
+      { "items": ["minecraft:paper"], "count": 2 },
+      { "items": ["minecraft:iron_ingot"], "count": 1 }
+    ]
+  }
+}

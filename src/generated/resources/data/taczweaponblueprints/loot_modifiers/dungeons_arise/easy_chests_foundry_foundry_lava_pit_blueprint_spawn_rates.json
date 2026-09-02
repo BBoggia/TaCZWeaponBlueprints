@@ -82,6 +82,16 @@
         "Count": 1,
         "id": "taczweaponblueprints:blueprint",
         "tag": {
+          "bpId": "ccrp:keltec_p50"
+        }
+      },
+      "weight": 12.216
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
           "bpId": "classicr:mp9"
         }
       },
@@ -212,6 +222,16 @@
         "Count": 1,
         "id": "taczweaponblueprints:blueprint",
         "tag": {
+          "bpId": "tacz:deagle_golden"
+        }
+      },
+      "weight": 14.149
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
           "bpId": "classicr:udp_9"
         }
       },
@@ -302,15 +322,25 @@
         "Count": 1,
         "id": "taczweaponblueprints:blueprint",
         "tag": {
+          "bpId": "tacz:ump45"
+        }
+      },
+      "weight": 15.159
+    },
+    {
+      "item": {
+        "Count": 1,
+        "id": "taczweaponblueprints:blueprint",
+        "tag": {
           "bpId": "suffuse:ump45"
         }
       },
       "weight": 15.232
     }
   ],
-  "poolProbability": 0.1,
+  "poolProbability": 0.2,
   "rolls": {
-    "max": 1,
+    "max": 2,
     "min": 1
   }
 }

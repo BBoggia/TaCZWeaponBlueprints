@@ -1,0 +1,80 @@
+{
+  "format": 2,
+  "tree": "taczweaponblueprints:default",
+  "priority": 100,
+  "entries": [
+    {
+      "target": {
+        "blueprints": [
+          "tacz:glock_17"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/handguns",
+      "tier": "starter",
+      "order": 0,
+      "rating": {
+        "combat": 2,
+        "utility": 98,
+        "appeal": 95
+      },
+      "tier_override_reason": "The shared default-tree foundation remains intentionally authored so automatic weapons always have one stable entry point.",
+      "rank": 0
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:m320"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/heavy",
+      "tier": "advanced",
+      "order": 100,
+      "rating": {
+        "combat": 29,
+        "utility": 22,
+        "appeal": 72
+      },
+      "tier_override_reason": "Explosive area damage, ammunition burden, and the authored cross-branch gate make this an intentional Advanced exception to raw-stat placement.",
+      "rank": 5
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:rpg7"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/heavy",
+      "tier": "elite",
+      "order": 200,
+      "rating": {
+        "combat": 62,
+        "utility": 1,
+        "appeal": 100
+      },
+      "tier_override_reason": "Explosive area damage, ammunition burden, and the authored cross-branch gate make this an intentional Elite exception to raw-stat placement.",
+      "rank": 8
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:minigun"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/machine_guns",
+      "tier": "apex",
+      "level": 1,
+      "order": 400,
+      "rating": {
+        "combat": 89,
+        "utility": 8,
+        "appeal": 100
+      },
+      "tier_override_reason": "Exceptional sustained fire, ammunition burden, and the authored heavy-weapon gate make this an intentional Apex exception to raw-stat placement.",
+      "rank": 9
+    }
+  ]
+}

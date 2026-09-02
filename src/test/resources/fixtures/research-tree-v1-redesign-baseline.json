@@ -1,0 +1,340 @@
+{
+  "format": 1,
+  "profile_id": "baseline:profile",
+  "tree_id": "baseline:tree",
+  "profile": {
+    "format": 1,
+    "journal_enabled": true,
+    "tree_enabled": true,
+    "visibility": "silhouette",
+    "research_enabled": true,
+    "recycling_enabled": true,
+    "allow_unlearned_recycling": false,
+    "recycling_value": 1,
+    "research_cost": {"points": 8},
+    "requires_discovery": false,
+    "creative_bypasses_cost": false,
+    "entry_point_candidates": ["baseline:root"],
+    "tech_entry_point_candidates": {
+      "attachments": ["baseline:attachment"],
+      "ammo": ["baseline:ammo"]
+    },
+    "tech_tree": "baseline:tree"
+  },
+  "tree": {
+    "format": 2,
+    "title": "Legacy Redesign Baseline",
+    "weapon_placement_mode": "automatic",
+    "layout": {"max_nodes_per_layer": 9},
+    "bands": {"mode": "none"},
+    "tiers": [
+      {"id": "starter", "title": "Starter"},
+      {"id": "basic", "title": "Basic"},
+      {"id": "established", "title": "Established"},
+      {"id": "advanced", "title": "Advanced"},
+      {"id": "elite", "title": "Elite"},
+      {"id": "apex", "title": "Apex"}
+    ],
+    "domains": [
+      {
+        "id": "weapons",
+        "title": "Weapons",
+        "fallback_lane": "baseline:weapons/general",
+        "fallback_tier": "basic",
+        "lanes": [
+          {"id": "baseline:weapons/general", "title": "General Weapons", "order": 10}
+        ]
+      },
+      {
+        "id": "attachments",
+        "title": "Attachments",
+        "fallback_lane": "baseline:attachments/general",
+        "fallback_tier": "basic",
+        "lanes": [
+          {"id": "baseline:attachments/general", "title": "General Attachments", "order": 20}
+        ]
+      },
+      {
+        "id": "ammo",
+        "title": "Ammo",
+        "fallback_lane": "baseline:ammo/general",
+        "fallback_tier": "basic",
+        "lanes": [
+          {"id": "baseline:ammo/general", "title": "General Ammo", "order": 30}
+        ]
+      }
+    ]
+  },
+  "automatic_profile": {
+    "format": 1,
+    "tree": "baseline:tree",
+    "mode": "connected",
+    "levels_per_tier": 3,
+    "review_confidence_threshold": 60,
+    "review_handling": "place_connected",
+    "max_prerequisites": 2,
+    "merge_interval": 4
+  },
+  "tags": [
+    {
+      "id": "baseline:featured",
+      "definition": {
+        "format": 1,
+        "values": ["baseline:tagged"]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "id": "baseline:rule/guns",
+      "definition": {
+        "format": 1,
+        "profile": "baseline:profile",
+        "priority": 0,
+        "target": {"selector": {"blueprint_kinds": ["gun"]}},
+        "visibility": "preview",
+        "tree_enabled": true,
+        "research_enabled": true,
+        "research_cost": {"points": 8}
+      }
+    },
+    {
+      "id": "baseline:rule/tagged",
+      "definition": {
+        "format": 1,
+        "profile": "baseline:profile",
+        "priority": -50,
+        "target": {"tags": ["baseline:featured"]},
+        "visibility": "name",
+        "research_cost": {"points": 7}
+      }
+    },
+    {
+      "id": "baseline:rule/root",
+      "definition": {
+        "format": 1,
+        "profile": "baseline:profile",
+        "priority": -100,
+        "target": {"blueprints": ["baseline:root"]},
+        "visibility": "full",
+        "research_cost": {"points": 3}
+      }
+    },
+    {
+      "id": "baseline:rule/upgrade",
+      "definition": {
+        "format": 1,
+        "profile": "baseline:profile",
+        "priority": -100,
+        "target": {"blueprints": ["baseline:upgrade"]},
+        "visibility": "full",
+        "research_cost": {"points": 11},
+        "prerequisites": ["baseline:root"]
+      }
+    },
+    {
+      "id": "baseline:rule/attachments",
+      "definition": {
+        "format": 1,
+        "profile": "baseline:profile",
+        "priority": 0,
+        "target": {"selector": {"blueprint_kinds": ["attachment"]}},
+        "visibility": "preview",
+        "tree_enabled": true,
+        "research_enabled": true,
+        "research_cost": {"points": 4}
+      }
+    },
+    {
+      "id": "baseline:rule/attachment_exact",
+      "definition": {
+        "format": 1,
+        "profile": "baseline:profile",
+        "priority": -100,
+        "target": {"blueprints": ["baseline:attachment"]},
+        "visibility": "full",
+        "research_cost": {"points": 6}
+      }
+    },
+    {
+      "id": "baseline:rule/ammo",
+      "definition": {
+        "format": 1,
+        "profile": "baseline:profile",
+        "priority": 0,
+        "target": {"selector": {"blueprint_kinds": ["ammo"]}},
+        "visibility": "preview",
+        "tree_enabled": true,
+        "research_enabled": true,
+        "research_cost": {"points": 2}
+      }
+    }
+  ],
+  "entry_bundles": [
+    {
+      "id": "baseline:entries/exact",
+      "definition": {
+        "format": 1,
+        "tree": "baseline:tree",
+        "priority": 100,
+        "entries": [
+          {
+            "target": {"blueprints": ["baseline:root"]},
+            "domain": "weapons",
+            "lane": "baseline:weapons/general",
+            "tier": "starter",
+            "level": 0,
+            "order": 10,
+            "rating": {"combat": 5, "utility": 5, "appeal": 5}
+          },
+          {
+            "target": {"blueprints": ["baseline:upgrade"]},
+            "domain": "weapons",
+            "lane": "baseline:weapons/general",
+            "tier": "starter",
+            "level": 0,
+            "order": 20,
+            "rating": {"combat": 10, "utility": 10, "appeal": 10}
+          },
+          {
+            "target": {"blueprints": ["baseline:attachment"]},
+            "domain": "attachments",
+            "lane": "baseline:attachments/general",
+            "tier": "basic",
+            "level": 1,
+            "order": 10
+          },
+          {
+            "target": {"blueprints": ["baseline:ammo"]},
+            "domain": "ammo",
+            "lane": "baseline:ammo/general",
+            "tier": "basic",
+            "level": 1,
+            "order": 10
+          }
+        ]
+      }
+    },
+    {
+      "id": "baseline:entries/tag",
+      "definition": {
+        "format": 1,
+        "tree": "baseline:tree",
+        "priority": 50,
+        "entries": [
+          {
+            "target": {"tags": ["baseline:featured"]},
+            "domain": "weapons",
+            "lane": "baseline:weapons/general",
+            "tier": "established",
+            "level": 1,
+            "order": 30
+          }
+        ]
+      }
+    },
+    {
+      "id": "baseline:entries/selector",
+      "definition": {
+        "format": 1,
+        "tree": "baseline:tree",
+        "priority": 20,
+        "entries": [
+          {
+            "target": {
+              "selector": {
+                "namespaces": ["baseline"],
+                "blueprint_kinds": ["gun"]
+              }
+            },
+            "domain": "weapons",
+            "lane": "baseline:weapons/general",
+            "tier": "advanced",
+            "level": 2,
+            "order": 40
+          }
+        ]
+      }
+    },
+    {
+      "id": "baseline:entries/fallback",
+      "definition": {
+        "format": 1,
+        "tree": "baseline:tree",
+        "priority": 0,
+        "entries": [
+          {
+            "target": {
+              "selector": {
+                "namespaces": ["addon"],
+                "blueprint_kinds": ["gun"]
+              }
+            },
+            "domain": "weapons",
+            "lane": "baseline:weapons/general",
+            "tier": "basic",
+            "level": 0,
+            "order": 900000,
+            "fallback": true
+          }
+        ]
+      }
+    }
+  ],
+  "catalog": [
+    {"id": "baseline:root", "kind": "gun", "item_type": "pistol"},
+    {"id": "baseline:upgrade", "kind": "gun", "item_type": "pistol"},
+    {"id": "baseline:tagged", "kind": "gun", "item_type": "rifle"},
+    {"id": "baseline:selector", "kind": "gun", "item_type": "shotgun"},
+    {"id": "addon:fallback_gun", "kind": "gun", "item_type": "rifle"},
+    {"id": "orphan:unplaced_gun", "kind": "gun", "item_type": "smg"},
+    {"id": "baseline:attachment", "kind": "attachment", "item_type": "scope"},
+    {"id": "baseline:ammo", "kind": "ammo", "item_type": "ammo"}
+  ],
+  "expected": {
+    "placement_origins": {
+      "baseline:root": "exact",
+      "baseline:upgrade": "exact",
+      "baseline:tagged": "tag",
+      "baseline:selector": "selector",
+      "addon:fallback_gun": "legacy_fallback",
+      "orphan:unplaced_gun": "unplaced",
+      "baseline:attachment": "exact",
+      "baseline:ammo": "exact"
+    },
+    "policy_rules": {
+      "baseline:root": "baseline:rule/root",
+      "baseline:upgrade": "baseline:rule/upgrade",
+      "baseline:tagged": "baseline:rule/tagged",
+      "baseline:selector": "baseline:rule/guns",
+      "addon:fallback_gun": "baseline:rule/guns",
+      "orphan:unplaced_gun": "baseline:rule/guns",
+      "baseline:attachment": "baseline:rule/attachment_exact",
+      "baseline:ammo": "baseline:rule/ammo"
+    },
+    "policy_points": {
+      "baseline:root": 3,
+      "baseline:upgrade": 11,
+      "baseline:tagged": 7,
+      "baseline:selector": 8,
+      "addon:fallback_gun": 8,
+      "orphan:unplaced_gun": 8,
+      "baseline:attachment": 6,
+      "baseline:ammo": 2
+    },
+    "automatic": {
+      "authored": [],
+      "eligible": [
+        "addon:fallback_gun",
+        "baseline:root",
+        "baseline:selector",
+        "baseline:tagged",
+        "baseline:upgrade",
+        "orphan:unplaced_gun"
+      ],
+      "unplaced": [],
+      "fingerprint": "be381b7ad38ccf1c8c5bf645e0dd4d7a07685bd4c9a85d10ccc9e8adc1bcf40d"
+    },
+    "publication_fingerprint": "677a16737f552b9d6a2165d4715ec2e73af44fd5924927bb793cde15047e9c67"
+  }
+}

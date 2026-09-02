@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "award_group": "taczweaponblueprints:first_blueprint_discovery",
+  "trigger": {
+    "type": "blueprint_discovered",
+    "retroactive": true
+  },
+  "reward": {
+    "points": 1,
+    "overflow": "require_full"
+  },
+  "repeat": {
+    "type": "once_per_target",
+    "claim_id": "taczweaponblueprints:first_blueprint_discovery"
+  },
+  "presentation": {
+    "visibility": "public",
+    "name": "research_points.taczweaponblueprints.first_blueprint_discovery"
+  }
+}

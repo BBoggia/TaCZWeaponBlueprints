@@ -1,0 +1,664 @@
+{
+  "format": 2,
+  "tree": "taczweaponblueprints:default",
+  "priority": 0,
+  "entries": [
+    {
+      "target": {
+        "blueprints": [
+          "tacz:m9a4"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/handguns",
+      "tier": "established",
+      "order": 100,
+      "rank": 2,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:m1911"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/handguns",
+      "tier": "advanced",
+      "order": 101,
+      "rank": 4,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:cz75"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/handguns",
+      "tier": "advanced",
+      "order": 102,
+      "rank": 4,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:p320"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/handguns",
+      "tier": "advanced",
+      "level": 1,
+      "order": 103,
+      "rank": 5,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:hk_mk23"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/handguns",
+      "tier": "advanced",
+      "level": 2,
+      "order": 104,
+      "rank": 6,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:rhino357"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/handguns",
+      "tier": "advanced",
+      "level": 1,
+      "order": 200,
+      "rank": 5,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:lonetrail"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/handguns",
+      "tier": "elite",
+      "order": 201,
+      "rank": 8,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:b93r"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/handguns",
+      "tier": "elite",
+      "order": 202,
+      "rank": 8,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:deagle"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/handguns",
+      "tier": "elite",
+      "order": 203,
+      "rank": 8,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:deagle_golden"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/handguns",
+      "tier": "elite",
+      "level": 1,
+      "order": 204,
+      "rank": 9,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:timeless50"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/handguns",
+      "tier": "elite",
+      "level": 1,
+      "order": 205,
+      "rank": 9,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:taurus500"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/handguns",
+      "tier": "apex",
+      "level": 1,
+      "order": 300,
+      "rank": 12,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:rpk"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/machine_guns",
+      "tier": "basic",
+      "order": 100,
+      "rank": 1,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:m249"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/machine_guns",
+      "tier": "established",
+      "order": 200,
+      "rank": 2,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:fn_evolys"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/machine_guns",
+      "tier": "advanced",
+      "order": 300,
+      "rank": 4,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:m16a4"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "basic",
+      "order": 100,
+      "rank": 1,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:m4a1"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "established",
+      "order": 200,
+      "rank": 2,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:type_81"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "established",
+      "order": 201,
+      "rank": 2,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:aug"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "established",
+      "level": 1,
+      "order": 202,
+      "rank": 3,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:hk_g3"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "established",
+      "level": 1,
+      "order": 203,
+      "rank": 3,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:m16a1"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "advanced",
+      "order": 300,
+      "rank": 4,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:ak47"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "advanced",
+      "order": 301,
+      "rank": 4,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:qbz_95"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "advanced",
+      "level": 1,
+      "order": 302,
+      "rank": 5,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:g36k"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "advanced",
+      "level": 1,
+      "order": 303,
+      "rank": 5,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:scar_l"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "advanced",
+      "level": 2,
+      "order": 304,
+      "rank": 6,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:fn_fal"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "advanced",
+      "level": 2,
+      "order": 305,
+      "rank": 7,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:sks_tactical"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "advanced",
+      "level": 2,
+      "order": 306,
+      "rank": 6,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:hk416d"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "elite",
+      "order": 400,
+      "rank": 8,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:qbz_191"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "elite",
+      "level": 1,
+      "order": 401,
+      "rank": 9,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:mk14"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "elite",
+      "level": 2,
+      "order": 402,
+      "rank": 10,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:spr15hb"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "apex",
+      "order": 500,
+      "rank": 11,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:scar_h"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/rifles",
+      "tier": "apex",
+      "level": 1,
+      "order": 501,
+      "rank": 12,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:db_long"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/shotguns",
+      "tier": "basic",
+      "order": 100,
+      "rank": 1,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:db_short"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/shotguns",
+      "tier": "established",
+      "order": 200,
+      "rank": 2,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:m870"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/shotguns",
+      "tier": "established",
+      "level": 1,
+      "order": 201,
+      "rank": 3,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:m1014"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/shotguns",
+      "tier": "advanced",
+      "order": 300,
+      "rank": 4,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:aa12"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/shotguns",
+      "tier": "elite",
+      "order": 400,
+      "rank": 8,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:spas_12"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/shotguns",
+      "tier": "elite",
+      "level": 1,
+      "order": 401,
+      "rank": 9,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:uzi"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/smgs",
+      "tier": "basic",
+      "order": 100,
+      "rank": 1,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:hk_mp5a5"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/smgs",
+      "tier": "established",
+      "order": 200,
+      "rank": 2,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:ump45"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/smgs",
+      "tier": "advanced",
+      "order": 300,
+      "rank": 4,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:p90"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/smgs",
+      "tier": "advanced",
+      "level": 1,
+      "order": 301,
+      "rank": 5,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:vector45"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/smgs",
+      "tier": "elite",
+      "order": 400,
+      "rank": 8,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:springfield1873"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/snipers",
+      "tier": "basic",
+      "order": 100,
+      "rank": 1,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:kar98"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/snipers",
+      "tier": "established",
+      "order": 200,
+      "rank": 2,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:m700"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/snipers",
+      "tier": "established",
+      "level": 1,
+      "order": 201,
+      "rank": 3,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:ai_awp"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/snipers",
+      "tier": "advanced",
+      "order": 300,
+      "rank": 4,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:m95"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/snipers",
+      "tier": "elite",
+      "order": 400,
+      "rank": 8,
+      "fallback": true
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:m107"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/snipers",
+      "tier": "apex",
+      "order": 500,
+      "rank": 11,
+      "fallback": true
+    }
+  ]
+}

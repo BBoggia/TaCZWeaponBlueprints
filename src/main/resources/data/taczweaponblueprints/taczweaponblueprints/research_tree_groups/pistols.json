@@ -1,0 +1,11 @@
+{
+  "format": 1,
+  "profile": "taczweaponblueprints:duplicate_recovery",
+  "title": "Pistols",
+  "translation_key": "gui.taczweaponblueprints.research_group.pistols",
+  "icon": "tacz:glock_17",
+  "order": 10,
+  "ranks": [
+    ["tacz:glock_17", "tacz:m9a4", "tacz:m1911", "tacz:cz75", "tacz:p320", "tacz:rhino357", "tacz:hk_mk23", "tacz:lonetrail", "tacz:b93r", "tacz:deagle", "tacz:deagle_golden", "tacz:timeless50", "tacz:taurus500"]
+  ]
+}

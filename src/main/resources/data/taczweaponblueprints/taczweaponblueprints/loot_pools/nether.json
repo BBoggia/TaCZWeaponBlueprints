@@ -1,0 +1,29 @@
+{
+  "format": 1,
+  "entries": [
+    {
+      "blueprint": "tacz:rpg7",
+      "weight": 0.4
+    },
+    {
+      "blueprint": "classicr:mgl_40mm",
+      "weight": 0.841
+    },
+    {
+      "blueprint": "lradd:m202",
+      "weight": 2.016
+    },
+    {
+      "blueprint": "classicr:m82a2",
+      "weight": 4.073
+    },
+    {
+      "blueprint": "tacz:m95",
+      "weight": 4.277
+    },
+    {
+      "blueprint": "classicr:minigun",
+      "weight": 6.717
+    }
+  ]
+}

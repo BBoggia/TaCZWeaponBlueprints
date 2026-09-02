@@ -1,0 +1,96 @@
+{
+  "format": 2,
+  "journal_enabled": true,
+  "tree_enabled": false,
+  "visibility": "silhouette",
+  "research_enabled": true,
+  "recycling_enabled": true,
+  "allow_unlearned_recycling": false,
+  "recycling_value": 1,
+  "research_cost": {
+    "points": 8,
+    "ingredients": [
+      {
+        "items": [
+          "minecraft:paper"
+        ],
+        "count": 4
+      },
+      {
+        "items": [
+          "minecraft:iron_ingot"
+        ],
+        "count": 2
+      }
+    ]
+  },
+  "requires_discovery": false,
+  "creative_bypasses_cost": false,
+  "domain_policies": {
+    "weapons": {
+      "tree_enabled": true,
+      "research_enabled": true
+    },
+    "attachments": {
+      "tree_enabled": false,
+      "research_enabled": false
+    },
+    "ammo": {
+      "tree_enabled": false,
+      "research_enabled": false
+    }
+  },
+  "reverse_engineering": {
+    "enabled": true,
+    "cost": {
+      "points": 0
+    },
+    "allow_known": true,
+    "allow_modified": true,
+    "physical_blueprint_learning": "bypass_tree_prerequisites",
+    "output_recyclable": false
+  },
+  "tech_tree": "taczweaponblueprints:default",
+  "entry_point_candidates": [
+    "tacz:glock_17",
+    "tacz:m9a4",
+    "tacz:m1911",
+    "tacz:cz75",
+    "tacz:p320",
+    "tacz:hk_mk23",
+    "tacz:rhino357",
+    "tacz:lonetrail",
+    "tacz:b93r",
+    "tacz:deagle",
+    "tacz:deagle_golden",
+    "tacz:timeless50",
+    "tacz:taurus500"
+  ],
+  "tech_entry_point_candidates": {
+    "attachments": [
+      "tacz:grip_rk6",
+      "tacz:sight_acro_pistol",
+      "tacz:light_extended_mag_1",
+      "tacz:oem_stock_light",
+      "tacz:laser_nightstick",
+      "tacz:bayonet_6h3",
+      "tacz:sight_deltapoint_pistol",
+      "tacz:sight_fastfire_pistol",
+      "tacz:sight_pk06_pistol",
+      "tacz:sight_rmr_dot",
+      "tacz:sight_sro_dot",
+      "tacz:stock_m4ss",
+      "tacz:bayonet_m9"
+    ],
+    "ammo": [
+      "tacz:9mm",
+      "tacz:22wmr",
+      "tacz:762x25",
+      "tacz:45acp",
+      "tacz:545x39",
+      "tacz:46x30",
+      "tacz:12g",
+      "tacz:45_70"
+    ]
+  }
+}

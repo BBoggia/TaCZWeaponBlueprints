@@ -1,0 +1,14 @@
+{
+  "format": 1,
+  "profile": "example:custom_progression",
+  "priority": 100,
+  "target": {
+    "blueprints": ["example_guns:starter_pistol"]
+  },
+  "visibility": "preview",
+  "tree_enabled": true,
+  "research_cost": {
+    "points": 4,
+    "ingredients": [{ "items": ["minecraft:paper"], "count": 2 }]
+  }
+}

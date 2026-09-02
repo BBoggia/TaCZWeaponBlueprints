@@ -1,0 +1,23 @@
+{
+  "format": 2,
+  "tree": "example:dynamic_weapons",
+  "priority": 100,
+  "entries": [
+    {
+      "target": {"blueprints": ["example_guns:starter_pistol"]},
+      "domain": "weapons",
+      "lane": "example:weapons/handguns",
+      "tier": "starter",
+      "rank": 0,
+      "order": 0
+    },
+    {
+      "target": {"blueprints": ["example_guns:advanced_pistol"]},
+      "domain": "weapons",
+      "lane": "example:weapons/handguns",
+      "tier": "advanced",
+      "rank": 1,
+      "order": 100
+    }
+  ]
+}

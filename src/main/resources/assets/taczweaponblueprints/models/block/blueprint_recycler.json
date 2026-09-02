@@ -1,0 +1,117 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "taczweaponblueprints:block/blueprint_recycler",
+    "side": "taczweaponblueprints:block/blueprint_recycler",
+    "front": "taczweaponblueprints:block/blueprint_recycler",
+    "top": "taczweaponblueprints:block/blueprint_recycler",
+    "control": "taczweaponblueprints:block/blueprint_recycler"
+  },
+  "elements": [
+    {
+      "name": "cabinet",
+      "from": [1, 2, 1],
+      "to": [15, 11, 15],
+      "faces": {
+        "north": { "uv": [8, 0, 16, 8], "texture": "#front" },
+        "east": { "uv": [0, 0, 8, 8], "texture": "#side" },
+        "south": { "uv": [0, 0, 8, 8], "texture": "#side" },
+        "west": { "uv": [0, 0, 8, 8], "texture": "#side" },
+        "up": { "uv": [0, 8, 8, 16], "texture": "#top" },
+        "down": { "uv": [0, 0, 8, 8], "texture": "#side" }
+      }
+    },
+    {
+      "name": "top_deck",
+      "from": [0, 11, 0],
+      "to": [16, 13, 16],
+      "faces": {
+        "north": { "uv": [8, 8, 16, 16], "texture": "#control" },
+        "east": { "uv": [0, 0, 8, 8], "texture": "#side" },
+        "south": { "uv": [0, 0, 8, 8], "texture": "#side" },
+        "west": { "uv": [0, 0, 8, 8], "texture": "#side" },
+        "up": { "uv": [0, 8, 8, 16], "texture": "#top" },
+        "down": { "uv": [0, 0, 8, 8], "texture": "#side" }
+      }
+    },
+    {
+      "name": "rear_console",
+      "from": [2, 13, 10],
+      "to": [14, 16, 15],
+      "faces": {
+        "north": { "uv": [8, 8, 16, 16], "texture": "#control" },
+        "east": { "uv": [0, 0, 8, 8], "texture": "#side" },
+        "south": { "uv": [0, 0, 8, 8], "texture": "#side" },
+        "west": { "uv": [0, 0, 8, 8], "texture": "#side" },
+        "up": { "uv": [0, 8, 8, 16], "texture": "#top" },
+        "down": { "uv": [0, 0, 8, 8], "texture": "#side" }
+      }
+    },
+    {
+      "name": "paper_intake",
+      "from": [4, 7, 0],
+      "to": [12, 11, 3],
+      "faces": {
+        "north": { "uv": [8, 0, 16, 8], "texture": "#front" },
+        "east": { "uv": [0, 0, 8, 8], "texture": "#side" },
+        "south": { "uv": [8, 8, 16, 16], "texture": "#control" },
+        "west": { "uv": [0, 0, 8, 8], "texture": "#side" },
+        "up": { "uv": [0, 8, 8, 16], "texture": "#top" },
+        "down": { "uv": [0, 0, 8, 8], "texture": "#side" }
+      }
+    },
+    {
+      "name": "output_drawer",
+      "from": [3, 3, 0],
+      "to": [13, 6, 2],
+      "faces": {
+        "north": { "uv": [8, 8, 16, 16], "texture": "#control" },
+        "east": { "uv": [0, 0, 8, 8], "texture": "#side" },
+        "south": { "uv": [8, 8, 16, 16], "texture": "#control" },
+        "west": { "uv": [0, 0, 8, 8], "texture": "#side" },
+        "up": { "uv": [0, 8, 8, 16], "texture": "#top" },
+        "down": { "uv": [0, 0, 8, 8], "texture": "#side" }
+      }
+    },
+    {
+      "name": "front_left_foot",
+      "from": [2, 0, 2],
+      "to": [5, 2, 5],
+      "faces": {
+        "north": { "uv": [8, 8, 16, 16], "texture": "#control" },
+        "east": { "uv": [0, 0, 8, 8], "texture": "#side" },
+        "south": { "uv": [0, 0, 8, 8], "texture": "#side" },
+        "west": { "uv": [0, 0, 8, 8], "texture": "#side" },
+        "up": { "uv": [0, 8, 8, 16], "texture": "#top" },
+        "down": { "uv": [0, 0, 8, 8], "texture": "#side" }
+      }
+    },
+    {
+      "name": "front_right_foot",
+      "from": [11, 0, 2],
+      "to": [14, 2, 5],
+      "faces": {
+        "north": { "uv": [8, 8, 16, 16], "texture": "#control" },
+        "east": { "uv": [0, 0, 8, 8], "texture": "#side" },
+        "south": { "uv": [0, 0, 8, 8], "texture": "#side" },
+        "west": { "uv": [0, 0, 8, 8], "texture": "#side" },
+        "up": { "uv": [0, 8, 8, 16], "texture": "#top" },
+        "down": { "uv": [0, 0, 8, 8], "texture": "#side" }
+      }
+    },
+    {
+      "name": "rear_feet",
+      "from": [2, 0, 11],
+      "to": [14, 2, 14],
+      "faces": {
+        "north": { "uv": [8, 8, 16, 16], "texture": "#control" },
+        "east": { "uv": [0, 0, 8, 8], "texture": "#side" },
+        "south": { "uv": [0, 0, 8, 8], "texture": "#side" },
+        "west": { "uv": [0, 0, 8, 8], "texture": "#side" },
+        "up": { "uv": [0, 8, 8, 16], "texture": "#top" },
+        "down": { "uv": [0, 0, 8, 8], "texture": "#side" }
+      }
+    }
+  ]
+}

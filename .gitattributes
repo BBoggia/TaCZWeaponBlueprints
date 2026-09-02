@@ -1,5 +1,12 @@
-# Disable autocrlf on generated files, they always generate with LF
-# Add any extra files or paths here to make git stop saying they
-# are changed when only line endings change.
+# Keep cross-platform build and configuration files stable.
+gradlew text eol=lf
+*.gradle text eol=lf
+*.properties text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.bat text eol=crlf
+
+# Generated resources always use LF and should not dominate language reports.
 src/generated/**/.cache/cache text eol=lf
 src/generated/**/*.json text eol=lf
+src/generated/** linguist-generated=true

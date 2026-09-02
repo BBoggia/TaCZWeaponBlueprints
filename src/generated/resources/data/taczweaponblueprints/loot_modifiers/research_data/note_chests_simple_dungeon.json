@@ -1,0 +1,14 @@
+{
+  "type": "taczweaponblueprints:research_data",
+  "chance": 0.12,
+  "conditions": [
+    {
+      "condition": "forge:loot_table_id",
+      "loot_table_id": "minecraft:chests/simple_dungeon"
+    }
+  ],
+  "item": {
+    "Count": 1,
+    "id": "taczweaponblueprints:research_note"
+  }
+}

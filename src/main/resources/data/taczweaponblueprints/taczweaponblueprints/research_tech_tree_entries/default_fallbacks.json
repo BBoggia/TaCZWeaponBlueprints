@@ -1,0 +1,30 @@
+{
+  "format": 1,
+  "tree": "taczweaponblueprints:default",
+  "entries": [
+    {
+      "target": {"selector": {"blueprint_kinds": ["gun"]}},
+      "domain": "weapons",
+      "lane": "taczweaponblueprints:weapons/general",
+      "tier": "basic",
+      "order": 900000,
+      "fallback": true
+    },
+    {
+      "target": {"selector": {"blueprint_kinds": ["attachment"]}},
+      "domain": "attachments",
+      "lane": "taczweaponblueprints:attachments/general",
+      "tier": "basic",
+      "order": 900000,
+      "fallback": true
+    },
+    {
+      "target": {"selector": {"blueprint_kinds": ["ammo"]}},
+      "domain": "ammo",
+      "lane": "taczweaponblueprints:ammo/general",
+      "tier": "basic",
+      "order": 900000,
+      "fallback": true
+    }
+  ]
+}

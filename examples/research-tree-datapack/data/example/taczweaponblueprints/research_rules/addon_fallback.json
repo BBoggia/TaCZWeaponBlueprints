@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "profile": "example:custom_progression",
+  "target": {
+    "selector": {"blueprint_kinds": ["gun"]}
+  },
+  "visibility": "preview",
+  "tree_enabled": true,
+  "research_cost": {
+    "points": 6,
+    "ingredients": [{"items": ["minecraft:paper"], "count": 2}]
+  }
+}

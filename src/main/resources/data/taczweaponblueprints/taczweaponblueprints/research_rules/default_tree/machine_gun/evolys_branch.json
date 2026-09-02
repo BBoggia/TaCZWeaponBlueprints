@@ -1,0 +1,10 @@
+{
+  "format": 1,
+  "profile": "taczweaponblueprints:duplicate_recovery",
+  "priority": 100,
+  "target": { "blueprints": ["tacz:minigun"] },
+  "visibility": "full",
+  "tree_enabled": true,
+  "research_cost": { "points": 10, "ingredients": [{ "items": ["minecraft:paper"], "count": 5 }, { "items": ["minecraft:iron_ingot"], "count": 4 }] },
+  "prerequisites": ["tacz:fn_evolys", "tacz:rpg7"]
+}

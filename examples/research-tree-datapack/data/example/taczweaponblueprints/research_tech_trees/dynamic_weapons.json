@@ -1,0 +1,30 @@
+{
+  "format": 2,
+  "title": "Example Dynamic Weapon Tree",
+  "icon": "example_guns:starter_pistol",
+  "weapon_placement_mode": "automatic",
+  "layout": {"max_nodes_per_layer": 9},
+  "bands": {"mode": "dynamic", "ranks_per_band": 3},
+  "domains": [
+    {
+      "id": "weapons",
+      "title": "Weapons",
+      "icon": "example_guns:starter_pistol",
+      "fallback_lane": "example:weapons/general",
+      "fallback_tier": "basic",
+      "lanes": [
+        {
+          "id": "example:weapons/handguns",
+          "title": "Handguns",
+          "icon": "example_guns:starter_pistol",
+          "order": 10
+        },
+        {
+          "id": "example:weapons/general",
+          "title": "Other Weapons",
+          "order": 1000
+        }
+      ]
+    }
+  ]
+}

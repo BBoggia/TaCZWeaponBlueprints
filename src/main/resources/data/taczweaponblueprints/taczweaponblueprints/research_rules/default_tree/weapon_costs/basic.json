@@ -1,0 +1,23 @@
+{
+  "format": 1,
+  "profile": "taczweaponblueprints:duplicate_recovery",
+  "priority": 100,
+  "target": {
+    "blueprints": [
+      "tacz:cz75",
+      "tacz:m1911",
+      "tacz:m9a4",
+      "tacz:p320",
+      "tacz:uzi"
+    ]
+  },
+  "visibility": "full",
+  "tree_enabled": true,
+  "research_cost": {
+    "points": 4,
+    "ingredients": [
+      { "items": ["minecraft:paper"], "count": 2 },
+      { "items": ["minecraft:iron_ingot"], "count": 1 }
+    ]
+  }
+}

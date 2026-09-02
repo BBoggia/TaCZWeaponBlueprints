@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "profile": "taczweaponblueprints:duplicate_recovery",
+  "priority": 100,
+  "target": {
+    "blueprints": [
+      "tacz:ammo_mod_hp",
+      "tacz:grip_rk0",
+      "tacz:grip_vertical_talon",
+      "tacz:laser_lopro",
+      "tacz:shotgun_extended_mag_2",
+      "tacz:extended_mag_2",
+      "tacz:muzzle_brake_timeless50",
+      "tacz:muzzle_silencer_sg",
+      "tacz:scope_98k",
+      "tacz:scope_contender",
+      "tacz:sight_coyote",
+      "tacz:scope_1873_6x",
+      "tacz:scope_acog_ta31",
+      "tacz:scope_qmk152",
+      "tacz:stock_ak12",
+      "tacz:stock_sba3",
+      "tacz:stock_tactical_spas_12"
+    ]
+  },
+  "visibility": "full",
+  "tree_enabled": true,
+  "research_enabled": true,
+  "requires_discovery": false,
+  "research_cost": {
+    "points": 8,
+    "ingredients": [
+      { "items": ["minecraft:paper"], "count": 4 },
+      { "items": ["minecraft:iron_ingot"], "count": 3 }
+    ]
+  },
+  "prerequisites": ["tacz:sight_t2"]
+}

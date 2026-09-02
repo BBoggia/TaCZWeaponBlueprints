@@ -1,0 +1,117 @@
+{
+  "format": 1,
+  "entries": [
+    {
+      "blueprint": "tacz:rpg7",
+      "weight": 0.4
+    },
+    {
+      "blueprint": "classicr:mgl_40mm",
+      "weight": 0.841
+    },
+    {
+      "blueprint": "tacz:m320",
+      "weight": 1.575
+    },
+    {
+      "blueprint": "lradd:m202",
+      "weight": 2.016
+    },
+    {
+      "blueprint": "tacz:m16a1",
+      "weight": 3.779
+    },
+    {
+      "blueprint": "tacz:m4a1",
+      "weight": 3.926
+    },
+    {
+      "blueprint": "classicr:m82a2",
+      "weight": 4.073
+    },
+    {
+      "blueprint": "tacz:m95",
+      "weight": 4.277
+    },
+    {
+      "blueprint": "fibers:ax94",
+      "weight": 4.309
+    },
+    {
+      "blueprint": "tacz:m16a4",
+      "weight": 5.101
+    },
+    {
+      "blueprint": "classicr:ngsw_r_renewed",
+      "weight": 5.248
+    },
+    {
+      "blueprint": "lradd:qbz191_em",
+      "weight": 5.542
+    },
+    {
+      "blueprint": "oldgun:bar",
+      "weight": 5.689
+    },
+    {
+      "blueprint": "lradd:mcx",
+      "weight": 6.203
+    },
+    {
+      "blueprint": "tacz:hk_g3",
+      "weight": 6.203
+    },
+    {
+      "blueprint": "cib:mg3",
+      "weight": 6.276
+    },
+    {
+      "blueprint": "lradd:mg42",
+      "weight": 6.276
+    },
+    {
+      "blueprint": "oldgun:mg34",
+      "weight": 6.276
+    },
+    {
+      "blueprint": "suffuse:pkp",
+      "weight": 6.423
+    },
+    {
+      "blueprint": "classicr:mrad",
+      "weight": 6.56
+    },
+    {
+      "blueprint": "tacz:scar_h",
+      "weight": 6.57
+    },
+    {
+      "blueprint": "lradd:sa58",
+      "weight": 6.57
+    },
+    {
+      "blueprint": "classicr:minigun",
+      "weight": 6.717
+    },
+    {
+      "blueprint": "classicr:m60",
+      "weight": 6.717
+    },
+    {
+      "blueprint": "cib:negev",
+      "weight": 6.717
+    },
+    {
+      "blueprint": "tacz:mk14",
+      "weight": 7.964
+    },
+    {
+      "blueprint": "lradd:rfb",
+      "weight": 8.242
+    },
+    {
+      "blueprint": "classicr:mp7",
+      "weight": 8.965
+    }
+  ]
+}
