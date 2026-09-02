@@ -69,6 +69,6 @@ class ResearchWorkstationsPhaseFiveTest {
 
     @Test
     void destructiveWireCleanupUsesANewExactProtocol() {
-        assertEquals("42", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("47", NetworkHandler.PROTOCOL_VERSION);
     }
 }

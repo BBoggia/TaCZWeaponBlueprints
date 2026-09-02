@@ -155,7 +155,7 @@ ledger. Version-1 saves migrate automatically with an empty ledger; learned and
 discovered blueprint IDs, Research Points, and legacy recipe aliases remain
 unchanged and require no world conversion. The ledger is copied across every
 player clone and is not sent to clients. The custom network protocol is
-`42`, so clients and servers must update together. Protocol 42 transfers each
+`47`, so clients and servers must update together. Protocol 47 transfers each
 disclosure-safe research graph, matching group presentation, and optional
 identity-safe Tech Tree metadata as one bounded atomic publication. It also
 transfers canonical prerequisite-group boundaries, visible alternatives,
@@ -166,7 +166,8 @@ order, optional visual-band references, placement-origin metadata, an ordered
 bounded table of custom band labels, and the tree-owned resolved 8–28 node
 layer capacity.
 It retains hardened progression chunk generations and uses a research-only,
-live-inventory Research Bench preview, including multi-node unlock count,
+live-inventory Research Bench preview and correlated authoritative guidance,
+including multi-node unlock count,
 aggregate path costs, and the complete material-type count even when only the
 first six bounded material rows are shown. The preview also carries the
 effective research-cost mode, an opaque route-and-quote fingerprint, and the
@@ -174,8 +175,34 @@ difference between an unavailable automatic-tree publication and a published
 graph with no complete authorized route. The server rejects a Research action
 whose fingerprint no longer matches the freshly prepared attempt, refreshes
 the current preview, and consumes nothing. A matching attempt commits the same
-prepared plan rather than planning the path again. Blueprint
-Analyzer previews independently carry
+prepared plan rather than planning the path again.
+Authoritative guidance requests are accepted only for the matching open Bench
+and latest research publication. Responses expose public route identities only,
+cap route nodes, purchases, selected requirement proofs, and displayed material
+rows independently of the larger transaction limits, and leave guidance
+unavailable rather than sending a partial or oversized proof.
+The fullscreen Affordable Now filter reuses that server authority through
+ordered batches of at most eight visible targets. The server evaluates no more
+than one queued target per tick across open Research Benches, and each player
+has a separate bounded batch-admission window. Regularly reserved background
+ticks prevent interactive requests from starving those queued sweeps, while
+selection, research, tracked guidance, and live preview refreshes share the
+same server-wide planning fuse. Repeated batch failures become bounded
+unavailable results instead of leaving the client in Checking indefinitely.
+If a response is lost entirely, tracked guidance retries once after ten
+seconds and then reports the route as unavailable. An Affordable Now batch
+uses a longer sixty-second window for shared queued work, retries once, and
+then advances past only that batch with bounded unavailable results. Late
+responses retain their original request identity and cannot replace newer
+state. Unexpected fail-closed route exceptions are logged at most once per
+minute with a suppressed-failure count so broken content or capability
+integrations remain diagnosable without allowing request spam to flood logs.
+Unchecked nodes remain neutral;
+the client never estimates affordability or changes the published layout.
+Exact tracked-goal pricing and Affordable Now are hidden when the server uses
+the `CREATE_BLUEPRINT` compatibility result mode because that mode does not
+purchase a complete prerequisite path.
+Blueprint Analyzer previews independently carry
 duplicate, Research Data, physical-item reverse-engineering, trusted weapon
 origin, and direct found-weapon recovery decisions plus an opaque
 workstation-state token. It correlates Research Bench
@@ -389,6 +416,12 @@ only claim/cooldown/window/budget history, while `all` also clears that ledger
 as part of a complete progression reset. Point spending, datapack removal, and
 configuration changes never clear award history.
 
+Every explicit progression reset also clears the player's bounded recent-
+unlock list in the Blueprint Journal. This list records successful Tech Tree,
+physical-blueprint, and administrator learning batches only; starting grants,
+migrations, failed transactions, discoveries, and RP-only activity do not
+enter it. Unavailable content remains in the separate Unavailable view.
+
 The built-in profile assigns exact research policies to the complete
 recipe-backed TaCZ 1.1.8 catalog: 53 weapons, 95 attachments, and 24 ammunition
 types. Profile format 2 now activates only the 53-weapon tree by default;
@@ -535,6 +568,7 @@ Run with JDK 17:
 ./gradlew verifyTaperedAutomaticTopologyContract
 ./gradlew verifyHybridRouteGenerationContract
 ./gradlew verifyAutomaticPublicationRecoveryContract
+./gradlew verifyResearchGuidanceCandidateHandoff
 ./gradlew verifyReleaseArtifact
 ./gradlew verifyPublicationReadiness
 ./gradlew certifyReleaseCandidate
@@ -559,10 +593,19 @@ bundled `connected` mode with `place_connected` review handling, the three
 version identities, dynamic layering with a configured 9–20-node range and its
 baseline resolved width, optional
 tree-owned optional/dynamic/configured presentation bands, the 4,096-candidate
-limit, protocol 42, export format 18, and automatic prerequisite strategy
+limit, protocol 47, export format 18, and automatic prerequisite strategy
 `grouped_routes_v1` unless the
 corresponding contract and compatibility documentation are deliberately
 revised.
+
+The Phase 10 research-guidance handoff writes
+`build/reports/research-guidance-candidate-handoff.json`. It binds the complete
+Phase 9 automated report and manual-QA matrix to the exact candidate JAR,
+preserves the protocol 47/player-data 3/client-settings 3 compatibility tuple,
+and carries 21 clean invariants, 16 packaged classes, and 48 localized surfaces
+into release certification. Its `requires_manual_qa` state is intentional:
+complete the linked runtime matrix before publication rather than treating an
+automated handoff as visual, accessibility, or multiplayer evidence.
 
 The grouped-prerequisite acceptance gate writes
 `build/reports/grouped-prerequisite-acceptance.json`. It rejects a missing,
@@ -621,7 +664,7 @@ The grouped-prerequisite Phase 12 visual-refinement gate writes
 `branch-aware-visual-refinement-v1` and verifies client-only family-preserving
 responsive wrapping, bounded grouped-junction clearance, branch-seam pressure,
 and deterministic 287/4,096-node geometry. It does not migrate saves or change
-the published graph: prerequisite groups, semantic ranks, costs, protocol 42,
+the published graph: prerequisite groups, semantic ranks, costs, protocol 47,
 export format 18, and the packaged `grouped_routes_v1` strategy remain
 authoritative. Before public release, retain the gate report and complete its
 linked before/after screenshot checks at normal and maximum zoom-out.

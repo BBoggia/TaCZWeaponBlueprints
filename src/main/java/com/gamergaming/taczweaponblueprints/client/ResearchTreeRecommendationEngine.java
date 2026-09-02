@@ -69,6 +69,32 @@ public final class ResearchTreeRecommendationEngine {
                 });
     }
 
+    /**
+     * Resolves the exact next step selected by authoritative route guidance.
+     * Unlike the general recommendation policy, this never reorders multiple
+     * simultaneously available route-frontier nodes.
+     */
+    public static Optional<Recommendation> recommendTrackedStep(
+            ResearchTreeGraph graph,
+            Set<ResourceLocation> navigableNodes,
+            ResourceLocation nextStepId,
+            int researchPoints) {
+        if (graph == null || navigableNodes == null || nextStepId == null
+                || researchPoints < 0
+                || navigableNodes.stream().anyMatch(java.util.Objects::isNull)) {
+            throw new IllegalArgumentException(
+                    "invalid tracked Research Tree recommendation inputs");
+        }
+        if (!navigableNodes.contains(nextStepId)) {
+            return Optional.empty();
+        }
+        return recommend(
+                graph,
+                Set.of(nextStepId),
+                Set.of(nextStepId),
+                researchPoints);
+    }
+
     public record Recommendation(
             ResourceLocation blueprintId,
             int pointCost,

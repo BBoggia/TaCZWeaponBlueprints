@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import com.gamergaming.taczweaponblueprints.progression.ResearchGuidanceSnapshot;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
 
 import net.minecraft.resources.ResourceLocation;
@@ -102,6 +103,74 @@ public final class ResearchTreePlanner {
                 summaryOnlySteps,
                 route.unresolvedRequirementGroups(),
                 costComplete,
+                complete));
+    }
+
+    /**
+     * Chooses the route that may be presented to the player. A terminal server
+     * failure is authoritative and must not fall back to a client estimate.
+     */
+    public static Optional<Plan> presentationPlan(
+            ResearchTreeGraph graph,
+            ResourceLocation targetId,
+            int researchPoints,
+            Optional<ResearchGuidanceSnapshot> authoritativeSnapshot,
+            boolean authoritativeUnavailable) {
+        if (authoritativeSnapshot == null) {
+            throw new IllegalArgumentException("authoritative guidance cannot be null");
+        }
+        if (authoritativeUnavailable) {
+            return Optional.empty();
+        }
+        Optional<ResearchGuidanceSnapshot> matching = authoritativeSnapshot
+                .filter(snapshot -> snapshot.targetId().equals(targetId));
+        return matching.isPresent()
+                ? authoritativePlan(graph, matching.orElseThrow())
+                : plan(graph, targetId, researchPoints);
+    }
+
+    /** Builds the presentation plan from a server-selected disclosure-safe route. */
+    public static Optional<Plan> authoritativePlan(
+            ResearchTreeGraph graph,
+            ResearchGuidanceSnapshot snapshot) {
+        if (graph == null || snapshot == null) {
+            throw new IllegalArgumentException("invalid authoritative Research Tree plan input");
+        }
+        Set<ResourceLocation> purchases = Set.copyOf(snapshot.purchaseIds());
+        if (!snapshot.routeAvailable()
+                || snapshot.supportIds().stream().anyMatch(id -> graph.node(id)
+                        .filter(node -> node.visibility().revealsIdentity())
+                        .filter(node -> node.learned() != purchases.contains(id))
+                        .isEmpty())
+                || snapshot.selectedRequirements().stream().anyMatch(selected -> graph
+                        .requirementGroupsOf(selected.dependentId()).stream()
+                        .filter(group -> group.ordinal() == selected.groupOrdinal())
+                        .noneMatch(group -> group.visibleAlternativeIds()
+                                .contains(selected.prerequisiteId())))) {
+            return Optional.empty();
+        }
+        LinkedHashSet<ResourceLocation> nodes = new LinkedHashSet<>(snapshot.supportIds());
+        LinkedHashSet<ResearchTreeGraph.Edge> edges = new LinkedHashSet<>();
+        for (var selected : snapshot.selectedRequirements()) {
+            edges.add(new ResearchTreeGraph.Edge(
+                    selected.prerequisiteId(), selected.dependentId()));
+        }
+        boolean complete = snapshot.state() == ResearchGuidanceSnapshot.State.LEARNED;
+        int remainingSteps = complete ? 0 : snapshot.purchaseIds().size();
+        int learnedSteps = nodes.size() - remainingSteps;
+        return Optional.of(new Plan(
+                snapshot.targetId(),
+                nodes,
+                edges,
+                snapshot.nextStepId(),
+                complete ? 0L : snapshot.pointCost(),
+                complete ? 0L : snapshot.totalMaterialTypes(),
+                remainingSteps,
+                learnedSteps,
+                0,
+                0,
+                0,
+                true,
                 complete));
     }
 

@@ -1,23 +1,27 @@
 package com.gamergaming.taczweaponblueprints.menu;
 
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
+import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.init.ModBlocks;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.init.ModMenus;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintLearningService;
-import com.gamergaming.taczweaponblueprints.progression.BlueprintUnlockOrigin;
-import com.gamergaming.taczweaponblueprints.progression.PhysicalBlueprintLearningMode;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintResearchService;
+import com.gamergaming.taczweaponblueprints.progression.ResearchAffordabilitySnapshot;
+import com.gamergaming.taczweaponblueprints.progression.ResearchCostMode;
+import com.gamergaming.taczweaponblueprints.progression.ResearchGuidanceSnapshot;
 import com.gamergaming.taczweaponblueprints.progression.ResearchIngredientPlanner;
+import com.gamergaming.taczweaponblueprints.progression.ResearchPathAuthority;
 import com.gamergaming.taczweaponblueprints.progression.ResearchPathUnlockPlanner;
+import com.gamergaming.taczweaponblueprints.progression.ResearchRouteEvaluationService;
+import com.gamergaming.taczweaponblueprints.progression.ResearchRouteFailureReporter;
 import com.gamergaming.taczweaponblueprints.progression.ResearchRouteFingerprint;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchDataManager;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchIngredient;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchPolicy;
@@ -34,12 +38,14 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.registries.ForgeRegistries;
 
 /** Research-only, slotless server menu for the permanent Research Tree. */
 public final class ResearchBenchMenu extends AbstractContainerMenu {
+    private static final long AFFORDABILITY_HEARTBEAT_INTERVAL_TICKS = 100L;
     private final ContainerLevelAccess access;
     private final Player owner;
     private final Inventory playerInventory;
@@ -48,7 +54,10 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
     private ResearchInventorySnapshot previewInventory = ResearchInventorySnapshot.EMPTY;
     private final ResearchBenchRequestLimiter requestLimiter =
             new ResearchBenchRequestLimiter();
+    private PendingAffordabilityBatch pendingAffordabilityBatch;
     private boolean suppressAuthoritativePreviewRefresh;
+    private boolean authoritativePreviewRefreshPending;
+    private final DataSlot routeGuidanceAvailable = DataSlot.standalone();
 
     public ResearchBenchMenu(int containerId, Inventory inventory, FriendlyByteBuf buffer) {
         this(containerId, inventory, ContainerLevelAccess.create(
@@ -72,6 +81,10 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
         this.access = access;
         this.owner = inventory.player;
         this.playerInventory = inventory;
+        if (!inventory.player.level().isClientSide) {
+            refreshRouteGuidanceAvailability();
+        }
+        addDataSlot(routeGuidanceAvailable);
     }
 
     public ResearchSelectionPreview preview() {
@@ -82,15 +95,26 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
         return Optional.ofNullable(selectedBlueprint);
     }
 
+    /** Whether the server supports exact path pricing for this open Bench. */
+    public boolean routeGuidanceAvailable() {
+        return routeGuidanceAvailable.get() != 0;
+    }
+
     public void acceptPreview(ResearchSelectionPreview preview) {
         this.preview = preview == null ? ResearchSelectionPreview.EMPTY : preview;
         this.selectedBlueprint = this.preview.blueprintId().orElse(null);
     }
 
     public void refreshAuthoritativePreview(ServerPlayer player) {
-        if (!suppressAuthoritativePreviewRefresh
-                && player != null && player.containerMenu == this && stillValid(player)) {
+        if (suppressAuthoritativePreviewRefresh
+                || player == null || player.containerMenu != this || !stillValid(player)) {
+            return;
+        }
+        if (selectedBlueprint == null
+                || ResearchPlanningAdmission.admit(serverTick(player))) {
             refreshPreview(player);
+        } else {
+            authoritativePreviewRefreshPending = true;
         }
     }
 
@@ -161,7 +185,7 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
                     ActionResultCode.REQUEST_THROTTLED);
         }
         if (blueprintId != null
-                && !ResearchPlanningAdmission.admit(serverTick(player))) {
+                && !ResearchPlanningAdmission.admitInteractive(serverTick(player))) {
             return new ActionResult(
                     ResearchBenchResearchAction.SELECT,
                     Optional.of(blueprintId),
@@ -207,7 +231,7 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
         }
         if (requestLimiter.admitResearch(player.tickCount)
                 == ResearchBenchRequestLimiter.Decision.THROTTLE
-                || !ResearchPlanningAdmission.admit(serverTick(player))) {
+                || !ResearchPlanningAdmission.admitInteractive(serverTick(player))) {
             return new ActionResult(
                     ResearchBenchResearchAction.RESEARCH,
                     Optional.of(requestedId),
@@ -317,14 +341,136 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
      */
     @Override
     public void broadcastChanges() {
+        if (owner instanceof ServerPlayer) {
+            refreshRouteGuidanceAvailability();
+        }
         super.broadcastChanges();
         if (selectedBlueprint != null
                 && owner instanceof ServerPlayer serverPlayer
                 && serverPlayer.containerMenu == this
                 && stillValid(serverPlayer)
-                && !previewInventory.matches(playerInventory.items)) {
+                && (authoritativePreviewRefreshPending
+                        || !previewInventory.matches(playerInventory.items))
+                && ResearchPlanningAdmission.admit(serverTick(serverPlayer))) {
             refreshPreview(serverPlayer);
         }
+        processAffordabilityBatch();
+    }
+
+    /** Queues one bounded sweep batch; one target is evaluated per admitted server tick. */
+    public Optional<AffordabilityResult> beginAffordabilityRequest(
+            ServerPlayer player,
+            int requestId,
+            long publicationGeneration,
+            List<ResourceLocation> targetIds) {
+        if (player == null || requestId < 1 || publicationGeneration == Long.MIN_VALUE
+                || targetIds == null || targetIds.isEmpty()
+                || targetIds.size() > ResearchAffordabilitySnapshot.MAX_TARGETS_PER_BATCH
+                || targetIds.stream().anyMatch(java.util.Objects::isNull)
+                || targetIds.stream().distinct().count() != targetIds.size()
+                || player.containerMenu != this || !stillValid(player)) {
+            return Optional.of(AffordabilityResult.rejected());
+        }
+        if (!ModConfigs.BLUEPRINT.progressionSnapshot()
+                .treeResearchResultMode().learnsDirectly()) {
+            return Optional.of(AffordabilityResult.rejected());
+        }
+        if (pendingAffordabilityBatch != null
+                || requestLimiter.admitAffordability(serverTick(player))
+                        == ResearchBenchRequestLimiter.Decision.THROTTLE) {
+            return Optional.of(AffordabilityResult.throttled());
+        }
+        IPlayerRecipeData data = player.getCapability(
+                        com.gamergaming.taczweaponblueprints.init.ModCapabilities
+                                .PLAYER_RECIPE_DATA)
+                .resolve().orElse(null);
+        ResearchTreeGraph graph = data == null
+                ? null
+                : BlueprintResearchDataManager.INSTANCE.treeFor(data);
+        if (graph == null || targetIds.stream().anyMatch(id -> graph.node(id)
+                .filter(node -> node.visibility().revealsIdentity()).isEmpty())) {
+            return Optional.of(AffordabilityResult.rejected());
+        }
+        pendingAffordabilityBatch = new PendingAffordabilityBatch(
+                player,
+                requestId,
+                publicationGeneration,
+                targetIds,
+                graph,
+                new ArrayList<>());
+        ResearchPlanningAdmission.registerQueued(player.getUUID());
+        return Optional.empty();
+    }
+
+    private void processAffordabilityBatch() {
+        PendingAffordabilityBatch batch = pendingAffordabilityBatch;
+        if (batch == null) {
+            return;
+        }
+        ServerPlayer player = batch.player();
+        if (player.containerMenu != this
+                || !stillValid(player)
+                || !NetworkHandler.matchesResearchGeneration(
+                        player, batch.publicationGeneration())) {
+            cancelAffordabilityBatch();
+            NetworkHandler.sendResearchAffordabilityResult(
+                    player,
+                    containerId,
+                    batch.requestId(),
+                    batch.publicationGeneration(),
+                    AffordabilityResult.rejected());
+            return;
+        }
+        long currentServerTick = serverTick(player);
+        if (Math.floorMod(currentServerTick, AFFORDABILITY_HEARTBEAT_INTERVAL_TICKS) == 0L) {
+            NetworkHandler.sendResearchAffordabilityResult(
+                    player,
+                    containerId,
+                    batch.requestId(),
+                    batch.publicationGeneration(),
+                    AffordabilityResult.queued());
+        }
+        if (!ResearchPlanningAdmission.admitQueued(currentServerTick, player.getUUID())) {
+            return;
+        }
+        ResourceLocation targetId = batch.targetIds().get(batch.entries().size());
+        ResearchAffordabilitySnapshot.Entry entry;
+        try {
+            PreparedRouteEvaluation prepared = prepareRouteEvaluation(player, targetId)
+                    .orElse(null);
+            ResearchGuidanceSnapshot guidance = prepared == null
+                    ? null
+                    : ResearchRouteEvaluationService.guidanceSnapshot(
+                            prepared.evaluation(), batch.publicGraph(), prepared.costMode())
+                            .orElse(null);
+            entry = guidance == null
+                    ? new ResearchAffordabilitySnapshot.Entry(
+                            targetId,
+                            ResearchGuidanceSnapshot.State.ROUTE_UNAVAILABLE,
+                            true)
+                    : new ResearchAffordabilitySnapshot.Entry(
+                            targetId,
+                            guidance.state(),
+                            guidance.transactionCapacityAvailable());
+        } catch (RuntimeException exception) {
+            ResearchRouteFailureReporter.report("Affordable Now batch evaluation", exception);
+            entry = new ResearchAffordabilitySnapshot.Entry(
+                    targetId,
+                    ResearchGuidanceSnapshot.State.ROUTE_UNAVAILABLE,
+                    true);
+        }
+        batch.entries().add(entry);
+        if (batch.entries().size() < batch.targetIds().size()) {
+            return;
+        }
+        cancelAffordabilityBatch();
+        NetworkHandler.sendResearchAffordabilityResult(
+                player,
+                containerId,
+                batch.requestId(),
+                batch.publicationGeneration(),
+                AffordabilityResult.success(
+                        new ResearchAffordabilitySnapshot(batch.entries())));
     }
 
     private void refreshPreview(ServerPlayer player) {
@@ -333,6 +479,7 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
 
     private void publishPreview(ServerPlayer player, ResearchSelectionPreview next) {
         preview = next;
+        authoritativePreviewRefreshPending = false;
         previewInventory = ResearchInventorySnapshot.capture(playerInventory.items);
         super.broadcastChanges();
         NetworkHandler.sendResearchBenchPreview(player, containerId, next);
@@ -343,101 +490,20 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
     }
 
     private PreparedPreview buildPreparedPreview(ServerPlayer player) {
-        var config = ModConfigs.BLUEPRINT.progressionSnapshot();
-        boolean directPathResearch = config.treeResearchResultMode().learnsDirectly();
+        boolean directPathResearch = ModConfigs.BLUEPRINT.progressionSnapshot()
+                .treeResearchResultMode().learnsDirectly();
         if (selectedBlueprint == null) {
             return PreparedPreview.empty(directPathResearch);
         }
-        var data = player.getCapability(
-                com.gamergaming.taczweaponblueprints.init.ModCapabilities.PLAYER_RECIPE_DATA)
-                .resolve().orElse(null);
-        if (data == null) {
+        PreparedRouteEvaluation prepared = prepareRouteEvaluation(
+                player, selectedBlueprint).orElse(null);
+        if (prepared == null) {
             return PreparedPreview.empty(directPathResearch);
         }
-        BlueprintResearchDataManager.ResearchPlanningAccess planningAccess;
-        BlueprintResearchPolicy policy;
-        boolean selectedProgressionExempt;
-        try {
-            planningAccess = config.treeResearchResultMode().learnsDirectly()
-                    ? BlueprintResearchDataManager.INSTANCE.planningAccessFor(data)
-                    : null;
-            policy = planningAccess == null
-                    ? resolvePolicy(player, selectedBlueprint).orElse(null)
-                    : planningAccess.policyResolver().apply(selectedBlueprint);
-            selectedProgressionExempt = planningAccess == null
-                    ? com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionAccess
-                            .isProgressionExempt(selectedBlueprint)
-                    : planningAccess.progressionExempt().test(selectedBlueprint);
-            if (selectedProgressionExempt) {
-                return PreparedPreview.empty(directPathResearch);
-            }
-        } catch (RuntimeException exception) {
-            return PreparedPreview.empty(directPathResearch);
-        }
-        if (policy == null || !policy.visibility().allowsServerSelection()) {
-            return PreparedPreview.empty(directPathResearch);
-        }
-        List<ItemStack> inventoryStacks = playerInventory.items.stream()
-                .map(ItemStack::copy)
-                .toList();
-        int pointCost = policy.researchCost().points();
-        int unlockCount = 1;
-        boolean bypass = player.isCreative() && policy.creativeBypassesCost();
-        boolean policyEligible = policy.researchable();
-        ResearchSelectionPreview.PathPlanningState pathPlanningState =
-                ResearchSelectionPreview.PathPlanningState.NONE;
+        ResearchRouteEvaluationService.Evaluation evaluation = prepared.evaluation();
         List<ResearchIngredientPlanner.Requirement> combinedIngredients =
-                policy.researchCost().ingredients().stream()
-                        .map(ingredient -> new ResearchIngredientPlanner.Requirement(
-                                ingredient.items(), ingredient.tag(), ingredient.count()))
-                        .toList();
-        ResearchPathUnlockPlanner.Plan path = null;
-        Optional<ResearchRouteFingerprint> routeFingerprint = Optional.empty();
-        if (config.treeResearchResultMode().learnsDirectly()) {
-            ResearchPathUnlockPlanner.Result planned = ResearchPathUnlockPlanner.plan(
-                    selectedBlueprint,
-                    data,
-                    planningAccess.policyResolver(),
-                    planningAccess.progressionExempt(),
-                    player.isCreative(),
-                    inventoryStacks,
-                    planningAccess.authority());
-            if (planned.successful() && config.blueprintsEnabled()) {
-                path = planned.plan().orElseThrow();
-                pointCost = path.pointCost();
-                unlockCount = path.unlockCount();
-                bypass = path.costBypassed();
-                combinedIngredients = path.ingredients();
-                policyEligible = true;
-                routeFingerprint = Optional.of(ResearchRouteFingerprint.create(
-                        selectedBlueprint,
-                        path,
-                        data,
-                        player.isCreative(),
-                        planningAccess.fingerprintContext()));
-            } else {
-                policyEligible = false;
-                pathPlanningState = ResearchSelectionPreview.PathPlanningState.fromStatus(
-                        planned.status());
-                if (pathPlanningState != ResearchSelectionPreview.PathPlanningState.NONE) {
-                    pointCost = 0;
-                    unlockCount = 1;
-                    bypass = false;
-                    combinedIngredients = List.of();
-                }
-            }
-        }
-        ResearchIngredientPlanner.Allocation inventoryAllocation;
-        if (path != null) {
-            inventoryAllocation = ResearchPathUnlockPlanner.allocateInventory(
-                            path, inventoryStacks)
-                    .orElseThrow()
-                    .allocation();
-        } else {
-            inventoryAllocation = ResearchIngredientPlanner.allocation(
-                            inventoryStacks, combinedIngredients)
-                    .orElseThrow();
-        }
+                evaluation.requirements();
+        ResearchIngredientPlanner.Allocation inventoryAllocation = evaluation.allocation();
         List<ResearchSelectionPreview.IngredientPreview> ingredients = new ArrayList<>();
         for (int ingredientIndex = 0;
                 ingredientIndex < Math.min(
@@ -464,60 +530,129 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
                     ingredient.count(),
                     inventoryAllocation.allocatedForIngredient(ingredientIndex)));
         }
-        boolean ingredientsSatisfied = bypass || inventoryAllocation.complete();
-        boolean transactionCapacityAvailable = true;
-        if (policyEligible && path != null) {
-            transactionCapacityAvailable = pathCapacityAvailable(data, path.solution());
-        } else if (policyEligible && config.treeResearchResultMode().learnsDirectly()) {
-            BlueprintLearningService.Preparation preparation =
-                    BlueprintLearningService.prepare(
-                            new BlueprintLearningService.Request(
-                                    BlueprintUnlockOrigin.TREE_RESEARCH,
-                                    selectedBlueprint,
-                                    config.blueprintsEnabled(),
-                                    PhysicalBlueprintLearningMode.DISABLED,
-                                    selectedProgressionExempt),
-                            data,
-                            id -> BlueprintLearningService.targetFromCatalog(
-                                    BlueprintDataManager.SERVER, id),
-                            ignored -> policy);
-            if (!preparation.ready()) {
-                BlueprintLearningService.Status failure = preparation.failure()
-                        .orElseThrow().status();
-                if (failure == BlueprintLearningService.Status
-                        .PROGRESSION_CAPACITY_EXHAUSTED) {
-                    // The legacy field name remains on the preview wire for
-                    // compatibility. In direct mode it represents capacity for
-                    // the transaction's non-economic result rather than a
-                    // physical output slot.
-                    transactionCapacityAvailable = false;
-                } else {
-                    policyEligible = false;
-                }
-            }
-        }
-        boolean ready = policyEligible
-                && (bypass || data.getResearchPoints() >= pointCost)
-                && ingredientsSatisfied
-                && transactionCapacityAvailable;
         return new PreparedPreview(
                 new ResearchSelectionPreview(
                         Optional.of(selectedBlueprint),
-                        pointCost,
-                        data.getResearchPoints(),
-                        policyEligible,
-                        ingredientsSatisfied,
-                        transactionCapacityAvailable,
-                        ready,
-                        bypass,
+                        evaluation.pointCost(),
+                        evaluation.pointBalance(),
+                        evaluation.policyEligible(),
+                        evaluation.ingredientsSatisfied(),
+                        evaluation.transactionCapacityAvailable(),
+                        evaluation.ready(),
+                        evaluation.costBypassed(),
                         ingredients,
-                        unlockCount,
+                        evaluation.unlockCount(),
                         combinedIngredients.size(),
-                        pathPlanningState,
-                        config.researchCostMode(),
-                        routeFingerprint),
+                        ResearchSelectionPreview.PathPlanningState.fromStatus(
+                                evaluation.planningStatus()),
+                        prepared.costMode(),
+                        evaluation.routeFingerprint()),
                 directPathResearch,
-                Optional.ofNullable(path));
+                evaluation.path());
+    }
+
+    /** Evaluates a public target without changing the menu's current selection. */
+    public GuidanceResult handleGuidanceRequest(
+            ServerPlayer player,
+            ResourceLocation targetId) {
+        if (player == null || targetId == null || player.containerMenu != this
+                || !stillValid(player)) {
+            return GuidanceResult.rejected();
+        }
+        if (!ModConfigs.BLUEPRINT.progressionSnapshot()
+                .treeResearchResultMode().learnsDirectly()) {
+            return GuidanceResult.rejected();
+        }
+        if (requestLimiter.admitGuidance(serverTick(player))
+                        == ResearchBenchRequestLimiter.Decision.THROTTLE
+                || !ResearchPlanningAdmission.admit(serverTick(player))) {
+            return GuidanceResult.throttled();
+        }
+        PreparedRouteEvaluation prepared = prepareRouteEvaluation(player, targetId)
+                .orElse(null);
+        if (prepared == null) {
+            return GuidanceResult.rejected();
+        }
+        try {
+            var graph = BlueprintResearchDataManager.INSTANCE.treeFor(prepared.playerData());
+            return ResearchRouteEvaluationService.guidanceSnapshot(
+                            prepared.evaluation(), graph, prepared.costMode())
+                    .map(GuidanceResult::success)
+                    .orElseGet(GuidanceResult::rejected);
+        } catch (RuntimeException exception) {
+            ResearchRouteFailureReporter.report("guidance response construction", exception);
+            return GuidanceResult.rejected();
+        }
+    }
+
+    private Optional<PreparedRouteEvaluation> prepareRouteEvaluation(
+            ServerPlayer player,
+            ResourceLocation targetId) {
+        if (player == null || targetId == null) {
+            return Optional.empty();
+        }
+        var config = ModConfigs.BLUEPRINT.progressionSnapshot();
+        boolean directPathResearch = config.treeResearchResultMode().learnsDirectly();
+        var data = player.getCapability(
+                com.gamergaming.taczweaponblueprints.init.ModCapabilities.PLAYER_RECIPE_DATA)
+                .resolve().orElse(null);
+        if (data == null) {
+            return Optional.empty();
+        }
+        try {
+            BlueprintResearchDataManager.ResearchPlanningAccess planningAccess =
+                    directPathResearch
+                            ? BlueprintResearchDataManager.INSTANCE.planningAccessFor(data)
+                            : null;
+            BlueprintResearchPolicy policy = planningAccess == null
+                    ? resolvePolicy(player, targetId).orElse(null)
+                    : planningAccess.policyResolver().apply(targetId);
+            boolean progressionExempt = planningAccess == null
+                    ? com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionAccess
+                            .isProgressionExempt(targetId)
+                    : planningAccess.progressionExempt().test(targetId);
+            if (progressionExempt || policy == null
+                    || !policy.visibility().allowsServerSelection()) {
+                return Optional.empty();
+            }
+            var policyResolver = planningAccess == null
+                    ? (java.util.function.Function<ResourceLocation, BlueprintResearchPolicy>)
+                            ignored -> policy
+                    : planningAccess.policyResolver();
+            var exemptionResolver = planningAccess == null
+                    ? (java.util.function.Predicate<ResourceLocation>)
+                            com.gamergaming.taczweaponblueprints.progression
+                                    .BlueprintProgressionAccess::isProgressionExempt
+                    : planningAccess.progressionExempt();
+            ResearchRouteEvaluationService.Evaluation evaluation =
+                    ResearchRouteEvaluationService.evaluate(
+                            new ResearchRouteEvaluationService.Request(
+                                    targetId,
+                                    data,
+                                    policy,
+                                    policyResolver,
+                                    exemptionResolver,
+                                    planningAccess == null
+                                            ? ResearchPathAuthority.authored()
+                                            : planningAccess.authority(),
+                                    planningAccess == null
+                                            ? ResearchRouteFingerprint.Context.EMPTY
+                                            : planningAccess.fingerprintContext(),
+                                    id -> BlueprintLearningService.targetFromCatalog(
+                                            BlueprintDataManager.SERVER, id),
+                                    playerInventory.items,
+                                    player.isCreative(),
+                                    directPathResearch,
+                                    config.blueprintsEnabled()))
+                            .orElse(null);
+            return evaluation == null
+                    ? Optional.empty()
+                    : Optional.of(new PreparedRouteEvaluation(
+                            evaluation, data, config.researchCostMode()));
+        } catch (RuntimeException exception) {
+            ResearchRouteFailureReporter.report("Bench route preparation", exception);
+            return Optional.empty();
+        }
     }
 
     private static MigrationAttempt migrateLegacyKnowledge(
@@ -537,6 +672,7 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
             // A custom capability implementation could fail after applying
             // part of a repair. Reject the purchase and publish knowledge so
             // client and server cannot proceed from different ancestry state.
+            ResearchRouteFailureReporter.report("legacy knowledge migration", exception);
             return new MigrationAttempt(false, true);
         }
     }
@@ -554,6 +690,11 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
         return player == null || player.getServer() == null
                 ? -1L
                 : player.getServer().getTickCount();
+    }
+
+    private void refreshRouteGuidanceAvailability() {
+        routeGuidanceAvailable.set(ModConfigs.BLUEPRINT.progressionSnapshot()
+                .treeResearchResultMode().learnsDirectly() ? 1 : 0);
     }
 
     private record PreparedPreview(
@@ -577,47 +718,106 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
         }
     }
 
-    private record MigrationAttempt(boolean changed, boolean failed) {
+    private record PreparedRouteEvaluation(
+            ResearchRouteEvaluationService.Evaluation evaluation,
+            IPlayerRecipeData playerData,
+            ResearchCostMode costMode) {
+        private PreparedRouteEvaluation {
+            if (evaluation == null || playerData == null || costMode == null) {
+                throw new IllegalArgumentException("prepared route evaluation is invalid");
+            }
+        }
     }
 
-    private static boolean pathCapacityAvailable(
-            com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData data,
-            ResearchPathUnlockPlanner.SelectedUnlockSolution solution) {
-        if (data.getLearnedBlueprints().size() + solution.unlockCount()
-                        > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION) {
-            return false;
-        }
-        Set<String> discoveries = new LinkedHashSet<>(data.getDiscoveredBlueprints());
-        Set<String> recipes = new LinkedHashSet<>(data.getLearnedRecipes());
-        for (ResearchPathUnlockPlanner.PlannedNode node : solution.nodes()) {
-            BlueprintLearningService.LearningTarget target;
-            com.gamergaming.taczweaponblueprints.capabilities.BlueprintLearningMutation.Result
-                    preflight;
-            try {
-                target = BlueprintLearningService.targetFromCatalog(
-                        BlueprintDataManager.SERVER, node.blueprintId());
-                if (target == null || !node.blueprintId().equals(target.blueprintId())) {
-                    return false;
-                }
-                preflight = data.applyBlueprintLearning(
-                        com.gamergaming.taczweaponblueprints.capabilities.BlueprintLearningMutation
-                                .Request.preflight(
-                                        target.blueprintId().toString(),
-                                        target.legacyRecipeId().toString()));
-            } catch (RuntimeException exception) {
-                return false;
-            }
-            if (!preflight.ready()) {
-                return false;
-            }
-            discoveries.add(target.blueprintId().toString());
-            recipes.add(target.legacyRecipeId().toString());
-            if (discoveries.size() > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION
-                    || recipes.size() > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION) {
-                return false;
+    public record GuidanceResult(
+            GuidanceResultCode code,
+            Optional<ResearchGuidanceSnapshot> snapshot) {
+        public GuidanceResult {
+            snapshot = snapshot == null ? Optional.empty() : snapshot;
+            if (code == null || (code == GuidanceResultCode.SUCCESS) != snapshot.isPresent()) {
+                throw new IllegalArgumentException("research guidance result is invalid");
             }
         }
-        return true;
+
+        private static GuidanceResult success(ResearchGuidanceSnapshot snapshot) {
+            return new GuidanceResult(GuidanceResultCode.SUCCESS, Optional.of(snapshot));
+        }
+
+        private static GuidanceResult rejected() {
+            return new GuidanceResult(GuidanceResultCode.REJECTED, Optional.empty());
+        }
+
+        private static GuidanceResult throttled() {
+            return new GuidanceResult(GuidanceResultCode.THROTTLED, Optional.empty());
+        }
+    }
+
+    public enum GuidanceResultCode {
+        SUCCESS,
+        REJECTED,
+        THROTTLED
+    }
+
+    public record AffordabilityResult(
+            AffordabilityResultCode code,
+            Optional<ResearchAffordabilitySnapshot> snapshot) {
+        public AffordabilityResult {
+            snapshot = snapshot == null ? Optional.empty() : snapshot;
+            if (code == null
+                    || (code == AffordabilityResultCode.SUCCESS) != snapshot.isPresent()) {
+                throw new IllegalArgumentException("research affordability result is invalid");
+            }
+        }
+
+        private static AffordabilityResult success(ResearchAffordabilitySnapshot snapshot) {
+            return new AffordabilityResult(
+                    AffordabilityResultCode.SUCCESS, Optional.of(snapshot));
+        }
+
+        public static AffordabilityResult rejected() {
+            return new AffordabilityResult(
+                    AffordabilityResultCode.REJECTED, Optional.empty());
+        }
+
+        public static AffordabilityResult throttled() {
+            return new AffordabilityResult(
+                    AffordabilityResultCode.THROTTLED, Optional.empty());
+        }
+
+        public static AffordabilityResult queued() {
+            return new AffordabilityResult(
+                    AffordabilityResultCode.QUEUED, Optional.empty());
+        }
+    }
+
+    public enum AffordabilityResultCode {
+        SUCCESS,
+        REJECTED,
+        THROTTLED,
+        QUEUED
+    }
+
+    private record PendingAffordabilityBatch(
+            ServerPlayer player,
+            int requestId,
+            long publicationGeneration,
+            List<ResourceLocation> targetIds,
+            ResearchTreeGraph publicGraph,
+            ArrayList<ResearchAffordabilitySnapshot.Entry> entries) {
+        private PendingAffordabilityBatch {
+            targetIds = targetIds == null ? List.of() : List.copyOf(targetIds);
+            if (player == null || requestId < 1 || publicationGeneration == Long.MIN_VALUE
+                    || targetIds.isEmpty()
+                    || targetIds.size()
+                            > ResearchAffordabilitySnapshot.MAX_TARGETS_PER_BATCH
+                    || publicGraph == null || entries == null || !entries.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "pending research affordability batch is invalid");
+            }
+        }
+    }
+
+    private record MigrationAttempt(boolean changed, boolean failed) {
     }
 
     private static Optional<BlueprintResearchPolicy> resolvePolicy(
@@ -632,6 +832,7 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
                     : Optional.ofNullable(
                             BlueprintResearchDataManager.INSTANCE.policyFor(blueprintId, data));
         } catch (RuntimeException exception) {
+            ResearchRouteFailureReporter.report("Bench policy resolution", exception);
             return Optional.empty();
         }
     }
@@ -639,6 +840,20 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
     @Override
     public boolean stillValid(Player player) {
         return stillValid(access, player, ModBlocks.RESEARCH_BENCH.get());
+    }
+
+    @Override
+    public void removed(Player player) {
+        cancelAffordabilityBatch();
+        super.removed(player);
+    }
+
+    private void cancelAffordabilityBatch() {
+        if (pendingAffordabilityBatch != null) {
+            ResearchPlanningAdmission.unregisterQueued(
+                    pendingAffordabilityBatch.player().getUUID());
+            pendingAffordabilityBatch = null;
+        }
     }
 
     @Override

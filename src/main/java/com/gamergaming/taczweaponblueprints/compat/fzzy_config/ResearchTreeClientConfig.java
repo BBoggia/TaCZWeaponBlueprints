@@ -5,6 +5,7 @@ import java.util.function.Supplier;
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.client.ResearchTreeDisplayPolicy;
 import com.gamergaming.taczweaponblueprints.client.ResearchTreeLayoutPreset;
+import com.gamergaming.taczweaponblueprints.client.ResearchTreeMinimapMode;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayout;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayoutPolicy;
@@ -25,7 +26,7 @@ import net.minecraft.network.chat.Component;
 
 /** Client-owned visual policy for the Research Tree layout kernel. */
 @RootConfig
-@Version(version = 2)
+@Version(version = 3)
 @Translation(prefix = ModConfigs.BASE_KEY + "research_tree_client")
 public final class ResearchTreeClientConfig extends Config {
     public static final int DEFAULT_HOLD_DURATION_MILLIS = 700;
@@ -56,6 +57,9 @@ public final class ResearchTreeClientConfig extends Config {
             ResearchTreeDisplayPolicy.DEFAULT.showBackgroundGrid());
     public ValidatedEnum<ResearchTreeLayoutPreset> layoutPreset = new ValidatedEnum<>(
             ResearchTreeLayoutPreset.BALANCED,
+            ValidatedEnum.WidgetType.CYCLING);
+    public ValidatedEnum<ResearchTreeMinimapMode> minimap = new ValidatedEnum<>(
+            ResearchTreeMinimapMode.AUTOMATIC,
             ValidatedEnum.WidgetType.CYCLING);
     @ConfigGroup.Pop
     public ConfigAction resetTreeAppearance = new ConfigAction.Builder()
@@ -136,6 +140,10 @@ public final class ResearchTreeClientConfig extends Config {
         return displayPolicy;
     }
 
+    public ResearchTreeMinimapMode minimapMode() {
+        return minimap.get();
+    }
+
     private void normalizeAndPublish() {
         if (interGroupGap.getUnconditional() < intraGroupGap.getUnconditional()) {
             interGroupGap.setAndUpdate(intraGroupGap.getUnconditional());
@@ -177,6 +185,7 @@ public final class ResearchTreeClientConfig extends Config {
         orderingSweeps.setAndUpdate(DEFAULTS.orderingSweeps());
         compactionSweeps.setAndUpdate(DEFAULTS.compactionSweeps());
         layoutPreset.setAndUpdate(ResearchTreeLayoutPreset.BALANCED);
+        minimap.setAndUpdate(ResearchTreeMinimapMode.AUTOMATIC);
         publishPolicies();
     }
 

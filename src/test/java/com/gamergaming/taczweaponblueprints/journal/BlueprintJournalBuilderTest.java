@@ -13,6 +13,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerRecipeData;
+import com.gamergaming.taczweaponblueprints.capabilities.RecentBlueprintUnlockBatch;
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionConfigSnapshot;
 import com.gamergaming.taczweaponblueprints.progression.DuplicateBlueprintPolicy;
@@ -38,6 +39,10 @@ class BlueprintJournalBuilderTest {
         player.discoverBlueprint("removed:history");
         player.addBlueprint("removed:learned_history");
         player.setResearchPoints(12);
+        player.recordRecentUnlockBatch(
+                RecentBlueprintUnlockBatch.Source.PHYSICAL_BLUEPRINT,
+                "test:learned",
+                List.of("test:learned"));
 
         BlueprintJournalSnapshot snapshot = BlueprintJournalBuilder.build(
                 catalog,
@@ -74,6 +79,9 @@ class BlueprintJournalBuilderTest {
                         .toList());
         assertFalse(snapshot.unavailableHistory().get(0).learned());
         assertTrue(snapshot.unavailableHistory().get(1).learned());
+        assertEquals(1, snapshot.recentUnlocks().size());
+        assertEquals(id("test:learned"),
+                snapshot.recentUnlocks().get(0).targetBlueprintId());
     }
 
     @Test

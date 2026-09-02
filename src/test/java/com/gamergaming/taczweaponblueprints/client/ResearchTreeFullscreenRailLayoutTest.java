@@ -35,6 +35,10 @@ class ResearchTreeFullscreenRailLayoutTest {
             assertTrue(fullscreen.rail().contains(rail.pin()));
             assertTrue(fullscreen.rail().contains(rail.help()));
             assertTrue(fullscreen.rail().contains(rail.recommendation()));
+            assertTrue(rail.affordability().x() >= fullscreen.searchField().right());
+            assertEquals(fullscreen.searchField().y(), rail.affordability().y());
+            assertFalse(rail.affordability().overlaps(fullscreen.searchField()));
+            assertFalse(rail.affordability().overlaps(fullscreen.close()));
             assertFalse(rail.entries().get(rail.entries().size() - 1)
                     .overlaps(rail.recommendation()));
         }
@@ -57,6 +61,7 @@ class ResearchTreeFullscreenRailLayoutTest {
             assertFalse(entry.overlaps(rail.pin()));
             assertFalse(entry.overlaps(rail.help()));
             assertFalse(entry.overlaps(rail.recommendation()));
+            assertFalse(entry.overlaps(rail.affordability()));
         });
     }
 

@@ -154,6 +154,25 @@ class ResearchTreeViewportTest {
     }
 
     @Test
+    void minimapCameraContractUsesTheUnobscuredClippedCanvasRectangle() {
+        ResearchTreeViewport viewport = new ResearchTreeViewport();
+        viewport.configure(300, 180, 900, 600);
+        viewport.setSafeInsets(new ResearchTreeViewport.Insets(50, 20, 30, 10));
+
+        assertEquals(new ResearchTreeViewport.ViewportSize(220, 150),
+                viewport.unobscuredSize());
+        viewport.focus(700, 450, 1, 1);
+        ResearchTreeViewport.CanvasBounds visible = viewport.visibleCanvasBounds();
+
+        assertTrue(visible.x() >= 0.0D);
+        assertTrue(visible.y() >= 0.0D);
+        assertTrue(visible.x() + visible.width() <= 900.0D);
+        assertTrue(visible.y() + visible.height() <= 600.0D);
+        assertEquals(220.0D, visible.width(), TOLERANCE);
+        assertEquals(150.0D, visible.height(), TOLERANCE);
+    }
+
+    @Test
     void replacingCanvasCanFitNewTopologyWithoutChangingViewportDimensions() {
         ResearchTreeViewport viewport = new ResearchTreeViewport();
         viewport.configure(200, 100, 300, 200);

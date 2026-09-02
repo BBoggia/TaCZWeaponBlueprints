@@ -31,6 +31,20 @@ class PlayerRecipeDataTest {
     }
 
     @Test
+    void recentHistoryCapabilityExtensionsRemainOptionalForLegacyImplementations()
+            throws NoSuchMethodException {
+        assertTrue(IPlayerRecipeData.class
+                .getMethod("getRecentUnlockBatches").isDefault());
+        assertTrue(IPlayerRecipeData.class.getMethod(
+                "recordRecentUnlockBatch",
+                RecentBlueprintUnlockBatch.Source.class,
+                String.class,
+                java.util.Collection.class).isDefault());
+        assertTrue(IPlayerRecipeData.class
+                .getMethod("clearRecentUnlockHistory").isDefault());
+    }
+
+    @Test
     void exposesReadOnlyStateAndCanReplaceFromItsOwnView() {
         PlayerRecipeData data = new PlayerRecipeData();
         data.replaceRecipes(List.of("tacz:gun/m4a1", "tacz:gun/ak47"));
@@ -54,6 +68,10 @@ class PlayerRecipeDataTest {
                 new net.minecraft.resources.ResourceLocation("test:first_discovery"),
                 new net.minecraft.resources.ResourceLocation("tacz:ak47"));
         assertTrue(original.applyResearchPointTransaction(0, 1000, Mutation.claim(claim)));
+        assertTrue(original.recordRecentUnlockBatch(
+                RecentBlueprintUnlockBatch.Source.TREE_RESEARCH,
+                "tacz:ak47",
+                List.of("tacz:m4a1", "tacz:ak47")));
 
         CompoundTag serialized = original.serializeNBT();
         assertEquals(PlayerProgressionLimits.DATA_VERSION, serialized.getInt("DataVersion"));
@@ -77,6 +95,7 @@ class PlayerRecipeDataTest {
         assertEquals(original.getResearchPoints(), restored.getResearchPoints());
         assertEquals(original.getResearchPointAwardLedger().claims(),
                 restored.getResearchPointAwardLedger().claims());
+        assertEquals(original.getRecentUnlockBatches(), restored.getRecentUnlockBatches());
     }
 
     @Test
@@ -149,7 +168,44 @@ class PlayerRecipeDataTest {
 
         assertEquals(37, restored.getResearchPoints());
         assertTrue(restored.getResearchPointAwardLedger().isEmpty());
-        assertEquals(2, restored.serializeNBT().getInt("DataVersion"));
+        assertEquals(PlayerProgressionLimits.DATA_VERSION,
+                restored.serializeNBT().getInt("DataVersion"));
+    }
+
+    @Test
+    void recentUnlockHistoryIsBoundedOrderedAndRetainsLargeBatchTotals() {
+        PlayerRecipeData data = new PlayerRecipeData();
+        List<String> largeBatch = new java.util.ArrayList<>();
+        for (int index = 0; index < 80; index++) {
+            largeBatch.add("test:member_" + index);
+        }
+        assertTrue(data.recordRecentUnlockBatch(
+                RecentBlueprintUnlockBatch.Source.TREE_RESEARCH,
+                "test:member_79",
+                largeBatch));
+        RecentBlueprintUnlockBatch first = data.getRecentUnlockBatches().get(0);
+        assertEquals(80, first.totalMemberCount());
+        assertEquals(PlayerProgressionLimits.MAX_RECENT_UNLOCK_MEMBERS_PER_BATCH,
+                first.memberBlueprintIds().size());
+        assertTrue(first.memberBlueprintIds().contains("test:member_79"));
+        assertTrue(first.truncated());
+
+        for (int batch = 0; batch < 40; batch++) {
+            assertTrue(data.recordRecentUnlockBatch(
+                    RecentBlueprintUnlockBatch.Source.PHYSICAL_BLUEPRINT,
+                    "test:single_" + batch,
+                    List.of("test:single_" + batch)));
+        }
+        assertEquals(PlayerProgressionLimits.MAX_RECENT_UNLOCK_BATCHES,
+                data.getRecentUnlockBatches().size());
+        assertEquals(41L, data.getRecentUnlockBatches().get(31).sequence());
+        assertTrue(data.getRecentUnlockBatches().stream()
+                .mapToInt(batch -> batch.memberBlueprintIds().size()).sum()
+                <= PlayerProgressionLimits.MAX_RECENT_UNLOCK_MEMBER_IDS);
+        assertFalse(data.recordRecentUnlockBatch(
+                RecentBlueprintUnlockBatch.Source.TREE_RESEARCH,
+                "test:not_a_member",
+                List.of("test:different")));
     }
 
     @Test

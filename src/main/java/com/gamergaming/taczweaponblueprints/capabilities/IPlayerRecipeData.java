@@ -1,6 +1,7 @@
 package com.gamergaming.taczweaponblueprints.capabilities;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import net.minecraft.nbt.CompoundTag;
 
@@ -10,6 +11,13 @@ public interface IPlayerRecipeData {
     Set<String> getDiscoveredBlueprints();
     int getResearchPoints();
     ResearchPointAwardLedger getResearchPointAwardLedger();
+    /**
+     * Optional Recent-history extension. The default keeps capability
+     * implementations compiled before player data version 3 compatible.
+     */
+    default List<RecentBlueprintUnlockBatch> getRecentUnlockBatches() {
+        return List.of();
+    }
     BlueprintLearningMutation.Result applyBlueprintLearning(
             BlueprintLearningMutation.Request request);
     boolean addRecipe(String recipeId);
@@ -27,6 +35,14 @@ public interface IPlayerRecipeData {
             ResearchPointAwardLedger.Mutation ledgerMutation);
     boolean spendResearchPoints(int amount);
     void clearResearchPointAwardLedger();
+    default boolean recordRecentUnlockBatch(
+            RecentBlueprintUnlockBatch.Source source,
+            String targetBlueprintId,
+            Collection<String> memberBlueprintIds) {
+        return false;
+    }
+    default void clearRecentUnlockHistory() {
+    }
     void replaceRecipes(Collection<String> recipeIds);
     boolean replaceProgression(
             Collection<String> learnedBlueprintIds,

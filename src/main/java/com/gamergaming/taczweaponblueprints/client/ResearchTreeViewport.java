@@ -70,6 +70,28 @@ public final class ResearchTreeViewport {
         return scale;
     }
 
+    /** Screen-space size left after persistent fullscreen controls are excluded. */
+    public ViewportSize unobscuredSize() {
+        return new ViewportSize(availableWidth(), availableHeight());
+    }
+
+    /** Current unobscured camera rectangle, clipped to the logical tree canvas. */
+    public CanvasBounds visibleCanvasBounds() {
+        double left = clampToCanvas(
+                panX + safeInsets.left() / scale, canvasWidth);
+        double top = clampToCanvas(
+                panY + safeInsets.top() / scale, canvasHeight);
+        double right = clampToCanvas(
+                panX + (viewportWidth - safeInsets.right()) / scale, canvasWidth);
+        double bottom = clampToCanvas(
+                panY + (viewportHeight - safeInsets.bottom()) / scale, canvasHeight);
+        return new CanvasBounds(
+                Math.min(left, right),
+                Math.min(top, bottom),
+                Math.abs(right - left),
+                Math.abs(bottom - top));
+    }
+
     public Snapshot snapshot() {
         return new Snapshot(targetPanX, targetPanY, targetScale);
     }
@@ -406,6 +428,28 @@ public final class ResearchTreeViewport {
 
     private static double clampFitScale(double value) {
         return Math.max(MIN_FIT_SCALE, Math.min(value, MAX_SCALE));
+    }
+
+    private static double clampToCanvas(double value, int canvasSize) {
+        return Math.max(0.0D, Math.min(value, canvasSize));
+    }
+
+    public record ViewportSize(int width, int height) {
+        public ViewportSize {
+            if (width <= 0 || height <= 0) {
+                throw new IllegalArgumentException("invalid unobscured Research Tree viewport size");
+            }
+        }
+    }
+
+    public record CanvasBounds(double x, double y, double width, double height) {
+        public CanvasBounds {
+            if (!Double.isFinite(x) || !Double.isFinite(y)
+                    || !Double.isFinite(width) || !Double.isFinite(height)
+                    || x < 0.0D || y < 0.0D || width < 0.0D || height < 0.0D) {
+                throw new IllegalArgumentException("invalid visible Research Tree canvas bounds");
+            }
+        }
     }
 
     public record Snapshot(double panX, double panY, double scale) {

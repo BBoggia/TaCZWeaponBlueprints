@@ -42,5 +42,31 @@ def verifyVersionState = tasks.register('verifyVersionState') {
             throw new GradleException(
                     'Development versions must not have platform release notes.')
         }
+
+        if (!developmentVersion) {
+            def releaseTag = "v${project.version}"
+            def tagCheck = providers.exec {
+                commandLine 'git', 'rev-parse', '--verify', '--quiet',
+                        "refs/tags/${releaseTag}"
+                ignoreExitValue = true
+            }.result.get()
+            if (tagCheck.exitValue == 0) {
+                def head = providers.exec {
+                    commandLine 'git', 'rev-parse', 'HEAD'
+                }.standardOutput.asText.get().trim()
+                def taggedCommit = providers.exec {
+                    commandLine 'git', 'rev-list', '-n', '1', releaseTag
+                }.standardOutput.asText.get().trim()
+                def worktree = providers.exec {
+                    commandLine 'git', 'status', '--porcelain',
+                            '--untracked-files=all'
+                }.standardOutput.asText.get().trim()
+                if (head != taggedCommit || !worktree.isEmpty()) {
+                    throw new GradleException(
+                            "Version ${project.version} is already tagged by ${releaseTag}; "
+                                    + 'new work requires a development version.')
+                }
+            }
+        }
     }
 }

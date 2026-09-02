@@ -10,6 +10,8 @@ import com.gamergaming.taczweaponblueprints.journal.BlueprintJournalEntry;
 import com.gamergaming.taczweaponblueprints.journal.BlueprintJournalSnapshot;
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
 
+import net.minecraft.resources.ResourceLocation;
+
 /** Pure, disclosure-safe search/filter/sort/pagination for the Journal UI. */
 public final class BlueprintJournalQuery {
     public static final int MAX_SEARCH_LENGTH = 80;
@@ -78,6 +80,49 @@ public final class BlueprintJournalQuery {
         int from = Math.min(matches.size(), page * pageSize);
         int to = Math.min(matches.size(), from + pageSize);
         return new HistoryResult(matches.subList(from, to), matches.size(), page, pageCount, pageSize);
+    }
+
+    public static RecentResult queryRecent(
+            List<BlueprintJournalSnapshot.RecentUnlockBatch> entries,
+            String search,
+            int requestedPage,
+            int pageSize,
+            Function<ResourceLocation, String> nameResolver) {
+        if (pageSize < 1) {
+            throw new IllegalArgumentException("Journal page size must be positive");
+        }
+        String needle = normalizeSearch(search);
+        Function<ResourceLocation, String> safeResolver =
+                nameResolver == null ? ignored -> "" : nameResolver;
+        List<BlueprintJournalSnapshot.RecentUnlockBatch> matches =
+                (entries == null
+                        ? List.<BlueprintJournalSnapshot.RecentUnlockBatch>of()
+                        : entries).stream()
+                        .filter(java.util.Objects::nonNull)
+                        .filter(entry -> needle.isEmpty()
+                                || recentSearchableText(entry, safeResolver).contains(needle))
+                        .sorted(Comparator.comparingLong(
+                                BlueprintJournalSnapshot.RecentUnlockBatch::sequence).reversed())
+                        .toList();
+        int pageCount = Math.max(1, (matches.size() + pageSize - 1) / pageSize);
+        int page = Math.max(0, Math.min(requestedPage, pageCount - 1));
+        int from = Math.min(matches.size(), page * pageSize);
+        int to = Math.min(matches.size(), from + pageSize);
+        return new RecentResult(
+                matches.subList(from, to), matches.size(), page, pageCount, pageSize);
+    }
+
+    private static String recentSearchableText(
+            BlueprintJournalSnapshot.RecentUnlockBatch entry,
+            Function<ResourceLocation, String> nameResolver) {
+        StringBuilder text = new StringBuilder(entry.source().name());
+        append(text, entry.targetBlueprintId().toString());
+        append(text, nameResolver.apply(entry.targetBlueprintId()));
+        for (ResourceLocation member : entry.memberBlueprintIds()) {
+            append(text, member.toString());
+            append(text, nameResolver.apply(member));
+        }
+        return text.toString().toLowerCase(Locale.ROOT);
     }
 
     public static List<String> categories(List<BlueprintJournalEntry> entries) {
@@ -251,6 +296,14 @@ public final class BlueprintJournalQuery {
 
     public record HistoryResult(
             List<BlueprintJournalSnapshot.HistoryEntry> entries,
+            int totalMatches,
+            int page,
+            int pageCount,
+            int pageSize) {
+    }
+
+    public record RecentResult(
+            List<BlueprintJournalSnapshot.RecentUnlockBatch> entries,
             int totalMatches,
             int page,
             int pageCount,

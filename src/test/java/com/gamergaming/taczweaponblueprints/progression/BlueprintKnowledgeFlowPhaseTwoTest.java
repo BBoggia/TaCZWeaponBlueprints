@@ -74,8 +74,8 @@ class BlueprintKnowledgeFlowPhaseTwoTest {
         assertEquals(0, BlueprintRecyclerMenu.INPUT_SLOT);
         assertEquals(1, BlueprintRecyclerMenu.OUTPUT_SLOT);
         assertEquals(2, BlueprintRecyclerMenu.FIRST_PLAYER_SLOT);
-        assertEquals(2, PlayerProgressionLimits.DATA_VERSION);
-        assertEquals("42", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals(3, PlayerProgressionLimits.DATA_VERSION);
+        assertEquals("47", NetworkHandler.PROTOCOL_VERSION);
     }
 
     private static String read(String relative) throws IOException {

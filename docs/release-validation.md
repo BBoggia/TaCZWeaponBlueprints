@@ -45,6 +45,37 @@ recipe transfer and hidden catalog enumeration. Run the onboarding and viewer
 presence/absence cases in the manual matrix; compile-only API success does not
 prove optional runtime classloading.
 
+The build also runs `verifyResearchGuidanceReleaseContract`. Its Phase 9
+stabilization gate opens the reobfuscated JAR and requires the runtime classes
+and English translations for
+the tracked research goal, server-authoritative route, exact RP and material
+progress, Affordable Now filter, Recent Journal view, and fullscreen minimap.
+It binds 21 named route, allocation, lifecycle, packet, persistence, rollback,
+scale, input, migration, cost-mode, compatibility, navigation, paging, and
+lost-response invariants to exact clean JUnit cases and writes
+`build/reports/research-guidance-release.json`. Confirm the report pins
+`research-guidance-qol-v1`, protocol 47, player-data version 3, client-settings
+version 3, 16 packaged feature classes, the 4,096-node public limit, and
+eight-target affordability batches. The release-candidate report must
+reference the same contract and report.
+
+This automated evidence does not certify visual hierarchy, pointer feel,
+narration quality, translated text fit, or simultaneous-player behavior in a
+running game. Complete the research-guidance checks in
+`docs/research-tree-manual-qa.md` before publication.
+
+`verifyResearchGuidanceCandidateHandoff` is the Phase 10 boundary between that
+automated evidence and hands-on release testing. It rejects drift in the full
+Phase 9 report, including its feature order, compatibility tuple, packaged
+surface counts, limits, unique passed invariants, and manual-QA path. It then
+writes `build/reports/research-guidance-candidate-handoff.json` with SHA-256
+identities for the source report, exact manual-QA matrix, and exact JAR. A
+passing handoff is explicitly marked `requires_manual_qa`; it must never be
+interpreted as proof that the unchecked runtime matrix has been completed.
+Artifact verification requires this handoff, and release-candidate
+certification rejects a handoff whose JAR digest differs from the candidate it
+is describing.
+
 Confirm the candidate report records the setup assistant as
 `discovery_pacing_only`, with all four presets, preview plus explicit
 confirmation, preserved custom values, unchanged player progression, and export
@@ -59,7 +90,7 @@ policy. Packaged-artifact verification separately requires every kernel and
 configuration class plus all twelve localized setting surfaces.
 
 The build also runs `verifyTaperedAutomaticTopologyContract`. It pins automatic
-topology `tacz-gun-placement-v13`, Research Tree protocol 42, export format 18,
+topology `tacz-gun-placement-v13`, Research Tree protocol 47, export format 18,
 and the canonical-coordinate/decision/finalized-rank publication contract;
 requires clean server planning, finalization, diagnostics, client layout,
 network, and packaged-data suites; and writes
@@ -77,7 +108,7 @@ The build also runs `verifyGroupedPrerequisiteAcceptanceContract`. It requires
 all 20 named Phase 7 semantic and integration invariants to resolve to exact,
 clean JUnit cases and writes
 `build/reports/grouped-prerequisite-acceptance.json`. Confirm the report pins
-`truth-tables-integration-v1`, protocol 42, export format 18, and
+`truth-tables-integration-v1`, protocol 47, export format 18, and
 `grouped_routes_v1`, and that the JAR manifest and release-candidate report
 contain the same acceptance contract.
 
@@ -96,7 +127,7 @@ invariants, and writes `build/reports/grouped-route-selection.json`. Confirm it
 pins `group-aware-route-balance-v1`, the grouped
 `group_aware_route_balance_v1` guard, the separate legacy union guard, the
 8.0x proven-imbalance threshold (with 4.0x retained as a p95 warning), protocol
-41, and export format 18. Confirm the
+47, and export format 18. Confirm the
 JAR manifest and release-candidate report contain the same selection contract.
 
 The build also runs `verifyGroupedRouteStabilizationContract`. It consumes the
@@ -184,7 +215,7 @@ bounded four-point score tolerance, and explicit truncation diagnostics,
 family-preserving responsive row boundaries and bounded ten-pixel lanes for
 additional any-of junctions,
 tree-owned optional/dynamic/configured presentation bands, the 4,096-candidate
-ceiling, protocol 42, export format 18, and packaged automatic prerequisite
+ceiling, protocol 47, export format 18, and packaged automatic prerequisite
 strategy `grouped_routes_v1`. Confirm canonical branch coordinates
 round-trip for every automatic member, two-family layouts receive a visible
 gutter, planned and published ranks are reported separately, and complete

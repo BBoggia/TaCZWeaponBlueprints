@@ -86,6 +86,39 @@ class BlueprintJournalQueryTest {
                 () -> BlueprintJournalQuery.queryHistory(history, "", 0, 0));
     }
 
+    @Test
+    void recentSearchUsesNamesAndMembersAndOrdersNewestFirst() {
+        List<BlueprintJournalSnapshot.RecentUnlockBatch> recent = List.of(
+                new BlueprintJournalSnapshot.RecentUnlockBatch(
+                        1L,
+                        com.gamergaming.taczweaponblueprints.capabilities
+                                .RecentBlueprintUnlockBatch.Source.PHYSICAL_BLUEPRINT,
+                        id("pack:alpha"),
+                        List.of(id("pack:alpha")),
+                        1),
+                new BlueprintJournalSnapshot.RecentUnlockBatch(
+                        2L,
+                        com.gamergaming.taczweaponblueprints.capabilities
+                                .RecentBlueprintUnlockBatch.Source.TREE_RESEARCH,
+                        id("pack:target"),
+                        List.of(id("pack:route_member"), id("pack:target")),
+                        2));
+
+        BlueprintJournalQuery.RecentResult result = BlueprintJournalQuery.queryRecent(
+                recent,
+                "route member",
+                0,
+                4,
+                blueprintId -> blueprintId.equals(id("pack:route_member"))
+                        ? "Route Member"
+                        : "");
+
+        assertEquals(1, result.totalMatches());
+        assertEquals(2L, result.entries().get(0).sequence());
+        assertThrows(IllegalArgumentException.class,
+                () -> BlueprintJournalQuery.queryRecent(recent, "", 0, 0, ignored -> ""));
+    }
+
     private static BlueprintJournalQuery.Result query(List<BlueprintJournalEntry> entries, String search) {
         return BlueprintJournalQuery.query(
                 entries, search, BlueprintJournalQuery.StatusFilter.ALL, "",

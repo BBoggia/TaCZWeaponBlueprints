@@ -15,11 +15,28 @@ base {
     archivesName = mod_id
 }
 
+// Keep build/libs unambiguous when the project version changes. Old primary
+// jars can carry obsolete dependency metadata and are easy to install by
+// mistake when they remain beside the current artifact.
+def removeStaleModArchives = tasks.register('removeStaleModArchives') {
+    group = 'build setup'
+    description = 'Removes obsolete primary mod jars before creating the current artifact.'
+
+    doLast {
+        def currentArchiveName = "${base.archivesName.get()}-${project.version}.jar"
+        fileTree("${buildDir}/libs") {
+            include "${base.archivesName.get()}-*.jar"
+        }.files.findAll { it.name != currentArchiveName }.each { staleArchive ->
+            delete staleArchive
+        }
+    }
+}
+
 // Phase 11 extends the public automatic-tree compatibility tuple with explicit
 // opt-in hybrid-generation evidence. Deliberate changes must update runtime
 // constants, release gates, and migration documentation together.
 def certifiedAutomaticPlacementVersion = 'tacz-gun-placement-v13'
-def certifiedResearchTreeProtocol = '42'
+def certifiedResearchTreeProtocol = '47'
 def certifiedResearchCatalogExportFormat = 18
 def certifiedAutomaticPrerequisiteStrategy = 'grouped_routes_v1'
 def certifiedAutomaticScoringModel = 'capability_v3'
@@ -43,6 +60,7 @@ def certifiedAutomaticPublicationContract =
         'canonical-branches-decisions-finalized-ranks-v1'
 def certifiedAutomaticPublicationHealthContract =
         'staged-failure-recovery-v1'
+def certifiedResearchGuidanceContract = 'research-guidance-qol-v1'
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
@@ -546,6 +564,7 @@ tasks.named('processResources', ProcessResources).configure {
 }
 
 tasks.named('jar', Jar).configure {
+    dependsOn removeStaleModArchives
     preserveFileTimestamps = false
     reproducibleFileOrder = true
 
@@ -727,7 +746,7 @@ tasks.register('verifySharedLayoutKernelMigration') {
                 'ResearchTechTreeDomainMenu.create',
                 'ResearchTechTreeViewState techTreeNavigation',
                 'ResearchTreeRecommendationEngine.recommend',
-                'ResearchTreePlanner.plan',
+                'ResearchTreePlanner.presentationPlan',
                 'ClientResearchPlannerState.track',
                 'treeCanvas.setTrackedPlan'
         ].findAll { !benchScreenSource.contains(it) }
@@ -2177,6 +2196,438 @@ tasks.register('verifyAutomaticPublicationRecoveryContract') {
     }
 }
 
+def researchGuidanceReleaseReportFile =
+        layout.buildDirectory.file('reports/research-guidance-release.json')
+def researchGuidanceCandidateHandoffReportFile =
+        layout.buildDirectory.file('reports/research-guidance-candidate-handoff.json')
+tasks.register('verifyResearchGuidanceReleaseContract') {
+    group = 'verification'
+    description = 'Certifies the packaged and stabilized research-guidance quality-of-life feature set.'
+    dependsOn tasks.named('reobfJar'), tasks.named('test')
+
+    inputs.file(tasks.named('jar', Jar).flatMap { it.archiveFile })
+    inputs.files(layout.buildDirectory.dir('test-results/test'))
+    inputs.files(
+            'src/main/java/com/gamergaming/taczweaponblueprints/network/NetworkHandler.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/capabilities/PlayerProgressionLimits.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/compat/fzzy_config/ResearchTreeClientConfig.java')
+    outputs.file(researchGuidanceReleaseReportFile)
+
+    doLast {
+        def artifact = tasks.named('jar', Jar).get().archiveFile.get().asFile
+        if (!artifact.isFile()) {
+            throw new GradleException(
+                    "Research guidance release artifact does not exist: ${artifact}")
+        }
+
+        def requiredClasses = [
+                'com/gamergaming/taczweaponblueprints/capabilities/RecentBlueprintUnlockBatch.class',
+                'com/gamergaming/taczweaponblueprints/client/ClientResearchAffordabilityState.class',
+                'com/gamergaming/taczweaponblueprints/client/ClientResearchGuidanceState.class',
+                'com/gamergaming/taczweaponblueprints/client/ResearchGoalProgressPresenter.class',
+                'com/gamergaming/taczweaponblueprints/client/ResearchTreeMinimap.class',
+                'com/gamergaming/taczweaponblueprints/client/ResearchTreeMinimapMode.class',
+                'com/gamergaming/taczweaponblueprints/menu/ResearchPlanningAdmission.class',
+                'com/gamergaming/taczweaponblueprints/network/ResearchAffordabilityRequestPacket.class',
+                'com/gamergaming/taczweaponblueprints/network/ResearchAffordabilityResultPacket.class',
+                'com/gamergaming/taczweaponblueprints/network/ResearchGuidanceRequestPacket.class',
+                'com/gamergaming/taczweaponblueprints/network/ResearchGuidanceResultPacket.class',
+                'com/gamergaming/taczweaponblueprints/progression/RecentBlueprintUnlockHistory.class',
+                'com/gamergaming/taczweaponblueprints/progression/ResearchAffordabilitySnapshot.class',
+                'com/gamergaming/taczweaponblueprints/progression/ResearchGuidanceSnapshot.class',
+                'com/gamergaming/taczweaponblueprints/progression/ResearchRouteEvaluationService.class',
+                'com/gamergaming/taczweaponblueprints/progression/ResearchRouteFailureReporter.class'
+        ]
+        def requiredTranslations = [
+                'gui.taczweaponblueprints.research_bench.tree.affordable.button.off',
+                'gui.taczweaponblueprints.research_bench.tree.affordable.button.on',
+                'gui.taczweaponblueprints.research_bench.tree.affordable.off',
+                'gui.taczweaponblueprints.research_bench.tree.affordable.checking',
+                'gui.taczweaponblueprints.research_bench.tree.affordable.complete',
+                'gui.taczweaponblueprints.research_bench.tree.affordable.empty',
+                'gui.taczweaponblueprints.research_bench.tree.affordable.narration',
+                'gui.taczweaponblueprints.research_bench.tree.goal.checking',
+                'gui.taczweaponblueprints.research_bench.tree.goal.complete',
+                'gui.taczweaponblueprints.research_bench.tree.goal.ready',
+                'gui.taczweaponblueprints.research_bench.tree.goal.missing_points',
+                'gui.taczweaponblueprints.research_bench.tree.goal.missing_materials',
+                'gui.taczweaponblueprints.research_bench.tree.goal.missing_both',
+                'gui.taczweaponblueprints.research_bench.tree.goal.capacity_blocked',
+                'gui.taczweaponblueprints.research_bench.tree.goal.policy_blocked',
+                'gui.taczweaponblueprints.research_bench.tree.goal.route_unavailable',
+                'gui.taczweaponblueprints.research_bench.tree.goal.costs_bypassed',
+                'gui.taczweaponblueprints.research_bench.tree.goal.progress.points',
+                'gui.taczweaponblueprints.research_bench.tree.goal.progress.materials',
+                'gui.taczweaponblueprints.research_bench.tree.goal.progress.materials_short',
+                'gui.taczweaponblueprints.research_bench.tree.goal.route',
+                'gui.taczweaponblueprints.research_bench.tree.goal.focus',
+                'gui.taczweaponblueprints.research_bench.tree.goal.narration',
+                'gui.taczweaponblueprints.research_bench.tree.goal.plan_summary',
+                'gui.taczweaponblueprints.research_bench.tree.goal.plan_checking',
+                'gui.taczweaponblueprints.journal.view',
+                'gui.taczweaponblueprints.journal.view.current',
+                'gui.taczweaponblueprints.journal.view.recent',
+                'gui.taczweaponblueprints.journal.view.unavailable',
+                'gui.taczweaponblueprints.journal.recent.empty',
+                'gui.taczweaponblueprints.journal.recent.row',
+                'gui.taczweaponblueprints.journal.recent.target',
+                'gui.taczweaponblueprints.journal.recent.source',
+                'gui.taczweaponblueprints.journal.recent.source.tree_research',
+                'gui.taczweaponblueprints.journal.recent.source.physical_blueprint',
+                'gui.taczweaponblueprints.journal.recent.source.administrator',
+                'gui.taczweaponblueprints.journal.recent.unlocked',
+                'gui.taczweaponblueprints.journal.recent.members',
+                'gui.taczweaponblueprints.journal.recent.more',
+                'gui.taczweaponblueprints.journal.recent.narration',
+                'config.taczweaponblueprints.research_tree_client.minimap',
+                'config.taczweaponblueprints.research_tree_client.minimap.desc',
+                'config.taczweaponblueprints.research_tree_client.minimap.AUTOMATIC',
+                'config.taczweaponblueprints.research_tree_client.minimap.AUTOMATIC.desc',
+                'config.taczweaponblueprints.research_tree_client.minimap.ALWAYS',
+                'config.taczweaponblueprints.research_tree_client.minimap.ALWAYS.desc',
+                'config.taczweaponblueprints.research_tree_client.minimap.HIDDEN',
+                'config.taczweaponblueprints.research_tree_client.minimap.HIDDEN.desc'
+        ]
+        def evidenceRequirements = [
+                [invariant: 'authoritative_route',
+                        suite: 'com.gamergaming.taczweaponblueprints.progression.ResearchPathUnlockPlannerTest',
+                        test: 'guidanceSnapshotPublishesOnlyTheExactSelectedRouteAndAllocation'],
+                [invariant: 'overlap_safe_materials',
+                        suite: 'com.gamergaming.taczweaponblueprints.progression.ResearchGuidanceAllocationPhaseZeroTest',
+                        test: 'flexibleRequirementCannotConsumeTheOnlyUnitForARestrictiveRequirement'],
+                [invariant: 'goal_publication_invalidation',
+                        suite: 'com.gamergaming.taczweaponblueprints.client.ClientResearchGuidanceStateTest',
+                        test: 'matchingOldResponseImmediatelyDropsAcceptedGuidanceAfterPublicationAdvance'],
+                [invariant: 'cross_feature_disclosure_cleanup',
+                        suite: 'com.gamergaming.taczweaponblueprints.client.ResearchGuidancePhaseSevenIntegrationTest',
+                        test: 'disclosureRemovalClearsGoalAndCannotRetainItsGuidanceOrClassification'],
+                [invariant: 'bounded_affordability_scale',
+                        suite: 'com.gamergaming.taczweaponblueprints.client.ClientResearchAffordabilityStateTest',
+                        test: 'maximumPublicationStillProducesOnlyOneBoundedRequestBatch'],
+                [invariant: 'affordability_presentation_only',
+                        suite: 'com.gamergaming.taczweaponblueprints.client.ResearchTreeCanvasTest',
+                        test: 'affordabilityLensChangesOnlyPresentationTreatment'],
+                [invariant: 'bounded_affordability_packet',
+                        suite: 'com.gamergaming.taczweaponblueprints.network.ResearchAffordabilityPacketTest',
+                        test: 'packetBoundariesRejectEmptyDuplicateAndOversizedBatches'],
+                [invariant: 'recent_history_bounds',
+                        suite: 'com.gamergaming.taczweaponblueprints.capabilities.PlayerRecipeDataTest',
+                        test: 'recentUnlockHistoryIsBoundedOrderedAndRetainsLargeBatchTotals'],
+                [invariant: 'recent_history_origins',
+                        suite: 'com.gamergaming.taczweaponblueprints.progression.BlueprintLearningServiceTest',
+                        test: 'grantsAndMigrationsDoNotEnterRecentHistoryButAdministratorLearningDoes'],
+                [invariant: 'atomic_path_history',
+                        suite: 'com.gamergaming.taczweaponblueprints.progression.ResearchPathUnlockPlannerTest',
+                        test: 'atomicPathPurchaseChargesEveryDistinctNodeAndLearnsTheWholeClosure'],
+                [invariant: 'rollback_excludes_history',
+                        suite: 'com.gamergaming.taczweaponblueprints.progression.ResearchPathUnlockPlannerTest',
+                        test: 'laterLearningFailureRollsBackKnowledgePointsRecipesAndInventory'],
+                [invariant: 'maximum_minimap',
+                        suite: 'com.gamergaming.taczweaponblueprints.client.ResearchTreeMinimapTest',
+                        test: 'maximumPublishedTreeProducesOnlyBoundedLightweightMarkers'],
+                [invariant: 'minimap_transform_clamping',
+                        suite: 'com.gamergaming.taczweaponblueprints.client.ResearchTreeMinimapTest',
+                        test: 'clickAndDragNavigateAtEverySupportedZoomWithoutEscapingTheCanvas'],
+                [invariant: 'minimap_settings_migration',
+                        suite: 'com.gamergaming.taczweaponblueprints.compat.fzzy_config.SettingsSerializationCompatibilityTest',
+                        test: 'versionTwoClientFileReceivesTheAutomaticMinimapDefault'],
+                [invariant: 'cost_mode_progress_channels',
+                        suite: 'com.gamergaming.taczweaponblueprints.client.ResearchGoalProgressPresenterTest',
+                        test: 'activeCostModesExposeOnlyTheirConfiguredProgressChannels'],
+                [invariant: 'creative_bypass_truthfulness',
+                        suite: 'com.gamergaming.taczweaponblueprints.client.ResearchGoalProgressPresenterTest',
+                        test: 'creativeBypassDoesNotFabricateEconomicProgress'],
+                [invariant: 'optional_recent_history_capability_extension',
+                        suite: 'com.gamergaming.taczweaponblueprints.capabilities.PlayerRecipeDataTest',
+                        test: 'recentHistoryCapabilityExtensionsRemainOptionalForLegacyImplementations'],
+                [invariant: 'authoritative_tracked_next_step',
+                        suite: 'com.gamergaming.taczweaponblueprints.client.ResearchTreeRecommendationEngineTest',
+                        test: 'trackedGoalUsesTheAuthoritativeNextStepWithoutRescoringItsFrontier'],
+                [invariant: 'recent_paging_selection_cleanup',
+                        suite: 'com.gamergaming.taczweaponblueprints.client.BlueprintJournalScreenRegressionTest',
+                        test: 'pagingClearsCurrentUnavailableAndRecentDetailSelections'],
+                [invariant: 'bounded_guidance_timeout_recovery',
+                        suite: 'com.gamergaming.taczweaponblueprints.client.ClientResearchGuidanceStateTest',
+                        test: 'lostGuidanceResponseRetriesOnceThenBecomesUnavailable'],
+                [invariant: 'bounded_affordability_timeout_recovery',
+                        suite: 'com.gamergaming.taczweaponblueprints.client.ClientResearchAffordabilityStateTest',
+                        test: 'lostBatchResponseRetriesOnceThenAdvancesAsUnavailable']
+        ]
+
+        def zip = new java.util.zip.ZipFile(artifact)
+        def missingClasses
+        def missingTranslations
+        try {
+            def names = java.util.Collections.list(zip.entries()).collect { it.name }.toSet()
+            missingClasses = requiredClasses.findAll { !names.contains(it) }
+            def languageEntry = zip.getEntry(
+                    'assets/taczweaponblueprints/lang/en_us.json')
+            if (languageEntry == null) {
+                throw new GradleException(
+                        'Packaged research guidance English language file is missing')
+            }
+            def language = zip.getInputStream(languageEntry).withCloseable { stream ->
+                new groovy.json.JsonSlurper().parse(stream, 'UTF-8')
+            }
+            missingTranslations = requiredTranslations.findAll { key ->
+                !(language[key] instanceof String) || language[key].isBlank()
+            }
+        } finally {
+            zip.close()
+        }
+        if (!missingClasses.isEmpty()) {
+            throw new GradleException(
+                    "Packaged research guidance classes are missing: ${missingClasses}")
+        }
+        if (!missingTranslations.isEmpty()) {
+            throw new GradleException(
+                    "Packaged research guidance translations are missing: ${missingTranslations}")
+        }
+
+        def evidence = evidenceRequirements.collect { required ->
+            def result = file(
+                    "${buildDir}/test-results/test/TEST-${required.suite}.xml")
+            if (!result.isFile()) {
+                throw new GradleException(
+                        "Research guidance release suite did not run: ${required.suite}")
+            }
+            def suite = new XmlSlurper().parse(result)
+            def testCase = suite.testcase.find {
+                it.@name.toString().replaceFirst(/\(\)$/, '') == required.test
+            }
+            if (testCase.size() != 1) {
+                throw new GradleException(
+                        "Research guidance release case did not run: ${required.suite}#${required.test}")
+            }
+            if (testCase.failure.size() != 0
+                    || testCase.error.size() != 0
+                    || testCase.skipped.size() != 0) {
+                throw new GradleException(
+                        "Research guidance release case is not clean: ${required.suite}#${required.test}")
+            }
+            [
+                    invariant: required.invariant,
+                    suite    : required.suite,
+                    test     : required.test,
+                    status   : 'passed'
+            ]
+        }
+
+        def protocolSource = file(
+                'src/main/java/com/gamergaming/taczweaponblueprints/network/NetworkHandler.java')
+                .getText('UTF-8')
+        def progressionLimitsSource = file(
+                'src/main/java/com/gamergaming/taczweaponblueprints/capabilities/PlayerProgressionLimits.java')
+                .getText('UTF-8')
+        def clientConfigSource = file(
+                'src/main/java/com/gamergaming/taczweaponblueprints/compat/fzzy_config/ResearchTreeClientConfig.java')
+                .getText('UTF-8')
+        if (!(protocolSource =~ /PROTOCOL_VERSION\s*=\s*"47"/).find()
+                || !(progressionLimitsSource =~ /DATA_VERSION\s*=\s*3/).find()
+                || !(clientConfigSource =~ /@Version\(version\s*=\s*3\)/).find()) {
+            throw new GradleException(
+                    'Research guidance compatibility versions must remain protocol 47, player data 3, and client settings 3')
+        }
+
+        def report = [
+                schema            : 1,
+                phase             : 9,
+                status            : 'passed',
+                contract          : certifiedResearchGuidanceContract,
+                features          : [
+                        'session_local_research_goal',
+                        'server_authoritative_route',
+                        'exact_resource_progress',
+                        'affordable_now_filter',
+                        'recent_unlock_history',
+                        'fullscreen_minimap'
+                ],
+                compatibility     : [
+                        networkProtocol: 47,
+                        playerDataVersion: 3,
+                        clientSettingsVersion: 3
+                ],
+                packagedClassCount: requiredClasses.size(),
+                translationCount  : requiredTranslations.size(),
+                maximumPublicNodes: 4096,
+                affordabilityBatch: 8,
+                manualRuntimeGate : 'docs/research-tree-manual-qa.md',
+                evidence          : evidence
+        ]
+        def output = researchGuidanceReleaseReportFile.get().asFile
+        output.parentFile.mkdirs()
+        def reportText = groovy.json.JsonOutput.prettyPrint(
+                groovy.json.JsonOutput.toJson(report)) + '\n'
+        def temporaryReport = java.nio.file.Files.createTempFile(
+                output.parentFile.toPath(), 'research-guidance-release-', '.json.tmp')
+        try {
+            java.nio.file.Files.writeString(
+                    temporaryReport,
+                    reportText,
+                    java.nio.charset.StandardCharsets.UTF_8)
+            try {
+                java.nio.file.Files.move(
+                        temporaryReport,
+                        output.toPath(),
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            } catch (java.nio.file.AtomicMoveNotSupportedException ignored) {
+                java.nio.file.Files.move(
+                        temporaryReport,
+                        output.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            }
+        } finally {
+            java.nio.file.Files.deleteIfExists(temporaryReport)
+        }
+        logger.lifecycle("Phase 9 research-guidance stabilization report: ${output}")
+    }
+}
+
+tasks.register('verifyResearchGuidanceCandidateHandoff') {
+    group = 'verification'
+    description = 'Certifies the Phase 10 research-guidance handoff from automated evidence to manual release QA.'
+    dependsOn tasks.named('verifyResearchGuidanceReleaseContract')
+
+    inputs.file(tasks.named('jar', Jar).flatMap { it.archiveFile })
+    inputs.file(researchGuidanceReleaseReportFile)
+    inputs.file('docs/research-tree-manual-qa.md')
+    outputs.file(researchGuidanceCandidateHandoffReportFile)
+
+    doLast {
+        def artifact = tasks.named('jar', Jar).get().archiveFile.get().asFile
+        if (!artifact.isFile()) {
+            throw new GradleException(
+                    "Research guidance candidate artifact does not exist: ${artifact}")
+        }
+
+        def sourceReportFile = researchGuidanceReleaseReportFile.get().asFile
+        if (!sourceReportFile.isFile()) {
+            throw new GradleException(
+                    "Research guidance release report does not exist: ${sourceReportFile}")
+        }
+        def source = new groovy.json.JsonSlurper().parse(sourceReportFile)
+        def expectedFeatures = [
+                'session_local_research_goal',
+                'server_authoritative_route',
+                'exact_resource_progress',
+                'affordable_now_filter',
+                'recent_unlock_history',
+                'fullscreen_minimap'
+        ]
+        def compatibility = source['compatibility']
+        def evidence = source['evidence']
+        def invariantIds = evidence instanceof List
+                ? evidence.collect { it['invariant'] }
+                : []
+        def manualQaPath = source['manualRuntimeGate']
+        def manualQaFile = manualQaPath instanceof String
+                ? file(manualQaPath)
+                : null
+
+        def mismatches = []
+        if (source['schema'] != 1) mismatches.add('schema')
+        if (source['phase'] != 9) mismatches.add('source phase')
+        if (source['status'] != 'passed') mismatches.add('source status')
+        if (source['contract'] != certifiedResearchGuidanceContract) {
+            mismatches.add('contract')
+        }
+        if (source['features'] != expectedFeatures) mismatches.add('features')
+        if (!(compatibility instanceof Map)
+                || compatibility['networkProtocol'] != 47
+                || compatibility['playerDataVersion'] != 3
+                || compatibility['clientSettingsVersion'] != 3) {
+            mismatches.add('compatibility')
+        }
+        if (source['packagedClassCount'] != 16) mismatches.add('packaged classes')
+        if (source['translationCount'] != 48) mismatches.add('translations')
+        if (source['maximumPublicNodes'] != 4096) mismatches.add('public-node limit')
+        if (source['affordabilityBatch'] != 8) mismatches.add('affordability batch')
+        if (!(evidence instanceof List) || evidence.size() != 21) {
+            mismatches.add('evidence count')
+        } else {
+            if (invariantIds.any { !(it instanceof String) || it.isBlank() }
+                    || invariantIds.toSet().size() != evidence.size()) {
+                mismatches.add('unique invariant identities')
+            }
+            if (evidence.any { it['status'] != 'passed' }) {
+                mismatches.add('clean evidence')
+            }
+        }
+        if (manualQaPath != 'docs/research-tree-manual-qa.md'
+                || manualQaFile == null
+                || !manualQaFile.isFile()) {
+            mismatches.add('manual QA handoff')
+        }
+        if (!mismatches.isEmpty()) {
+            throw new GradleException(
+                    "Research guidance candidate handoff drifted: ${mismatches}")
+        }
+
+        def sha256Of = { File inputFile ->
+            def digest = java.security.MessageDigest.getInstance('SHA-256')
+            inputFile.withInputStream { input ->
+                def buffer = new byte[8192]
+                int read
+                while ((read = input.read(buffer)) != -1) {
+                    digest.update(buffer, 0, read)
+                }
+            }
+            digest.digest().encodeHex().toString()
+        }
+        def report = [
+                schema                 : 1,
+                phase                  : 10,
+                status                 : 'passed',
+                publicationState       : 'requires_manual_qa',
+                contract               : certifiedResearchGuidanceContract,
+                sourcePhase            : source['phase'],
+                sourceReport           : 'build/reports/research-guidance-release.json',
+                sourceReportSha256     : sha256Of(sourceReportFile),
+                artifact               : [
+                        file  : "build/libs/${artifact.name}",
+                        sha256: sha256Of(artifact)
+                ],
+                features               : expectedFeatures,
+                compatibility          : compatibility,
+                packagedClassCount     : source['packagedClassCount'],
+                translationCount       : source['translationCount'],
+                automatedEvidenceCount : evidence.size(),
+                manualRuntimeGate      : manualQaPath,
+                manualRuntimeGateSha256: sha256Of(manualQaFile)
+        ]
+        def output = researchGuidanceCandidateHandoffReportFile.get().asFile
+        output.parentFile.mkdirs()
+        def reportText = groovy.json.JsonOutput.prettyPrint(
+                groovy.json.JsonOutput.toJson(report)) + '\n'
+        def temporaryReport = java.nio.file.Files.createTempFile(
+                output.parentFile.toPath(),
+                'research-guidance-candidate-handoff-',
+                '.json.tmp')
+        try {
+            java.nio.file.Files.writeString(
+                    temporaryReport,
+                    reportText,
+                    java.nio.charset.StandardCharsets.UTF_8)
+            try {
+                java.nio.file.Files.move(
+                        temporaryReport,
+                        output.toPath(),
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            } catch (java.nio.file.AtomicMoveNotSupportedException ignored) {
+                java.nio.file.Files.move(
+                        temporaryReport,
+                        output.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            }
+        } finally {
+            java.nio.file.Files.deleteIfExists(temporaryReport)
+        }
+        logger.lifecycle("Phase 10 research-guidance candidate handoff report: ${output}")
+    }
+}
+
 tasks.register('verifyReleaseArtifact') {
     group = 'verification'
     description = 'Validates the reobfuscated release JAR, metadata, JSON, and generated loot index.'
@@ -2190,7 +2641,9 @@ tasks.register('verifyReleaseArtifact') {
             tasks.named('verifyGroupedRouteStabilizationContract'),
             tasks.named('verifyHybridRouteGenerationContract'),
             tasks.named('verifyGroupedVisualRefinementContract'),
-            tasks.named('verifyAutomaticPublicationRecoveryContract')
+            tasks.named('verifyAutomaticPublicationRecoveryContract'),
+            tasks.named('verifyResearchGuidanceReleaseContract'),
+            tasks.named('verifyResearchGuidanceCandidateHandoff')
 
     doLast {
         def artifact = tasks.named('jar', Jar).get().archiveFile.get().asFile
@@ -3612,6 +4065,7 @@ tasks.register('verifyPublicationReadiness') {
     group = 'verification'
     description = 'Runs artifact verification and blocks publication while legal/release choices remain unresolved.'
     dependsOn tasks.named('verifyReleaseArtifact')
+    dependsOn tasks.named('verifyVersionState')
 
     doLast {
         def changelogText = file('CHANGELOG.md').getText('UTF-8')
@@ -3733,6 +4187,8 @@ tasks.register('certifyReleaseCandidate') {
     inputs.file(hybridRouteGenerationReportFile)
     inputs.file(groupedVisualRefinementReportFile)
     inputs.file(automaticPublicationRecoveryReportFile)
+    inputs.file(researchGuidanceReleaseReportFile)
+    inputs.file(researchGuidanceCandidateHandoffReportFile)
     inputs.files(layout.buildDirectory.dir('test-results/test'))
     inputs.properties([
             minecraft_version : minecraft_version,
@@ -3768,6 +4224,34 @@ tasks.register('certifyReleaseCandidate') {
         def protocolMatch = protocolSource =~ /PROTOCOL_VERSION\s*=\s*"([^"]+)"/
         if (!protocolMatch.find()) {
             throw new GradleException('Could not determine the network protocol from NetworkHandler')
+        }
+        def researchGuidanceReport = new groovy.json.JsonSlurper().parse(
+                researchGuidanceReleaseReportFile.get().asFile)
+        if (researchGuidanceReport['status'] != 'passed'
+                || researchGuidanceReport['contract']
+                        != certifiedResearchGuidanceContract) {
+            throw new GradleException(
+                    'Release certification requires matching research-guidance evidence')
+        }
+        def researchGuidanceHandoff = new groovy.json.JsonSlurper().parse(
+                researchGuidanceCandidateHandoffReportFile.get().asFile)
+        if (researchGuidanceHandoff['phase'] != 10
+                || researchGuidanceHandoff['status'] != 'passed'
+                || researchGuidanceHandoff['publicationState']
+                        != 'requires_manual_qa'
+                || researchGuidanceHandoff['contract']
+                        != certifiedResearchGuidanceContract
+                || researchGuidanceHandoff['sourcePhase'] != 9
+                || researchGuidanceHandoff['automatedEvidenceCount'] != 21
+                || researchGuidanceHandoff['packagedClassCount'] != 16
+                || researchGuidanceHandoff['translationCount'] != 48
+                || researchGuidanceHandoff['manualRuntimeGate']
+                        != 'docs/research-tree-manual-qa.md'
+                || !(researchGuidanceHandoff['manualRuntimeGateSha256']
+                        ==~ /[0-9a-f]{64}/)
+                || researchGuidanceHandoff['artifact']?.get('sha256') != sha256) {
+            throw new GradleException(
+                    'Release certification requires the exact Phase 10 research-guidance candidate handoff')
         }
 
         def testSuites = fileTree("${buildDir}/test-results/test") {
@@ -3836,6 +4320,38 @@ tasks.register('certifyReleaseCandidate') {
                         viewerContent: 'generic_information_only',
                         recipeTransfer: 'none',
                         hiddenCatalogEnumeration: 'none'
+                ],
+                researchGuidance: [
+                        contract: certifiedResearchGuidanceContract,
+                        sourcePhase: researchGuidanceHandoff['sourcePhase'],
+                        candidateHandoffPhase: researchGuidanceHandoff['phase'],
+                        publicationState:
+                                researchGuidanceHandoff['publicationState'],
+                        automatedEvidenceCount:
+                                researchGuidanceHandoff['automatedEvidenceCount'],
+                        packagedClassCount:
+                                researchGuidanceHandoff['packagedClassCount'],
+                        translationCount:
+                                researchGuidanceHandoff['translationCount'],
+                        manualQaSha256:
+                                researchGuidanceHandoff['manualRuntimeGateSha256'],
+                        compatibility:
+                                researchGuidanceHandoff['compatibility'],
+                        features: [
+                                'session_local_research_goal',
+                                'server_authoritative_route',
+                                'exact_resource_progress',
+                                'affordable_now_filter',
+                                'recent_unlock_history',
+                                'fullscreen_minimap'
+                        ],
+                        report: 'build/reports/research-guidance-release.json',
+                        candidateHandoffReport:
+                                'build/reports/research-guidance-candidate-handoff.json',
+                        gate: 'verifyResearchGuidanceReleaseContract',
+                        candidateHandoffGate:
+                                'verifyResearchGuidanceCandidateHandoff',
+                        manualQa: 'docs/research-tree-manual-qa.md'
                 ],
                 setupAssistant: [
                         scope               : 'discovery_pacing_only',

@@ -26,12 +26,14 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public class NetworkHandler {
-    public static final String PROTOCOL_VERSION = "42";
+    public static final String PROTOCOL_VERSION = "47";
     // A random per-server seed prevents a partial chunk set from an earlier
     // connection being mistaken for a new sync after reconnecting.
     private static final AtomicLong SYNC_SEQUENCE =
             new AtomicLong(ThreadLocalRandom.current().nextLong());
     private static final Map<UUID, ResearchTreePublication> LAST_SENT_RESEARCH_TREES =
+            new ConcurrentHashMap<>();
+    private static final Map<UUID, Long> LAST_SENT_RESEARCH_GENERATIONS =
             new ConcurrentHashMap<>();
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
         new ResourceLocation(TaCZWeaponBlueprints.MODID, "main"),
@@ -117,6 +119,30 @@ public class NetworkHandler {
                 SyncBalancePresetPacket::toBytes,
                 SyncBalancePresetPacket::new,
                 SyncBalancePresetPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+
+        INSTANCE.registerMessage(id++, ResearchGuidanceRequestPacket.class,
+                ResearchGuidanceRequestPacket::toBytes,
+                ResearchGuidanceRequestPacket::new,
+                ResearchGuidanceRequestPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_SERVER));
+
+        INSTANCE.registerMessage(id++, ResearchGuidanceResultPacket.class,
+                ResearchGuidanceResultPacket::toBytes,
+                ResearchGuidanceResultPacket::new,
+                ResearchGuidanceResultPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+
+        INSTANCE.registerMessage(id++, ResearchAffordabilityRequestPacket.class,
+                ResearchAffordabilityRequestPacket::toBytes,
+                ResearchAffordabilityRequestPacket::new,
+                ResearchAffordabilityRequestPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_SERVER));
+
+        INSTANCE.registerMessage(id++, ResearchAffordabilityResultPacket.class,
+                ResearchAffordabilityResultPacket::toBytes,
+                ResearchAffordabilityResultPacket::new,
+                ResearchAffordabilityResultPacket::handle,
                 Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
@@ -210,6 +236,37 @@ public class NetworkHandler {
                 new ResearchBenchActionResultPacket(containerId, requestId, result));
     }
 
+    public static void sendResearchGuidanceResult(
+            ServerPlayer player,
+            int containerId,
+            int requestId,
+            long publicationGeneration,
+            com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu.GuidanceResult result) {
+        INSTANCE.send(
+                PacketDistributor.PLAYER.with(() -> player),
+                new ResearchGuidanceResultPacket(
+                        containerId,
+                        requestId,
+                        publicationGeneration,
+                        result));
+    }
+
+    public static void sendResearchAffordabilityResult(
+            ServerPlayer player,
+            int containerId,
+            int requestId,
+            long publicationGeneration,
+            com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu
+                    .AffordabilityResult result) {
+        INSTANCE.send(
+                PacketDistributor.PLAYER.with(() -> player),
+                new ResearchAffordabilityResultPacket(
+                        containerId,
+                        requestId,
+                        publicationGeneration,
+                        result));
+    }
+
     public static void sendResearchPointFeedback(ServerPlayer player, Feedback feedback) {
         if (player != null && feedback != null && feedback.present()) {
             INSTANCE.send(
@@ -248,15 +305,24 @@ public class NetworkHandler {
     public static void clearPlayerSyncState(ServerPlayer player) {
         if (player != null) {
             LAST_SENT_RESEARCH_TREES.remove(player.getUUID());
+            LAST_SENT_RESEARCH_GENERATIONS.remove(player.getUUID());
         }
+    }
+
+    public static boolean matchesResearchGeneration(ServerPlayer player, long generation) {
+        return player != null
+                && Long.valueOf(generation).equals(
+                        LAST_SENT_RESEARCH_GENERATIONS.get(player.getUUID()));
     }
 
     /** Clears publication state that belongs to the server instance being stopped. */
     public static void clearServerSyncState() {
         LAST_SENT_RESEARCH_TREES.clear();
+        LAST_SENT_RESEARCH_GENERATIONS.clear();
         com.gamergaming.taczweaponblueprints.menu.ResearchPlanningAdmission.clear();
         com.gamergaming.taczweaponblueprints.progression.ResearchPathUnlockPlanner
                 .clearComplexityMemo();
+        com.gamergaming.taczweaponblueprints.progression.ResearchRouteFailureReporter.clear();
     }
 
     private static void sendPlayerProgressionData(
@@ -299,6 +365,7 @@ public class NetworkHandler {
                     .forEach(packet -> INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), packet));
             LAST_SENT_RESEARCH_TREES.put(player.getUUID(), tree);
         }
+        LAST_SENT_RESEARCH_GENERATIONS.put(player.getUUID(), generation);
     }
 
     private static void refreshOpenWorkstation(ServerPlayer player) {

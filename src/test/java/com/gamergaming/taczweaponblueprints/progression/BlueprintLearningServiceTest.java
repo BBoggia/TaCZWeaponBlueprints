@@ -50,6 +50,9 @@ class BlueprintLearningServiceTest {
         assertEquals(Set.of(BLUEPRINT.toString()), data.getLearnedBlueprints());
         assertEquals(Set.of(BLUEPRINT.toString()), data.getDiscoveredBlueprints());
         assertEquals(Set.of(RECIPE.toString()), data.getLearnedRecipes());
+        assertEquals(1, data.getRecentUnlockBatches().size());
+        assertEquals(BLUEPRINT.toString(),
+                data.getRecentUnlockBatches().get(0).targetBlueprintId());
     }
 
     @Test
@@ -112,6 +115,33 @@ class BlueprintLearningServiceTest {
                 treeData,
                 policy(treeData, true, false, false));
         assertFailureWithoutMutation(Status.PREREQUISITES_REQUIRED, tree, treeData);
+    }
+
+    @Test
+    void grantsAndMigrationsDoNotEnterRecentHistoryButAdministratorLearningDoes() {
+        for (BlueprintUnlockOrigin excluded : List.of(
+                BlueprintUnlockOrigin.STARTING_GRANT,
+                BlueprintUnlockOrigin.MIGRATION)) {
+            PlayerRecipeData data = new PlayerRecipeData();
+            Result result = learn(
+                    request(excluded, true, PhysicalBlueprintLearningMode.DISABLED, false),
+                    data,
+                    policy(data, true, false, true));
+            assertTrue(result.successful());
+            assertTrue(data.getRecentUnlockBatches().isEmpty());
+        }
+
+        PlayerRecipeData administrator = new PlayerRecipeData();
+        Result result = learn(
+                request(
+                        BlueprintUnlockOrigin.ADMINISTRATOR,
+                        true,
+                        PhysicalBlueprintLearningMode.DISABLED,
+                        false),
+                administrator,
+                policy(administrator, true, false, true));
+        assertTrue(result.successful());
+        assertEquals(1, administrator.getRecentUnlockBatches().size());
     }
 
     @Test

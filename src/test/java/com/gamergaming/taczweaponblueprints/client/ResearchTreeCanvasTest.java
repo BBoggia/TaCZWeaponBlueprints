@@ -20,6 +20,8 @@ import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayout;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayoutEngine;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayoutPolicy;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain;
+import com.gamergaming.taczweaponblueprints.progression.ResearchAffordabilitySnapshot;
+import com.gamergaming.taczweaponblueprints.progression.ResearchGuidanceSnapshot;
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
 
 import net.minecraft.resources.ResourceLocation;
@@ -261,6 +263,40 @@ class ResearchTreeCanvasTest {
         canvas.setTrackedPlan(null);
         assertTrue(canvas.trackedTargetId().isEmpty());
         assertFalse(canvas.isTrackedPathNode(id("test:b")));
+    }
+
+    @Test
+    void affordabilityLensChangesOnlyPresentationTreatment() {
+        ResearchTreeCanvas canvas = canvas();
+        ResearchTreeGraph graph = chainGraph();
+        ResearchTreeLayout layout = ResearchTreeLayoutEngine.layout(graph);
+        canvas.setContent(graph, layout, Map.of(), null);
+        ResearchTreeViewport.Snapshot camera = canvas.viewport().snapshot();
+
+        canvas.setAffordabilityFilter(true, Map.of(
+                id("test:a"), new ResearchAffordabilitySnapshot.Entry(
+                        id("test:a"), ResearchGuidanceSnapshot.State.AFFORDABLE, false),
+                id("test:b"), new ResearchAffordabilitySnapshot.Entry(
+                        id("test:b"), ResearchGuidanceSnapshot.State.MISSING_MATERIALS, true)));
+
+        assertEquals(ResearchTreeCanvas.AffordabilityTreatment.AFFORDABLE,
+                canvas.affordabilityTreatment(id("test:a")));
+        assertEquals(ResearchTreeCanvas.AffordabilityTreatment.DIMMED,
+                canvas.affordabilityTreatment(id("test:b")));
+        assertEquals(ResearchTreeCanvas.AffordabilityTreatment.CHECKING,
+                canvas.affordabilityTreatment(id("test:c")));
+        assertEquals(camera, canvas.viewport().snapshot());
+        assertEquals(layout, canvas.layout());
+
+        canvas.setAffordabilityFilter(false, Map.of());
+        assertEquals(ResearchTreeCanvas.AffordabilityTreatment.NORMAL,
+                canvas.affordabilityTreatment(id("test:b")));
+        assertThrows(IllegalArgumentException.class, () ->
+                canvas.setAffordabilityFilter(true, Map.of(
+                        id("test:missing"), new ResearchAffordabilitySnapshot.Entry(
+                                id("test:missing"),
+                                ResearchGuidanceSnapshot.State.AFFORDABLE,
+                                true))));
     }
 
     @Test

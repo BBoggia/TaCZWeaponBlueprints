@@ -238,6 +238,26 @@ class ResearchTreeRecommendationEngineTest {
     }
 
     @Test
+    void trackedGoalUsesTheAuthoritativeNextStepWithoutRescoringItsFrontier() {
+        ResourceLocation authoritative = id("test:authoritative");
+        ResourceLocation cheaper = id("test:cheaper");
+        ResearchTreeGraph graph = graph(
+                List.of(
+                        available(0, authoritative, 8, 2),
+                        available(1, cheaper, 1, 0)),
+                List.of());
+
+        assertEquals(cheaper, ResearchTreeRecommendationEngine.recommend(
+                graph, ids(graph), ids(graph), 10).orElseThrow().blueprintId());
+        assertEquals(authoritative,
+                ResearchTreeRecommendationEngine.recommendTrackedStep(
+                        graph, ids(graph), authoritative, 10)
+                        .orElseThrow().blueprintId());
+        assertTrue(ResearchTreeRecommendationEngine.recommendTrackedStep(
+                graph, Set.of(cheaper), authoritative, 10).isEmpty());
+    }
+
+    @Test
     void rejectsInvalidInputsAndContradictoryResults() {
         assertThrows(IllegalArgumentException.class, () ->
                 ResearchTreeRecommendationEngine.recommend(

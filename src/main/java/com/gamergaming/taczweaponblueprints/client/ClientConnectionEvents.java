@@ -28,6 +28,8 @@ public final class ClientConnectionEvents {
         ClientBlueprintJournal.clear();
         ClientResearchTree.clear();
         ClientResearchPlannerState.clear();
+        ClientResearchGuidanceState.clear();
+        ClientResearchAffordabilityState.clear();
         ClientResearchPointPresentationState.clear();
         SyncPlayerProgressionPacket.clearClientState();
         SyncBlueprintJournalPacket.clearClientState();

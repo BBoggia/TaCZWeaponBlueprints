@@ -27,6 +27,11 @@ public final class ResearchTreeFullscreenRailLayout {
         ResearchTreeScreenLayout.Rect help = actionAt(x, rail.bottom() - INNER_PADDING, 4);
         ResearchTreeScreenLayout.Rect recommendation =
                 actionAt(x, rail.bottom() - INNER_PADDING, 5);
+        ResearchTreeScreenLayout.Rect affordability = new ResearchTreeScreenLayout.Rect(
+                fullscreen.searchField().right() + ResearchTreeFullscreenLayout.OVERLAY_GAP,
+                fullscreen.searchField().y(),
+                ENTRY_SIZE,
+                ENTRY_SIZE);
 
         int entriesY = fullscreen.searchButton().bottom() + SECTION_GAP;
         int entriesBottom = recommendation.y() - SECTION_GAP;
@@ -44,7 +49,14 @@ public final class ResearchTreeFullscreenRailLayout {
                     ENTRY_SIZE));
         }
         return new Layout(
-                List.copyOf(entries), recommendation, help, pin, zoomOut, zoomIn, fit);
+                List.copyOf(entries),
+                affordability,
+                recommendation,
+                help,
+                pin,
+                zoomOut,
+                zoomIn,
+                fit);
     }
 
     /**
@@ -124,6 +136,7 @@ public final class ResearchTreeFullscreenRailLayout {
 
     public record Layout(
             List<ResearchTreeScreenLayout.Rect> entries,
+            ResearchTreeScreenLayout.Rect affordability,
             ResearchTreeScreenLayout.Rect recommendation,
             ResearchTreeScreenLayout.Rect help,
             ResearchTreeScreenLayout.Rect pin,
@@ -133,11 +146,12 @@ public final class ResearchTreeFullscreenRailLayout {
         public Layout {
             entries = entries == null ? List.of() : List.copyOf(entries);
             if (entries.isEmpty() || entries.stream().anyMatch(java.util.Objects::isNull)
-                    || recommendation == null || help == null || pin == null
+                    || affordability == null || recommendation == null || help == null || pin == null
                     || zoomOut == null || zoomIn == null || fit == null) {
                 throw new IllegalArgumentException("invalid fullscreen rail geometry");
             }
             ArrayList<ResearchTreeScreenLayout.Rect> regions = new ArrayList<>(entries);
+            regions.add(affordability);
             regions.add(recommendation);
             regions.add(help);
             regions.add(pin);

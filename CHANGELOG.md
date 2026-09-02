@@ -6,6 +6,29 @@ documentation.
 
 ## Unreleased
 
+## 1.2.0 - 2026-09-02
+
+### Added
+
+- Added research target pinning with route highlighting, material progress,
+  and a direct return to the tracked goal.
+- Added an Affordable Now filter that checks the complete research cost without
+  blocking normal Research Bench actions.
+- Added a recent unlock history and a fullscreen Tech Tree minimap with click
+  and drag navigation.
+
+### Fixed
+
+- Prevented rejected or expired server route guidance from leaving an
+  estimated path highlighted as though it were authoritative.
+- Kept Affordable Now checks responsive under shared-server load by
+  acknowledging queued work and renewing its client request while it waits.
+- Prevented the minimap from covering persistent controls on compact screens.
+
+### Compatibility
+
+- Updated the network protocol to 47. Clients and servers must update together.
+
 ## 1.1.1 - 2026-09-01
 
 ### Added

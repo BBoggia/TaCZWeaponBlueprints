@@ -34,6 +34,7 @@ public final class SyncBlueprintJournalPacket {
     private final int researchableCount;
     private final List<BlueprintJournalEntry> entries;
     private final List<BlueprintJournalSnapshot.HistoryEntry> history;
+    private final List<BlueprintJournalSnapshot.RecentUnlockBatch> recentUnlocks;
 
     private SyncBlueprintJournalPacket(
             long syncId,
@@ -42,7 +43,8 @@ public final class SyncBlueprintJournalPacket {
             int chunkCount,
             BlueprintJournalSnapshot snapshot,
             List<BlueprintJournalEntry> entries,
-            List<BlueprintJournalSnapshot.HistoryEntry> history) {
+            List<BlueprintJournalSnapshot.HistoryEntry> history,
+            List<BlueprintJournalSnapshot.RecentUnlockBatch> recentUnlocks) {
         validateChunkMetadata(chunkIndex, chunkCount);
         this.syncId = syncId;
         this.reuseExistingTree = reuseExistingTree;
@@ -55,6 +57,7 @@ public final class SyncBlueprintJournalPacket {
         researchableCount = snapshot.researchableCount();
         this.entries = List.copyOf(entries);
         this.history = List.copyOf(history);
+        this.recentUnlocks = List.copyOf(recentUnlocks);
         validateCommonState();
         if (estimatedPayloadBytes() > BlueprintSyncLimits.MAX_CHUNK_BYTES) {
             throw new IllegalArgumentException("Journal synchronization chunk exceeds the byte budget");
@@ -86,6 +89,34 @@ public final class SyncBlueprintJournalPacket {
         }
         entries = List.copyOf(decodedEntries);
         history = List.copyOf(decodedHistory);
+        int recentCount = readBoundedCount(
+                buf,
+                "Journal recent unlock",
+                PlayerProgressionLimits.MAX_RECENT_UNLOCK_BATCHES);
+        List<BlueprintJournalSnapshot.RecentUnlockBatch> decodedRecent =
+                new ArrayList<>(recentCount);
+        for (int index = 0; index < recentCount; index++) {
+            long sequence = buf.readLong();
+            int sourceOrdinal = buf.readUnsignedByte();
+            var sources = com.gamergaming.taczweaponblueprints.capabilities
+                    .RecentBlueprintUnlockBatch.Source.values();
+            if (sourceOrdinal >= sources.length) {
+                throw new IllegalArgumentException("Invalid recent unlock source");
+            }
+            ResourceLocation target = readId(buf);
+            int totalMembers = buf.readVarInt();
+            int memberCount = readBoundedCount(
+                    buf,
+                    "Journal recent unlock member",
+                    PlayerProgressionLimits.MAX_RECENT_UNLOCK_MEMBERS_PER_BATCH);
+            List<ResourceLocation> members = new ArrayList<>(memberCount);
+            for (int memberIndex = 0; memberIndex < memberCount; memberIndex++) {
+                members.add(readId(buf));
+            }
+            decodedRecent.add(new BlueprintJournalSnapshot.RecentUnlockBatch(
+                    sequence, sources[sourceOrdinal], target, members, totalMembers));
+        }
+        recentUnlocks = List.copyOf(decodedRecent);
         validateCommonState();
         if (buf.readerIndex() - start > BlueprintSyncLimits.MAX_CHUNK_BYTES) {
             throw new IllegalArgumentException("Journal synchronization chunk exceeds the byte budget");
@@ -109,6 +140,15 @@ public final class SyncBlueprintJournalPacket {
         history.forEach(entry -> {
             buf.writeResourceLocation(entry.blueprintId());
             buf.writeBoolean(entry.learned());
+        });
+        buf.writeVarInt(recentUnlocks.size());
+        recentUnlocks.forEach(batch -> {
+            buf.writeLong(batch.sequence());
+            buf.writeByte(batch.source().ordinal());
+            buf.writeResourceLocation(batch.targetBlueprintId());
+            buf.writeVarInt(batch.totalMemberCount());
+            buf.writeVarInt(batch.memberBlueprintIds().size());
+            batch.memberBlueprintIds().forEach(buf::writeResourceLocation);
         });
         if (buf.writerIndex() - start > BlueprintSyncLimits.MAX_CHUNK_BYTES) {
             throw new IllegalArgumentException("Journal synchronization chunk exceeds the byte budget");
@@ -156,6 +196,16 @@ public final class SyncBlueprintJournalPacket {
             current.history.add(entry);
             current.estimatedBytes += bytes;
         }
+        for (BlueprintJournalSnapshot.RecentUnlockBatch batch : snapshot.recentUnlocks()) {
+            int bytes = estimatedRecentUnlockBytes(batch);
+            if (!current.empty()
+                    && current.estimatedBytes + bytes > BlueprintSyncLimits.MAX_CHUNK_BYTES) {
+                chunks.add(current);
+                current = new Chunk();
+            }
+            current.recentUnlocks.add(batch);
+            current.estimatedBytes += bytes;
+        }
         if (!current.empty() || chunks.isEmpty()) {
             chunks.add(current);
         }
@@ -166,7 +216,8 @@ public final class SyncBlueprintJournalPacket {
         for (int index = 0; index < chunks.size(); index++) {
             Chunk chunk = chunks.get(index);
             packets.add(new SyncBlueprintJournalPacket(
-                    syncId, reuseExistingTree, index, chunks.size(), snapshot, chunk.entries, chunk.history));
+                    syncId, reuseExistingTree, index, chunks.size(), snapshot,
+                    chunk.entries, chunk.history, chunk.recentUnlocks));
         }
         return List.copyOf(packets);
     }
@@ -179,6 +230,9 @@ public final class SyncBlueprintJournalPacket {
         for (BlueprintJournalSnapshot.HistoryEntry entry : history) {
             bytes += BlueprintSyncLimits.encodedUtfBytes(entry.blueprintId().toString()) + 1;
         }
+        for (BlueprintJournalSnapshot.RecentUnlockBatch batch : recentUnlocks) {
+            bytes += estimatedRecentUnlockBytes(batch);
+        }
         return bytes;
     }
 
@@ -190,7 +244,10 @@ public final class SyncBlueprintJournalPacket {
                 || discoveredCount > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION
                 || researchableCount > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION
                 || entries.size() > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION
-                || history.size() > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION) {
+                || history.size() > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION
+                || recentUnlocks.size() > PlayerProgressionLimits.MAX_RECENT_UNLOCK_BATCHES
+                || recentUnlocks.stream().mapToInt(batch -> batch.memberBlueprintIds().size()).sum()
+                        > PlayerProgressionLimits.MAX_RECENT_UNLOCK_MEMBER_IDS) {
             throw new IllegalArgumentException("Journal synchronization metadata is invalid");
         }
     }
@@ -257,6 +314,16 @@ public final class SyncBlueprintJournalPacket {
         return bytes;
     }
 
+    private static int estimatedRecentUnlockBytes(
+            BlueprintJournalSnapshot.RecentUnlockBatch batch) {
+        int bytes = 24 + BlueprintSyncLimits.encodedUtfBytes(
+                batch.targetBlueprintId().toString());
+        for (ResourceLocation member : batch.memberBlueprintIds()) {
+            bytes += BlueprintSyncLimits.encodedUtfBytes(member.toString());
+        }
+        return bytes;
+    }
+
     private static Optional<ResourceLocation> readOptionalId(FriendlyByteBuf buf) {
         return buf.readBoolean() ? Optional.of(readId(buf)) : Optional.empty();
     }
@@ -285,8 +352,16 @@ public final class SyncBlueprintJournalPacket {
     }
 
     private static int readBoundedCount(FriendlyByteBuf buf, String description) {
+        return readBoundedCount(
+                buf, description, PlayerProgressionLimits.MAX_IDS_PER_COLLECTION);
+    }
+
+    private static int readBoundedCount(
+            FriendlyByteBuf buf,
+            String description,
+            int maximum) {
         int count = buf.readVarInt();
-        if (count < 0 || count > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION) {
+        if (count < 0 || count > maximum) {
             throw new IllegalArgumentException("Invalid " + description + " count: " + count);
         }
         return count;
@@ -303,10 +378,12 @@ public final class SyncBlueprintJournalPacket {
     private static final class Chunk {
         private final List<BlueprintJournalEntry> entries = new ArrayList<>();
         private final List<BlueprintJournalSnapshot.HistoryEntry> history = new ArrayList<>();
+        private final List<BlueprintJournalSnapshot.RecentUnlockBatch> recentUnlocks =
+                new ArrayList<>();
         private int estimatedBytes = JOURNAL_HEADER_RESERVE;
 
         private boolean empty() {
-            return entries.isEmpty() && history.isEmpty();
+            return entries.isEmpty() && history.isEmpty() && recentUnlocks.isEmpty();
         }
     }
 
@@ -354,7 +431,9 @@ public final class SyncBlueprintJournalPacket {
             }
             SyncBlueprintJournalPacket existing = chunks.putIfAbsent(packet.chunkIndex, packet);
             if (existing != null
-                    && (!existing.entries.equals(packet.entries) || !existing.history.equals(packet.history))) {
+                    && (!existing.entries.equals(packet.entries)
+                            || !existing.history.equals(packet.history)
+                            || !existing.recentUnlocks.equals(packet.recentUnlocks))) {
                 chunks.clear();
                 throw new IllegalArgumentException("Conflicting duplicate Journal synchronization chunk");
             }
@@ -363,21 +442,30 @@ public final class SyncBlueprintJournalPacket {
             }
             long totalEntries = chunks.values().stream().mapToLong(chunk -> chunk.entries.size()).sum();
             long totalHistory = chunks.values().stream().mapToLong(chunk -> chunk.history.size()).sum();
+            long totalRecent = chunks.values().stream()
+                    .mapToLong(chunk -> chunk.recentUnlocks.size()).sum();
+            long totalRecentMembers = chunks.values().stream()
+                    .flatMap(chunk -> chunk.recentUnlocks.stream())
+                    .mapToLong(batch -> batch.memberBlueprintIds().size()).sum();
             if (totalEntries > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION
-                    || totalHistory > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION) {
+                    || totalHistory > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION
+                    || totalRecent > PlayerProgressionLimits.MAX_RECENT_UNLOCK_BATCHES
+                    || totalRecentMembers > PlayerProgressionLimits.MAX_RECENT_UNLOCK_MEMBER_IDS) {
                 chunks.clear();
                 throw new IllegalArgumentException("Completed Journal synchronization exceeds the entry limit");
             }
             List<BlueprintJournalEntry> entries = new ArrayList<>();
             List<BlueprintJournalSnapshot.HistoryEntry> history = new ArrayList<>();
+            List<BlueprintJournalSnapshot.RecentUnlockBatch> recentUnlocks = new ArrayList<>();
             chunks.values().forEach(chunk -> {
                 entries.addAll(chunk.entries);
                 history.addAll(chunk.history);
+                recentUnlocks.addAll(chunk.recentUnlocks);
             });
             chunks.clear();
             completed = true;
             return Optional.of(new BlueprintJournalSnapshot(
-                    entries, history, researchPoints, pointCap,
+                    entries, history, recentUnlocks, researchPoints, pointCap,
                     learnedCount, discoveredCount, researchableCount));
         }
 
