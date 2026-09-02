@@ -142,7 +142,7 @@ last working data active.
 
 ## Documentation
 
-- [Current release notes](docs/releases/1.1.md)
+- [Current release notes](docs/releases/1.1.1.md)
 - [CurseForge description](docs/curseforge-description.md)
 - [Operations and migration](docs/operations-and-migration.md)
 - [Research-tree authoring](docs/research-tree-authoring.md)

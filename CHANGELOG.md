@@ -6,6 +6,8 @@ documentation.
 
 ## Unreleased
 
+## 1.1.1 - 2026-09-01
+
 ### Added
 
 - Added Compact, Balanced, Spacious, and Custom client layout presets for the
