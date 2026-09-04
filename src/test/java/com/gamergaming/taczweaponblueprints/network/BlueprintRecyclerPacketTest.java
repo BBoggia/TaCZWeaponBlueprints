@@ -14,6 +14,8 @@ import com.gamergaming.taczweaponblueprints.progression.BlueprintRecyclingServic
 import com.gamergaming.taczweaponblueprints.progression.BlueprintReverseEngineeringService;
 import com.gamergaming.taczweaponblueprints.progression.FoundWeaponRecoveryService;
 import com.gamergaming.taczweaponblueprints.progression.ResearchDataRedemptionService;
+import com.gamergaming.taczweaponblueprints.progression.fragment.BlueprintFragmentAnalysisService;
+import com.gamergaming.taczweaponblueprints.progression.fragment.BlueprintFragmentPolicy;
 
 import io.netty.buffer.Unpooled;
 import net.minecraft.network.FriendlyByteBuf;
@@ -93,7 +95,28 @@ class BlueprintRecyclerPacketTest {
                                 3)),
                         BlueprintRecyclerPreview.WeaponOrigin.LOOT_GENERATED,
                         3,
-                        Optional.of(FoundWeaponRecoveryService.Status.READY))
+                        Optional.of(FoundWeaponRecoveryService.Status.READY)),
+                BlueprintRecyclerPreview.fragment(
+                        new BlueprintFragmentAnalysisService.Evaluation(
+                                BlueprintFragmentAnalysisService.Status.READY,
+                                Optional.of(BLUEPRINT),
+                                BlueprintFragmentPolicy.CompletionMode.TARGETED_RESEARCH_BOOST,
+                                3,
+                                3,
+                                0,
+                                4,
+                                7,
+                                7,
+                                5,
+                                0,
+                                1,
+                                false,
+                                false,
+                                0,
+                                4,
+                                20,
+                                false,
+                                9L))
         };
 
         for (BlueprintRecyclerPreview preview : previews) {

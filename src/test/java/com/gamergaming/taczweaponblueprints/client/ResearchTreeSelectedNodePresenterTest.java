@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Test;
 
 import com.gamergaming.taczweaponblueprints.menu.ResearchSelectionPreview;
 import com.gamergaming.taczweaponblueprints.progression.ResearchCostMode;
+import com.gamergaming.taczweaponblueprints.progression.eligibility.ResearchAccessSummary;
+import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchTier;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
 
 import net.minecraft.resources.ResourceLocation;
@@ -148,6 +150,51 @@ class ResearchTreeSelectedNodePresenterTest {
         assertTrue(presentation.pathPurchase());
         assertEquals(4, presentation.unlockCount());
         assertTrue(presentation.actionEnabled());
+    }
+
+    @Test
+    void authoritativeAccessBlockerTakesPriorityOverAnAffordablePath() {
+        ResourceLocation nodeId = new ResourceLocation("test:tier_three_target");
+        for (var blocked : List.of(
+                new AccessFixture(
+                        ResearchAccessSummary.workbench(
+                                ResearchWorkbenchTier.TIER_1,
+                                ResearchWorkbenchTier.TIER_3),
+                        ResearchTreeSelectedNodePresenter.Message.WORKBENCH_TIER_REQUIRED),
+                new AccessFixture(
+                        ResearchAccessSummary.gate("gate.test.complete_trial"),
+                        ResearchTreeSelectedNodePresenter.Message.PROGRESSION_GATE_REQUIRED),
+                new AccessFixture(
+                        ResearchAccessSummary.POLICY_UNAVAILABLE,
+                        ResearchTreeSelectedNodePresenter.Message.REQUIREMENTS_UNAVAILABLE))) {
+            ResearchSelectionPreview preview = new ResearchSelectionPreview(
+                    Optional.of(nodeId),
+                    24,
+                    30,
+                    false,
+                    true,
+                    true,
+                    false,
+                    false,
+                    List.of(),
+                    4,
+                    0,
+                    ResearchSelectionPreview.PathPlanningState.NONE,
+                    ResearchCostMode.POINTS_AND_ITEMS,
+                    Optional.empty(),
+                    blocked.summary());
+
+            ResearchTreeSelectedNodePresenter.Presentation presentation =
+                    ResearchTreeSelectedNodePresenter.present(input(
+                            node(nodeId, ResearchTreeGraph.Availability.PREREQUISITES_REQUIRED),
+                            true,
+                            Optional.of(nodeId),
+                            preview));
+
+            assertEquals(blocked.message(), presentation.message());
+            assertTrue(presentation.actionVisible());
+            assertFalse(presentation.actionEnabled());
+        }
     }
 
     @Test
@@ -349,5 +396,10 @@ class ResearchTreeSelectedNodePresenterTest {
                 0,
                 0,
                 availability);
+    }
+
+    private record AccessFixture(
+            ResearchAccessSummary summary,
+            ResearchTreeSelectedNodePresenter.Message message) {
     }
 }

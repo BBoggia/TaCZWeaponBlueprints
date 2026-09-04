@@ -8,6 +8,8 @@ import java.util.Set;
 
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
 import com.gamergaming.taczweaponblueprints.item.BlueprintKind;
+import com.gamergaming.taczweaponblueprints.progression.ResearchFeatureConfigSnapshot;
+import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchTier;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeAuthoringReport;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeEconomyAudit;
@@ -27,10 +29,10 @@ import net.minecraft.resources.ResourceLocation;
 /** Creates a deterministic, author-friendly view of the live research catalog. */
 public final class BlueprintResearchCatalogExporter {
     /**
-     * Format 18 records explicit generated relationship shape and hybrid-route
-     * aggregate evidence. The legacy prerequisite union remains for older tools.
+     * Format 20 separates complete crafting assignments from research-tree policy.
+     * The legacy prerequisite union remains for older tools.
      */
-    public static final int CURRENT_FORMAT = 18;
+    public static final int CURRENT_FORMAT = 20;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private BlueprintResearchCatalogExporter() {
@@ -118,6 +120,52 @@ public final class BlueprintResearchCatalogExporter {
             ResearchTechTreeEconomyAudit.Audit economyAudit,
             ResearchGroupedRouteQualityAudit.Audit groupedRouteQualityAudit,
             ResearchGroupedRouteMotifAssessment.Assessment motifAssessment) {
+        return exportWithDiagnostics(
+                snapshot,
+                catalog,
+                profileId,
+                automaticDiagnostics,
+                authoringReport,
+                topologyAudit,
+                economyAudit,
+                groupedRouteQualityAudit,
+                motifAssessment,
+                BlueprintProgressionPolicySnapshot.EMPTY,
+                BlueprintCraftingPolicySnapshot.EMPTY,
+                null);
+    }
+
+    public static String exportWithDiagnostics(
+            BlueprintResearchSnapshot snapshot,
+            Map<ResourceLocation, BlueprintData> catalog,
+            ResourceLocation profileId,
+            AutomaticWeaponPlacementDiagnostics automaticDiagnostics,
+            ResearchTechTreeAuthoringReport authoringReport,
+            ResearchTechTreeTopologyAudit.Audit topologyAudit,
+            ResearchTechTreeEconomyAudit.Audit economyAudit,
+            ResearchGroupedRouteQualityAudit.Audit groupedRouteQualityAudit,
+            ResearchGroupedRouteMotifAssessment.Assessment motifAssessment,
+            BlueprintProgressionPolicySnapshot progressionPolicy,
+            ResearchFeatureConfigSnapshot featureConfig) {
+        return exportWithDiagnostics(
+                snapshot, catalog, profileId, automaticDiagnostics, authoringReport,
+                topologyAudit, economyAudit, groupedRouteQualityAudit, motifAssessment,
+                progressionPolicy, BlueprintCraftingPolicySnapshot.EMPTY, featureConfig);
+    }
+
+    public static String exportWithDiagnostics(
+            BlueprintResearchSnapshot snapshot,
+            Map<ResourceLocation, BlueprintData> catalog,
+            ResourceLocation profileId,
+            AutomaticWeaponPlacementDiagnostics automaticDiagnostics,
+            ResearchTechTreeAuthoringReport authoringReport,
+            ResearchTechTreeTopologyAudit.Audit topologyAudit,
+            ResearchTechTreeEconomyAudit.Audit economyAudit,
+            ResearchGroupedRouteQualityAudit.Audit groupedRouteQualityAudit,
+            ResearchGroupedRouteMotifAssessment.Assessment motifAssessment,
+            BlueprintProgressionPolicySnapshot progressionPolicy,
+            BlueprintCraftingPolicySnapshot craftingPolicy,
+            ResearchFeatureConfigSnapshot featureConfig) {
         if (profileId == null) {
             throw new IllegalArgumentException("profileId cannot be null");
         }
@@ -142,6 +190,12 @@ public final class BlueprintResearchCatalogExporter {
                 motifAssessment == null
                         ? ResearchGroupedRouteMotifAssessment.Assessment.EMPTY
                         : motifAssessment;
+        BlueprintProgressionPolicySnapshot stableProgressionPolicy = progressionPolicy == null
+                ? BlueprintProgressionPolicySnapshot.EMPTY
+                : progressionPolicy;
+        BlueprintCraftingPolicySnapshot stableCraftingPolicy = craftingPolicy == null
+                ? BlueprintCraftingPolicySnapshot.EMPTY
+                : craftingPolicy;
         if (stableMotifAssessment.available()
                 && (!stableGroupedRouteQuality.available()
                         || stableMotifAssessment.weaponNodeCount()
@@ -175,6 +229,34 @@ public final class BlueprintResearchCatalogExporter {
             throw new IllegalArgumentException(
                     "automatic diagnostics do not match the exported catalog or tree");
         }
+        boolean progressionAvailable = stableProgressionPolicy
+                != BlueprintProgressionPolicySnapshot.EMPTY
+                && stableProgressionPolicy.diagnosticsByProfile().containsKey(profileId);
+        if (progressionAvailable) {
+            Set<ResourceLocation> progressionIds = stableProgressionPolicy.policiesByProfile()
+                    .get(profileId).keySet();
+            Set<ResourceLocation> omissionIds = stableProgressionPolicy.omissionsByProfile()
+                    .get(profileId).keySet();
+            Set<ResourceLocation> coveredIds = new java.util.HashSet<>(progressionIds);
+            coveredIds.addAll(omissionIds);
+            if (!catalogIds.containsAll(progressionIds)
+                    || !catalogIds.containsAll(omissionIds)
+                    || !java.util.Collections.disjoint(progressionIds, omissionIds)
+                    || !coveredIds.equals(catalogIds)) {
+                throw new IllegalArgumentException(
+                        "progression policy does not match the exported catalog or profile");
+            }
+        }
+        boolean craftingAvailable = stableCraftingPolicy
+                != BlueprintCraftingPolicySnapshot.EMPTY
+                && stableCraftingPolicy.diagnosticsByProfile().containsKey(profileId);
+        if (craftingAvailable
+                && (!stableCraftingPolicy.catalogBlueprintIds().equals(catalogIds)
+                        || !stableCraftingPolicy.policiesByProfile().get(profileId)
+                                .keySet().equals(catalogIds))) {
+            throw new IllegalArgumentException(
+                    "crafting policy does not completely match the exported catalog or profile");
+        }
 
         JsonObject root = new JsonObject();
         root.addProperty("format", CURRENT_FORMAT);
@@ -195,6 +277,17 @@ public final class BlueprintResearchCatalogExporter {
         root.add(
                 "grouped_route_motif_assessment",
                 exportGroupedRouteMotifAssessment(stableMotifAssessment));
+        root.add(
+                "progression_policy",
+                exportProgressionPolicySummary(
+                        stableProgressionPolicy,
+                        profileId,
+                        progressionAvailable,
+                        featureConfig));
+        root.add(
+                "crafting_policy",
+                exportCraftingPolicySummary(
+                        stableCraftingPolicy, profileId, craftingAvailable, featureConfig));
         if (automaticDiagnostics != null) {
             JsonObject automatic = new JsonObject();
             automatic.addProperty("tree", automaticDiagnostics.treeId().toString());
@@ -359,6 +452,28 @@ public final class BlueprintResearchCatalogExporter {
             exported.addProperty("research_enabled", definition.researchEnabled());
             exported.addProperty("research_points", definition.researchCost().points());
             exported.addProperty("ingredient_types", definition.researchCost().ingredients().size());
+            if (progressionAvailable) {
+                stableProgressionPolicy.policy(profileId, blueprintId).ifPresentOrElse(
+                        policy -> exported.add(
+                                "progression_policy",
+                                exportProgressionPolicyEntry(policy)),
+                        () -> {
+                            String reason = stableProgressionPolicy.omissionsByProfile()
+                                    .get(profileId).get(blueprintId);
+                            if (reason != null) {
+                                exported.addProperty("progression_policy_omission", reason);
+                            }
+                        });
+            }
+            if (craftingAvailable) {
+                ResolvedBlueprintCraftingPolicy crafting = stableCraftingPolicy
+                        .policiesByProfile().get(profileId).get(blueprintId);
+                if (crafting == null) {
+                    throw new IllegalArgumentException(
+                            "crafting policy is missing an exported catalog entry");
+                }
+                exported.add("crafting_policy", exportCraftingPolicyEntry(crafting));
+            }
             JsonArray prerequisites = new JsonArray();
             definition.prerequisites().forEach(id -> prerequisites.add(id.toString()));
             exported.add("prerequisites", prerequisites);
@@ -480,6 +595,192 @@ public final class BlueprintResearchCatalogExporter {
         }
         root.add("entries", exportedEntries);
         return GSON.toJson(root) + System.lineSeparator();
+    }
+
+    private static JsonObject exportProgressionPolicySummary(
+            BlueprintProgressionPolicySnapshot snapshot,
+            ResourceLocation profileId,
+            boolean available,
+            ResearchFeatureConfigSnapshot config) {
+        JsonObject result = new JsonObject();
+        result.addProperty("available", available);
+        if (!available) {
+            return result;
+        }
+        BlueprintProgressionPolicySnapshot.ProfileDiagnostics diagnostics =
+                snapshot.diagnosticsByProfile().get(profileId);
+        result.addProperty("catalog_revision", snapshot.catalogRevision());
+        result.addProperty("research_revision", snapshot.researchRevision());
+        result.addProperty("included_count", diagnostics.includedCount());
+        result.addProperty("omitted_count", diagnostics.omittedCount());
+        result.addProperty("review_fallback_count", diagnostics.reviewFallbackCount());
+        result.addProperty("gate_group_count", diagnostics.gateGroupCount());
+        result.addProperty("gate_condition_count", diagnostics.gateConditionCount());
+        result.addProperty(
+                "tier_1_upper_percentile_basis_points",
+                snapshot.automaticPercentiles().tierOneUpperBasisPoints());
+        result.addProperty(
+                "tier_2_upper_percentile_basis_points",
+                snapshot.automaticPercentiles().tierTwoUpperBasisPoints());
+        result.add("research_tier_counts", exportTierCounts(diagnostics.researchTierCounts()));
+        JsonObject thresholds = new JsonObject();
+        diagnostics.fragmentThresholdCounts().forEach((threshold, count) ->
+                thresholds.addProperty(Integer.toString(threshold), count));
+        result.add("fragment_threshold_counts", thresholds);
+        if (config != null) {
+            result.addProperty(
+                    "progression_preset",
+                    config.progressionPreset().name().toLowerCase(java.util.Locale.ROOT));
+            result.addProperty("research_tiers_enforced", config.enforceResearchTiers());
+            result.addProperty(
+                    "fragment_preset",
+                    config.fragmentPreset().name().toLowerCase(java.util.Locale.ROOT));
+            result.addProperty(
+                    "exact_fragment_threshold_count",
+                    config.exactFragmentThresholds().size());
+        }
+        return result;
+    }
+
+    private static JsonObject exportTierCounts(Map<ResearchWorkbenchTier, Integer> counts) {
+        JsonObject result = new JsonObject();
+        for (ResearchWorkbenchTier tier : ResearchWorkbenchTier.values()) {
+            result.addProperty(tier.serializedName(), counts.getOrDefault(tier, 0));
+        }
+        return result;
+    }
+
+    private static JsonObject exportCraftingPolicySummary(
+            BlueprintCraftingPolicySnapshot snapshot,
+            ResourceLocation profileId,
+            boolean available,
+            ResearchFeatureConfigSnapshot config) {
+        JsonObject result = new JsonObject();
+        result.addProperty("available", available);
+        if (!available) {
+            return result;
+        }
+        BlueprintCraftingPolicySnapshot.ProfileDiagnostics diagnostics =
+                snapshot.diagnosticsByProfile().get(profileId);
+        result.addProperty("catalog_revision", snapshot.catalogRevision());
+        result.addProperty("research_revision", snapshot.researchRevision());
+        result.addProperty("automatic_revision", snapshot.automaticRevision());
+        result.addProperty("assigned_count", diagnostics.assignedCount());
+        result.addProperty("complete_catalog_coverage",
+                diagnostics.assignedCount() == snapshot.catalogBlueprintIds().size());
+        result.add("disposition_counts", exportEnumCounts(diagnostics.dispositionCounts()));
+        result.add("workbench_level_counts", exportTierCounts(diagnostics.tierCounts()));
+        result.add("source_counts", exportEnumCounts(diagnostics.sourceCounts()));
+        result.add("warning_counts", exportEnumCounts(diagnostics.warningCounts()));
+        result.addProperty("review_required_count", diagnostics.reviewRequiredCount());
+        result.addProperty("gate_group_count", diagnostics.gateGroupCount());
+        result.addProperty("gate_condition_count", diagnostics.gateConditionCount());
+        if (config != null) {
+            result.addProperty("crafting_tiers_enforced", config.enforceCraftingTiers());
+            result.addProperty(
+                    "unknown_external_workstations_unrestricted",
+                    config.unknownExternalWorkstationsUnrestricted());
+            result.addProperty(
+                    "unknown_workstation_fallback_level",
+                    config.unknownWorkstationFallbackTier().level());
+            result.addProperty(
+                    "external_workstation_mapping_count",
+                    config.externalWorkstationTiers().size());
+            JsonArray mappings = new JsonArray();
+            config.externalWorkstationTiers().forEach((id, tier) -> {
+                JsonObject mapping = new JsonObject();
+                mapping.addProperty("workstation", id.toString());
+                mapping.addProperty("level", tier.level());
+                mappings.add(mapping);
+            });
+            result.add("external_workstation_mappings", mappings);
+        }
+        return result;
+    }
+
+    private static JsonObject exportEnumCounts(
+            Map<? extends Enum<?>, Integer> counts) {
+        JsonObject result = new JsonObject();
+        counts.entrySet().stream()
+                .sorted(java.util.Comparator.comparing(entry ->
+                        entry.getKey().name()))
+                .forEach(entry -> result.addProperty(
+                        entry.getKey().name().toLowerCase(java.util.Locale.ROOT),
+                        entry.getValue()));
+        return result;
+    }
+
+    private static JsonObject exportCraftingPolicyEntry(
+            ResolvedBlueprintCraftingPolicy policy) {
+        JsonObject result = new JsonObject();
+        result.addProperty("disposition", policy.disposition().serializedName());
+        policy.requiredWorkbenchTier().ifPresent(tier ->
+                result.addProperty("workbench_level", tier.level()));
+        result.addProperty("source", policy.source().serializedName());
+        policy.selectedRuleId().ifPresent(id ->
+                result.addProperty("selected_rule", id.toString()));
+        result.addProperty(
+                "rule_specificity",
+                policy.ruleSpecificity().name().toLowerCase(java.util.Locale.ROOT));
+        policy.automaticScore().ifPresent(score ->
+                result.addProperty("automatic_score", score));
+        policy.automaticPercentileBasisPoints().ifPresent(percentile ->
+                result.addProperty("automatic_percentile_basis_points", percentile));
+        result.addProperty("review_required", policy.reviewRequired());
+        result.addProperty("reason", policy.reasonCode());
+        result.addProperty("gate_group_count", policy.gates().allOf().size());
+        result.addProperty("gate_condition_count", policy.gates().conditionCount());
+        JsonArray warnings = new JsonArray();
+        policy.warnings().stream()
+                .map(BlueprintCraftingPolicyWarning::serializedName)
+                .sorted()
+                .forEach(warnings::add);
+        result.add("warnings", warnings);
+        return result;
+    }
+
+    private static JsonObject exportProgressionPolicyEntry(
+            ResolvedBlueprintProgressionPolicy policy) {
+        JsonObject result = new JsonObject();
+        result.addProperty(
+                "research_workbench_tier",
+                policy.researchWorkbenchTier().serializedName());
+        result.addProperty(
+                "tier_source",
+                policy.tierSource().name().toLowerCase(java.util.Locale.ROOT));
+        policy.selectedProgressionRuleId().ifPresent(id ->
+                result.addProperty("selected_progression_rule", id.toString()));
+        result.addProperty(
+                "rule_specificity",
+                policy.ruleSpecificity().name().toLowerCase(java.util.Locale.ROOT));
+        policy.automaticScore().ifPresent(score ->
+                result.addProperty("automatic_capability_score", score));
+        policy.automaticPercentileBasisPoints().ifPresent(percentile ->
+                result.addProperty("automatic_percentile_basis_points", percentile));
+        result.addProperty("review_required", policy.reviewRequired());
+
+        JsonObject fragments = new JsonObject();
+        fragments.addProperty(
+                "mode",
+                policy.fragments().completionMode().name().toLowerCase(java.util.Locale.ROOT));
+        fragments.addProperty("threshold", policy.fragments().threshold());
+        fragments.addProperty("retained_progress_cap", policy.fragments().retainedProgressCap());
+        fragments.addProperty(
+                "discount_mode",
+                policy.fragments().researchDiscount().mode().name().toLowerCase(
+                        java.util.Locale.ROOT));
+        fragments.addProperty("discount_value", policy.fragments().researchDiscount().value());
+        fragments.addProperty(
+                "learned_target_rp",
+                policy.fragments().learnedTargetResearchPoints());
+        fragments.addProperty("exact_threshold", policy.exactFragmentThreshold());
+        result.add("fragments", fragments);
+
+        JsonObject gates = new JsonObject();
+        gates.addProperty("group_count", policy.gates().allOf().size());
+        gates.addProperty("condition_count", policy.gates().conditionCount());
+        result.add("gates", gates);
+        return result;
     }
 
     private static JsonObject exportTopology(ResearchTechTreeTopologyAudit.Audit audit) {

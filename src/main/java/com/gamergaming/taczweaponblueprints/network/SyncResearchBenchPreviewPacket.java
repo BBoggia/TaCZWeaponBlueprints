@@ -8,10 +8,17 @@ import java.util.function.Supplier;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
 import com.gamergaming.taczweaponblueprints.menu.ResearchSelectionPreview;
+import com.gamergaming.taczweaponblueprints.menu.ResearchSelectionProgressionPreview;
 import com.gamergaming.taczweaponblueprints.progression.ResearchCostMode;
 import com.gamergaming.taczweaponblueprints.progression.ResearchRouteFingerprint;
+import com.gamergaming.taczweaponblueprints.progression.ProgressionIds;
+import com.gamergaming.taczweaponblueprints.progression.DisclosedCraftingAccess;
+import com.gamergaming.taczweaponblueprints.progression.eligibility.ResearchAccessSummary;
+import com.gamergaming.taczweaponblueprints.progression.fragment.BlueprintFragmentPolicy;
+import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchTier;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCost;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchIngredient;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintCraftingDisposition;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
@@ -82,12 +89,14 @@ public final class SyncResearchBenchPreviewPacket {
                 ? Optional.of(new ResearchRouteFingerprint(
                         buffer.readLong(), buffer.readLong()))
                 : Optional.empty();
+        ResearchAccessSummary accessSummary = readAccessSummary(buffer);
+        ResearchSelectionProgressionPreview progression = readProgression(buffer);
         this.preview = new ResearchSelectionPreview(
                 blueprintId, pointCost, pointBalance,
                 policyEligible, ingredientsSatisfied, outputSpace,
                 researchable, creativeBypass, ingredients,
                 unlockCount, totalIngredientTypes, pathPlanningState,
-                costModes[costModeOrdinal], routeFingerprint);
+                costModes[costModeOrdinal], routeFingerprint, accessSummary, progression);
     }
 
     public void toBytes(FriendlyByteBuf buffer) {
@@ -117,6 +126,8 @@ public final class SyncResearchBenchPreviewPacket {
             buffer.writeLong(fingerprint.high());
             buffer.writeLong(fingerprint.low());
         });
+        writeAccessSummary(buffer, preview.accessSummary());
+        writeProgression(buffer, preview.progression());
     }
 
     public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
@@ -160,5 +171,109 @@ public final class SyncResearchBenchPreviewPacket {
 
     private static void writeId(FriendlyByteBuf buffer, ResourceLocation id) {
         buffer.writeUtf(id.toString(), PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH);
+    }
+
+    private static ResearchAccessSummary readAccessSummary(FriendlyByteBuf buffer) {
+        int ordinal = buffer.readVarInt();
+        ResearchAccessSummary.Kind[] kinds = ResearchAccessSummary.Kind.values();
+        if (ordinal < 0 || ordinal >= kinds.length) {
+            throw new IllegalArgumentException("invalid research access-summary kind");
+        }
+        Optional<ResearchWorkbenchTier> current = readOptionalTier(buffer);
+        Optional<ResearchWorkbenchTier> required = readOptionalTier(buffer);
+        Optional<String> messageKey = buffer.readBoolean()
+                ? Optional.of(buffer.readUtf(ProgressionIds.MAX_MESSAGE_KEY_LENGTH))
+                : Optional.empty();
+        return new ResearchAccessSummary(kinds[ordinal], current, required, messageKey);
+    }
+
+    private static void writeAccessSummary(
+            FriendlyByteBuf buffer,
+            ResearchAccessSummary summary) {
+        buffer.writeVarInt(summary.kind().ordinal());
+        writeOptionalTier(buffer, summary.currentTier());
+        writeOptionalTier(buffer, summary.requiredTier());
+        buffer.writeBoolean(summary.messageKey().isPresent());
+        summary.messageKey().ifPresent(key ->
+                buffer.writeUtf(key, ProgressionIds.MAX_MESSAGE_KEY_LENGTH));
+    }
+
+    private static ResearchSelectionProgressionPreview readProgression(
+            FriendlyByteBuf buffer) {
+        Optional<ResearchWorkbenchTier> current = readOptionalTier(buffer);
+        Optional<ResearchWorkbenchTier> required = readOptionalTier(buffer);
+        Optional<ResearchSelectionProgressionPreview.FragmentProgress> fragments =
+                Optional.empty();
+        if (buffer.readBoolean()) {
+            int modeOrdinal = buffer.readVarInt();
+            BlueprintFragmentPolicy.CompletionMode[] modes =
+                    BlueprintFragmentPolicy.CompletionMode.values();
+            if (modeOrdinal < 0 || modeOrdinal >= modes.length) {
+                throw new IllegalArgumentException(
+                        "invalid Blueprint Fragment completion mode");
+            }
+            fragments = Optional.of(new ResearchSelectionProgressionPreview.FragmentProgress(
+                    buffer.readVarInt(),
+                    buffer.readVarInt(),
+                    modes[modeOrdinal],
+                    buffer.readBoolean()));
+        }
+        return new ResearchSelectionProgressionPreview(
+                current,
+                required,
+                fragments,
+                readCraftingAccess(buffer));
+    }
+
+    private static void writeProgression(
+            FriendlyByteBuf buffer,
+            ResearchSelectionProgressionPreview progression) {
+        writeOptionalTier(buffer, progression.currentTier());
+        writeOptionalTier(buffer, progression.requiredTier());
+        buffer.writeBoolean(progression.fragments().isPresent());
+        progression.fragments().ifPresent(fragments -> {
+            buffer.writeVarInt(fragments.completionMode().ordinal());
+            buffer.writeVarInt(fragments.archived());
+            buffer.writeVarInt(fragments.threshold());
+            buffer.writeBoolean(fragments.discountApplied());
+        });
+        writeCraftingAccess(buffer, progression.craftingAccess());
+    }
+
+    private static Optional<DisclosedCraftingAccess> readCraftingAccess(
+            FriendlyByteBuf buffer) {
+        if (!buffer.readBoolean()) {
+            return Optional.empty();
+        }
+        int ordinal = buffer.readVarInt();
+        BlueprintCraftingDisposition[] dispositions = BlueprintCraftingDisposition.values();
+        if (ordinal < 0 || ordinal >= dispositions.length) {
+            throw new IllegalArgumentException("invalid disclosed crafting disposition");
+        }
+        return Optional.of(new DisclosedCraftingAccess(
+                dispositions[ordinal], readOptionalTier(buffer)));
+    }
+
+    private static void writeCraftingAccess(
+            FriendlyByteBuf buffer,
+            Optional<DisclosedCraftingAccess> access) {
+        buffer.writeBoolean(access.isPresent());
+        access.ifPresent(value -> {
+            buffer.writeVarInt(value.disposition().ordinal());
+            writeOptionalTier(buffer, value.requiredWorkbenchTier());
+        });
+    }
+
+    private static Optional<ResearchWorkbenchTier> readOptionalTier(FriendlyByteBuf buffer) {
+        return buffer.readBoolean()
+                ? Optional.of(ResearchWorkbenchTier.fromLevel(buffer.readVarInt()))
+                : Optional.empty();
+    }
+
+    private static void writeOptionalTier(
+            FriendlyByteBuf buffer,
+            Optional<ResearchWorkbenchTier> tier) {
+        buffer.writeBoolean(tier.isPresent());
+        tier.ifPresent(value -> buffer.writeVarInt(value.level()));
     }
 }

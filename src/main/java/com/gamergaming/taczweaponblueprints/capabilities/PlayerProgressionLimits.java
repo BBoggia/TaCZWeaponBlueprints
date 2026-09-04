@@ -5,10 +5,15 @@ package com.gamergaming.taczweaponblueprints.capabilities;
  * Gameplay configuration may impose lower limits, but never higher ones.
  */
 public final class PlayerProgressionLimits {
-    public static final int DATA_VERSION = 3;
+    public static final int DATA_VERSION = 4;
     public static final int MAX_IDS_PER_COLLECTION = 4096;
     public static final int MAX_RESOURCE_ID_LENGTH = 256;
     public static final int MAX_RESEARCH_POINTS = 1_000_000_000;
+    public static final int MAX_PROGRESS_VALUE = 1_000_000_000;
+    public static final int MAX_FRAGMENT_TARGETS = MAX_IDS_PER_COLLECTION;
+    public static final int MAX_PROGRESSION_CRITERIA = MAX_IDS_PER_COLLECTION;
+    /** Rejects an implausibly large progress list before iterating hostile NBT. */
+    public static final int MAX_PERSISTED_PROGRESS_ENTRIES_TO_INSPECT = 8192;
     public static final int MAX_RESEARCH_POINT_AWARD_CLAIMS = 4096;
     public static final int MAX_RESEARCH_POINT_AWARD_RATE_STATES = 512;
     public static final int MAX_RESEARCH_POINT_AWARD_WINDOW_ENTRIES = 4096;

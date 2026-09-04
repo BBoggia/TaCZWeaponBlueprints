@@ -1,0 +1,10 @@
+{
+  "loader": "forge:obj",
+  "flip_v": true,
+  "model": "taczweaponblueprints:models/block/research_bench_east.obj",
+  "automatic_culling": false,
+  "textures": {
+    "texture0": "taczweaponblueprints:block/experimental_research_bench",
+    "particle": "taczweaponblueprints:block/experimental_research_bench"
+  }
+}

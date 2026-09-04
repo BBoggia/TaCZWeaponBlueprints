@@ -16,6 +16,13 @@ client recipe screen.
 - **Research Bench Tech Tree** — Browse the available weapon collection in one
   edge-to-edge Tech Tree with search, pan, zoom, keyboard navigation, and
   an interactive minimap for navigating large weapon collections.<br><br>
+- **Dedicated Research and Crafting Stations** — Progress through three
+  Research Bench tiers for the Tech Tree and three Workbench levels for TaCZ
+  weapon crafting. Every tier has its own direct crafting recipe.<br><br>
+- **Blueprint Fragments** — Find weapon-specific fragments through the normal
+  blueprint loot system and archive them in the Blueprint Analyzer. A completed
+  set can reduce that weapon's research cost or reconstruct a protected
+  blueprint, depending on the server preset.<br><br>
 - **Research Planning Tools** — Pin a weapon as your current goal, highlight
   its complete research route, and track the RP and materials you still need.
   The Affordable Now filter can narrow the tree to research you can purchase
@@ -23,16 +30,10 @@ client recipe screen.
 - **Automatic Weapon Placement** — The built-in tree organizes TaCZ weapons by
   strength, handling, range, and play style. Its width, layers, and branches
   adapt as compatible add-on guns enter or leave the server's weapon catalog.<br><br>
-- **Shortest-Path Research** — Select a higher locked weapon to preview and
-  unlock the shortest valid route to it. Shared prerequisites are paid for
-  only once, and an out-of-order blueprint can't bypass the missing route back
-  to the start of the tree.<br><br>
-- **Safe Research Purchases** — Research is handled as an atomic transaction.
-  The server commits only the route shown in the current preview. If the rules
-  change or the complete purchase can't finish, no partial RP or material cost
-  is consumed.<br><br>
-- **Flexible Research Costs** — Servers can require Research Points (RP),
-  inventory materials, or both without rewriting every research definition.<br><br>
+- **Flexible Shortest-Path Research** — Select a higher locked weapon to
+  preview and unlock the shortest valid route to it. Servers can require
+  Research Points (RP), inventory materials, or both. The purchase is atomic,
+  so a failed or changed route consumes no partial cost.<br><br>
 - **Blueprint Analyzer** — Reverse engineer supported TaCZ equipment, recycle
   learned duplicate blueprints, and redeem configured Research Data for RP.
   Servers can protect crafted guns while allowing guns found in loot to become
@@ -40,9 +41,9 @@ client recipe screen.
 - **Blueprint Journal** — Track discoveries, learned recipes, recent unlocks,
   completion, and the active server rules. A reusable Getting Started page
   explains the main progression loop and available ways to earn RP.<br><br>
-- **JEI and EMI Information** — Optional integrations explain the Research
-  Bench, Blueprint Analyzer, blueprints, and Research Data without revealing
-  hidden research targets or bypassing unlocks.
+- **JEI and EMI Information** — Optional integrations explain Research Benches,
+  crafting Workbenches, the Blueprint Analyzer, blueprints, and Research Data
+  without revealing hidden research targets or bypassing unlocks.
 
 Weapons are the only Tech Tree category enabled by default. Built-in research
 data for TaCZ ammo and attachments remains available for pack authors
@@ -55,14 +56,18 @@ who want to enable and customize those categories.
    Data.
 3. Use a blueprint to learn its recipe, then open the Blueprint Journal to
    review your progress and ways to earn RP.
-4. Craft a Research Bench to browse the Tech Tree. Use the Blueprint Analyzer
-   when you want to reverse engineer equipment or recycle supported items.<br><br>
+4. Craft a Research Bench to browse the Tech Tree, then build the appropriate
+   Workbench level to craft learned weapons. Build higher tiers as your arsenal
+   advances.<br><br>
+5. Use the Blueprint Analyzer to archive Blueprint Fragments, reverse engineer
+   equipment, or recycle supported items.<br><br>
 
 ## Servers and Modpacks
 
 Server configuration controls blueprint loot, pacing, blacklists, Research
-Point limits, research costs, found-weapon recovery, recycling, discovery
-visibility, starting blueprints, and progression exemptions. Settings are
+Point limits, research and crafting tiers, Blueprint Fragment behavior,
+found-weapon recovery, recycling, discovery visibility, starting blueprints,
+and progression exemptions. Settings are
 organized into clear sections, while advanced pack controls remain available
 without crowding the common options. Players can separately choose a Compact,
 Balanced, Spacious, or Custom Tech Tree layout and adjust confirmation,
@@ -70,9 +75,11 @@ notifications, the background grid, and reduced motion.
 
 Datapacks can customize loot pools, research costs, ingredients, entry points,
 visibility, prerequisites, grouped routes, Research Point awards, and Tech Tree
-presentation. Pack authors can use the automatic weapon tree or provide an
-authored-only tree containing only their selected weapons. If a reload contains
-invalid data, the server keeps the last working settings.
+presentation. They can also assign workstation tiers, Blueprint Fragment
+rules, and Progression Gates based on advancements, Bench tiers, or custom
+server milestones. Pack authors can use the automatic weapon tree or provide
+an authored-only tree containing only their selected weapons. If a reload
+contains invalid data, the server keeps the last working settings.
 
 The mod supports TaCZ content packs without requiring a separate blueprint
 definition for every added gun. The available blueprint catalog is rebuilt

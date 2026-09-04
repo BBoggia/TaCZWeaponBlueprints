@@ -1,5 +1,5 @@
 {
-  "format": 2,
+  "format": 4,
   "journal_enabled": true,
   "tree_enabled": false,
   "visibility": "silhouette",
@@ -49,6 +49,78 @@
     "allow_modified": true,
     "physical_blueprint_learning": "bypass_tree_prerequisites",
     "output_recyclable": false
+  },
+  "progression": {
+    "fallback_tiers": {
+      "research": "tier_2",
+      "crafting": "tier_2"
+    },
+    "authored_tier_bands": {
+      "starter": {"research": "tier_1", "crafting": "tier_1"},
+      "basic": {"research": "tier_1", "crafting": "tier_1"},
+      "established": {"research": "tier_2", "crafting": "tier_2"},
+      "advanced": {"research": "tier_2", "crafting": "tier_2"},
+      "elite": {"research": "tier_3", "crafting": "tier_3"},
+      "apex": {"research": "tier_3", "crafting": "tier_3"}
+    },
+    "fragments": {
+      "mode": "targeted_research_boost",
+      "thresholds": {
+        "tier_1": 5,
+        "tier_2": 10,
+        "tier_3": 15
+      },
+      "retained_progress_cap": 1000,
+      "research_discount": {
+        "mode": "percentage",
+        "value": 2500
+      },
+      "learned_target_rp": 1
+    }
+  },
+  "crafting": {
+    "authored_guns": {
+      "tier_bands": {
+        "starter": "tier_1",
+        "basic": "tier_1",
+        "established": "tier_2",
+        "advanced": "tier_2",
+        "elite": "tier_3",
+        "apex": "tier_3"
+      },
+      "fallback": {
+        "disposition": "tiered",
+        "workbench_tier": "tier_2"
+      }
+    },
+    "authored_omitted_guns": {
+      "mode": "disabled"
+    },
+    "automatic_guns": {
+      "mode": "automatic_tier",
+      "fallback": {
+        "disposition": "tiered",
+        "workbench_tier": "tier_2"
+      }
+    },
+    "ammo": {
+      "mode": "linked_weapon",
+      "fallback": {
+        "disposition": "tiered",
+        "workbench_tier": "tier_1"
+      }
+    },
+    "attachments": {
+      "mode": "fixed",
+      "fallback": {
+        "disposition": "tiered",
+        "workbench_tier": "tier_1"
+      }
+    },
+    "other": {
+      "disposition": "tiered",
+      "workbench_tier": "tier_1"
+    }
   },
   "tech_tree": "taczweaponblueprints:default",
   "entry_point_candidates": [

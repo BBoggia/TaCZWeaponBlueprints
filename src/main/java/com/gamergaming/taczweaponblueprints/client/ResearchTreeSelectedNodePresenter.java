@@ -90,6 +90,15 @@ final class ResearchTreeSelectedNodePresenter {
         if (pathPlanningFailure != null) {
             return pathPlanningFailure;
         }
+        Message accessFailure = switch (preview.accessSummary().kind()) {
+            case NONE -> null;
+            case POLICY_UNAVAILABLE -> Message.REQUIREMENTS_UNAVAILABLE;
+            case WORKBENCH_TIER -> Message.WORKBENCH_TIER_REQUIRED;
+            case PROGRESSION_GATE -> Message.PROGRESSION_GATE_REQUIRED;
+        };
+        if (accessFailure != null) {
+            return accessFailure;
+        }
         Message published = switch (node.availability()) {
             case REDACTED -> Message.FOLLOW_PATH;
             case LEARNED -> Message.LEARNED;
@@ -227,6 +236,9 @@ final class ResearchTreeSelectedNodePresenter {
         MATERIALS_REQUIRED,
         INVENTORY_SPACE_REQUIRED,
         PROGRESSION_CAPACITY_EXHAUSTED,
+        WORKBENCH_TIER_REQUIRED,
+        PROGRESSION_GATE_REQUIRED,
+        REQUIREMENTS_UNAVAILABLE,
         READY,
         LOCKED,
         DISCOVERY_REQUIRED,

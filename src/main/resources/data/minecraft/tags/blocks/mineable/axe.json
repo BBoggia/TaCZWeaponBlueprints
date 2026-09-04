@@ -1,6 +1,8 @@
 {
   "replace": false,
   "values": [
-    "taczweaponblueprints:research_bench"
+    "taczweaponblueprints:research_bench",
+    "taczweaponblueprints:advanced_research_bench",
+    "taczweaponblueprints:experimental_research_bench"
   ]
 }

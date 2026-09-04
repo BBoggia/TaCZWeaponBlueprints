@@ -2,6 +2,7 @@ package com.gamergaming.taczweaponblueprints.network;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Optional;
@@ -11,8 +12,14 @@ import org.junit.jupiter.api.Test;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchResearchAction;
 import com.gamergaming.taczweaponblueprints.menu.ResearchSelectionPreview;
+import com.gamergaming.taczweaponblueprints.menu.ResearchSelectionProgressionPreview;
 import com.gamergaming.taczweaponblueprints.progression.ResearchCostMode;
 import com.gamergaming.taczweaponblueprints.progression.ResearchRouteFingerprint;
+import com.gamergaming.taczweaponblueprints.progression.DisclosedCraftingAccess;
+import com.gamergaming.taczweaponblueprints.progression.eligibility.ResearchAccessSummary;
+import com.gamergaming.taczweaponblueprints.progression.fragment.BlueprintFragmentPolicy;
+import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchTier;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintCraftingDisposition;
 
 import io.netty.buffer.Unpooled;
 import net.minecraft.network.FriendlyByteBuf;
@@ -115,7 +122,9 @@ class ResearchBenchPacketTest {
                 ResearchBenchMenu.ActionResultCode.ROUTE_TOO_COMPLEX,
                 ResearchBenchMenu.ActionResultCode.TECH_TREE_UNAVAILABLE,
                 ResearchBenchMenu.ActionResultCode.UNSATISFIABLE,
-                ResearchBenchMenu.ActionResultCode.STALE_PREVIEW)) {
+                ResearchBenchMenu.ActionResultCode.STALE_PREVIEW,
+                ResearchBenchMenu.ActionResultCode.WORKBENCH_TIER_REQUIRED,
+                ResearchBenchMenu.ActionResultCode.PROGRESSION_GATE_REQUIRED)) {
             ResearchBenchMenu.ActionResult result = new ResearchBenchMenu.ActionResult(
                     ResearchBenchResearchAction.RESEARCH,
                     Optional.of(BLUEPRINT),
@@ -124,6 +133,42 @@ class ResearchBenchPacketTest {
             try {
                 new ResearchBenchActionResultPacket(7, 94, result).toBytes(buffer);
                 assertEquals(result, new ResearchBenchActionResultPacket(buffer).result());
+            } finally {
+                buffer.release();
+            }
+        }
+    }
+
+    @Test
+    void exactTierAndGateBlockersRoundTripWithoutHiddenPolicyDetails() {
+        for (ResearchAccessSummary access : List.of(
+                ResearchAccessSummary.workbench(
+                        ResearchWorkbenchTier.TIER_1,
+                        ResearchWorkbenchTier.TIER_3),
+                ResearchAccessSummary.gate("gate.example.complete_trial"),
+                ResearchAccessSummary.POLICY_UNAVAILABLE)) {
+            ResearchSelectionPreview preview = new ResearchSelectionPreview(
+                    Optional.of(BLUEPRINT),
+                    42,
+                    80,
+                    false,
+                    true,
+                    true,
+                    false,
+                    false,
+                    List.of(),
+                    2,
+                    0,
+                    ResearchSelectionPreview.PathPlanningState.NONE,
+                    ResearchCostMode.POINTS_AND_ITEMS,
+                    Optional.empty(),
+                    access);
+            FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+            try {
+                new SyncResearchBenchPreviewPacket(9, preview).toBytes(buffer);
+                assertEquals(
+                        preview,
+                        new SyncResearchBenchPreviewPacket(buffer).preview());
             } finally {
                 buffer.release();
             }
@@ -208,7 +253,19 @@ class ResearchBenchPacketTest {
                 3,
                 ResearchSelectionPreview.PathPlanningState.NONE,
                 ResearchCostMode.POINTS_AND_ITEMS,
-                Optional.of(fingerprint));
+                Optional.of(fingerprint),
+                ResearchAccessSummary.NONE,
+                new ResearchSelectionProgressionPreview(
+                        Optional.of(ResearchWorkbenchTier.TIER_2),
+                        Optional.of(ResearchWorkbenchTier.TIER_3),
+                        Optional.of(new ResearchSelectionProgressionPreview.FragmentProgress(
+                                5,
+                                5,
+                                BlueprintFragmentPolicy.CompletionMode.TARGETED_RESEARCH_BOOST,
+                                true)),
+                        Optional.of(new DisclosedCraftingAccess(
+                                BlueprintCraftingDisposition.TIERED,
+                                Optional.of(ResearchWorkbenchTier.TIER_3)))));
         FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
         try {
             new SyncResearchBenchPreviewPacket(9, preview).toBytes(buffer);
@@ -218,6 +275,13 @@ class ResearchBenchPacketTest {
             assertEquals(5, decoded.unlockCount());
             assertEquals(2, decoded.additionalIngredientTypes());
             assertEquals(Optional.of(fingerprint), decoded.routeFingerprint());
+            assertEquals(ResearchWorkbenchTier.TIER_3,
+                    decoded.progression().requiredTier().orElseThrow());
+            assertTrue(decoded.progression().fragments().orElseThrow().discountApplied());
+            assertEquals(
+                    ResearchWorkbenchTier.TIER_3,
+                    decoded.progression().craftingAccess().orElseThrow()
+                            .requiredWorkbenchTier().orElseThrow());
         } finally {
             buffer.release();
         }
@@ -254,7 +318,9 @@ class ResearchBenchPacketTest {
         FriendlyByteBuf invalid = new FriendlyByteBuf(Unpooled.buffer());
         try {
             new SyncResearchBenchPreviewPacket(9, preview).toBytes(invalid);
-            invalid.setByte(invalid.writerIndex() - 2, ResearchCostMode.values().length);
+            // The empty route, access summary, progression tier/fragment fields,
+            // and disclosed crafting-access marker occupy nine trailing bytes.
+            invalid.setByte(invalid.writerIndex() - 10, ResearchCostMode.values().length);
             assertThrows(
                     IllegalArgumentException.class,
                     () -> new SyncResearchBenchPreviewPacket(invalid));

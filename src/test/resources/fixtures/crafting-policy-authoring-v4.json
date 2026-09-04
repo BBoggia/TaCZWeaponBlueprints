@@ -1,0 +1,98 @@
+{
+  "profile": {
+    "format": 4,
+    "journal_enabled": true,
+    "visibility": "full",
+    "research_enabled": true,
+    "recycling_enabled": true,
+    "allow_unlearned_recycling": false,
+    "recycling_value": 1,
+    "research_cost": {"points": 8},
+    "requires_discovery": false,
+    "creative_bypasses_cost": false,
+    "domain_policies": {
+      "weapons": {"tree_enabled": true, "research_enabled": true},
+      "attachments": {"tree_enabled": false, "research_enabled": false},
+      "ammo": {"tree_enabled": false, "research_enabled": false}
+    },
+    "crafting": {
+      "authored_guns": {
+        "tier_bands": {
+          "starter": "tier_1",
+          "basic": "tier_1",
+          "established": "tier_2",
+          "advanced": "tier_2",
+          "elite": "tier_3",
+          "apex": "tier_3"
+        },
+        "fallback": {"disposition": "unrestricted"}
+      },
+      "authored_omitted_guns": {
+        "mode": "automatic_tier",
+        "fallback": {"disposition": "tiered", "workbench_tier": "tier_3"}
+      },
+      "automatic_guns": {"mode": "fixed", "workbench_tier": "tier_2"},
+      "ammo": {
+        "mode": "linked_weapon",
+        "fallback": {"disposition": "disabled"}
+      },
+      "attachments": {
+        "mode": "type_mapped",
+        "fallback": {"disposition": "tiered", "workbench_tier": "tier_1"},
+        "item_type_policies": {
+          "scope": {"disposition": "unrestricted"},
+          "muzzle": {"disposition": "disabled"},
+          "stock": {"disposition": "tiered", "workbench_tier": "tier_2"}
+        }
+      },
+      "other": {"disposition": "unrestricted"}
+    }
+  },
+  "omission_modes": [
+    {"mode": "fixed", "workbench_tier": "tier_2"},
+    {"mode": "unrestricted"},
+    {"mode": "disabled"},
+    {
+      "mode": "automatic_tier",
+      "fallback": {"disposition": "tiered", "workbench_tier": "tier_2"}
+    }
+  ],
+  "rules": [
+    {
+      "format": 4,
+      "profile": "test:profile",
+      "target": {"blueprints": ["test:tiered"]},
+      "crafting": {"disposition": "tiered", "workbench_tier": "tier_3"}
+    },
+    {
+      "format": 4,
+      "profile": "test:profile",
+      "target": {"selector": {"blueprint_kinds": ["ammo"]}},
+      "crafting": {"disposition": "unrestricted"}
+    },
+    {
+      "format": 4,
+      "profile": "test:profile",
+      "target": {"selector": {"blueprint_kinds": ["attachment"]}},
+      "crafting": {"disposition": "disabled"}
+    },
+    {
+      "format": 4,
+      "profile": "test:profile",
+      "target": {"selector": {"blueprint_kinds": ["gun"]}},
+      "crafting": {
+        "gates": {
+          "all_of": [{
+            "any_of": [{
+              "type": "criterion",
+              "id": "test:trial",
+              "value": 1,
+              "scope": "crafting",
+              "message": "gate.test.trial"
+            }]
+          }]
+        }
+      }
+    }
+  ]
+}

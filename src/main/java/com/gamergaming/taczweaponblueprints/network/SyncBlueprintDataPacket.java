@@ -142,6 +142,11 @@ public class SyncBlueprintDataPacket {
         ctx.get().setPacketHandled(true);
     }
 
+    /** Drops any partial or completed snapshot retained from the previous connection. */
+    public static void clearClientState() {
+        CLIENT_ACCUMULATOR.clear();
+    }
+
     int estimatedPayloadBytes() {
         int size = 8
                 + BlueprintSyncLimits.varIntBytes(chunkIndex)
@@ -184,36 +189,77 @@ public class SyncBlueprintDataPacket {
         }
     }
 
-    private static final class ClientAccumulator {
-        private long syncId = Long.MIN_VALUE;
+    static final class ClientAccumulator {
+        private boolean initialized;
+        private boolean completed;
+        private long syncId;
         private int expectedChunks;
-        private final Map<Integer, Map<ResourceLocation, BlueprintData>> chunks = new TreeMap<>();
+        private final Map<Integer, SyncBlueprintDataPacket> chunks = new TreeMap<>();
 
-        private synchronized Optional<Map<ResourceLocation, BlueprintData>> accept(SyncBlueprintDataPacket packet) {
-            if (syncId != packet.syncId) {
+        synchronized Optional<Map<ResourceLocation, BlueprintData>> accept(
+                SyncBlueprintDataPacket packet) {
+            if (packet == null) {
+                throw new IllegalArgumentException("blueprint packet cannot be null");
+            }
+            if (initialized && Long.compare(packet.syncId, syncId) < 0) {
+                return Optional.empty();
+            }
+            if (!initialized || syncId != packet.syncId) {
+                initialized = true;
+                completed = false;
                 syncId = packet.syncId;
                 expectedChunks = packet.chunkCount;
                 chunks.clear();
             }
+            if (completed) {
+                return Optional.empty();
+            }
             if (expectedChunks != packet.chunkCount) {
+                clear();
                 throw new IllegalArgumentException("Inconsistent blueprint synchronization chunk count");
             }
-            chunks.put(packet.chunkIndex, packet.blueprintDataMap);
+            SyncBlueprintDataPacket existing = chunks.putIfAbsent(packet.chunkIndex, packet);
+            if (existing != null
+                    && !existing.blueprintDataMap.equals(packet.blueprintDataMap)) {
+                clear();
+                throw new IllegalArgumentException(
+                        "Conflicting duplicate blueprint synchronization chunk");
+            }
+            long entryCount = chunks.values().stream()
+                    .mapToLong(chunk -> chunk.blueprintDataMap.size())
+                    .sum();
+            if (entryCount > MAX_BLUEPRINTS) {
+                clear();
+                throw new IllegalArgumentException(
+                        "Blueprint synchronization exceeds the entry limit");
+            }
             if (chunks.size() != expectedChunks) {
                 return Optional.empty();
             }
 
             Map<ResourceLocation, BlueprintData> completed = new LinkedHashMap<>();
-            chunks.values().forEach(chunk -> chunk.forEach((id, data) -> {
-                if (completed.put(id, data) != null) {
-                    throw new IllegalArgumentException("Duplicate blueprint ID across synchronization chunks: " + id);
+            for (SyncBlueprintDataPacket chunk : chunks.values()) {
+                for (Map.Entry<ResourceLocation, BlueprintData> entry
+                        : chunk.blueprintDataMap.entrySet()) {
+                    if (completed.put(entry.getKey(), entry.getValue()) != null) {
+                        clear();
+                        throw new IllegalArgumentException(
+                                "Duplicate blueprint ID across synchronization chunks: "
+                                        + entry.getKey());
+                    }
                 }
-            }));
-            if (completed.size() > MAX_BLUEPRINTS) {
-                throw new IllegalArgumentException("Completed blueprint synchronization exceeds the entry limit");
             }
             chunks.clear();
+            this.completed = true;
             return Optional.of(Collections.unmodifiableMap(completed));
+        }
+
+        synchronized void clear() {
+            initialized = false;
+            completed = false;
+            syncId = 0L;
+            expectedChunks = 0;
+            chunks.clear();
         }
     }
 }

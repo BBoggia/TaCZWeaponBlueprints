@@ -2,6 +2,7 @@ package com.gamergaming.taczweaponblueprints.resource.research;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -73,6 +74,84 @@ class BlueprintResearchPolicyResolverTest {
         assertEquals(id("test:tag"), tagged.ruleId().orElseThrow());
         assertEquals(BlueprintResearchTarget.MatchSpecificity.TAG, tagged.specificity());
         assertEquals(3, tagged.recyclingValue());
+    }
+
+    @Test
+    void exactCraftingOnlyRuleCannotMaskBroaderResearchDefinition() {
+        ResourceLocation blueprintId = id("test:rifle");
+        ResourceLocation tagId = id("test:featured");
+        ResourceLocation prerequisiteId = id("test:basic");
+        BlueprintResearchRule broaderResearch = rule(
+                "research",
+                -1000,
+                target(List.of(), List.of(tagId), null),
+                Optional.of(new BlueprintResearchCost(37, List.of())),
+                Optional.of(6),
+                Optional.of(JournalVisibility.NAME),
+                Optional.empty());
+        BlueprintResearchRule exactCrafting = craftingOnlyRule(
+                blueprintId,
+                1000,
+                BlueprintCraftingDisposition.UNRESTRICTED);
+        BlueprintResearchRule prerequisite = rule(
+                "prerequisite",
+                0,
+                target(List.of(prerequisiteId), List.of(), null),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty());
+        BlueprintResearchSnapshot snapshot = BlueprintResearchSnapshot.create(
+                Map.of(tagId, new BlueprintLootTag(1, List.of(blueprintId))),
+                Map.of(profileId(), profile(false)),
+                Map.of(
+                        id("test:research"), broaderResearch,
+                        id("test:crafting"), exactCrafting,
+                        id("test:prerequisite"), prerequisite));
+
+        Map<ResourceLocation, BlueprintData> catalog = new java.util.LinkedHashMap<>();
+        catalog.putAll(catalog(blueprintId, "rifle"));
+        catalog.putAll(catalog(prerequisiteId, "rifle"));
+        BlueprintResearchPolicy policy = resolve(snapshot, catalog, blueprintId, null);
+        BlueprintResearchPolicyResolver.RuleSelection researchSelection =
+                BlueprintResearchDiagnostics.inspectSelection(
+                        snapshot, catalog, profileId(), blueprintId);
+        BlueprintResearchPolicyResolver.RuleSelection craftingSelection =
+                BlueprintResearchPolicyResolver.craftingRuleSelection(
+                        snapshot, profileId(), blueprintId, catalog.get(blueprintId));
+
+        assertEquals(id("test:research"), policy.ruleId().orElseThrow());
+        assertEquals(id("test:research"), researchSelection.selectedRuleId().orElseThrow());
+        assertEquals(BlueprintResearchTarget.MatchSpecificity.TAG, researchSelection.specificity());
+        assertEquals(37, policy.researchCost().points());
+        assertEquals(6, policy.recyclingValue());
+        assertEquals(JournalVisibility.NAME, policy.visibility());
+        assertEquals(id("test:crafting"), craftingSelection.selectedRuleId().orElseThrow());
+        assertEquals(BlueprintResearchTarget.MatchSpecificity.EXACT, craftingSelection.specificity());
+    }
+
+    @Test
+    void craftingOnlyRuleCannotHideSelectedResearchPrerequisitesFromSnapshotValidation() {
+        ResourceLocation blueprintId = id("test:rifle");
+        BlueprintResearchRule cyclicResearch = rule(
+                "cyclic",
+                0,
+                target(List.of(blueprintId), List.of(), null),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.of(List.of(blueprintId)));
+        BlueprintResearchRule exactCrafting = craftingOnlyRule(
+                blueprintId,
+                1000,
+                BlueprintCraftingDisposition.UNRESTRICTED);
+
+        assertThrows(IllegalArgumentException.class, () -> BlueprintResearchSnapshot.create(
+                Map.of(),
+                Map.of(profileId(), profile(false)),
+                Map.of(
+                        id("test:cyclic"), cyclicResearch,
+                        id("test:crafting"), exactCrafting)));
     }
 
     @Test
@@ -530,6 +609,34 @@ class BlueprintResearchPolicyResolverTest {
                 Optional.empty(),
                 prerequisites,
                 Optional.empty());
+    }
+
+    private static BlueprintResearchRule craftingOnlyRule(
+            ResourceLocation blueprintId,
+            int priority,
+            BlueprintCraftingDisposition disposition) {
+        return new BlueprintResearchRule(
+                BlueprintResearchRule.CRAFTING_FORMAT,
+                profileId(),
+                priority,
+                target(List.of(blueprintId), List.of(), null),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.of(new BlueprintCraftingRuleOverride(
+                        Optional.of(disposition),
+                        Optional.empty(),
+                        Optional.empty())));
     }
 
     private static BlueprintResearchTarget target(

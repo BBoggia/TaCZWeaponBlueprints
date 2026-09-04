@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
@@ -12,7 +13,15 @@ import org.junit.jupiter.api.Test;
 import com.gamergaming.taczweaponblueprints.client.ResearchTreeLayoutPreset;
 import com.gamergaming.taczweaponblueprints.client.ResearchTreeMinimapMode;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintBalancePreset;
+import com.gamergaming.taczweaponblueprints.progression.BlueprintFragmentPreset;
+import com.gamergaming.taczweaponblueprints.progression.AmmoCraftingStrategy;
+import com.gamergaming.taczweaponblueprints.progression.AttachmentCraftingStrategy;
+import com.gamergaming.taczweaponblueprints.progression.CraftingAccessOverride;
+import com.gamergaming.taczweaponblueprints.progression.ResearchProgressionPreset;
+import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchTier;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintFragmentProfilePolicy;
 import me.fzzyhmstrs.fzzy_config.api.ConfigApi;
+import net.minecraft.resources.ResourceLocation;
 
 class SettingsSerializationCompatibilityTest {
     @Test
@@ -41,17 +50,72 @@ class SettingsSerializationCompatibilityTest {
     void serverGroupsDoNotChangePersistedFieldPaths() {
         String serialized = ConfigApi.serializeConfig(new BlueprintConfig()).get();
 
-        assertTrue(serialized.contains("version = 2"));
+        assertTrue(serialized.contains("version = 4"));
         assertTrue(serialized.contains("balancePreset = \"BALANCED\""));
         assertTrue(serialized.contains("enableBlueprints = true"));
         assertTrue(serialized.contains("researchPointCap = 10000"));
         assertTrue(serialized.contains("blueprintSpawnChance = "));
+        assertTrue(serialized.contains("progressionPreset = \"TIERED_RESEARCH_AND_CRAFTING\""));
+        assertTrue(serialized.contains("fragmentPreset = \"TARGETED_RESEARCH_BOOST\""));
+        assertTrue(serialized.contains("ammoCraftingStrategy = \"PROFILE\""));
+        assertTrue(serialized.contains("attachmentCraftingStrategy = \"PROFILE\""));
+        assertTrue(serialized.contains("exactCraftingOverrides ="));
         assertFalse(serialized.contains("generalProgression ="));
         assertFalse(serialized.contains("[generalProgression]"));
         assertFalse(serialized.contains("discoveryAndLoot ="));
         assertFalse(serialized.contains("researchAndPoints ="));
         assertFalse(serialized.contains("startingAccess ="));
         assertFalse(serialized.contains("advanced ="));
+    }
+
+    @Test
+    void versionTwoServerFileMigratesToClassicWithoutChangingDormantCustomValues() {
+        BlueprintConfig migrated = ConfigApi.deserializeConfig(
+                new BlueprintConfig(),
+                """
+                        version = 2
+                        customEnforceResearchTiers = false
+                        customEnforceCraftingTiers = true
+                        tierOneFragmentThreshold = 7
+                        """)
+                .get();
+        migrated.update(2);
+
+        assertEquals(ResearchProgressionPreset.CLASSIC, migrated.progressionPreset.get());
+        assertFalse(migrated.researchFeatureSnapshot().enforceResearchTiers());
+        assertFalse(migrated.researchFeatureSnapshot().enforceCraftingTiers());
+        assertFalse(migrated.customEnforceResearchTiers.get());
+        assertTrue(migrated.customEnforceCraftingTiers.get());
+        assertEquals(7, migrated.tierOneFragmentThreshold.get());
+        assertEquals(BlueprintFragmentPreset.DISABLED, migrated.fragmentPreset.get());
+        assertFalse(migrated.researchFeatureSnapshot().fragmentPolicy(
+                BlueprintFragmentProfilePolicy.DEFAULT,
+                new ResourceLocation("test", "legacy_target"),
+                ResearchWorkbenchTier.TIER_1,
+                Optional.empty()).enabled());
+        assertEquals(AmmoCraftingStrategy.PROFILE, migrated.ammoCraftingStrategy.get());
+        assertEquals(AttachmentCraftingStrategy.PROFILE,
+                migrated.attachmentCraftingStrategy.get());
+        assertTrue(migrated.researchFeatureSnapshot().craftingPolicy()
+                .exactOverrides().isEmpty());
+    }
+
+    @Test
+    void versionThreeServerFilePreservesProfileCraftingBehavior() {
+        BlueprintConfig migrated = ConfigApi.deserializeConfig(
+                new BlueprintConfig(),
+                "version = 3\nprogressionExemptKinds = [ \"gun\" ]\n").get();
+        migrated.update(3);
+
+        assertEquals(AmmoCraftingStrategy.PROFILE, migrated.ammoCraftingStrategy.get());
+        assertEquals(AttachmentCraftingStrategy.PROFILE,
+                migrated.attachmentCraftingStrategy.get());
+        assertTrue(migrated.researchFeatureSnapshot().craftingPolicy()
+                .unrestrictedKinds().isEmpty());
+        assertTrue(migrated.researchFeatureSnapshot().craftingPolicy()
+                .disabledKinds().isEmpty());
+        assertEquals(Set.of(com.gamergaming.taczweaponblueprints.item.BlueprintKind.GUN),
+                migrated.accessSnapshot().progressionExemptKinds());
     }
 
     @Test
@@ -128,7 +192,7 @@ class SettingsSerializationCompatibilityTest {
 
         String serialized = ConfigApi.serializeConfig(migrated).get();
         BlueprintConfig roundTripped = ConfigApi.deserializeConfig(new BlueprintConfig(), serialized).get();
-        roundTripped.update(2);
+        roundTripped.update(4);
         assertEquals(List.of("gun", "attachment"), roundTripped.progressionExemptKinds.get());
         assertEquals(
                 List.of("pistol", "pack_defined_type"),
@@ -146,6 +210,7 @@ class SettingsSerializationCompatibilityTest {
                         gunBlacklist = [ "futurepack:prototype" ]
                         ammoBlacklist = [ "futurepack:prototype_round" ]
                         attachmentBlacklist = [ "futurepack:prototype_scope" ]
+                        exactCraftingOverrides = { "futurepack:prototype" = "TIER_3" }
                         """)
                 .get();
         migrated.update(2);
@@ -156,10 +221,12 @@ class SettingsSerializationCompatibilityTest {
         assertTrue(migrated.gunBlacklist.contains("futurepack:prototype"));
         assertTrue(migrated.ammoBlacklist.contains("futurepack:prototype_round"));
         assertTrue(migrated.attachmentBlacklist.contains("futurepack:prototype_scope"));
+        assertEquals(CraftingAccessOverride.TIER_3,
+                migrated.exactCraftingOverrides.get("futurepack:prototype"));
 
         String serialized = ConfigApi.serializeConfig(migrated).get();
         BlueprintConfig roundTripped = ConfigApi.deserializeConfig(new BlueprintConfig(), serialized).get();
-        roundTripped.update(2);
+        roundTripped.update(4);
         assertEquals(Set.copyOf(migrated.startingBlueprints), Set.copyOf(roundTripped.startingBlueprints));
         assertEquals(
                 Set.copyOf(migrated.progressionExemptBlueprints),
@@ -169,5 +236,7 @@ class SettingsSerializationCompatibilityTest {
         assertEquals(
                 Set.copyOf(migrated.attachmentBlacklist),
                 Set.copyOf(roundTripped.attachmentBlacklist));
+        assertEquals(CraftingAccessOverride.TIER_3,
+                roundTripped.exactCraftingOverrides.get("futurepack:prototype"));
     }
 }

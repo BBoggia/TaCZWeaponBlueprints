@@ -1,6 +1,7 @@
 package com.gamergaming.taczweaponblueprints.progression;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -22,7 +23,7 @@ class BlueprintKnowledgeFlowPhaseSixTest {
         assertTrue(BlueprintAccessConfigSnapshot.EMPTY.progressionExemptKinds().isEmpty());
         assertTrue(BlueprintAccessConfigSnapshot.EMPTY.progressionExemptItemTypes().isEmpty());
         assertTrue(BlueprintAccessConfigSnapshot.EMPTY.startingBlueprints().isEmpty());
-        assertEquals("47", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("55", NetworkHandler.PROTOCOL_VERSION);
     }
 
     @Test
@@ -47,6 +48,59 @@ class BlueprintKnowledgeFlowPhaseSixTest {
         }
         assertTrue(build.contains("exemptionPersistence: 'live_policy_only'"));
         assertTrue(build.contains("awardPolicy: 'starting_grants_do_not_award'"));
+    }
+
+    @Test
+    void progressionExemptCraftingStillPassesThroughTierAndGateAuthority()
+            throws IOException {
+        String crafting = Files.readString(PROJECT.resolve(
+                "src/main/java/com/gamergaming/taczweaponblueprints/progression/"
+                        + "CraftingEligibilityService.java"));
+        int exemption = crafting.indexOf(
+                "boolean exempt = BlueprintProgressionAccess.isProgressionExempt");
+        int publication = crafting.indexOf(
+                "var policyAccess = ProgressionPolicyAccessService.acquireCrafting(",
+                exemption);
+        int craftingMap = crafting.indexOf("policyAccess.profileCraftingPolicies()", publication);
+        int policyEvaluation = crafting.indexOf(
+                "private static Evaluation evaluatePolicy(", craftingMap);
+        int tier = crafting.indexOf("evaluateWorkbenchAccess(", policyEvaluation);
+        int gate = crafting.indexOf(
+                "ProgressionGateEvaluator.evaluateRequirements(", tier);
+
+        assertTrue(exemption >= 0);
+        assertTrue(publication > exemption);
+        assertTrue(craftingMap > publication);
+        assertTrue(policyEvaluation > craftingMap);
+        assertTrue(tier > policyEvaluation);
+        assertTrue(gate > tier);
+        assertTrue(crafting.substring(exemption, publication)
+                .contains("if (!exempt &&"));
+        assertFalse(crafting.substring(exemption, publication)
+                .contains("return Evaluation.permitted()"));
+    }
+
+    @Test
+    void disabledBlueprintModeOnlyRetainsAuthorityForNativeCraftingWorkbenches()
+            throws IOException {
+        String crafting = Files.readString(PROJECT.resolve(
+                "src/main/java/com/gamergaming/taczweaponblueprints/progression/"
+                        + "CraftingEligibilityService.java"));
+        int snapshot = crafting.indexOf("public static Snapshot snapshot(");
+        int nativeWorkbench = crafting.indexOf(
+                "isNativeCraftingWorkbench(menu.getBlockId())", snapshot);
+        int conditionalAuthority = crafting.indexOf(
+                "if (blueprintsEnabled || nativeWorkbench)", nativeWorkbench);
+        int authority = crafting.indexOf(
+                "workbench = authenticatedWorkbench(player, menu)", conditionalAuthority);
+        int disabled = crafting.indexOf("if (!blueprintsEnabled)", snapshot);
+
+        assertTrue(snapshot >= 0);
+        assertTrue(nativeWorkbench > snapshot);
+        assertTrue(conditionalAuthority > nativeWorkbench);
+        assertTrue(authority > conditionalAuthority);
+        assertTrue(disabled > snapshot);
+        assertTrue(disabled > authority);
     }
 
 }

@@ -8,6 +8,7 @@ import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits
 import com.gamergaming.taczweaponblueprints.progression.BlueprintResearchService;
 import com.gamergaming.taczweaponblueprints.progression.ResearchCostMode;
 import com.gamergaming.taczweaponblueprints.progression.ResearchRouteFingerprint;
+import com.gamergaming.taczweaponblueprints.progression.eligibility.ResearchAccessSummary;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCost;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchIngredient;
 
@@ -28,11 +29,14 @@ public record ResearchSelectionPreview(
         int ingredientTypeCount,
         PathPlanningState pathPlanningState,
         ResearchCostMode costMode,
-        Optional<ResearchRouteFingerprint> routeFingerprint) {
+        Optional<ResearchRouteFingerprint> routeFingerprint,
+        ResearchAccessSummary accessSummary,
+        ResearchSelectionProgressionPreview progression) {
     public static final ResearchSelectionPreview EMPTY = new ResearchSelectionPreview(
             Optional.empty(), 0, 0, false, false, false, false, false,
             List.of(), 0, 0, PathPlanningState.NONE, ResearchCostMode.POINTS_AND_ITEMS,
-            Optional.empty());
+            Optional.empty(), ResearchAccessSummary.NONE,
+            ResearchSelectionProgressionPreview.EMPTY);
 
     /** Compatibility constructor for the original single-node preview shape. */
     public ResearchSelectionPreview(
@@ -59,7 +63,9 @@ public record ResearchSelectionPreview(
                 ingredients == null ? 0 : ingredients.size(),
                 PathPlanningState.NONE,
                 ResearchCostMode.POINTS_AND_ITEMS,
-                Optional.empty());
+                Optional.empty(),
+                ResearchAccessSummary.NONE,
+                ResearchSelectionProgressionPreview.EMPTY);
     }
 
     /** Compatibility constructor for the protocol-38 path preview shape. */
@@ -89,7 +95,9 @@ public record ResearchSelectionPreview(
                 ingredientTypeCount,
                 PathPlanningState.NONE,
                 ResearchCostMode.POINTS_AND_ITEMS,
-                Optional.empty());
+                Optional.empty(),
+                ResearchAccessSummary.NONE,
+                ResearchSelectionProgressionPreview.EMPTY);
     }
 
     /** Compatibility constructor for the protocol-39 path-planning preview shape. */
@@ -120,7 +128,9 @@ public record ResearchSelectionPreview(
                 ingredientTypeCount,
                 pathPlanningState,
                 ResearchCostMode.POINTS_AND_ITEMS,
-                Optional.empty());
+                Optional.empty(),
+                ResearchAccessSummary.NONE,
+                ResearchSelectionProgressionPreview.EMPTY);
     }
 
     /** Compatibility constructor for the protocol-41 cost-mode preview shape. */
@@ -152,7 +162,69 @@ public record ResearchSelectionPreview(
                 ingredientTypeCount,
                 pathPlanningState,
                 costMode,
-                Optional.empty());
+                Optional.empty(),
+                ResearchAccessSummary.NONE,
+                ResearchSelectionProgressionPreview.EMPTY);
+    }
+
+    /** Compatibility constructor for the protocol-48 route-fingerprint preview shape. */
+    public ResearchSelectionPreview(
+            Optional<ResourceLocation> blueprintId,
+            int pointCost,
+            int pointBalance,
+            boolean policyEligible,
+            boolean ingredientsSatisfied,
+            boolean outputSpace,
+            boolean researchable,
+            boolean creativeBypass,
+            List<IngredientPreview> ingredients,
+            int unlockCount,
+            int ingredientTypeCount,
+            PathPlanningState pathPlanningState,
+            ResearchCostMode costMode,
+            Optional<ResearchRouteFingerprint> routeFingerprint) {
+        this(
+                blueprintId,
+                pointCost,
+                pointBalance,
+                policyEligible,
+                ingredientsSatisfied,
+                outputSpace,
+                researchable,
+                creativeBypass,
+                ingredients,
+                unlockCount,
+                ingredientTypeCount,
+                pathPlanningState,
+                costMode,
+                routeFingerprint,
+                ResearchAccessSummary.NONE,
+                ResearchSelectionProgressionPreview.EMPTY);
+    }
+
+    /** Compatibility constructor for previews without Phase 11 progression details. */
+    public ResearchSelectionPreview(
+            Optional<ResourceLocation> blueprintId,
+            int pointCost,
+            int pointBalance,
+            boolean policyEligible,
+            boolean ingredientsSatisfied,
+            boolean outputSpace,
+            boolean researchable,
+            boolean creativeBypass,
+            List<IngredientPreview> ingredients,
+            int unlockCount,
+            int ingredientTypeCount,
+            PathPlanningState pathPlanningState,
+            ResearchCostMode costMode,
+            Optional<ResearchRouteFingerprint> routeFingerprint,
+            ResearchAccessSummary accessSummary) {
+        this(
+                blueprintId, pointCost, pointBalance, policyEligible,
+                ingredientsSatisfied, outputSpace, researchable, creativeBypass,
+                ingredients, unlockCount, ingredientTypeCount, pathPlanningState,
+                costMode, routeFingerprint, accessSummary,
+                ResearchSelectionProgressionPreview.EMPTY);
     }
 
     public ResearchSelectionPreview {
@@ -163,6 +235,10 @@ public record ResearchSelectionPreview(
                 : pathPlanningState;
         costMode = costMode == null ? ResearchCostMode.POINTS_AND_ITEMS : costMode;
         routeFingerprint = routeFingerprint == null ? Optional.empty() : routeFingerprint;
+        accessSummary = accessSummary == null ? ResearchAccessSummary.NONE : accessSummary;
+        progression = progression == null
+                ? ResearchSelectionProgressionPreview.EMPTY
+                : progression;
         if (pointCost < 0 || pointCost > PlayerProgressionLimits.MAX_RESEARCH_POINTS
                 || pointBalance < 0 || pointBalance > PlayerProgressionLimits.MAX_RESEARCH_POINTS
                 || ingredients.size() > BlueprintResearchCost.MAX_INGREDIENT_TYPES
@@ -184,7 +260,8 @@ public record ResearchSelectionPreview(
         if (blueprintId.isEmpty() && (pointCost != 0 || policyEligible || ingredientsSatisfied
                 || outputSpace || researchable || creativeBypass || !ingredients.isEmpty()
                 || unlockCount != 0 || ingredientTypeCount != 0
-                || pathPlanningState != PathPlanningState.NONE)) {
+                || pathPlanningState != PathPlanningState.NONE
+                || !progression.equals(ResearchSelectionProgressionPreview.EMPTY))) {
             throw new IllegalArgumentException("empty research selection contains policy details");
         }
         if (blueprintId.isPresent() && unlockCount < 1) {
@@ -220,6 +297,11 @@ public record ResearchSelectionPreview(
                                 || !policyEligible
                                 || pathPlanningState != PathPlanningState.NONE)) {
             throw new IllegalArgumentException("research route fingerprint is inconsistent");
+        }
+        if (blueprintId.isEmpty() && accessSummary.blocked()
+                || accessSummary.blocked() && (policyEligible || researchable)
+                || pathPlanningState != PathPlanningState.NONE && accessSummary.blocked()) {
+            throw new IllegalArgumentException("research access summary is inconsistent");
         }
     }
 

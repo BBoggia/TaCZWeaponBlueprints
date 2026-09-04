@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "DED",
+    "NBN",
+    "DRD"
+  ],
+  "key": {
+    "D": { "item": "minecraft:diamond" },
+    "E": { "item": "minecraft:ender_eye" },
+    "N": { "item": "minecraft:netherite_scrap" },
+    "B": { "item": "minecraft:blast_furnace" },
+    "R": { "item": "minecraft:redstone_block" }
+  },
+  "result": {
+    "item": "taczweaponblueprints:experimental_research_bench"
+  },
+  "show_notification": true
+}

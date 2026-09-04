@@ -17,10 +17,19 @@ import com.gamergaming.taczweaponblueprints.capabilities.RecentBlueprintUnlockBa
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionConfigSnapshot;
 import com.gamergaming.taczweaponblueprints.progression.DuplicateBlueprintPolicy;
+import com.gamergaming.taczweaponblueprints.progression.fragment.BlueprintFragmentDiscount;
+import com.gamergaming.taczweaponblueprints.progression.fragment.BlueprintFragmentPolicy;
+import com.gamergaming.taczweaponblueprints.progression.gate.ProgressionGateRequirements;
+import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchTier;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCost;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchProfile;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchSnapshot;
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
+import com.gamergaming.taczweaponblueprints.resource.research.ResolvedBlueprintProgressionPolicy;
+import com.gamergaming.taczweaponblueprints.resource.research.ResolvedBlueprintCraftingPolicy;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintCraftingDisposition;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintCraftingPolicySource;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchTarget.MatchSpecificity;
 
 import net.minecraft.resources.ResourceLocation;
 
@@ -104,6 +113,76 @@ class BlueprintJournalBuilderTest {
     }
 
     @Test
+    void publishesFragmentProgressOnlyWhenIdentityIsDisclosed() {
+        PlayerRecipeData player = new PlayerRecipeData();
+        player.discoverBlueprint("test:discovered");
+        assertTrue(player.replaceSupplementalProgression(
+                Map.of("test:discovered", 3), Map.of()));
+        ResolvedBlueprintProgressionPolicy progression = fragmentPolicy(
+                id("test:discovered"));
+
+        BlueprintJournalSnapshot disclosed = BlueprintJournalBuilder.build(
+                Map.of(id("test:discovered"), data("test:discovered")),
+                researchSnapshot(),
+                config(JournalVisibility.FULL),
+                player,
+                ignored -> false,
+                ignored -> false,
+                null,
+                Map.of(id("test:discovered"), progression));
+        BlueprintJournalEntry.FragmentProgress progress = disclosed.entries().get(0)
+                .fragmentProgress().orElseThrow();
+        assertEquals(3, progress.archived());
+        assertEquals(5, progress.threshold());
+
+        BlueprintJournalSnapshot hidden = BlueprintJournalBuilder.build(
+                Map.of(id("test:discovered"), data("test:discovered")),
+                researchSnapshot(),
+                config(JournalVisibility.NAME),
+                player,
+                ignored -> false,
+                ignored -> false,
+                null,
+                Map.of(id("test:discovered"), progression));
+        assertTrue(hidden.entries().get(0).fragmentProgress().isEmpty());
+    }
+
+    @Test
+    void publishesCraftingAccessOnlyForFullJournalDetails() {
+        ResourceLocation learnedId = id("test:learned");
+        ResourceLocation previewId = id("test:preview");
+        PlayerRecipeData player = new PlayerRecipeData();
+        player.addBlueprint(learnedId.toString());
+        player.discoverBlueprint(previewId.toString());
+
+        BlueprintJournalSnapshot snapshot = BlueprintJournalBuilder.build(
+                Map.of(learnedId, data(learnedId.toString()),
+                        previewId, data(previewId.toString())),
+                researchSnapshot(),
+                config(JournalVisibility.FULL),
+                player,
+                ignored -> false,
+                ignored -> false,
+                null,
+                Map.of(),
+                Map.of(
+                        learnedId, craftingPolicy(learnedId, ResearchWorkbenchTier.TIER_3),
+                        previewId, craftingPolicy(previewId, ResearchWorkbenchTier.TIER_2)));
+
+        BlueprintJournalEntry learned = snapshot.entries().stream()
+                .filter(entry -> entry.blueprintId().filter(learnedId::equals).isPresent())
+                .findFirst().orElseThrow();
+        BlueprintJournalEntry preview = snapshot.entries().stream()
+                .filter(entry -> entry.blueprintId().filter(previewId::equals).isPresent())
+                .findFirst().orElseThrow();
+        assertEquals(
+                ResearchWorkbenchTier.TIER_3,
+                learned.craftingAccess().orElseThrow()
+                        .requiredWorkbenchTier().orElseThrow());
+        assertTrue(preview.craftingAccess().isEmpty());
+    }
+
+    @Test
     void disabledJournalAndUnavailablePlayerDataPublishEmptySnapshots() {
         Map<ResourceLocation, BlueprintData> catalog =
                 Map.of(id("test:unknown"), data("test:unknown"));
@@ -171,6 +250,47 @@ class BlueprintJournalBuilderTest {
                 null,
                 "rifle",
                 id("test:slot/" + blueprintId.getPath()));
+    }
+
+    private static ResolvedBlueprintProgressionPolicy fragmentPolicy(
+            ResourceLocation blueprintId) {
+        return new ResolvedBlueprintProgressionPolicy(
+                PROFILE,
+                blueprintId,
+                ResearchWorkbenchTier.TIER_1,
+                new BlueprintFragmentPolicy(
+                        BlueprintFragmentPolicy.CompletionMode.TARGETED_RESEARCH_BOOST,
+                        5,
+                        100,
+                        BlueprintFragmentDiscount.fixed(2),
+                        1),
+                ProgressionGateRequirements.EMPTY,
+                ResolvedBlueprintProgressionPolicy.TierSource.FALLBACK,
+                Optional.empty(),
+                MatchSpecificity.NONE,
+                Optional.empty(),
+                Optional.empty(),
+                false,
+                false);
+    }
+
+    private static ResolvedBlueprintCraftingPolicy craftingPolicy(
+            ResourceLocation blueprintId,
+            ResearchWorkbenchTier tier) {
+        return new ResolvedBlueprintCraftingPolicy(
+                PROFILE,
+                blueprintId,
+                BlueprintCraftingDisposition.TIERED,
+                Optional.of(tier),
+                ProgressionGateRequirements.EMPTY,
+                BlueprintCraftingPolicySource.PROFILE_FALLBACK,
+                Optional.empty(),
+                MatchSpecificity.NONE,
+                Optional.empty(),
+                Optional.empty(),
+                false,
+                "journal_test",
+                java.util.Set.of());
     }
 
     private static ResourceLocation id(String value) {

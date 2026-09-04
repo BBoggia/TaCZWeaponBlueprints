@@ -66,6 +66,18 @@ public record BlueprintRecyclerScreenModel(
                     safe.actionable() ? StatusEmphasis.POSITIVE : StatusEmphasis.MUTED,
                     true);
             case PHYSICAL_ITEM -> physical(safe, requestPending);
+            case BLUEPRINT_FRAGMENT -> new BlueprintRecyclerScreenModel(
+                    PREFIX + "fragment.title",
+                    PREFIX + "fragment.status."
+                            + enumKey(safe.fragmentEvaluation().orElseThrow().status()),
+                    safe.actionable()
+                            ? Optional.of(
+                                    BlueprintRecyclerActionContract.Action.ARCHIVE_FRAGMENTS)
+                            : Optional.empty(),
+                    Optional.empty(),
+                    safe.actionable() && !requestPending,
+                    safe.actionable() ? StatusEmphasis.POSITIVE : StatusEmphasis.MUTED,
+                    true);
         };
     }
 

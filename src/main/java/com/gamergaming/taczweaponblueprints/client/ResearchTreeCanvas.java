@@ -69,6 +69,9 @@ public final class ResearchTreeCanvas {
     private ResourceLocation hoveredId;
     private ResourceLocation authoritativeSelectedId;
     private ResourceLocation activeSearchMatch;
+    private ResourceLocation progressionMarkerId;
+    private boolean fragmentProgressMarker;
+    private boolean progressionBlockerMarker;
     private String categoryFilter;
     private boolean unifiedOverview;
     private boolean dragging;
@@ -107,6 +110,16 @@ public final class ResearchTreeCanvas {
 
     public ResearchTreeDisplayPolicy displayPolicy() {
         return displayPolicy;
+    }
+
+    /** Marks only the authoritative selection; ordinary nodes remain undecorated. */
+    public void setProgressionMarker(
+            ResourceLocation blueprintId,
+            boolean fragmentProgress,
+            boolean progressionBlocked) {
+        progressionMarkerId = blueprintId;
+        fragmentProgressMarker = blueprintId != null && fragmentProgress;
+        progressionBlockerMarker = blueprintId != null && progressionBlocked;
     }
 
     private void applyCameraAnimationPolicy() {
@@ -2115,6 +2128,9 @@ public final class ResearchTreeCanvas {
         if (node.blueprintId().equals(authoritativeSelectedId)) {
             drawAuthoritativeSelectionMarker(graphics, x, y);
         }
+        if (node.blueprintId().equals(progressionMarkerId)) {
+            drawProgressionMarker(graphics, x, y);
+        }
         if (cardDetail == ResearchTreePresentationContract.CardDetail.DETAILED) {
             drawStatusBadge(graphics, x, y, statusColor, symbol);
         }
@@ -2152,6 +2168,16 @@ public final class ResearchTreeCanvas {
         int bottom = y + ResearchTreeLayout.NODE_HEIGHT - 1;
         graphics.fill(x + 1, bottom - 5, x + 3, bottom + 1, style.text());
         graphics.fill(x + 1, bottom - 1, x + 9, bottom + 1, style.text());
+    }
+
+    private void drawProgressionMarker(GuiGraphics graphics, int x, int y) {
+        int markerX = x + ResearchTreeLayout.NODE_WIDTH - 5;
+        if (fragmentProgressMarker) {
+            graphics.fill(markerX, y + 4, markerX + 3, y + 7, style.accent());
+        }
+        if (progressionBlockerMarker) {
+            graphics.fill(markerX, y + 8, markerX + 3, y + 11, style.directRequirement());
+        }
     }
 
     private void drawStatusBadge(

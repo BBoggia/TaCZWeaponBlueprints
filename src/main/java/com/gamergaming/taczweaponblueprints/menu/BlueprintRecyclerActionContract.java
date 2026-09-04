@@ -7,6 +7,7 @@ import com.gamergaming.taczweaponblueprints.progression.BlueprintRecyclingServic
 import com.gamergaming.taczweaponblueprints.progression.BlueprintReverseEngineeringService;
 import com.gamergaming.taczweaponblueprints.progression.FoundWeaponRecoveryService;
 import com.gamergaming.taczweaponblueprints.progression.ResearchDataRedemptionService;
+import com.gamergaming.taczweaponblueprints.progression.fragment.BlueprintFragmentAnalysisService;
 
 import net.minecraft.resources.ResourceLocation;
 
@@ -20,7 +21,8 @@ public final class BlueprintRecyclerActionContract {
         REDEEM,
         REDEEM_STACK,
         REVERSE_ENGINEER,
-        RECOVER_POINTS
+        RECOVER_POINTS,
+        ARCHIVE_FRAGMENTS
     }
 
     public enum ResultCode {
@@ -61,6 +63,27 @@ public final class BlueprintRecyclerActionContract {
         VERIFIED_LOOT_REQUIRED,
         RECOVERY_DISABLED,
         ROLLBACK_FAILED;
+
+        public static ResultCode from(BlueprintFragmentAnalysisService.Status status) {
+            if (status == null) {
+                return TRANSACTION_FAILED;
+            }
+            return switch (status) {
+                case SUCCESS -> SUCCESS;
+                case INVALID_INPUT -> INVALID_INPUT;
+                case PLAYER_DATA_UNAVAILABLE -> PLAYER_DATA_UNAVAILABLE;
+                case POLICY_UNAVAILABLE -> POLICY_UNAVAILABLE;
+                case STALE_POLICY -> STALE_POLICY;
+                case FRAGMENTS_DISABLED -> RECYCLING_DISABLED;
+                case ARCHIVE_FULL, PROGRESSION_CAPACITY_EXHAUSTED ->
+                        PROGRESSION_CAPACITY_EXHAUSTED;
+                case LEARNED_TARGET_RETURN_DISABLED -> NO_VALUE;
+                case POINT_CAP_REACHED -> POINT_CAP_REACHED;
+                case OUTPUT_OCCUPIED -> OUTPUT_OCCUPIED;
+                case TRANSACTION_FAILED, READY -> TRANSACTION_FAILED;
+                case ROLLBACK_FAILED -> ROLLBACK_FAILED;
+            };
+        }
 
         public static ResultCode from(BlueprintRecyclingService.Status status) {
             if (status == null) {

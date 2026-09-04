@@ -67,15 +67,16 @@ class BlueprintKnowledgeFlowPhaseTwoTest {
         assertTrue(research.contains("input.deliver(output)"));
 
         assertEquals(
-                Set.of("RECYCLE", "REDEEM", "REDEEM_STACK", "REVERSE_ENGINEER", "RECOVER_POINTS"),
+                Set.of("RECYCLE", "REDEEM", "REDEEM_STACK", "REVERSE_ENGINEER",
+                        "RECOVER_POINTS", "ARCHIVE_FRAGMENTS"),
                 Arrays.stream(BlueprintRecyclerActionContract.Action.values())
                         .map(Enum::name)
                         .collect(Collectors.toSet()));
         assertEquals(0, BlueprintRecyclerMenu.INPUT_SLOT);
         assertEquals(1, BlueprintRecyclerMenu.OUTPUT_SLOT);
         assertEquals(2, BlueprintRecyclerMenu.FIRST_PLAYER_SLOT);
-        assertEquals(3, PlayerProgressionLimits.DATA_VERSION);
-        assertEquals("47", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals(4, PlayerProgressionLimits.DATA_VERSION);
+        assertEquals("55", NetworkHandler.PROTOCOL_VERSION);
     }
 
     private static String read(String relative) throws IOException {

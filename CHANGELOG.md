@@ -6,6 +6,114 @@ documentation.
 
 ## Unreleased
 
+### Changed
+
+- Replaced the three crafting Workbench models with surface-optimized voxel
+  versions while retaining their existing placement footprint and item-view
+  orientation.
+
+### Removed
+
+- Removed Research Bench and crafting Workbench upgrade kits. Every station
+  tier remains available through its own direct crafting recipe.
+
+## 1.3.0 - 2026-09-03
+
+### Added
+
+- Added separate three-tier Research Benches and crafting Workbenches,
+  configurable Blueprint Fragment behavior, and reusable Progression Gate
+  requirements for datapacks and future event-based unlocks.
+- Added format-3 research profile and rule authoring for workstation tiers,
+  Blueprint Fragments, and Progression Gates, plus format-4 authoring for
+  independently resolved crafting policy. Resolved policy details are included
+  in research inspection, status, and format-20 catalog exports.
+- Added bounded per-player storage for archived Blueprint Fragments and durable
+  Progression Gate criteria, including operator inspection and independent
+  `fragments` and `criteria` reset scopes.
+- Added disclosure-filtered synchronization that never sends hidden or
+  unrelated Progression Gate criterion IDs to clients. Full Blueprint Journal
+  entries and selected Tech Tree details now show the applicable crafting
+  Workbench requirement without exposing authoring diagnostics.
+- Added a server-only Progression Gate criterion API with idempotent grants,
+  bounded increments, administrative clearing, cancellable pre-change events,
+  immutable post-change events, and operator test commands.
+- Added disclosure-safe gate evaluation for custom criteria, vanilla
+  advancements, and the active Research Bench context. Advancement requirements
+  use current player progress after login or reload without a separate ledger.
+- Added three dedicated Workbench levels with native TaCZ crafting and direct
+  recipes for every level.
+- Added server-authoritative crafting-tier and Progression Gate enforcement for
+  learned recipes, including configurable exact and fallback tiers for
+  compatible third-party TaCZ workstations.
+- Added approachable ammo and attachment crafting strategies, plus advanced
+  no-level, disabled, and exact crafting overrides that remain independent of
+  blueprint-free knowledge settings.
+- Added separate research and crafting results to operator inspection, plus
+  complete format-20 crafting-policy coverage, sources, rules, reasons, and
+  warnings in research catalog exports.
+- Added target-specific Blueprint Fragments to eligible blueprint loot. A
+  configurable share replaces full-blueprint drops, and player-generated loot
+  favors weapons the player has not learned without removing learned targets.
+- Added Blueprint Fragment archiving to the Blueprint Analyzer. Completed sets
+  can discount the matching Tech Tree research cost, reconstruct a protected
+  blueprint, or return configured RP when the target is already learned.
+- Included fragment discounts and set consumption in shortest-path research
+  previews and atomic transactions, with stale-preview protection and complete
+  rollback of inventory, RP, fragment, and knowledge changes.
+
+### Fixed
+
+- Kept core research and crafting rule selection independent in both
+  directions, so a more specific crafting rule cannot hide broader research
+  costs, prerequisites, visibility, recycling, discovery, or
+  reverse-engineering policy, and a research-only rule cannot hide broader
+  crafting policy.
+- Kept the active profile, tiered progression, and Blueprint Fragment controls
+  configurable when Research Bench learning is disabled, because Workbench
+  crafting and blueprint reconstruction can remain active independently.
+- Made crafting Workbench eligibility consume the complete crafting-policy
+  projection without requiring the weapon to have a Tech Tree research
+  assignment.
+- Kept crafting Workbench tabs initialized while recipes remain unavailable
+  until the initial server crafting-access response arrives, preventing TaCZ
+  from initializing the tabs as permanently empty or exposing provisional
+  crafting access.
+- Republished tier and gate policy after live server-setting changes, and made
+  crafting access repair a missed integrated-server config callback instead of
+  leaving every crafting Workbench unavailable.
+- Kept progression-exempt recipes subject to configured crafting tiers and
+  Progression Gates instead of allowing them to bypass those policies.
+- Prevented completed Blueprint Fragment sets from becoming stranded at their
+  retention cap when converting an already learned target into RP.
+- Made native crafting access synchronization request-scoped and chunked so
+  large recipe catalogs cannot exceed the network payload budget or apply a
+  stale response to a newly opened workstation. An incomplete response can be
+  requested once more without allowing repeated requests to amplify server
+  work.
+- Limited native crafting access evaluation to learned and exempt candidates,
+  and avoided rebuilding that access list for RP-only updates.
+- Raised a resolved fragment retention cap to any exact threshold override so
+  operator or datapack settings cannot make a completed set unreachable.
+- Prevented unusually large combinations of research profiles and catalog
+  entries from exhausting server memory during policy reloads.
+- Kept upgraded version-2 servers on Classic progression with Blueprint
+  Fragments disabled until an operator opts into the new systems.
+- Corrected release reports and progression diagnostics so they identify the
+  active compatibility versions and only attribute settings to rules that
+  actually define them.
+- Fixed a dedicated-server startup failure caused by client-only settings
+  controls loading during common configuration initialization.
+- Removed the ordinary crafting recipe for TaCZ's legacy Gun Smith Table while
+  retaining the block, item, assets, Creative entry, and configurable crafting
+  compatibility for existing tables.
+
+### Compatibility
+
+- Advanced player progression data to version 4 with automatic migration from
+  older saves, and advanced the network protocol to 55. Clients and servers
+  must update together.
+
 ## 1.2.0 - 2026-09-02
 
 ### Added

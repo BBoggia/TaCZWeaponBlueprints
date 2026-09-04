@@ -32,6 +32,10 @@ import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchD
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchDiagnostics;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchPolicy;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchPolicyResolver;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintProgressionPolicyManager;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintProgressionPolicySnapshot;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintCraftingPolicySnapshot;
+import com.gamergaming.taczweaponblueprints.resource.research.ProgressionPolicyAccessService;
 import com.gamergaming.taczweaponblueprints.resource.research.ResearchTreeGroupDefinition;
 import com.gamergaming.taczweaponblueprints.resource.research.ResearchTreeGroupPlacement;
 import com.mojang.brigadier.Command;
@@ -132,6 +136,57 @@ public final class BlueprintResearchCommand {
                 groupAudit.catalogSize(),
                 groupAudit.fallbackBlueprintIds().size(),
                 groupAudit.missingMemberIds().size()), false);
+        var progressionAccess = ProgressionPolicyAccessService.acquire(
+                ProgressionPolicyAccessService.Mode.CURRENT_ONLY).orElse(null);
+        var progressionPublication = progressionAccess == null
+                ? BlueprintProgressionPolicyManager.INSTANCE.publication()
+                : progressionAccess.policy();
+        Optional<com.gamergaming.taczweaponblueprints.resource.research
+                .BlueprintProgressionPolicySnapshot.ProfileDiagnostics> progressionDiagnostics =
+                progressionAccess != null
+                        ? Optional.ofNullable(progressionPublication.snapshot()
+                                .diagnosticsByProfile().get(profileId))
+                        : Optional.empty();
+        progressionDiagnostics.ifPresentOrElse(value ->
+                        context.getSource().sendSuccess(() -> Component.translatable(
+                                "commands.taczweaponblueprints.research.progression_policy",
+                                value.includedCount(),
+                                value.omittedCount(),
+                                value.researchTierCounts(),
+                                value.reviewFallbackCount(),
+                                value.gateGroupCount(),
+                                value.gateConditionCount(),
+                                value.fragmentThresholdCounts(),
+                                progressionAccess == null ? 0
+                                        : progressionAccess.config()
+                                                .externalWorkstationTiers().size(),
+                                progressionPublication.revision()), false),
+                () -> context.getSource().sendSuccess(() -> Component.translatable(
+                        "commands.taczweaponblueprints.research.progression_policy.unavailable"), false));
+        Optional<BlueprintCraftingPolicySnapshot.ProfileDiagnostics> craftingDiagnostics =
+                progressionAccess != null
+                        ? Optional.ofNullable(progressionPublication.craftingSnapshot()
+                                .diagnosticsByProfile().get(profileId))
+                        : Optional.empty();
+        craftingDiagnostics.ifPresentOrElse(value ->
+                        context.getSource().sendSuccess(() -> Component.translatable(
+                                "commands.taczweaponblueprints.research.crafting_policy",
+                                value.assignedCount(),
+                                value.dispositionCounts(),
+                                value.tierCounts(),
+                                value.sourceCounts(),
+                                value.reviewRequiredCount(),
+                                value.gateGroupCount(),
+                                value.gateConditionCount(),
+                                value.warningCounts(),
+                                progressionPublication.revision()), false),
+                () -> context.getSource().sendSuccess(() -> Component.translatable(
+                        "commands.taczweaponblueprints.research.crafting_policy.unavailable"),
+                        false));
+        BlueprintProgressionPolicyManager.INSTANCE.lastFailure().ifPresent(message ->
+                context.getSource().sendFailure(Component.translatable(
+                        "commands.taczweaponblueprints.research.progression_policy.last_failure",
+                        message)));
         automatic.ifPresentOrElse(diagnostics ->
                 context.getSource().sendSuccess(() -> Component.translatable(
                         "commands.taczweaponblueprints.research.automatic",
@@ -428,6 +483,53 @@ public final class BlueprintResearchCommand {
                 placement.map(value -> Integer.toString(value.rank())).orElse("-"),
                 placement.map(value -> Integer.toString(value.orderInRank())).orElse("-"),
                 includedInOverview), false);
+        ProgressionPolicyAccessService.Context policyAccess =
+                ProgressionPolicyAccessService.acquire(
+                        ProgressionPolicyAccessService.Mode.ENSURE_CURRENT).orElse(null);
+        Optional.ofNullable(policyAccess)
+                .flatMap(access -> access.policyFor(blueprintId))
+                .ifPresentOrElse(resolved -> context.getSource().sendSuccess(() ->
+                                Component.translatable(
+                                        "commands.taczweaponblueprints.research.inspect.research_policy",
+                                        resolved.researchWorkbenchTier().serializedName(),
+                                        resolved.tierSource().name().toLowerCase(java.util.Locale.ROOT),
+                                        resolved.reviewRequired(),
+                                        resolved.fragments().completionMode().name().toLowerCase(
+                                                java.util.Locale.ROOT),
+                                        resolved.fragments().threshold(),
+                                        resolved.gates().allOf().size(),
+                                        resolved.gates().conditionCount()), false),
+                        () -> context.getSource().sendSuccess(() -> Component.translatable(
+                                "commands.taczweaponblueprints.research.inspect.research_policy.omitted"),
+                                false));
+        Optional.ofNullable(policyAccess)
+                .flatMap(access -> access.craftingPolicyFor(blueprintId))
+                .ifPresentOrElse(resolved -> context.getSource().sendSuccess(() ->
+                                Component.translatable(
+                                        "commands.taczweaponblueprints.research.inspect.crafting_policy",
+                                        resolved.disposition().serializedName(),
+                                        resolved.requiredWorkbenchTier()
+                                                .map(value -> Integer.toString(value.level()))
+                                                .orElse("-"),
+                                        resolved.source().serializedName(),
+                                        resolved.selectedRuleId()
+                                                .map(ResourceLocation::toString).orElse("-"),
+                                        resolved.ruleSpecificity().name().toLowerCase(
+                                                java.util.Locale.ROOT),
+                                        resolved.reviewRequired(),
+                                        resolved.gates().allOf().size(),
+                                        resolved.gates().conditionCount(),
+                                        resolved.reasonCode(),
+                                        resolved.warnings().isEmpty()
+                                                ? "-"
+                                                : resolved.warnings().stream()
+                                                        .map(value -> value.serializedName())
+                                                        .sorted()
+                                                        .collect(java.util.stream.Collectors
+                                                                .joining(","))), false),
+                        () -> context.getSource().sendSuccess(() -> Component.translatable(
+                                "commands.taczweaponblueprints.research.inspect.crafting_policy.unavailable"),
+                                false));
         automaticDiagnostics(research, catalog, profileId)
                 .flatMap(diagnostics -> diagnostics.entry(blueprintId))
                 .ifPresent(entry -> {
@@ -602,6 +704,15 @@ public final class BlueprintResearchCommand {
                 automatic.orElse(null),
                 AutomaticWeaponEvidenceManager.INSTANCE.snapshotForCatalogRevision(
                         catalog.revision()));
+        ProgressionPolicyAccessService.Context progressionAccess =
+                ProgressionPolicyAccessService.acquire(
+                        ProgressionPolicyAccessService.Mode.CURRENT_ONLY).orElse(null);
+        BlueprintProgressionPolicySnapshot progressionPolicy = progressionAccess == null
+                ? BlueprintProgressionPolicySnapshot.EMPTY
+                : progressionAccess.policy().snapshot();
+        BlueprintCraftingPolicySnapshot craftingPolicy = progressionAccess == null
+                ? BlueprintCraftingPolicySnapshot.EMPTY
+                : progressionAccess.policy().craftingSnapshot();
         String json = BlueprintResearchCatalogExporter.exportWithDiagnostics(
                 research.snapshot(),
                 catalog.blueprints(),
@@ -611,7 +722,10 @@ public final class BlueprintResearchCommand {
                 topology,
                 economy,
                 groupedRouteQuality,
-                motifAssessment);
+                motifAssessment,
+                progressionPolicy,
+                craftingPolicy,
+                progressionAccess == null ? null : progressionAccess.config());
         try {
             Files.createDirectories(directory);
             Files.writeString(temporary, json, StandardCharsets.UTF_8);

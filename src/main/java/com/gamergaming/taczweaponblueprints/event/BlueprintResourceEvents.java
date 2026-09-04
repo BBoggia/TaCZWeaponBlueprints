@@ -46,8 +46,17 @@ public final class BlueprintResourceEvents {
                 ResearchPointAwardReconciliationScheduler.schedule(player);
             });
         } else {
-            // The catalog retains its last-known-good snapshot. Research data may
-            // still have changed, so republish Journals against that stable catalog.
+            // Catalog initialization publishes only a complete catalog map, but a
+            // later evidence, automatic-placement, or policy stage may fail. Rebuild
+            // every revision-coupled publication against the current complete map
+            // before synchronizing players.
+            boolean recovered = BlueprintDataManager.SERVER
+                    .rebuildDerivedPublicationsFromRetainedCatalog();
+            if (!recovered) {
+                TaCZWeaponBlueprints.LOGGER.error(
+                        "Unable to reconcile progression policy with the retained blueprint "
+                                + "catalog; research remains fail-closed until a successful reload");
+            }
             event.getPlayers().forEach(player -> {
                 var grants = StartingBlueprintGrantService.applyConfiguredGrants(player);
                 if (grants.changed()) {

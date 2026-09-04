@@ -66,7 +66,7 @@ public final class BlueprintResearchDiagnostics {
             ResourceLocation profileId,
             ResourceLocation blueprintId) {
         Map<ResourceLocation, BlueprintData> stableCatalog = catalog == null ? Map.of() : catalog;
-        return BlueprintResearchPolicyResolver.ruleSelection(
+        return BlueprintResearchPolicyResolver.researchDefinitionRuleSelection(
                 snapshot,
                 profileId,
                 blueprintId,
@@ -108,7 +108,7 @@ public final class BlueprintResearchDiagnostics {
         for (Map.Entry<ResourceLocation, BlueprintData> entry : sortedCatalog.entrySet()) {
             ResourceLocation blueprintId = entry.getKey();
             BlueprintResearchPolicyResolver.RuleSelection selection =
-                    BlueprintResearchPolicyResolver.ruleSelection(
+                    BlueprintResearchPolicyResolver.researchDefinitionRuleSelection(
                             stableSnapshot,
                             profileId,
                             blueprintId,

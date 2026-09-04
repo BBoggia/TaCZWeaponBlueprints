@@ -1,0 +1,11 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_netherite_scrap": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": { "items": [{ "items": ["minecraft:netherite_scrap"] }] }
+    }
+  },
+  "requirements": [["has_netherite_scrap"]],
+  "rewards": { "recipes": ["taczweaponblueprints:experimental_research_bench"] }
+}

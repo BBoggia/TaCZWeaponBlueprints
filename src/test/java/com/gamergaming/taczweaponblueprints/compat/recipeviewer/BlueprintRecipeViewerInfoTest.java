@@ -23,7 +23,7 @@ class BlueprintRecipeViewerInfoTest {
         Set<String> keys = new HashSet<>();
         for (Topic topic : Topic.all()) {
             assertTrue(topic.translationKeys().size() >= 2);
-            assertTrue(topic.translationKeys().size() <= 3);
+            assertTrue(topic.translationKeys().size() <= 4);
             for (String key : topic.translationKeys()) {
                 assertTrue(key.startsWith("recipe_viewer.taczweaponblueprints."));
                 assertTrue(keys.add(key));

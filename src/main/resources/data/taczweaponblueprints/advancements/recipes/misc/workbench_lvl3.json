@@ -1,0 +1,11 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_smithing_table": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": { "items": [{ "items": ["minecraft:smithing_table"] }] }
+    }
+  },
+  "requirements": [["has_smithing_table"]],
+  "rewards": { "recipes": ["taczweaponblueprints:workbench_lvl3"] }
+}

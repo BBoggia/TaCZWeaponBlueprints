@@ -6,7 +6,7 @@ import java.util.Optional;
 
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
-import com.gamergaming.taczweaponblueprints.init.ModBlocks;
+import com.gamergaming.taczweaponblueprints.block.ResearchBenchBlock;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.init.ModMenus;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
@@ -21,11 +21,16 @@ import com.gamergaming.taczweaponblueprints.progression.ResearchPathUnlockPlanne
 import com.gamergaming.taczweaponblueprints.progression.ResearchRouteEvaluationService;
 import com.gamergaming.taczweaponblueprints.progression.ResearchRouteFailureReporter;
 import com.gamergaming.taczweaponblueprints.progression.ResearchRouteFingerprint;
+import com.gamergaming.taczweaponblueprints.progression.eligibility.ResearchRouteEligibilityService;
+import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchInteractionMode;
+import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchContext;
+import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchTier;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
+import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchDataManager;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchIngredient;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchPolicy;
-import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
+import com.gamergaming.taczweaponblueprints.resource.research.ProgressionPolicyAccessService;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
@@ -47,6 +52,9 @@ import net.minecraftforge.registries.ForgeRegistries;
 public final class ResearchBenchMenu extends AbstractContainerMenu {
     private static final long AFFORDABILITY_HEARTBEAT_INTERVAL_TICKS = 100L;
     private final ContainerLevelAccess access;
+    private final Level workbenchLevel;
+    private final BlockPos workbenchPosition;
+    private final ResearchWorkbenchTier workbenchTier;
     private final Player owner;
     private final Inventory playerInventory;
     private ResourceLocation selectedBlueprint;
@@ -60,8 +68,7 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
     private final DataSlot routeGuidanceAvailable = DataSlot.standalone();
 
     public ResearchBenchMenu(int containerId, Inventory inventory, FriendlyByteBuf buffer) {
-        this(containerId, inventory, ContainerLevelAccess.create(
-                inventory.player.level(), buffer.readBlockPos()));
+        this(containerId, inventory, readOpenData(buffer));
     }
 
     public static ResearchBenchMenu server(
@@ -69,16 +76,36 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
             Inventory inventory,
             Level level,
             BlockPos pos) {
+        ResearchWorkbenchTier tier = ResearchBenchBlock.tierAtValidRoot(level, pos)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Cannot open a Research Bench menu for an invalid structure"));
         return new ResearchBenchMenu(
-                containerId, inventory, ContainerLevelAccess.create(level, pos));
+                containerId, inventory, level, pos, tier);
+    }
+
+    private ResearchBenchMenu(int containerId, Inventory inventory, OpenData openData) {
+        this(
+                containerId,
+                inventory,
+                inventory.player.level(),
+                openData.position(),
+                openData.tier());
     }
 
     private ResearchBenchMenu(
             int containerId,
             Inventory inventory,
-            ContainerLevelAccess access) {
+            Level level,
+            BlockPos workbenchPosition,
+            ResearchWorkbenchTier workbenchTier) {
         super(ModMenus.RESEARCH_BENCH.get(), containerId);
-        this.access = access;
+        if (level == null || workbenchPosition == null || workbenchTier == null) {
+            throw new IllegalArgumentException("Research Bench menu context cannot be null");
+        }
+        this.access = ContainerLevelAccess.create(level, workbenchPosition);
+        this.workbenchLevel = level;
+        this.workbenchPosition = workbenchPosition.immutable();
+        this.workbenchTier = workbenchTier;
         this.owner = inventory.player;
         this.playerInventory = inventory;
         if (!inventory.player.level().isClientSide) {
@@ -93,6 +120,10 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
 
     public Optional<ResourceLocation> selectedBlueprint() {
         return Optional.ofNullable(selectedBlueprint);
+    }
+
+    public ResearchWorkbenchTier workbenchTier() {
+        return workbenchTier;
     }
 
     /** Whether the server supports exact path pricing for this open Bench. */
@@ -273,13 +304,32 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
         }
 
         BlueprintResearchService.Result transaction;
+        ResearchWorkbenchContext workbenchContext = authoritativeWorkbenchContext(player)
+                .orElse(null);
+        if (workbenchContext == null) {
+            return researchResult(
+                    player,
+                    requestedId,
+                    new BlueprintResearchService.Result(
+                            BlueprintResearchService.Status.WORKBENCH_TIER_REQUIRED,
+                            Optional.of(requestedId),
+                            0,
+                            current.preview().pointBalance(),
+                            false,
+                            com.gamergaming.taczweaponblueprints.progression
+                                    .TreeResearchResultMode.DIRECT_LEARN,
+                            false,
+                            false,
+                            false),
+                    current.preview());
+        }
         suppressAuthoritativePreviewRefresh = true;
         try {
             transaction = current.directPathResearch()
                     ? current.path()
                             .map(path -> BlueprintResearchService
                                     .researchPreparedPathFromInventory(
-                                            player, requestedId, path))
+                                            player, requestedId, path, workbenchContext))
                             .orElseGet(() -> new BlueprintResearchService.Result(
                                     BlueprintResearchService.Status.STALE_POLICY,
                                     Optional.of(requestedId),
@@ -291,7 +341,8 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
                                     false,
                                     false,
                                     false))
-                    : BlueprintResearchService.researchFromInventory(player, requestedId);
+                    : BlueprintResearchService.researchFromInventory(
+                            player, requestedId, workbenchContext);
         } finally {
             suppressAuthoritativePreviewRefresh = false;
         }
@@ -546,9 +597,70 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
                         ResearchSelectionPreview.PathPlanningState.fromStatus(
                                 evaluation.planningStatus()),
                         prepared.costMode(),
-                        evaluation.routeFingerprint()),
+                        evaluation.routeFingerprint(),
+                        evaluation.accessSummary(),
+                        progressionPreview(
+                                selectedBlueprint,
+                                evaluation,
+                                prepared.playerData(),
+                                prepared.workbenchContext())),
                 directPathResearch,
                 evaluation.path());
+    }
+
+    private ResearchSelectionProgressionPreview progressionPreview(
+            ResourceLocation targetId,
+            ResearchRouteEvaluationService.Evaluation evaluation,
+            IPlayerRecipeData playerData,
+            ResearchWorkbenchContext workbenchContext) {
+        var policyAccess = ProgressionPolicyAccessService.acquire(
+                ProgressionPolicyAccessService.Mode.CURRENT_ONLY).orElse(null);
+        if (policyAccess == null) {
+            return ResearchSelectionProgressionPreview.EMPTY;
+        }
+        var policies = policyAccess.profilePolicies();
+        var targetPolicy = policies.get(targetId);
+        if (targetPolicy == null) {
+            return ResearchSelectionProgressionPreview.EMPTY;
+        }
+        ResearchWorkbenchTier requiredTier = evaluation.path()
+                .stream()
+                .flatMap(path -> path.nodes().stream())
+                .map(node -> policies.get(node.blueprintId()))
+                .filter(java.util.Objects::nonNull)
+                .map(policy -> policy.researchWorkbenchTier())
+                .max(java.util.Comparator.comparingInt(ResearchWorkbenchTier::level))
+                .orElse(targetPolicy.researchWorkbenchTier());
+        var fragmentPolicy = targetPolicy.fragments();
+        java.util.Map<String, Integer> archivedByTarget =
+                playerData.getArchivedBlueprintFragments();
+        Integer archivedValue = archivedByTarget == null
+                ? null
+                : archivedByTarget.getOrDefault(targetId.toString(), 0);
+        boolean validArchived = archivedValue != null
+                && archivedValue >= 0
+                && archivedValue
+                        <= com.gamergaming.taczweaponblueprints.progression.fragment
+                                .BlueprintFragmentPolicy.MAX_ARCHIVED_FRAGMENTS;
+        Optional<ResearchSelectionProgressionPreview.FragmentProgress> fragments =
+                fragmentPolicy.enabled() && validArchived
+                        ? Optional.of(new ResearchSelectionProgressionPreview.FragmentProgress(
+                                archivedValue,
+                                fragmentPolicy.threshold(),
+                                fragmentPolicy.completionMode(),
+                                evaluation.path().stream()
+                                        .flatMap(path -> path.fragmentSetUses().stream())
+                                        .anyMatch(use -> use.blueprintId().equals(targetId))))
+                        : Optional.empty();
+        Optional<com.gamergaming.taczweaponblueprints.progression.DisclosedCraftingAccess>
+                craftingAccess = policyAccess.craftingPolicyFor(targetId)
+                        .map(com.gamergaming.taczweaponblueprints.progression
+                                .DisclosedCraftingAccess::from);
+        return new ResearchSelectionProgressionPreview(
+                Optional.of(workbenchContext.tier()),
+                Optional.of(requiredTier),
+                fragments,
+                craftingAccess);
     }
 
     /** Evaluates a public target without changing the menu's current selection. */
@@ -600,6 +712,11 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
             return Optional.empty();
         }
         try {
+            ResearchWorkbenchContext workbenchContext = authoritativeWorkbenchContext(player)
+                    .orElse(null);
+            if (workbenchContext == null) {
+                return Optional.empty();
+            }
             BlueprintResearchDataManager.ResearchPlanningAccess planningAccess =
                     directPathResearch
                             ? BlueprintResearchDataManager.INSTANCE.planningAccessFor(data)
@@ -643,12 +760,17 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
                                     playerInventory.items,
                                     player.isCreative(),
                                     directPathResearch,
-                                    config.blueprintsEnabled()))
+                                    config.blueprintsEnabled(),
+                                    Optional.of(ids -> ResearchRouteEligibilityService
+                                            .evaluate(player, ids, workbenchContext)),
+                                    plan -> com.gamergaming.taczweaponblueprints.progression
+                                            .fragment.BlueprintFragmentResearchService
+                                            .adjustRuntimePlan(plan, data)))
                             .orElse(null);
             return evaluation == null
                     ? Optional.empty()
                     : Optional.of(new PreparedRouteEvaluation(
-                            evaluation, data, config.researchCostMode()));
+                            evaluation, data, config.researchCostMode(), workbenchContext));
         } catch (RuntimeException exception) {
             ResearchRouteFailureReporter.report("Bench route preparation", exception);
             return Optional.empty();
@@ -692,6 +814,50 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
                 : player.getServer().getTickCount();
     }
 
+    /** Re-derives the server-owned workstation identity from the live two-block structure. */
+    private Optional<ResearchWorkbenchContext> authoritativeWorkbenchContext(
+            ServerPlayer player) {
+        if (player == null || player.containerMenu != this
+                || player.level() != workbenchLevel || !stillValid(player)) {
+            return Optional.empty();
+        }
+        var state = workbenchLevel.getBlockState(workbenchPosition);
+        if (!(state.getBlock() instanceof ResearchBenchBlock bench)
+                || bench.tier() != workbenchTier) {
+            return Optional.empty();
+        }
+        ResourceLocation workstationId = ForgeRegistries.BLOCKS.getKey(bench);
+        if (workstationId == null) {
+            return Optional.empty();
+        }
+        return Optional.of(new ResearchWorkbenchContext(
+                workbenchPosition,
+                workbenchLevel.dimension().location(),
+                workstationId,
+                workbenchTier,
+                ResearchInteractionMode.RESEARCH,
+                (long) containerId + 1L));
+    }
+
+    /** Server-validated source used only to transition this exact menu to crafting. */
+    public Optional<ResearchWorkbenchContext> authoritativeTransitionContext(
+            ServerPlayer player) {
+        return authoritativeWorkbenchContext(player);
+    }
+
+    /**
+     * Authenticates a public service context against this exact open menu
+     * session. Physical proximity alone is not sufficient authority to research.
+     */
+    public boolean authorizesResearchContext(
+            ServerPlayer player,
+            ResearchWorkbenchContext context) {
+        return context != null
+                && authoritativeWorkbenchContext(player)
+                        .filter(context::equals)
+                        .isPresent();
+    }
+
     private void refreshRouteGuidanceAvailability() {
         routeGuidanceAvailable.set(ModConfigs.BLUEPRINT.progressionSnapshot()
                 .treeResearchResultMode().learnsDirectly() ? 1 : 0);
@@ -721,9 +887,11 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
     private record PreparedRouteEvaluation(
             ResearchRouteEvaluationService.Evaluation evaluation,
             IPlayerRecipeData playerData,
-            ResearchCostMode costMode) {
+            ResearchCostMode costMode,
+            ResearchWorkbenchContext workbenchContext) {
         private PreparedRouteEvaluation {
-            if (evaluation == null || playerData == null || costMode == null) {
+            if (evaluation == null || playerData == null || costMode == null
+                    || workbenchContext == null) {
                 throw new IllegalArgumentException("prepared route evaluation is invalid");
             }
         }
@@ -839,7 +1007,31 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return stillValid(access, player, ModBlocks.RESEARCH_BENCH.get());
+        return access.evaluate((level, pos) ->
+                ResearchBenchBlock.isValidRoot(level, pos, workbenchTier)
+                        && player.distanceToSqr(
+                                pos.getX() + 0.5D,
+                                pos.getY() + 0.5D,
+                                pos.getZ() + 0.5D) <= 64.0D,
+                true);
+    }
+
+    private static OpenData readOpenData(FriendlyByteBuf buffer) {
+        if (buffer == null) {
+            throw new IllegalArgumentException("Research Bench open data cannot be null");
+        }
+        return new OpenData(
+                buffer.readBlockPos(),
+                ResearchWorkbenchTier.fromLevel(buffer.readVarInt()));
+    }
+
+    private record OpenData(BlockPos position, ResearchWorkbenchTier tier) {
+        private OpenData {
+            if (position == null || tier == null) {
+                throw new IllegalArgumentException("Research Bench open data is invalid");
+            }
+            position = position.immutable();
+        }
     }
 
     @Override
@@ -893,6 +1085,8 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
         TECH_TREE_UNAVAILABLE,
         UNSATISFIABLE,
         STALE_PREVIEW,
+        WORKBENCH_TIER_REQUIRED,
+        PROGRESSION_GATE_REQUIRED,
         REQUEST_THROTTLED
     }
 

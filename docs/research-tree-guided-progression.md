@@ -29,6 +29,13 @@ research a blueprint, consume RP or materials, or send a transaction packet.
 The existing explicit node selection and server-confirmed Research action remain
 the only route into a transaction.
 
+Tracked routes wait for the same server-authoritative eligibility result used by
+the Research action. A route blocked by its current Research Bench tier or a
+Progression Gate does not advertise an inaccessible next step. The Affordable
+Now filter likewise classifies only a complete server-evaluated route as
+affordable; RP and materials alone cannot make a tier- or gate-blocked target
+appear ready.
+
 Silhouette, Name, Preview-only, redacted, learned, locked, unpublished, and
 otherwise non-navigable nodes cannot become recommendations. Reloads, research
 point updates, projection changes, and learned-state updates recompute the

@@ -33,7 +33,15 @@ public final class TaCZWeaponBlueprintsEmiPlugin implements EmiPlugin {
                         EmiBlueprintStackIdentity.blankTarget(stack.getNbt())));
 
         addInfo(registry, Topic.RESEARCH_BENCH,
-                List.of(EmiStack.of(ModItems.RESEARCH_BENCH_ITEM.get())));
+                List.of(
+                        EmiStack.of(ModItems.RESEARCH_BENCH_ITEM.get()),
+                        EmiStack.of(ModItems.ADVANCED_RESEARCH_BENCH_ITEM.get()),
+                        EmiStack.of(ModItems.EXPERIMENTAL_RESEARCH_BENCH_ITEM.get())));
+        addInfo(registry, Topic.CRAFTING_WORKBENCH,
+                List.of(
+                        EmiStack.of(ModItems.WORKBENCH_LVL1_ITEM.get()),
+                        EmiStack.of(ModItems.WORKBENCH_LVL2_ITEM.get()),
+                        EmiStack.of(ModItems.WORKBENCH_LVL3_ITEM.get())));
         addInfo(registry, Topic.BLUEPRINT_ANALYZER,
                 List.of(EmiStack.of(ModItems.BLUEPRINT_RECYCLER_ITEM.get())));
         addBlueprintInfo(registry);

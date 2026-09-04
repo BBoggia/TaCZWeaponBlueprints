@@ -1,0 +1,11 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_cartography_table": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": { "items": [{ "items": ["minecraft:cartography_table"] }] }
+    }
+  },
+  "requirements": [["has_cartography_table"]],
+  "rewards": { "recipes": ["taczweaponblueprints:research_bench"] }
+}

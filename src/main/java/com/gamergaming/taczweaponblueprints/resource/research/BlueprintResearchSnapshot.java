@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
@@ -27,6 +28,7 @@ public final class BlueprintResearchSnapshot {
     public static final int MAX_TOTAL_TECH_TREE_ENTRIES = 65_536;
     public static final int MAX_TOTAL_TECH_TREE_TARGET_TERMS = 65_536;
     public static final int MAX_EXPANDED_TECH_TREE_TAG_BINDINGS = 262_144;
+    public static final int MAX_TOTAL_PROGRESSION_GATE_CONDITIONS = 65_536;
     public static final BlueprintResearchSnapshot EMPTY = new BlueprintResearchSnapshot(
             Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of(),
             Map.of(), Map.of(), Map.of());
@@ -411,6 +413,26 @@ public final class BlueprintResearchSnapshot {
                     "research data cannot contain more than " + MAX_TOTAL_INGREDIENT_TERMS
                             + " total ingredient terms");
         }
+        long gateConditions = profiles.values().stream()
+                .map(BlueprintResearchProfile::progression)
+                .map(BlueprintProgressionProfilePolicy::gates)
+                .mapToLong(com.gamergaming.taczweaponblueprints.progression.gate
+                        .ProgressionGateRequirements::conditionCount)
+                .sum();
+        gateConditions += rules.values().stream()
+                .map(BlueprintResearchRule::progression)
+                .flatMap(Optional::stream)
+                .map(BlueprintProgressionRuleOverride::gates)
+                .flatMap(Optional::stream)
+                .mapToLong(com.gamergaming.taczweaponblueprints.progression.gate
+                        .ProgressionGateRequirements::conditionCount)
+                .sum();
+        if (gateConditions > MAX_TOTAL_PROGRESSION_GATE_CONDITIONS) {
+            throw new IllegalArgumentException(
+                    "research data cannot contain more than "
+                            + MAX_TOTAL_PROGRESSION_GATE_CONDITIONS
+                            + " total Progression Gate conditions");
+        }
         long groupMembers = groups.values().stream()
                 .mapToLong(ResearchTreeGroupDefinition::memberCount)
                 .sum();
@@ -750,6 +772,9 @@ public final class BlueprintResearchSnapshot {
             Map<ResourceLocation, List<RuleBinding>> byProfile) {
         Map<ResourceLocation, List<RuleBinding>> exactRules = new LinkedHashMap<>();
         for (RuleBinding binding : byProfile.getOrDefault(profileId, List.of())) {
+            if (!BlueprintResearchPolicyResolver.authorsResearchDefinition(binding.rule())) {
+                continue;
+            }
             for (ResourceLocation targetId : binding.rule().target().blueprints()) {
                 exactRules.computeIfAbsent(targetId, ignored -> new ArrayList<>()).add(binding);
             }

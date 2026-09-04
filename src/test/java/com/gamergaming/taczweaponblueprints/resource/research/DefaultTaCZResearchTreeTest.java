@@ -25,6 +25,7 @@ import com.gamergaming.taczweaponblueprints.client.ResearchTechTreeLayoutEngine;
 import com.gamergaming.taczweaponblueprints.client.ResearchTechTreeLayoutPolicy;
 import com.gamergaming.taczweaponblueprints.client.ResearchTechTreeProjectionBuilder;
 import com.gamergaming.taczweaponblueprints.client.ResearchTechTreeProjectionCatalog;
+import com.gamergaming.taczweaponblueprints.compat.fzzy_config.BlueprintConfig;
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
 import com.gamergaming.taczweaponblueprints.item.BlueprintKind;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerRecipeData;
@@ -32,6 +33,7 @@ import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionConf
 import com.gamergaming.taczweaponblueprints.progression.BlueprintLearningService;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintUnlockOrigin;
 import com.gamergaming.taczweaponblueprints.progression.DuplicateBlueprintPolicy;
+import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchTier;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.AutomaticPlacementMode;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain;
@@ -350,6 +352,50 @@ class DefaultTaCZResearchTreeTest {
         var presentation = exportRoot.getAsJsonObject("tech_tree_presentation");
         assertEquals("dynamic", presentation.get("band_mode").getAsString());
         assertEquals(3, presentation.get("ranks_per_band").getAsInt());
+    }
+
+    @Test
+    void automaticWorkbenchTiersUseTieAwareCapabilityPercentiles() throws Exception {
+        BlueprintResearchSnapshot snapshot = packagedSnapshot();
+        Map<ResourceLocation, BlueprintData> catalog = catalog(OFFICIAL_GUNS);
+        AutomaticBaseline automatic = automaticBaseline(snapshot, catalog);
+
+        BlueprintProgressionPolicySnapshot progression =
+                BlueprintProgressionPolicyResolver.resolve(
+                        snapshot,
+                        catalog,
+                        1L,
+                        1L,
+                        Map.of(TECH_TREE_ID, automatic.candidates()),
+                        new BlueprintConfig().researchFeatureSnapshot());
+
+        var diagnostics = progression.diagnosticsByProfile().get(PROFILE_ID);
+        assertEquals(OFFICIAL_GUNS.size(), diagnostics.includedCount());
+        assertEquals(0, diagnostics.omittedCount());
+        assertTrue(diagnostics.researchTierCounts().get(ResearchWorkbenchTier.TIER_1) > 0);
+        assertTrue(diagnostics.researchTierCounts().get(ResearchWorkbenchTier.TIER_2) > 0);
+        assertTrue(diagnostics.researchTierCounts().get(ResearchWorkbenchTier.TIER_3) > 0);
+
+        Map<Integer, Set<ResearchWorkbenchTier>> tiersByScore = new LinkedHashMap<>();
+        automatic.candidates().eligibleProposals().forEach((id, proposal) -> {
+            ResolvedBlueprintProgressionPolicy policy = progression.policy(
+                    PROFILE_ID, new ResourceLocation(id)).orElseThrow();
+            if (proposal.reviewRequired()) {
+                assertEquals(
+                        ResolvedBlueprintProgressionPolicy.TierSource.REVIEW_FALLBACK,
+                        policy.tierSource());
+                assertTrue(policy.automaticPercentileBasisPoints().isEmpty());
+            } else {
+                assertEquals(
+                        ResolvedBlueprintProgressionPolicy.TierSource.AUTOMATIC_PERCENTILE,
+                        policy.tierSource());
+                assertTrue(policy.automaticPercentileBasisPoints().isPresent());
+                tiersByScore.computeIfAbsent(proposal.mechanicalScore(), ignored -> new LinkedHashSet<>())
+                        .add(policy.researchWorkbenchTier());
+            }
+        });
+        assertTrue(tiersByScore.values().stream().allMatch(tiers -> tiers.size() == 1),
+                "equal automatic scores must never split across workstation tiers");
     }
 
     @Test
@@ -784,7 +830,18 @@ class DefaultTaCZResearchTreeTest {
     void packagedTechTreeDefinesDynamicBandsAndDormantOptInDomains() throws Exception {
         BlueprintResearchSnapshot snapshot = packagedSnapshot();
         BlueprintResearchProfile profile = snapshot.profiles().get(PROFILE_ID);
-        assertEquals(2, profile.format());
+        assertEquals(BlueprintResearchProfile.CURRENT_FORMAT, profile.format());
+        assertEquals(
+                com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchTier.TIER_2,
+                profile.progression().fallbackTiers().researchTier());
+        assertEquals(15, profile.progression().fragments().thresholds().get(
+                com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchTier.TIER_3));
+        assertEquals(BlueprintCraftingStrategy.Mode.AUTOMATIC_TIER,
+                profile.crafting().automaticGuns().mode());
+        assertEquals(BlueprintCraftingStrategy.Mode.DISABLED,
+                profile.crafting().authoredOmittedGuns().mode());
+        assertEquals(BlueprintCraftingStrategy.Mode.LINKED_WEAPON,
+                profile.crafting().ammo().mode());
         assertEquals(BlueprintResearchProfile.DomainPolicy.ENABLED,
                 profile.domainPolicy(Domain.WEAPONS));
         assertEquals(new BlueprintResearchProfile.DomainPolicy(false, false),

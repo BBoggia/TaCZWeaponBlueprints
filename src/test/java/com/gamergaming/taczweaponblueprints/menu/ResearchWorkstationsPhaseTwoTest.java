@@ -37,7 +37,7 @@ class ResearchWorkstationsPhaseTwoTest {
         assertEquals(RECYCLER, ModBlocks.BLUEPRINT_RECYCLER.getId());
         assertEquals(RECYCLER, ModItems.BLUEPRINT_RECYCLER_ITEM.getId());
         assertEquals(RECYCLER, ModMenus.BLUEPRINT_RECYCLER.getId());
-        assertEquals("47", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("55", NetworkHandler.PROTOCOL_VERSION);
     }
 
     @Test

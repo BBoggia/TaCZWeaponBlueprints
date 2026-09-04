@@ -3,6 +3,7 @@ package com.gamergaming.taczweaponblueprints.event;
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.progression.ResearchPointAwardDispatcher;
 import com.gamergaming.taczweaponblueprints.progression.ResearchPointCombatTracker;
+import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionSyncScheduler;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -26,6 +27,17 @@ public final class ResearchPointAwardEvents {
         if (event.getEntity() instanceof ServerPlayer player) {
             ResearchPointAwardDispatcher.advancementCompleted(
                     player, event.getAdvancement().getId());
+        }
+    }
+
+    @SubscribeEvent
+    public static void onAdvancementProgressed(
+            AdvancementEvent.AdvancementProgressEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            // Both grants and administrative revocations can change a live
+            // advancement gate. Coalescing keeps multiple criterion changes to
+            // one player publication and one open-Bench preview refresh per tick.
+            BlueprintProgressionSyncScheduler.markDirty(player);
         }
     }
 

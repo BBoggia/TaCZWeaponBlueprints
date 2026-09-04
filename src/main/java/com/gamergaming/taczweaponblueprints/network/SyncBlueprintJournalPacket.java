@@ -12,6 +12,10 @@ import com.gamergaming.taczweaponblueprints.client.ClientResearchState;
 import com.gamergaming.taczweaponblueprints.journal.BlueprintJournalEntry;
 import com.gamergaming.taczweaponblueprints.journal.BlueprintJournalSnapshot;
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
+import com.gamergaming.taczweaponblueprints.progression.fragment.BlueprintFragmentPolicy;
+import com.gamergaming.taczweaponblueprints.progression.DisclosedCraftingAccess;
+import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchTier;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintCraftingDisposition;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
@@ -20,7 +24,7 @@ import net.minecraftforge.network.NetworkEvent;
 /** Chunked atomic synchronization for the disclosure-filtered Journal model. */
 public final class SyncBlueprintJournalPacket {
     private static final int JOURNAL_HEADER_RESERVE = 64;
-    private static final int JOURNAL_ENTRY_FIXED_RESERVE = 40;
+    private static final int JOURNAL_ENTRY_FIXED_RESERVE = 56;
     private static final ClientAccumulator CLIENT_ACCUMULATOR = new ClientAccumulator();
 
     private final long syncId;
@@ -268,6 +272,13 @@ public final class SyncBlueprintJournalPacket {
         if ((flags & ~31) != 0) {
             throw new IllegalArgumentException("Invalid synchronized Journal flags");
         }
+        int researchPointCost = buf.readVarInt();
+        int ingredientTypeCount = buf.readVarInt();
+        int prerequisiteCount = buf.readVarInt();
+        int recyclingValue = buf.readVarInt();
+        Optional<BlueprintJournalEntry.FragmentProgress> fragmentProgress =
+                readFragmentProgress(buf);
+        Optional<DisclosedCraftingAccess> craftingAccess = readCraftingAccess(buf);
         return new BlueprintJournalEntry(
                 ordinal,
                 visibility,
@@ -280,10 +291,12 @@ public final class SyncBlueprintJournalPacket {
                 (flags & 4) != 0,
                 (flags & 8) != 0,
                 (flags & 16) != 0,
-                buf.readVarInt(),
-                buf.readVarInt(),
-                buf.readVarInt(),
-                buf.readVarInt());
+                researchPointCost,
+                ingredientTypeCount,
+                prerequisiteCount,
+                recyclingValue,
+                fragmentProgress,
+                craftingAccess);
     }
 
     private static void writeEntry(FriendlyByteBuf buf, BlueprintJournalEntry entry) {
@@ -303,6 +316,63 @@ public final class SyncBlueprintJournalPacket {
         buf.writeVarInt(entry.ingredientTypeCount());
         buf.writeVarInt(entry.prerequisiteCount());
         buf.writeVarInt(entry.recyclingValue());
+        writeFragmentProgress(buf, entry.fragmentProgress());
+        writeCraftingAccess(buf, entry.craftingAccess());
+    }
+
+    private static Optional<BlueprintJournalEntry.FragmentProgress> readFragmentProgress(
+            FriendlyByteBuf buf) {
+        if (!buf.readBoolean()) {
+            return Optional.empty();
+        }
+        int modeOrdinal = buf.readVarInt();
+        BlueprintFragmentPolicy.CompletionMode[] modes =
+                BlueprintFragmentPolicy.CompletionMode.values();
+        if (modeOrdinal < 0 || modeOrdinal >= modes.length) {
+            throw new IllegalArgumentException("Invalid Journal fragment completion mode");
+        }
+        return Optional.of(new BlueprintJournalEntry.FragmentProgress(
+                buf.readVarInt(), buf.readVarInt(), modes[modeOrdinal]));
+    }
+
+    private static void writeFragmentProgress(
+            FriendlyByteBuf buf,
+            Optional<BlueprintJournalEntry.FragmentProgress> progress) {
+        buf.writeBoolean(progress.isPresent());
+        progress.ifPresent(value -> {
+            buf.writeVarInt(value.completionMode().ordinal());
+            buf.writeVarInt(value.archived());
+            buf.writeVarInt(value.threshold());
+        });
+    }
+
+    private static Optional<DisclosedCraftingAccess> readCraftingAccess(
+            FriendlyByteBuf buf) {
+        if (!buf.readBoolean()) {
+            return Optional.empty();
+        }
+        int dispositionOrdinal = buf.readUnsignedByte();
+        BlueprintCraftingDisposition[] dispositions = BlueprintCraftingDisposition.values();
+        if (dispositionOrdinal >= dispositions.length) {
+            throw new IllegalArgumentException("Invalid Journal crafting disposition");
+        }
+        Optional<ResearchWorkbenchTier> requiredTier = buf.readBoolean()
+                ? Optional.of(ResearchWorkbenchTier.fromLevel(buf.readVarInt()))
+                : Optional.empty();
+        return Optional.of(new DisclosedCraftingAccess(
+                dispositions[dispositionOrdinal], requiredTier));
+    }
+
+    private static void writeCraftingAccess(
+            FriendlyByteBuf buf,
+            Optional<DisclosedCraftingAccess> access) {
+        buf.writeBoolean(access.isPresent());
+        access.ifPresent(value -> {
+            buf.writeByte(value.disposition().ordinal());
+            buf.writeBoolean(value.requiredWorkbenchTier().isPresent());
+            value.requiredWorkbenchTier().ifPresent(tier ->
+                    buf.writeVarInt(tier.level()));
+        });
     }
 
     private static int estimatedEntryBytes(BlueprintJournalEntry entry) {

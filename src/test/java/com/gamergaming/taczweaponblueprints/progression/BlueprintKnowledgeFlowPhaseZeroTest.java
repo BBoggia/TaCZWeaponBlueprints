@@ -90,12 +90,14 @@ class BlueprintKnowledgeFlowPhaseZeroTest {
     @Test
     void laterPhaseActivatesReverseEngineeringAndTheExtractOnlyOutputSlot() {
         assertEquals(
-                Set.of("RECYCLE", "REDEEM", "REDEEM_STACK", "REVERSE_ENGINEER", "RECOVER_POINTS"),
+                Set.of("RECYCLE", "REDEEM", "REDEEM_STACK", "REVERSE_ENGINEER",
+                        "RECOVER_POINTS", "ARCHIVE_FRAGMENTS"),
                 Arrays.stream(BlueprintRecyclerActionContract.Action.values())
                         .map(Enum::name)
                         .collect(Collectors.toSet()));
         assertEquals(
-                Set.of("EMPTY", "INVALID", "BLUEPRINT", "RESEARCH_DATA", "PHYSICAL_ITEM"),
+                Set.of("EMPTY", "INVALID", "BLUEPRINT", "RESEARCH_DATA", "PHYSICAL_ITEM",
+                        "BLUEPRINT_FRAGMENT"),
                 Arrays.stream(BlueprintRecyclerPreview.InputKind.values())
                         .map(Enum::name)
                         .collect(Collectors.toSet()));
@@ -104,7 +106,7 @@ class BlueprintKnowledgeFlowPhaseZeroTest {
         assertEquals(2, BlueprintRecyclerMenu.FIRST_PLAYER_SLOT);
         assertTrue(Arrays.stream(BlueprintResearchService.Status.values())
                 .anyMatch(status -> status == BlueprintResearchService.Status.OUTPUT_FULL));
-        assertEquals("47", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("55", NetworkHandler.PROTOCOL_VERSION);
     }
 
     private static BlueprintResearchPolicy policy(

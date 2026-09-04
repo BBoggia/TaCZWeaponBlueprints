@@ -86,6 +86,12 @@ public final class BlueprintLootDataManager extends SimplePreparableReloadListen
         return publication;
     }
 
+    /** Clears server-scoped datapack state after the server has fully stopped. */
+    public void clear() {
+        publication = new Publication(BlueprintLootSnapshot.EMPTY, 0L);
+        BlueprintLootCatalogCache.clear();
+    }
+
     public boolean ownsLootDistribution(ResourceLocation lootTableId) {
         return publication.snapshot().ownsLootTable(lootTableId);
     }

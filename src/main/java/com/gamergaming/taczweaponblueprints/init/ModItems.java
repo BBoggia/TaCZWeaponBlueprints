@@ -5,6 +5,10 @@ import net.minecraft.world.item.BlockItem;
 
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
+import com.gamergaming.taczweaponblueprints.item.BlueprintFragmentItem;
+import com.gamergaming.taczweaponblueprints.item.CraftingWorkbenchItem;
+import com.gamergaming.taczweaponblueprints.item.ResearchBenchItem;
+import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchTier;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -26,9 +30,44 @@ public class ModItems {
                         .stacksTo(1)
                 ));
 
+        public static final RegistryObject<BlueprintFragmentItem> BLUEPRINT_FRAGMENT =
+                ITEMS.register("blueprint_fragment", () -> new BlueprintFragmentItem(
+                        new Item.Properties().stacksTo(64)));
+
         public static final RegistryObject<Item> RESEARCH_BENCH_ITEM =
-                ITEMS.register("research_bench", () -> new BlockItem(
+                ITEMS.register("research_bench", () -> new ResearchBenchItem(
                         ModBlocks.RESEARCH_BENCH.get(),
+                        ResearchWorkbenchTier.TIER_1,
+                        new Item.Properties()));
+
+        public static final RegistryObject<Item> ADVANCED_RESEARCH_BENCH_ITEM =
+                ITEMS.register("advanced_research_bench", () -> new ResearchBenchItem(
+                        ModBlocks.ADVANCED_RESEARCH_BENCH.get(),
+                        ResearchWorkbenchTier.TIER_2,
+                        new Item.Properties()));
+
+        public static final RegistryObject<Item> EXPERIMENTAL_RESEARCH_BENCH_ITEM =
+                ITEMS.register("experimental_research_bench", () -> new ResearchBenchItem(
+                        ModBlocks.EXPERIMENTAL_RESEARCH_BENCH.get(),
+                        ResearchWorkbenchTier.TIER_3,
+                        new Item.Properties()));
+
+        public static final RegistryObject<Item> WORKBENCH_LVL1_ITEM =
+                ITEMS.register("workbench_lvl1", () -> new CraftingWorkbenchItem(
+                        ModBlocks.WORKBENCH_LVL1.get(),
+                        ResearchWorkbenchTier.TIER_1,
+                        new Item.Properties()));
+
+        public static final RegistryObject<Item> WORKBENCH_LVL2_ITEM =
+                ITEMS.register("workbench_lvl2", () -> new CraftingWorkbenchItem(
+                        ModBlocks.WORKBENCH_LVL2.get(),
+                        ResearchWorkbenchTier.TIER_2,
+                        new Item.Properties()));
+
+        public static final RegistryObject<Item> WORKBENCH_LVL3_ITEM =
+                ITEMS.register("workbench_lvl3", () -> new CraftingWorkbenchItem(
+                        ModBlocks.WORKBENCH_LVL3.get(),
+                        ResearchWorkbenchTier.TIER_3,
                         new Item.Properties()));
 
         public static final RegistryObject<Item> BLUEPRINT_RECYCLER_ITEM =

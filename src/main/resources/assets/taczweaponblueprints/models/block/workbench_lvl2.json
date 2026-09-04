@@ -1,0 +1,10 @@
+{
+  "loader": "forge:obj",
+  "flip_v": true,
+  "model": "taczweaponblueprints:models/block/workbench_lvl2.obj",
+  "automatic_culling": false,
+  "textures": {
+    "texture0": "taczweaponblueprints:block/voxel_white",
+    "particle": "taczweaponblueprints:block/workbench_lvl2"
+  }
+}

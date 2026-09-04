@@ -32,12 +32,15 @@ def removeStaleModArchives = tasks.register('removeStaleModArchives') {
     }
 }
 
-// Phase 11 extends the public automatic-tree compatibility tuple with explicit
-// opt-in hybrid-generation evidence. Deliberate changes must update runtime
-// constants, release gates, and migration documentation together.
+// The tiered-progression release gate owns the current compatibility tuple.
+// Deliberate changes must update runtime constants, release gates, and
+// migration documentation together.
 def certifiedAutomaticPlacementVersion = 'tacz-gun-placement-v13'
-def certifiedResearchTreeProtocol = '47'
-def certifiedResearchCatalogExportFormat = 18
+def certifiedResearchTreeProtocol = '55'
+def certifiedResearchTreeProtocolNumber = certifiedResearchTreeProtocol as int
+def certifiedResearchCatalogExportFormat = 20
+def certifiedPlayerDataVersion = 4
+def certifiedClientSettingsVersion = 3
 def certifiedAutomaticPrerequisiteStrategy = 'grouped_routes_v1'
 def certifiedAutomaticScoringModel = 'capability_v3'
 def certifiedAutomaticFormulaVersion = 'tacz-gun-capability-v3'
@@ -61,6 +64,8 @@ def certifiedAutomaticPublicationContract =
 def certifiedAutomaticPublicationHealthContract =
         'staged-failure-recovery-v1'
 def certifiedResearchGuidanceContract = 'research-guidance-qol-v1'
+def certifiedTieredProgressionReleaseContract =
+        'tiered-progression-fragments-gates-v1'
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
@@ -276,9 +281,13 @@ dependencies {
     // bundled or required at runtime; integration entry points are discovered
     // only when the corresponding client mod is installed.
     compileOnly fg.deobf("dev.emi:emi-forge:${emi_version}:api")
-    // Load EMI in the development runtime so runClient exercises the optional
-    // integration without making it a required dependency of the published jar.
-    runtimeOnly fg.deobf("dev.emi:emi-forge:${emi_version}")
+    // Load EMI in the normal development runtime so runClient exercises the
+    // optional integration without making it a required dependency of the
+    // published jar. The structure-aware datagen profile supplies JEI for
+    // Quark and must not also load EMI's newer-JEI compatibility bridge.
+    if (!(findProperty('includeStructureDataMods') ?: 'false').toBoolean()) {
+        runtimeOnly fg.deobf("dev.emi:emi-forge:${emi_version}")
+    }
     compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}-common-api:${jei_version}")
     compileOnly(fg.deobf("mezz.jei:jei-${minecraft_version}-forge-api:${jei_version}"))
 
@@ -293,6 +302,11 @@ dependencies {
     // Opt in with: ./gradlew runData -PincludeStructureDataMods=true
     def includeStructureDataMods = (findProperty('includeStructureDataMods') ?: 'false').toBoolean()
     if (includeStructureDataMods) {
+        // Quark's optional JEI integration is constructed during Forge datagen.
+        // The API-only dependencies above are enough for normal compilation,
+        // but the full structure-aware runtime must provide JEI's implementation.
+        runtimeOnly fg.deobf("mezz.jei:jei-${minecraft_version}-forge:${jei_version}")
+
         implementation fg.deobf("curse.maven:when-dungeons-arise-442508:4983862")
         implementation fg.deobf("curse.maven:yungs-api-421850:5769971")
         implementation fg.deobf("curse.maven:yungs-better-dungeons-510089:5271360")
@@ -606,6 +620,8 @@ tasks.named('jar', Jar).configure {
                         certifiedAutomaticPublicationContract,
                 'Automatic-Publication-Health':
                         certifiedAutomaticPublicationHealthContract,
+                'Tiered-Progression-Contract':
+                        certifiedTieredProgressionReleaseContract,
 
                 // Add this line to specify your Mixin config file
                 'MixinConfigs'            : "${mod_id}.mixins.json",
@@ -2422,11 +2438,24 @@ tasks.register('verifyResearchGuidanceReleaseContract') {
         def clientConfigSource = file(
                 'src/main/java/com/gamergaming/taczweaponblueprints/compat/fzzy_config/ResearchTreeClientConfig.java')
                 .getText('UTF-8')
-        if (!(protocolSource =~ /PROTOCOL_VERSION\s*=\s*"47"/).find()
-                || !(progressionLimitsSource =~ /DATA_VERSION\s*=\s*3/).find()
-                || !(clientConfigSource =~ /@Version\(version\s*=\s*3\)/).find()) {
+        def runtimeProtocol = protocolSource =~ /PROTOCOL_VERSION\s*=\s*"([^"]+)"/
+        def playerDataVersion = progressionLimitsSource =~ /DATA_VERSION\s*=\s*(\d+)/
+        def clientSettingsVersion = clientConfigSource =~ /@Version\(version\s*=\s*(\d+)\)/
+        def detectedRuntimeProtocol = runtimeProtocol.find() ? runtimeProtocol.group(1) : null
+        def detectedPlayerDataVersion = playerDataVersion.find()
+                ? playerDataVersion.group(1) as int
+                : null
+        def detectedClientSettingsVersion = clientSettingsVersion.find()
+                ? clientSettingsVersion.group(1) as int
+                : null
+        if (detectedRuntimeProtocol != certifiedResearchTreeProtocol
+                || detectedPlayerDataVersion != certifiedPlayerDataVersion
+                || detectedClientSettingsVersion != certifiedClientSettingsVersion) {
             throw new GradleException(
-                    'Research guidance compatibility versions must remain protocol 47, player data 3, and client settings 3')
+                    "Research guidance compatibility versions must match protocol "
+                            + "${certifiedResearchTreeProtocol}, player data "
+                            + "${certifiedPlayerDataVersion}, and client settings "
+                            + "${certifiedClientSettingsVersion}")
         }
 
         def report = [
@@ -2443,9 +2472,9 @@ tasks.register('verifyResearchGuidanceReleaseContract') {
                         'fullscreen_minimap'
                 ],
                 compatibility     : [
-                        networkProtocol: 47,
-                        playerDataVersion: 3,
-                        clientSettingsVersion: 3
+                        networkProtocol: certifiedResearchTreeProtocolNumber,
+                        playerDataVersion: certifiedPlayerDataVersion,
+                        clientSettingsVersion: certifiedClientSettingsVersion
                 ],
                 packagedClassCount: requiredClasses.size(),
                 translationCount  : requiredTranslations.size(),
@@ -2534,9 +2563,11 @@ tasks.register('verifyResearchGuidanceCandidateHandoff') {
         }
         if (source['features'] != expectedFeatures) mismatches.add('features')
         if (!(compatibility instanceof Map)
-                || compatibility['networkProtocol'] != 47
-                || compatibility['playerDataVersion'] != 3
-                || compatibility['clientSettingsVersion'] != 3) {
+                || compatibility['networkProtocol']
+                        != certifiedResearchTreeProtocolNumber
+                || compatibility['playerDataVersion'] != certifiedPlayerDataVersion
+                || compatibility['clientSettingsVersion']
+                        != certifiedClientSettingsVersion) {
             mismatches.add('compatibility')
         }
         if (source['packagedClassCount'] != 16) mismatches.add('packaged classes')
@@ -2628,6 +2659,270 @@ tasks.register('verifyResearchGuidanceCandidateHandoff') {
     }
 }
 
+def tieredProgressionReleaseReportFile =
+        layout.buildDirectory.file('reports/tiered-progression-release.json')
+tasks.register('verifyTieredProgressionReleaseContract') {
+    group = 'verification'
+    description = 'Certifies the integrated Research Bench tier, Blueprint Fragment, and Progression Gate contract.'
+    dependsOn tasks.named('test'), tasks.named('reobfJar')
+
+    inputs.files(
+            'src/main/java/com/gamergaming/taczweaponblueprints/network/NetworkHandler.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/capabilities/PlayerProgressionLimits.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/compat/fzzy_config/BlueprintConfig.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/progression/ResearchFeatureConfigSnapshot.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/progression/ResearchPolicyShapeSnapshot.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/resource/research/ProgressionPolicyAccessService.java',
+            'src/main/java/com/gamergaming/taczweaponblueprints/resource/research/BlueprintProgressionPolicyResolver.java',
+            'docs/research-bench-tiers-and-crafting.md',
+            'docs/blueprint-fragment-supply.md',
+            'docs/progression-gate-api.md',
+            'docs/research-tree-manual-qa.md')
+    inputs.file(tasks.named('jar', Jar).flatMap { it.archiveFile })
+    inputs.files(layout.buildDirectory.dir('test-results/test'))
+    outputs.file(tieredProgressionReleaseReportFile)
+
+    doLast {
+        def source = { String path -> file(path).getText('UTF-8') }
+        def protocolMatcher = source(
+                'src/main/java/com/gamergaming/taczweaponblueprints/network/NetworkHandler.java') =~
+                /PROTOCOL_VERSION\s*=\s*"([^"]+)"/
+        def dataVersionMatcher = source(
+                'src/main/java/com/gamergaming/taczweaponblueprints/capabilities/PlayerProgressionLimits.java') =~
+                /DATA_VERSION\s*=\s*(\d+)/
+        def configVersionMatcher = source(
+                'src/main/java/com/gamergaming/taczweaponblueprints/compat/fzzy_config/BlueprintConfig.java') =~
+                /@Version\(version\s*=\s*(\d+)\)/
+        if (!protocolMatcher.find() || protocolMatcher.group(1) != certifiedResearchTreeProtocol
+                || !dataVersionMatcher.find()
+                || (dataVersionMatcher.group(1) as int) != certifiedPlayerDataVersion
+                || !configVersionMatcher.find()
+                || (configVersionMatcher.group(1) as int) != 4) {
+            throw new GradleException(
+                    'Tiered progression compatibility tuple drifted from its certified values')
+        }
+
+        def requiredSuites = [
+                'com.gamergaming.taczweaponblueprints.progression.ResearchFeatureConfigSnapshotTest',
+                'com.gamergaming.taczweaponblueprints.progression.CraftingPolicyConfigSnapshotTest',
+                'com.gamergaming.taczweaponblueprints.progression.CraftingEligibilityServiceTest',
+                'com.gamergaming.taczweaponblueprints.resource.research.BlueprintProgressionPolicyResolverTest',
+                'com.gamergaming.taczweaponblueprints.resource.research.BlueprintCraftingPolicyResolverTest',
+                'com.gamergaming.taczweaponblueprints.resource.research.CraftingPolicyPerformanceTest',
+                'com.gamergaming.taczweaponblueprints.resource.BlueprintDataManagerProgressionTest',
+                'com.gamergaming.taczweaponblueprints.resource.research.DefaultTaCZResearchTreeTest',
+                'com.gamergaming.taczweaponblueprints.progression.workbench.CraftingWorkbenchTierResolverTest',
+                'com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchDomainTest',
+                'com.gamergaming.taczweaponblueprints.block.AtomicTwoPartReplacementTest',
+                'com.gamergaming.taczweaponblueprints.block.TieredResearchBenchResourcesTest',
+                'com.gamergaming.taczweaponblueprints.block.TieredCraftingWorkbenchResourcesTest',
+                'com.gamergaming.taczweaponblueprints.progression.fragment.BlueprintFragmentPolicyTest',
+                'com.gamergaming.taczweaponblueprints.progression.fragment.BlueprintFragmentAnalysisServiceTest',
+                'com.gamergaming.taczweaponblueprints.network.SyncCraftingAccessPacketTest',
+                'com.gamergaming.taczweaponblueprints.progression.BlueprintFragmentResearchServiceTest',
+                'com.gamergaming.taczweaponblueprints.progression.gate.ProgressionGateDomainTest',
+                'com.gamergaming.taczweaponblueprints.progression.gate.ProgressionGateEvaluatorTest',
+                'com.gamergaming.taczweaponblueprints.progression.gate.ProgressionCriterionServiceTest',
+                'com.gamergaming.taczweaponblueprints.progression.ProgressionLifecyclePhaseTwelveTest',
+                'com.gamergaming.taczweaponblueprints.capabilities.PlayerRecipeDataTest',
+                'com.gamergaming.taczweaponblueprints.compat.fzzy_config.SettingsSerializationCompatibilityTest',
+                'com.gamergaming.taczweaponblueprints.compat.fzzy_config.ConfigClientBoundaryContractTest',
+                'com.gamergaming.taczweaponblueprints.compat.tacz.TaCZWorkbenchAdapterContractTest',
+                'com.gamergaming.taczweaponblueprints.mixin.GunSmithTableMenuMixinContractTest',
+                'com.gamergaming.taczweaponblueprints.client.ClientCraftingAccessStateTest'
+        ]
+        def evidence = requiredSuites.collect { suiteName ->
+            def result = file("${buildDir}/test-results/test/TEST-${suiteName}.xml")
+            if (!result.isFile()) {
+                throw new GradleException(
+                        "Tiered progression regression suite did not run: ${suiteName}")
+            }
+            def suite = new XmlSlurper().parse(result)
+            def item = [
+                    suite: suiteName,
+                    tests: (suite.@tests.toString() ?: '0') as int,
+                    failures: (suite.@failures.toString() ?: '0') as int,
+                    errors: (suite.@errors.toString() ?: '0') as int,
+                    skipped: (suite.@skipped.toString() ?: '0') as int
+            ]
+            if (item.tests < 1 || item.failures != 0 || item.errors != 0
+                    || item.skipped != 0) {
+                throw new GradleException(
+                        "Tiered progression regression suite is not clean: ${item}")
+            }
+            item
+        }
+
+        def artifact = tasks.named('jar', Jar).get().archiveFile.get().asFile
+        def zip = new java.util.zip.ZipFile(artifact)
+        try {
+            def requiredEntries = [
+                    'com/gamergaming/taczweaponblueprints/progression/ResearchFeatureConfigSnapshot.class',
+                    'com/gamergaming/taczweaponblueprints/progression/ResearchPolicyShapeSnapshot.class',
+                    'com/gamergaming/taczweaponblueprints/progression/CraftingPolicyConfigSnapshot.class',
+                    'com/gamergaming/taczweaponblueprints/progression/AmmoCraftingStrategy.class',
+                    'com/gamergaming/taczweaponblueprints/progression/AttachmentCraftingStrategy.class',
+                    'com/gamergaming/taczweaponblueprints/progression/CraftingAccessOverride.class',
+                    'com/gamergaming/taczweaponblueprints/resource/research/ProgressionPolicyAccessService.class',
+                    'com/gamergaming/taczweaponblueprints/resource/research/BlueprintProgressionPolicyResolver.class',
+                    'com/gamergaming/taczweaponblueprints/resource/research/BlueprintCraftingConfigOverlay.class',
+                    'com/gamergaming/taczweaponblueprints/progression/workbench/ResearchWorkbenchAuthority.class',
+                    'com/gamergaming/taczweaponblueprints/progression/workbench/CraftingWorkbenchTierResolver.class',
+                    'com/gamergaming/taczweaponblueprints/block/CraftingWorkbenchBlock.class',
+                    'com/gamergaming/taczweaponblueprints/item/CraftingWorkbenchItem.class',
+                    'com/gamergaming/taczweaponblueprints/progression/CraftingEligibilityService.class',
+                    'com/gamergaming/taczweaponblueprints/item/BlueprintFragmentItem.class',
+                    'com/gamergaming/taczweaponblueprints/progression/fragment/BlueprintFragmentAnalysisService.class',
+                    'com/gamergaming/taczweaponblueprints/progression/fragment/BlueprintFragmentResearchService.class',
+                    'com/gamergaming/taczweaponblueprints/progression/gate/ProgressionGateEvaluator.class',
+                    'com/gamergaming/taczweaponblueprints/api/ProgressionCriteria.class',
+                    'com/gamergaming/taczweaponblueprints/menu/ResearchSelectionProgressionPreview.class',
+                    'com/gamergaming/taczweaponblueprints/network/SyncPlayerSupplementalProgressionPacket.class',
+                    'com/gamergaming/taczweaponblueprints/network/SyncCraftingAccessPacket.class',
+                    'com/gamergaming/taczweaponblueprints/mixin/GunSmithTableBlockEntityMixin.class',
+                    'data/tacz/recipes/gun_smith_table.json',
+                    'data/taczweaponblueprints/recipes/research_bench.json',
+                    'data/taczweaponblueprints/recipes/advanced_research_bench.json',
+                    'data/taczweaponblueprints/recipes/experimental_research_bench.json',
+                    'data/taczweaponblueprints/recipes/workbench_lvl1.json',
+                    'data/taczweaponblueprints/recipes/workbench_lvl2.json',
+                    'data/taczweaponblueprints/recipes/workbench_lvl3.json',
+                    'assets/taczweaponblueprints/blockstates/workbench_lvl1.json',
+                    'assets/taczweaponblueprints/blockstates/workbench_lvl2.json',
+                    'assets/taczweaponblueprints/blockstates/workbench_lvl3.json',
+                    'assets/taczweaponblueprints/models/block/workbench_lvl1.obj',
+                    'assets/taczweaponblueprints/models/block/workbench_lvl2.obj',
+                    'assets/taczweaponblueprints/models/block/workbench_lvl3.obj',
+                    'assets/taczweaponblueprints/models/item/workbench_lvl1.obj',
+                    'assets/taczweaponblueprints/models/item/workbench_lvl2.obj',
+                    'assets/taczweaponblueprints/models/item/workbench_lvl3.obj',
+                    'assets/taczweaponblueprints/textures/block/workbench_lvl1.png',
+                    'assets/taczweaponblueprints/textures/block/workbench_lvl2.png',
+                    'assets/taczweaponblueprints/textures/block/workbench_lvl3.png',
+                    'assets/taczweaponblueprints/models/item/blueprint_fragment.json'
+            ]
+            def missing = requiredEntries.findAll { zip.getEntry(it) == null }
+            if (!missing.isEmpty()) {
+                throw new GradleException(
+                        "Tiered progression JAR surface is incomplete: ${missing}")
+            }
+            def manifest = zip.getInputStream(zip.getEntry('META-INF/MANIFEST.MF'))
+                    .withCloseable { stream -> new java.util.jar.Manifest(stream) }
+            if (manifest.mainAttributes.getValue('Tiered-Progression-Contract')
+                    != certifiedTieredProgressionReleaseContract
+                    || manifest.mainAttributes.getValue('Research-Tree-Protocol')
+                    != certifiedResearchTreeProtocol) {
+                throw new GradleException(
+                        'Tiered progression manifest contract does not match runtime compatibility')
+            }
+        } finally {
+            zip.close()
+        }
+
+        def config = source(
+                'src/main/java/com/gamergaming/taczweaponblueprints/compat/fzzy_config/BlueprintConfig.java')
+        def migrationMarkers = [
+                'ResearchProgressionPreset.TIERED_RESEARCH_AND_CRAFTING',
+                'BlueprintFragmentPreset.TARGETED_RESEARCH_BOOST',
+                'tierOneUpperPercent = new ValidatedInt(35, 98, 1)',
+                'tierTwoUpperPercent = new ValidatedInt(75, 99, 2)',
+                'tierOneFragmentThreshold = customFragments(',
+                'new ValidatedInt(5, MAX_CONFIGURED_FRAGMENT_THRESHOLD, 1)',
+                'new ValidatedInt(10, MAX_CONFIGURED_FRAGMENT_THRESHOLD, 1)',
+                'new ValidatedInt(15, MAX_CONFIGURED_FRAGMENT_THRESHOLD, 1)',
+                'fragmentLootReplacementPercent = new ValidatedInt(20, 100, 0)',
+                'if (deserializedVersion < 3)',
+                'progressionPreset.validateAndSet(ResearchProgressionPreset.CLASSIC)',
+                'fragmentPreset.validateAndSet(BlueprintFragmentPreset.DISABLED)'
+        ].findAll { !config.contains(it) }
+        if (!migrationMarkers.isEmpty()) {
+            throw new GradleException(
+                    "Tiered progression defaults or migration markers drifted: ${migrationMarkers}")
+        }
+
+        def digest = java.security.MessageDigest.getInstance('SHA-256')
+        artifact.withInputStream { input ->
+            def buffer = new byte[8192]
+            int read
+            while ((read = input.read(buffer)) != -1) {
+                digest.update(buffer, 0, read)
+            }
+        }
+        def report = [
+                schema: 1,
+                phase: 12,
+                status: 'passed',
+                publicationState: 'requires_runtime_matrix',
+                contract: certifiedTieredProgressionReleaseContract,
+                compatibility: [
+                        networkProtocol: certifiedResearchTreeProtocolNumber,
+                        playerDataVersion: certifiedPlayerDataVersion,
+                        serverConfigVersion: 4
+                ],
+                defaults: [
+                        progressionPreset: 'tiered_research_and_crafting',
+                        fragmentPreset: 'targeted_research_boost',
+                        ammoCraftingStrategy: 'profile',
+                        attachmentCraftingStrategy: 'profile',
+                        automaticTierPercentiles: [3500, 7500],
+                        fragmentThresholds: [tier1: 5, tier2: 10, tier3: 15],
+                        fragmentLootReplacementPercent: 20
+                ],
+                balanceEvidence: [
+                        bundledWeaponCatalog: 53,
+                        automaticCatalogCeiling: 4096,
+                        configuredFiniteRp: 218,
+                        automaticWeaponTreeRp: 418,
+                        fragmentCompletionTime: 'depends_on_successful_blueprint_loot_opportunities',
+                        directRecipesConsumeLowerBench: false,
+                        upgradePathCheaperThanDirectConvenienceRecipes: true
+                ],
+                automatedSuites: evidence,
+                automatedTestCount: evidence.sum { it.tests } ?: 0,
+                manualRuntimeGate: 'docs/research-tree-manual-qa.md',
+                durableContracts: [
+                        'docs/research-bench-tiers-and-crafting.md',
+                        'docs/blueprint-fragment-supply.md',
+                        'docs/progression-gate-api.md'
+                ],
+                artifact: [
+                        path: project.relativePath(artifact),
+                        bytes: artifact.length(),
+                        sha256: digest.digest().encodeHex().toString()
+                ]
+        ]
+        def output = tieredProgressionReleaseReportFile.get().asFile
+        output.parentFile.mkdirs()
+        def reportText = groovy.json.JsonOutput.prettyPrint(
+                groovy.json.JsonOutput.toJson(report)) + '\n'
+        def temporaryReport = java.nio.file.Files.createTempFile(
+                output.parentFile.toPath(),
+                'tiered-progression-release-',
+                '.json.tmp')
+        try {
+            java.nio.file.Files.writeString(
+                    temporaryReport,
+                    reportText,
+                    java.nio.charset.StandardCharsets.UTF_8)
+            try {
+                java.nio.file.Files.move(
+                        temporaryReport,
+                        output.toPath(),
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            } catch (java.nio.file.AtomicMoveNotSupportedException ignored) {
+                java.nio.file.Files.move(
+                        temporaryReport,
+                        output.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            }
+        } finally {
+            java.nio.file.Files.deleteIfExists(temporaryReport)
+        }
+        logger.lifecycle("Tiered progression release report: ${output}")
+    }
+}
+
 tasks.register('verifyReleaseArtifact') {
     group = 'verification'
     description = 'Validates the reobfuscated release JAR, metadata, JSON, and generated loot index.'
@@ -2643,7 +2938,8 @@ tasks.register('verifyReleaseArtifact') {
             tasks.named('verifyGroupedVisualRefinementContract'),
             tasks.named('verifyAutomaticPublicationRecoveryContract'),
             tasks.named('verifyResearchGuidanceReleaseContract'),
-            tasks.named('verifyResearchGuidanceCandidateHandoff')
+            tasks.named('verifyResearchGuidanceCandidateHandoff'),
+            tasks.named('verifyTieredProgressionReleaseContract')
 
     doLast {
         def artifact = tasks.named('jar', Jar).get().archiveFile.get().asFile
@@ -2671,6 +2967,9 @@ tasks.register('verifyReleaseArtifact') {
 
             def required = [
                     'com/gamergaming/taczweaponblueprints/loot/DynamicBlueprintLootModifier.class',
+                    'com/gamergaming/taczweaponblueprints/loot/BlueprintFragmentLootResolver.class',
+                    'com/gamergaming/taczweaponblueprints/progression/fragment/BlueprintFragmentAnalysisService.class',
+                    'com/gamergaming/taczweaponblueprints/progression/fragment/BlueprintFragmentResearchService.class',
                     'com/gamergaming/taczweaponblueprints/loot/ResearchDataLootModifier.class',
                     'com/gamergaming/taczweaponblueprints/loot/BlueprintLootPolicyResolver.class',
                     'com/gamergaming/taczweaponblueprints/command/sub/BlueprintLootCommand.class',
@@ -2686,6 +2985,7 @@ tasks.register('verifyReleaseArtifact') {
                     'com/gamergaming/taczweaponblueprints/client/ClientModEvents.class',
                     'com/gamergaming/taczweaponblueprints/init/ModBlocks.class',
                     'com/gamergaming/taczweaponblueprints/init/ModItems.class',
+                    'com/gamergaming/taczweaponblueprints/item/BlueprintFragmentItem.class',
                     'com/gamergaming/taczweaponblueprints/init/ModMenus.class',
                     'com/gamergaming/taczweaponblueprints/block/ResearchBenchBlock.class',
                     'com/gamergaming/taczweaponblueprints/block/BlueprintRecyclerBlock.class',
@@ -2925,6 +3225,7 @@ tasks.register('verifyReleaseArtifact') {
                     'assets/taczweaponblueprints/blockstates/blueprint_recycler.json',
                     'assets/taczweaponblueprints/models/block/blueprint_recycler.json',
                     'assets/taczweaponblueprints/models/item/blueprint_recycler.json',
+                    'assets/taczweaponblueprints/models/item/blueprint_fragment.json',
                     'assets/taczweaponblueprints/textures/block/blueprint_recycler.png',
                     'assets/taczweaponblueprints/blockstates/research_bench.json',
                     'assets/taczweaponblueprints/models/block/research_bench_north.obj',
@@ -3402,12 +3703,47 @@ tasks.register('verifyReleaseArtifact') {
                         "Packaged Research Tech Tree kind fallbacks are incomplete or misrouted: ${fallbackDomainByKind}")
             }
             def profile = parsePackagedJson(researchProfileFiles.first())
-            if (profile['format'] != 2
+            def progression = profile['progression']
+            def crafting = profile['crafting']
+            if (profile['format'] != 4
                     || profile['tree_enabled'] != false
                     || profile['domain_policies'] != [
                             weapons: [tree_enabled: true, research_enabled: true],
                             attachments: [tree_enabled: false, research_enabled: false],
                             ammo: [tree_enabled: false, research_enabled: false]
+                    ]
+                    || progression?.get('fallback_tiers') != [
+                            research: 'tier_2', crafting: 'tier_2'
+                    ]
+                    || progression?.get('authored_tier_bands')?.keySet()
+                            != (['starter', 'basic', 'established', 'advanced', 'elite', 'apex'] as Set)
+                    || progression?.get('fragments')?.get('mode') != 'targeted_research_boost'
+                    || progression?.get('fragments')?.get('thresholds') != [
+                            tier_1: 5, tier_2: 10, tier_3: 15
+                    ]
+                    || progression?.get('fragments')?.get('retained_progress_cap') != 1000
+                    || crafting?.get('authored_guns')?.get('tier_bands') != [
+                            starter: 'tier_1', basic: 'tier_1', established: 'tier_2',
+                            advanced: 'tier_2', elite: 'tier_3', apex: 'tier_3'
+                    ]
+                    || crafting?.get('authored_guns')?.get('fallback') != [
+                            disposition: 'tiered', workbench_tier: 'tier_2'
+                    ]
+                    || crafting?.get('authored_omitted_guns') != [mode: 'disabled']
+                    || crafting?.get('automatic_guns')?.get('mode') != 'automatic_tier'
+                    || crafting?.get('automatic_guns')?.get('fallback') != [
+                            disposition: 'tiered', workbench_tier: 'tier_2'
+                    ]
+                    || crafting?.get('ammo')?.get('mode') != 'linked_weapon'
+                    || crafting?.get('ammo')?.get('fallback') != [
+                            disposition: 'tiered', workbench_tier: 'tier_1'
+                    ]
+                    || crafting?.get('attachments') != [
+                            mode: 'fixed',
+                            fallback: [disposition: 'tiered', workbench_tier: 'tier_1']
+                    ]
+                    || crafting?.get('other') != [
+                            disposition: 'tiered', workbench_tier: 'tier_1'
                     ]
                     || profile['tech_tree'] != 'taczweaponblueprints:default'
                     || !(profile['entry_point_candidates'] instanceof List)
@@ -3648,6 +3984,29 @@ tasks.register('verifyReleaseArtifact') {
             def languageEntry = zip.getEntry('assets/taczweaponblueprints/lang/en_us.json')
             def language = zip.getInputStream(languageEntry).withCloseable { stream ->
                 jsonParser.parse(stream, 'UTF-8')
+            }
+            def requiredFragmentLanguageKeys = [
+                    'item.taczweaponblueprints.blueprint_fragment',
+                    'item.taczweaponblueprints.blueprint_fragment.named',
+                    'item.taczweaponblueprints.blueprint_fragment.invalid_name',
+                    'item.taczweaponblueprints.blueprint_fragment.unknown_name',
+                    'item.taczweaponblueprints.blueprint_fragment.tooltip.target',
+                    'item.taczweaponblueprints.blueprint_fragment.tooltip.archive',
+                    'item.taczweaponblueprints.blueprint_fragment.tooltip.invalid',
+                    'item.taczweaponblueprints.blueprint_fragment.tooltip.unknown',
+                    'commands.taczweaponblueprints.loot.preview.fragments',
+                    'gui.taczweaponblueprints.blueprint_recycler.fragment.title',
+                    'gui.taczweaponblueprints.blueprint_recycler.action.archive_fragments',
+                    'gui.taczweaponblueprints.blueprint_recycler.action.archive_fragments.tooltip',
+                    'gui.taczweaponblueprints.blueprint_recycler.fragment.status.ready',
+                    'gui.taczweaponblueprints.blueprint_recycler.fragment.summary'
+            ]
+            def missingFragmentLanguage = requiredFragmentLanguageKeys.findAll {
+                !language.containsKey(it)
+            }
+            if (!missingFragmentLanguage.isEmpty()) {
+                throw new GradleException(
+                        "Packaged Blueprint Fragment copy is incomplete: ${missingFragmentLanguage}")
             }
             def requiredResearchTreeLanguageKeys = [
                     'gui.taczweaponblueprints.research_bench.tree.search.toggle',
@@ -3893,6 +4252,10 @@ tasks.register('verifyReleaseArtifact') {
                     'recipe_viewer.taczweaponblueprints.research_bench.1',
                     'recipe_viewer.taczweaponblueprints.research_bench.2',
                     'recipe_viewer.taczweaponblueprints.research_bench.3',
+                    'recipe_viewer.taczweaponblueprints.crafting_workbench.1',
+                    'recipe_viewer.taczweaponblueprints.crafting_workbench.2',
+                    'recipe_viewer.taczweaponblueprints.crafting_workbench.3',
+                    'recipe_viewer.taczweaponblueprints.crafting_workbench.4',
                     'recipe_viewer.taczweaponblueprints.blueprint_analyzer.1',
                     'recipe_viewer.taczweaponblueprints.blueprint_analyzer.2',
                     'recipe_viewer.taczweaponblueprints.blueprint_analyzer.3',
@@ -3927,6 +4290,7 @@ tasks.register('verifyReleaseArtifact') {
             }
             def expectedCommonMixins = [
                     'IGunSmithTableRecipeAccessor',
+                    'GunSmithTableBlockEntityMixin',
                     'GunSmithTableMenuMixin',
                     'TaCZLootTableInjectorModifierMixin'
             ] as Set
@@ -3943,6 +4307,44 @@ tasks.register('verifyReleaseArtifact') {
             ] as Set
             if (!(mixinConfig.client instanceof List) || mixinConfig.client.toSet() != expectedClientMixins) {
                 throw new GradleException("Packaged client mixin surface does not match ${expectedClientMixins}")
+            }
+            def nativeWorkbenchIds = [
+                    'workbench_lvl1',
+                    'workbench_lvl2',
+                    'workbench_lvl3'
+            ]
+            nativeWorkbenchIds.each { workstationId ->
+                [
+                        "data/taczweaponblueprints/index/blocks/${workstationId}.json",
+                        "data/taczweaponblueprints/data/blocks/${workstationId}.json"
+                ].each { resourcePath ->
+                    if (zip.getEntry(resourcePath) == null) {
+                        throw new GradleException(
+                                "Packaged native crafting Workbench resource is missing: ${resourcePath}")
+                    }
+                }
+            }
+            if (zip.getEntry(
+                    'data/taczweaponblueprints/recipe_filters/workbench_all.json') == null) {
+                throw new GradleException('Packaged crafting Workbench recipe filter is missing')
+            }
+            def legacyTableRecipeEntry = zip.getEntry('data/tacz/recipes/gun_smith_table.json')
+            if (legacyTableRecipeEntry == null) {
+                throw new GradleException('Packaged legacy TaCZ table recipe override is missing')
+            }
+            def legacyTableRecipe = zip.getInputStream(legacyTableRecipeEntry).withCloseable { stream ->
+                jsonParser.parse(stream, 'UTF-8')
+            }
+            def legacyConditions = legacyTableRecipe['recipes'] instanceof List
+                    && legacyTableRecipe['recipes'].size() == 1
+                    ? legacyTableRecipe['recipes'][0]['conditions']
+                    : null
+            if (legacyTableRecipe['type'] != 'forge:conditional'
+                    || !(legacyConditions instanceof List)
+                    || legacyConditions.size() != 1
+                    || legacyConditions[0]['type'] != 'forge:false') {
+                throw new GradleException(
+                        'Packaged legacy TaCZ table override must remain a single false conditional')
             }
             def refmapEntry = zip.getEntry('META-INF/taczweaponblueprints.refmap.json')
             if (refmapEntry == null) {
@@ -4041,7 +4443,9 @@ tasks.register('verifyReleaseArtifact') {
                     || attributes.getValue('Automatic-Publication-Contract')
                             != certifiedAutomaticPublicationContract
                     || attributes.getValue('Automatic-Publication-Health')
-                            != certifiedAutomaticPublicationHealthContract) {
+                            != certifiedAutomaticPublicationHealthContract
+                    || attributes.getValue('Tiered-Progression-Contract')
+                            != certifiedTieredProgressionReleaseContract) {
                 throw new GradleException(
                         'Packaged manifest does not match the certified Research Tree contracts')
             }
@@ -4189,6 +4593,7 @@ tasks.register('certifyReleaseCandidate') {
     inputs.file(automaticPublicationRecoveryReportFile)
     inputs.file(researchGuidanceReleaseReportFile)
     inputs.file(researchGuidanceCandidateHandoffReportFile)
+    inputs.file(tieredProgressionReleaseReportFile)
     inputs.files(layout.buildDirectory.dir('test-results/test'))
     inputs.properties([
             minecraft_version : minecraft_version,
@@ -4225,11 +4630,20 @@ tasks.register('certifyReleaseCandidate') {
         if (!protocolMatch.find()) {
             throw new GradleException('Could not determine the network protocol from NetworkHandler')
         }
+        def detectedReleaseProtocol = protocolMatch.group(1) as int
         def researchGuidanceReport = new groovy.json.JsonSlurper().parse(
                 researchGuidanceReleaseReportFile.get().asFile)
+        def researchGuidanceCompatibility = researchGuidanceReport['compatibility']
         if (researchGuidanceReport['status'] != 'passed'
                 || researchGuidanceReport['contract']
-                        != certifiedResearchGuidanceContract) {
+                        != certifiedResearchGuidanceContract
+                || !(researchGuidanceCompatibility instanceof Map)
+                || researchGuidanceCompatibility['networkProtocol']
+                        != detectedReleaseProtocol
+                || researchGuidanceCompatibility['playerDataVersion']
+                        != certifiedPlayerDataVersion
+                || researchGuidanceCompatibility['clientSettingsVersion']
+                        != certifiedClientSettingsVersion) {
             throw new GradleException(
                     'Release certification requires matching research-guidance evidence')
         }
@@ -4253,6 +4667,24 @@ tasks.register('certifyReleaseCandidate') {
             throw new GradleException(
                     'Release certification requires the exact Phase 10 research-guidance candidate handoff')
         }
+        def tieredProgressionReport = new groovy.json.JsonSlurper().parse(
+                tieredProgressionReleaseReportFile.get().asFile)
+        if (tieredProgressionReport['phase'] != 12
+                || tieredProgressionReport['status'] != 'passed'
+                || tieredProgressionReport['publicationState']
+                        != 'requires_runtime_matrix'
+                || tieredProgressionReport['contract']
+                        != certifiedTieredProgressionReleaseContract
+                || tieredProgressionReport['compatibility']?.get('networkProtocol')
+                        != detectedReleaseProtocol
+                || tieredProgressionReport['compatibility']?.get('playerDataVersion')
+                        != certifiedPlayerDataVersion
+                || tieredProgressionReport['artifact']?.get('sha256') != sha256
+                || tieredProgressionReport['manualRuntimeGate']
+                        != 'docs/research-tree-manual-qa.md') {
+            throw new GradleException(
+                    'Release certification requires matching tiered-progression evidence')
+        }
 
         def testSuites = fileTree("${buildDir}/test-results/test") {
             include 'TEST-*.xml'
@@ -4273,13 +4705,40 @@ tasks.register('certifyReleaseCandidate') {
                 tacz           : tacz_version,
                 fzzyConfig     : fzzy_config_version,
                 networkProtocol: protocolMatch.group(1),
+                tieredProgression: [
+                        contract: tieredProgressionReport['contract'],
+                        publicationState: tieredProgressionReport['publicationState'],
+                        automatedTestCount: tieredProgressionReport['automatedTestCount'],
+                        defaults: tieredProgressionReport['defaults'],
+                        balanceEvidence: tieredProgressionReport['balanceEvidence'],
+                        report: 'build/reports/tiered-progression-release.json',
+                        manualQa: tieredProgressionReport['manualRuntimeGate']
+                ],
                 researchWorkstations: [
                         researchBench: [
                                 registryId  : 'taczweaponblueprints:research_bench',
                                 presentation: 'permanent_fullscreen_research_tree',
+                                workstationTiers: [
+                                        'taczweaponblueprints:research_bench'             : 1,
+                                        'taczweaponblueprints:advanced_research_bench'    : 2,
+                                        'taczweaponblueprints:experimental_research_bench': 3
+                                ],
                                 actions     : ['select', 'research'],
                                 researchCostModes:
                                         ['points_and_items', 'points_only', 'items_only'],
+                                localInputs : 0
+                        ],
+                        craftingWorkbench: [
+                                workstationTiers: [
+                                        'taczweaponblueprints:workbench_lvl1': 1,
+                                        'taczweaponblueprints:workbench_lvl2': 2,
+                                        'taczweaponblueprints:workbench_lvl3': 3
+                                ],
+                                actions     : ['craft'],
+                                craftingUi  : 'native_tacz_gun_smith_table',
+                                craftingAuthority:
+                                        'canonical_knowledge_tier_gate_and_physical_session',
+                                legacyTableRecipe: 'suppressed_by_false_conditional',
                                 localInputs : 0
                         ],
                         blueprintRecycler: [

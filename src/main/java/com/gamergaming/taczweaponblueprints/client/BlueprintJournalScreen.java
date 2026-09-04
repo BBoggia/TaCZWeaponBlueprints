@@ -248,7 +248,8 @@ public final class BlueprintJournalScreen extends Screen {
                 .append(Component.literal("["))
                 .append(statusName(entry))
                 .append(Component.literal("] "))
-                .append(name);
+                .append(name)
+                .append(journalFragmentRowSuffix(entry));
         Button button = Button.builder(message, ignored -> {
             selectedEntry = entry;
             selectedHistory = null;
@@ -570,6 +571,33 @@ public final class BlueprintJournalScreen extends Screen {
                     Component.translatable("gui.taczweaponblueprints.journal.detail.id"),
                     Component.literal(entry.blueprintId().orElseThrow().toString()));
         }
+        if (entry.craftingAccess().isPresent()) {
+            line = detailLine(
+                    graphics,
+                    x,
+                    line,
+                    detailWidth,
+                    Component.translatable(
+                            "gui.taczweaponblueprints.journal.detail.crafting"),
+                    craftingAccessText(entry.craftingAccess().orElseThrow()));
+        }
+        if (entry.fragmentProgress().isPresent()) {
+            BlueprintJournalEntry.FragmentProgress progress =
+                    entry.fragmentProgress().orElseThrow();
+            line = detailLine(
+                    graphics,
+                    x,
+                    line,
+                    detailWidth,
+                    Component.translatable(
+                            "gui.taczweaponblueprints.journal.detail.fragments"),
+                    Component.translatable(
+                            progress.complete()
+                                    ? "gui.taczweaponblueprints.journal.detail.fragments_complete"
+                                    : "gui.taczweaponblueprints.journal.detail.fragments_progress",
+                            progress.displayedArchived(),
+                            progress.threshold()));
+        }
         if (entry.researchPointCost() > 0 || entry.researchable()) {
             line += 4;
             graphics.drawString(font,
@@ -678,6 +706,16 @@ public final class BlueprintJournalScreen extends Screen {
                     "gui.taczweaponblueprints.journal.undiscovered", entry.ordinal() + 1);
         }
         return Component.literal(resolvedName(entry));
+    }
+
+    private Component journalFragmentRowSuffix(BlueprintJournalEntry entry) {
+        return entry.fragmentProgress()
+                .filter(progress -> progress.archived() > 0)
+                .<Component>map(progress -> Component.translatable(
+                        "gui.taczweaponblueprints.journal.row.fragments",
+                        progress.displayedArchived(),
+                        progress.threshold()))
+                .orElse(Component.empty());
     }
 
     private String resolvedName(BlueprintJournalEntry entry) {
@@ -821,6 +859,23 @@ public final class BlueprintJournalScreen extends Screen {
                         selectedEntry.prerequisiteCount(),
                         yesNo(selectedEntry.canAffordPoints())));
             }
+            if (selectedEntry.fragmentProgress().isPresent()) {
+                BlueprintJournalEntry.FragmentProgress progress =
+                        selectedEntry.fragmentProgress().orElseThrow();
+                narration = narration.copy().append(Component.literal(" ")).append(
+                        Component.translatable(
+                                "gui.taczweaponblueprints.journal.detail.fragments_narration",
+                                progress.displayedArchived(),
+                                progress.threshold(),
+                                yesNo(progress.complete())));
+            }
+            if (selectedEntry.craftingAccess().isPresent()) {
+                narration = narration.copy().append(Component.literal(" ")).append(
+                        Component.translatable(
+                                "gui.taczweaponblueprints.journal.detail.crafting_narration",
+                                craftingAccessText(
+                                        selectedEntry.craftingAccess().orElseThrow())));
+            }
             return narration;
         }
         if (selectedHistory != null) {
@@ -839,6 +894,19 @@ public final class BlueprintJournalScreen extends Screen {
                     recentSourceName(selectedRecent));
         }
         return super.getNarrationMessage();
+    }
+
+    private Component craftingAccessText(
+            com.gamergaming.taczweaponblueprints.progression.DisclosedCraftingAccess access) {
+        return switch (access.disposition()) {
+            case TIERED -> Component.translatable(
+                    "gui.taczweaponblueprints.crafting_access.level",
+                    access.requiredWorkbenchTier().orElseThrow().level());
+            case UNRESTRICTED -> Component.translatable(
+                    "gui.taczweaponblueprints.crafting_access.any_workbench");
+            case DISABLED -> Component.translatable(
+                    "gui.taczweaponblueprints.crafting_access.disabled");
+        };
     }
 
     private Component onboardingNarration() {

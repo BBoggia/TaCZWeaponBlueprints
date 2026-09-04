@@ -49,7 +49,7 @@ class ResearchWorkstationsPhaseEightTest {
         assertEquals(RECYCLER, ModItems.BLUEPRINT_RECYCLER_ITEM.getId());
         assertEquals(RECYCLER, ModMenus.BLUEPRINT_RECYCLER.getId());
         assertTrue(ResearchBenchPresentationPolicy.permanentFullscreen());
-        assertEquals("47", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("55", NetworkHandler.PROTOCOL_VERSION);
     }
 
     @Test
@@ -58,7 +58,8 @@ class ResearchWorkstationsPhaseEightTest {
                 List.of("SELECT", "RESEARCH"),
                 Arrays.stream(ResearchBenchResearchAction.values()).map(Enum::name).toList());
         assertEquals(
-                Set.of("RECYCLE", "REDEEM", "REDEEM_STACK", "REVERSE_ENGINEER", "RECOVER_POINTS"),
+                Set.of("RECYCLE", "REDEEM", "REDEEM_STACK", "REVERSE_ENGINEER",
+                        "RECOVER_POINTS", "ARCHIVE_FRAGMENTS"),
                 Arrays.stream(BlueprintRecyclerActionContract.Action.values())
                         .map(Enum::name)
                         .collect(Collectors.toSet()));
@@ -132,8 +133,10 @@ class ResearchWorkstationsPhaseEightTest {
         String checklist = Files.readString(PROJECT.resolve("docs/release-checklist.md"));
         String validation = Files.readString(PROJECT.resolve("docs/release-validation.md"));
         String operations = Files.readString(PROJECT.resolve("docs/operations-and-migration.md"));
+        String changelog = Files.readString(PROJECT.resolve("CHANGELOG.md"));
+        String release = Files.readString(PROJECT.resolve("docs/releases/1.3.0.md"));
 
-        assertTrue(manual.contains("protocol other than `47`"));
+        assertTrue(manual.contains("protocol other than `55`"));
         assertFalse(manual.contains("protocol other than `20`"));
         assertTrue(manual.contains("does not certify any"));
         assertTrue(manual.contains("unchecked hands-on behavior below"));
@@ -141,6 +144,24 @@ class ResearchWorkstationsPhaseEightTest {
         assertTrue(validation.contains("research-workstation ownership"));
         assertTrue(validation.contains("presentation contract"));
         assertTrue(operations.contains("research-workstation split"));
+        assertTrue(operations.contains("built-in profile uses format 4"));
+        assertTrue(changelog.contains("advanced the network protocol to 55"));
+        assertFalse(changelog.contains("advanced the network protocol to 52"));
+        assertTrue(changelog.contains("plus format-4 authoring for"));
+        assertTrue(release.contains("Format 4 adds independently resolved crafting policy"));
+    }
+
+    @Test
+    void nativeCraftingUiUsesModeAwareAccessAtEveryActionSurface()
+            throws IOException {
+        String screen = Files.readString(PROJECT.resolve(
+                "src/main/java/com/gamergaming/taczweaponblueprints/mixin/"
+                        + "GunSmithTableScreenMixin.java"));
+
+        assertTrue(screen.contains("access.receivedForMode(enabled)"));
+        assertTrue(screen.contains("access.unrestrictedCrafting(enabled)"));
+        assertTrue(screen.contains("access.availableForMode(enabled)"));
+        assertTrue(screen.contains("access.allows(recipeId.toString(), enabled)"));
     }
 
 }

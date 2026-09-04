@@ -19,7 +19,7 @@ Run these operator commands after the server has loaded TaCZ recipes:
 ```
 
 `export` writes `taczweaponblueprints/research-catalog.json` inside the current
-world folder. Format 18 is stable and sorted. It includes every live blueprint
+world folder. Format 20 is stable and sorted. It includes every live blueprint
 ID, selected rule, visibility, cost, legacy prerequisite union, canonical
 prerequisite groups, authored group placement,
 fallback status, missing authored members, the selected tree's presentation-band
@@ -28,6 +28,14 @@ and a decision explanation for every weapon. The audit is built from a detached
 fully disclosed view, independent of any player's progress and the configured
 undiscovered-visibility ceiling. Use these exact IDs in rules and groups; do not
 infer them from display names.
+
+Format 20 additionally includes the revision-matched research and crafting
+policy projections. Its top-level summaries record research-tier and fragment
+distributions, research omissions, complete crafting dispositions and
+Workbench levels, review fallbacks, and external workstation mappings from the
+exact config snapshot used to resolve the publication. Each catalog entry has
+independent research and crafting sections when applicable, so an entry omitted
+from the Tech Tree can still report its explicit crafting result.
 
 The topology section covers connectivity, reachability, rank population and
 gaps, fan-in/fan-out, depth, merges, approximate crossings/edge length, origin
@@ -149,6 +157,258 @@ all domains were enabled. Domain policy does not disable the Journal,
 discovery, recycling, reverse engineering, physical-blueprint learning, or
 progression exemptions. The packaged profile enables Weapons and disables
 Attachments and Ammo.
+
+## Workstation, fragment, crafting, and gate policy
+
+Research profile format 3 adds policy that is independent of Tech Tree layout:
+
+```json
+{
+  "format": 3,
+  "progression": {
+    "fallback_tiers": {"research": "tier_2", "crafting": "tier_2"},
+    "authored_tier_bands": {
+      "starter": {"research": "tier_1", "crafting": "tier_1"},
+      "basic": {"research": "tier_1", "crafting": "tier_1"},
+      "established": {"research": "tier_2", "crafting": "tier_2"},
+      "advanced": {"research": "tier_2", "crafting": "tier_2"},
+      "elite": {"research": "tier_3", "crafting": "tier_3"},
+      "apex": {"research": "tier_3", "crafting": "tier_3"}
+    },
+    "fragments": {
+      "mode": "targeted_research_boost",
+      "thresholds": {"tier_1": 5, "tier_2": 10, "tier_3": 15},
+      "retained_progress_cap": 1000,
+      "research_discount": {"mode": "percentage", "value": 2500},
+      "learned_target_rp": 1
+    }
+  }
+}
+```
+
+For authored entries, `authored_tier_bands` maps the six visual tiers to
+workstation requirements. Automatic entries instead use tie-aware percentiles
+of the final capability score, so equal scores never split across workstation
+tiers and visual compaction cannot change an assignment. A proposal that still
+requires review uses `fallback_tiers` and remains visibly marked as a review
+fallback. In an `authored_only` weapon tree, unmatched weapons remain omitted;
+the progression resolver does not reintroduce them.
+
+A format-3 research rule may override one selected target:
+
+```json
+{
+  "format": 3,
+  "profile": "example:profile",
+  "target": {"blueprints": ["example:weapon"]},
+  "progression": {
+    "research_tier": "tier_3",
+    "crafting_tier": "tier_2",
+    "fragment_threshold": 12
+  }
+}
+```
+
+The existing exact, tag, selector, priority, and resource-ID tie-break selects
+one rule. That rule overrides the profile tier values; exact rules are reported
+separately from broader authored-rule overrides. `fragment_threshold` requires
+an exact target. A server-config exact threshold takes final precedence so an
+operator can rebalance fragments without replacing datapack files. When that
+exact threshold exceeds the normal retained-progress cap, whether it came from
+server config or the selected datapack rule, the resolved entry raises its cap
+to the threshold so the completed set remains reachable.
+
+Research profile format 4 separates crafting availability from research
+placement. Its `crafting` block assigns an explicit policy to authored guns,
+guns omitted from an authored-only tree, automatically placed guns, ammo,
+attachments, and any other recognized catalog entry:
+
+```json
+{
+  "format": 4,
+  "crafting": {
+    "authored_guns": {
+      "tier_bands": {
+        "starter": "tier_1",
+        "basic": "tier_1",
+        "established": "tier_2",
+        "advanced": "tier_2",
+        "elite": "tier_3",
+        "apex": "tier_3"
+      },
+      "fallback": {
+        "disposition": "tiered",
+        "workbench_tier": "tier_2"
+      }
+    },
+    "authored_omitted_guns": {"mode": "disabled"},
+    "automatic_guns": {
+      "mode": "automatic_tier",
+      "fallback": {
+        "disposition": "tiered",
+        "workbench_tier": "tier_2"
+      }
+    },
+    "ammo": {
+      "mode": "linked_weapon",
+      "fallback": {
+        "disposition": "tiered",
+        "workbench_tier": "tier_1"
+      }
+    },
+    "attachments": {
+      "mode": "fixed",
+      "fallback": {
+        "disposition": "tiered",
+        "workbench_tier": "tier_1"
+      }
+    },
+    "other": {
+      "disposition": "tiered",
+      "workbench_tier": "tier_1"
+    }
+  }
+}
+```
+
+A direct access policy uses one of three dispositions. `tiered` requires
+`workbench_tier`; `unrestricted` and `disabled` forbid it. An unrestricted
+entry still requires blueprint knowledge and applicable Progression Gates. A
+disabled entry cannot be crafted through the normal Workbench flow.
+
+The `authored_omitted_guns` strategy accepts `fixed`, `unrestricted`,
+`disabled`, or `automatic_tier`. The `automatic_guns` strategy accepts the
+same modes. `ammo` accepts `fixed`, `unrestricted`, `disabled`, or
+`linked_weapon`. A `fixed` strategy requires `workbench_tier`, while
+`automatic_tier` and `linked_weapon` require a direct `fallback` policy.
+Linked ammo uses the lowest tiered level among its authoritative compatible
+guns. Compatible guns marked `unrestricted` or `disabled` do not silently
+lower that result. If no compatible gun has a tiered crafting policy, or if no
+trustworthy TaCZ gun-to-ammo association exists, the configured ammo fallback
+is used and the condition remains visible in policy diagnostics. Shared ammo is
+therefore available with its earliest tiered compatible gun, while ambiguous
+source links never choose a tier automatically.
+
+Attachment mode may be `fixed`, `unrestricted`, `disabled`, or `type_mapped`.
+The first three require a matching fallback disposition and no type map.
+`type_mapped` requires a non-empty `item_type_policies` object and uses its
+fallback for an unknown canonical attachment type. Item-type keys are bounded,
+lowercase identifiers; display names and resource paths are not inferred. A
+missing, unmapped, or malformed catalog type retains an
+`unknown_attachment_type` policy diagnostic, so the fallback is visible to
+operators instead of silently becoming unrestricted. Attachment Workbench
+levels are not inferred from mechanical stats.
+
+Research and crafting assignments are resolved as separate action-specific
+projections inside one aggregate publication. The publication records the
+catalog, research, automatic-placement, weapon-evidence, ammo-association, and
+policy-configuration identities used to build it. Each action validates the
+identities and projection it consumes; crafting does not require an included
+research-policy entry. A failed rebuild retains the previous complete
+aggregate rather than exposing partially updated maps.
+
+A format-4 rule can override crafting without making its target part of the
+Tech Tree:
+
+```json
+{
+  "format": 4,
+  "profile": "example:profile",
+  "target": {"blueprints": ["example:weapon"]},
+  "crafting": {
+    "disposition": "tiered",
+    "workbench_tier": "tier_3"
+  }
+}
+```
+
+The crafting rule may instead set `unrestricted`, set `disabled`, or contain
+only crafting-scoped `gates`. Gate conditions in this block may use `crafting`
+or `both` scope, never `research` scope. An explicitly empty crafting override
+is invalid. A rule cannot declare both the old
+`progression.crafting_tier` and the new crafting disposition/level, nor two
+competing sets of crafting-scoped gates. These conflicts reject the reload with
+an actionable codec error.
+
+Rule selection keeps the established priority and specificity order: exact ID,
+tag, selector, then the applicable profile/category default. It happens
+independently from research inclusion. Consequently, automatic score evidence
+has no authority over authored-only entries unless the profile explicitly uses
+`automatic_tier` for omitted guns. Profiles and rules in formats 1 through 3
+retain their established combined progression tiers for entries that were
+already assigned. Entries outside that old publication decode to an explicit
+unrestricted compatibility fallback; old data does not silently acquire
+format-4 defaults.
+
+Legacy `progression.crafting_tier` and crafting-scoped `progression.gates`
+remain valid migration inputs when a profile moves to format 4 before all of
+its rules are rewritten. Legacy and independent crafting rules participate in
+the same exact, tag, and selector precedence pass. A rule that affects only
+research cannot hide a broader rule that affects crafting.
+
+Research-tier, fragment, and research-scoped gate selection uses its own
+precedence pass. A crafting-only exact rule cannot hide a broader research tag
+or selector rule. Mixed legacy gate objects are projected by scope; an override
+that contains no conditions for the current action does not erase that
+action's profile-level gates.
+
+Both profile and rule progression objects may include bounded AND-of-OR gates:
+
+```json
+{
+  "gates": {
+    "all_of": [
+      {"any_of": [
+        {
+          "type": "criterion",
+          "id": "example:weapon_trial",
+          "value": 3,
+          "scope": "research",
+          "message": "gate.example.weapon_trial",
+          "disclosure": "public"
+        },
+        {
+          "type": "advancement",
+          "id": "minecraft:adventure/kill_a_mob",
+          "scope": "research",
+          "message": "gate.example.adventure",
+          "disclosure": "hidden"
+        }
+      ]}
+    ]
+  }
+}
+```
+
+Condition types are `criterion`, `advancement`, and `workbench_tier`; the last
+uses `tier` instead of `id`/`value`. Scope is `research`, `crafting`, or `both`.
+A policy permits at most 32 groups, 16 alternatives per group, and 64 total
+conditions. Empty or duplicate groups, unknown fields/types, invalid IDs,
+oversized structures, and malformed message keys reject the candidate reload.
+Formats 1 and 2 contribute a Tier 1/no-fragment/no-gate research schema baseline. The
+server's global presets can override that baseline. Existing version-2 server
+configs migrate to Classic progression with Blueprint Fragments disabled, while
+new installations use the current defaults.
+
+These values are resolved, revisioned, and exposed to operator diagnostics.
+Blueprint Fragment totals and public Progression Gate criteria are persisted and
+synchronized. The server can evaluate criteria, advancements, and an active
+Research Bench context through one disclosure-safe gate result. See the
+[Progression Gate criterion API](progression-gate-api.md) for integration and
+operator commands. Live Research Bench previews, route guidance, Affordable Now
+results, and research transactions enforce the resolved research tier and every
+applicable gate on each unlearned node in the selected route. A transaction
+rechecks the bench, route, policy, gates, costs, inventory capacity, and player
+progress before consuming anything. Crafting Workbenches separately enforce the
+complete crafting projection, while Blueprint Fragment acquisition uses its
+research-specific fragment policy.
+
+The policy resolver publishes at most 262,144 profile-catalog assignments per
+reload. A candidate above that aggregate limit is rejected before allocation,
+and the last working publication remains active. Entries explicitly omitted
+from a valid publication are outside workstation-tier enforcement; an entry
+missing from both the policy and omission maps is an invalid or stale state and
+must never be treated as unrestricted.
 
 ## Reverse-engineering policy
 

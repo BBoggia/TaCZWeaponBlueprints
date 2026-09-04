@@ -23,6 +23,7 @@ import com.gamergaming.taczweaponblueprints.network.ResearchBenchActionPacket;
 import com.gamergaming.taczweaponblueprints.network.ResearchGuidanceRequestPacket;
 import com.gamergaming.taczweaponblueprints.progression.ResearchCostMode;
 import com.gamergaming.taczweaponblueprints.progression.ResearchGuidanceSnapshot;
+import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchTier;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayout;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayoutPolicy;
@@ -1350,6 +1351,13 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         if (searchBox == null) {
             return;
         }
+        ResearchSelectionPreview preview = menu.preview();
+        treeCanvas.setProgressionMarker(
+                preview.blueprintId().orElse(null),
+                preview.progression().fragments()
+                        .map(progress -> progress.archived() > 0)
+                        .orElse(false),
+                preview.accessSummary().blocked());
         if (uiUpdates.shouldRefreshWidgets(widgetSnapshot())) {
             // Static refresh resets fullscreen-owned widgets to their neutral
             // state, so the contextual widget cache must re-apply its state.
@@ -2706,6 +2714,14 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             return;
         }
         graphics.drawString(font, title, titleLabelX, titleLabelY, TEXT, false);
+        Component tierLabel = workbenchTierLabel();
+        graphics.drawString(
+                font,
+                tierLabel,
+                imageWidth - font.width(tierLabel) - 8,
+                titleLabelY,
+                MUTED,
+                false);
         renderBrowseLabels(graphics);
     }
 
@@ -2922,6 +2938,8 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         int stateMessageY = fullscreenOverlayLayout == null
                 ? canvas.y() + 8
                 : fullscreenOverlayLayout.searchField().bottom() + 8;
+        graphics.drawString(font, workbenchTierLabel(), messageX, stateMessageY, MUTED, false);
+        stateMessageY += font.lineHeight + 3;
         int nextMessageY = stateMessageY;
         if (!guidanceVisible && researchTreePublicationRejected) {
             nextMessageY = renderRejectedPublicationWarning(
@@ -2956,6 +2974,12 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         }
 
         renderFullscreenContextCardContent(graphics);
+    }
+
+    private Component workbenchTierLabel() {
+        return Component.translatable(
+                "gui.taczweaponblueprints.research_bench.workbench_tier",
+                menu.workbenchTier().level());
     }
 
     private void renderFullscreenContextCardContent(GuiGraphics graphics) {
@@ -3041,10 +3065,11 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         }
         graphics.drawString(
                 font,
-                clipped(details.pathPurchase()
-                                ? selectedPathDisplaySummary(details)
-                                : selectedRequirementGroupSummary(node)
-                                        .orElseGet(() -> selectedRelationshipSummary(details)),
+                clipped(selectedProgressionSummary(node).orElseGet(() ->
+                                details.pathPurchase()
+                                        ? selectedPathDisplaySummary(details)
+                                        : selectedRequirementGroupSummary(node)
+                                                .orElseGet(() -> selectedRelationshipSummary(details))),
                         card.readiness().width()),
                 card.readiness().x(),
                 card.readiness().y(),
@@ -3086,6 +3111,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 ResearchTreeSelectedNodePresenter.Presentation details =
                         selectedNodePresentation(node);
                 ArrayList<Component> lines = new ArrayList<>();
+                lines.addAll(selectedProgressionLines(node));
                 if (details.pathPurchase()) {
                     lines.add(selectedPathSummary(details));
                     if (details.additionalIngredientTypes() > 0) {
@@ -3124,7 +3150,10 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         SelectedNodeUi selectedUi = selectedNodeUi(node, presentation);
         ArrayList<Component> lines = new ArrayList<>();
         lines.add(nodeName(node));
+        selectedTierLine(node).ifPresent(lines::add);
+        selectedCraftingLine(node).ifPresent(lines::add);
         lines.add(selectedUi.message());
+        selectedFragmentLine(node).ifPresent(lines::add);
         if (node.visibility().revealsResearchSummary() || presentation.exactPreview()) {
             lines.add(selectedNodeCostOrVisibility(node, presentation));
         }
@@ -3241,15 +3270,123 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                     BAD,
                     false);
         }
-        Component message = Component.translatable(
-                "gui.taczweaponblueprints.research_bench.tree.selection."
-                        + presentation.message().name().toLowerCase(Locale.ROOT));
+        Component message = accessRequirementMessage(presentation).orElseGet(() ->
+                Component.translatable(
+                        "gui.taczweaponblueprints.research_bench.tree.selection."
+                                + presentation.message().name().toLowerCase(Locale.ROOT)));
         return new SelectedNodeUi(
                 message,
                 selectedNodeMessageColor(presentation.message()),
                 presentation.actionEnabled()
                         && researchFeedback.snapshot().status()
                                 != ResearchTreeFeedbackState.Status.PENDING);
+    }
+
+    private Optional<Component> accessRequirementMessage(
+            ResearchTreeSelectedNodePresenter.Presentation presentation) {
+        if (!presentation.exactPreview()) {
+            return Optional.empty();
+        }
+        ResearchSelectionPreview current = menu.preview();
+        return switch (current.accessSummary().kind()) {
+            case WORKBENCH_TIER -> current.accessSummary().requiredTier().map(tier ->
+                    Component.translatable(
+                            "gui.taczweaponblueprints.research_bench.tree.selection.requires_workbench",
+                            Component.translatable(workbenchNameKey(tier))));
+            case PROGRESSION_GATE -> current.accessSummary().messageKey()
+                    .map(Component::translatable);
+            case NONE, POLICY_UNAVAILABLE -> Optional.empty();
+        };
+    }
+
+    private List<Component> selectedProgressionLines(ResearchTreeGraph.Node node) {
+        if (!ResearchTreeContextCardPolicy.hasMatchingAuthoritativePreview(
+                node.blueprintId(), treeCanvas.authoritativeSelectedId(), menu.preview())) {
+            return List.of();
+        }
+        ArrayList<Component> lines = new ArrayList<>();
+        selectedTierLine(node).ifPresent(lines::add);
+        selectedCraftingLine(node).ifPresent(lines::add);
+        ResearchTreeSelectedNodePresenter.Presentation presentation =
+                selectedNodePresentation(node);
+        accessRequirementMessage(presentation).ifPresent(lines::add);
+        selectedFragmentLine(node).ifPresent(lines::add);
+        return List.copyOf(lines);
+    }
+
+    private Optional<Component> selectedTierLine(ResearchTreeGraph.Node node) {
+        if (!ResearchTreeContextCardPolicy.hasMatchingAuthoritativePreview(
+                node.blueprintId(), treeCanvas.authoritativeSelectedId(), menu.preview())) {
+            return Optional.empty();
+        }
+        var progression = menu.preview().progression();
+        return progression.currentTier().isPresent() && progression.requiredTier().isPresent()
+                ? Optional.of(Component.translatable(
+                        "gui.taczweaponblueprints.research_bench.tree.progression.tier",
+                        progression.currentTier().orElseThrow().level(),
+                        progression.requiredTier().orElseThrow().level()))
+                : Optional.empty();
+    }
+
+    private Optional<Component> selectedCraftingLine(ResearchTreeGraph.Node node) {
+        if (!ResearchTreeContextCardPolicy.hasMatchingAuthoritativePreview(
+                node.blueprintId(), treeCanvas.authoritativeSelectedId(), menu.preview())) {
+            return Optional.empty();
+        }
+        return menu.preview().progression().craftingAccess().map(access -> switch (
+                access.disposition()) {
+            case TIERED -> Component.translatable(
+                    "gui.taczweaponblueprints.research_bench.tree.progression.crafting_level",
+                    access.requiredWorkbenchTier().orElseThrow().level());
+            case UNRESTRICTED -> Component.translatable(
+                    "gui.taczweaponblueprints.research_bench.tree.progression.crafting_any");
+            case DISABLED -> Component.translatable(
+                    "gui.taczweaponblueprints.research_bench.tree.progression.crafting_disabled");
+        });
+    }
+
+    private Optional<Component> selectedFragmentLine(ResearchTreeGraph.Node node) {
+        if (!ResearchTreeContextCardPolicy.hasMatchingAuthoritativePreview(
+                node.blueprintId(), treeCanvas.authoritativeSelectedId(), menu.preview())) {
+            return Optional.empty();
+        }
+        return menu.preview().progression().fragments().map(progress -> Component.translatable(
+                progress.discountApplied()
+                        ? "gui.taczweaponblueprints.research_bench.tree.progression.fragments_discounted"
+                        : progress.complete()
+                                ? "gui.taczweaponblueprints.research_bench.tree.progression.fragments_complete"
+                                : "gui.taczweaponblueprints.research_bench.tree.progression.fragments",
+                progress.displayedArchived(),
+                progress.threshold()));
+    }
+
+    private Optional<Component> selectedProgressionSummary(ResearchTreeGraph.Node node) {
+        if (!ResearchTreeContextCardPolicy.hasMatchingAuthoritativePreview(
+                node.blueprintId(), treeCanvas.authoritativeSelectedId(), menu.preview())) {
+            return Optional.empty();
+        }
+        var progression = menu.preview().progression();
+        if (progression.currentTier().isEmpty() || progression.requiredTier().isEmpty()) {
+            return Optional.empty();
+        }
+        MutableComponent summary = Component.translatable(
+                "gui.taczweaponblueprints.research_bench.tree.progression.tier_compact",
+                progression.currentTier().orElseThrow().level(),
+                progression.requiredTier().orElseThrow().level());
+        progression.fragments().ifPresent(progress -> summary.append(" · ").append(
+                Component.translatable(
+                        "gui.taczweaponblueprints.research_bench.tree.progression.fragments_compact",
+                        progress.displayedArchived(),
+                        progress.threshold())));
+        return Optional.of(summary);
+    }
+
+    private static String workbenchNameKey(ResearchWorkbenchTier tier) {
+        return switch (tier) {
+            case TIER_1 -> "block.taczweaponblueprints.research_bench";
+            case TIER_2 -> "block.taczweaponblueprints.advanced_research_bench";
+            case TIER_3 -> "block.taczweaponblueprints.experimental_research_bench";
+        };
     }
 
     private int selectedNodeMessageColor(
@@ -3260,8 +3397,10 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             case FOLLOW_PATH -> MUTED;
             case POINTS_REQUIRED, MATERIALS_REQUIRED, INVENTORY_SPACE_REQUIRED,
                     PROGRESSION_CAPACITY_EXHAUSTED,
+                    WORKBENCH_TIER_REQUIRED, PROGRESSION_GATE_REQUIRED,
                     DISCOVERY_REQUIRED, PREREQUISITES_REQUIRED -> WARN;
             case LOCKED, RESEARCH_DISABLED, COST_UNAVAILABLE, CONTENT_UNAVAILABLE,
+                    REQUIREMENTS_UNAVAILABLE,
                     PATH_TOO_LARGE, ROUTE_TOO_COMPLEX, TECH_TREE_UNAVAILABLE,
                     UNSATISFIABLE -> BAD;
         };
@@ -3717,9 +3856,13 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             return;
         }
         ResearchTreeGraph.Node node = hovered.orElseThrow();
+        ArrayList<Component> lines = new ArrayList<>();
+        lines.add(nodeName(node));
+        lines.add(nodeStatus(node));
+        lines.addAll(selectedProgressionLines(node));
         graphics.renderComponentTooltip(
                 font,
-                List.of(nodeName(node), nodeStatus(node)),
+                List.copyOf(lines),
                 mouseX,
                 mouseY);
     }
@@ -3780,10 +3923,22 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         Set<ResourceLocation> preferred = treeCanvas.graph().nodes().stream()
                 .map(ResearchTreeGraph.Node::blueprintId)
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        Optional<ResourceLocation> trackedTarget = ClientResearchPlannerState.targetId();
         Optional<ResearchTreePlanner.Plan> tracked = researchPlan
                 .filter(plan -> !plan.complete());
+        if (trackedTarget.isPresent() && tracked.isEmpty()) {
+            return Optional.empty();
+        }
         if (tracked.isPresent()) {
             ResearchTreePlanner.Plan plan = tracked.orElseThrow();
+            Optional<ResearchGuidanceSnapshot> guidance =
+                    ClientResearchGuidanceState.currentSnapshot()
+                            .filter(snapshot -> snapshot.targetId().equals(plan.targetId()));
+            if (ClientResearchGuidanceState.pending()
+                    || ClientResearchGuidanceState.unavailable()
+                    || guidance.filter(snapshot -> !snapshot.routeAvailable()).isPresent()) {
+                return Optional.empty();
+            }
             Set<ResourceLocation> plannedIds = plan.pathNodeIds();
             ResearchTreeGraph plannedGraph = publicGraph.inducedSubgraph(plannedIds);
             Set<ResourceLocation> plannedNavigable = navigable.stream()
@@ -4422,7 +4577,9 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                             });
                 }
             }
-            case CLOSE -> clickFullscreenWidget(fullscreenButton, mouseX, mouseY, button);
+            case CLOSE -> {
+                clickFullscreenWidget(fullscreenButton, mouseX, mouseY, button);
+            }
             case GRAPH_ELEMENT, GRAPH_BACKGROUND, NONE -> {
                 // Graph-owned targets are handled by the gesture path below.
             }
@@ -4880,13 +5037,18 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             SelectedNodeUi selectedUi = selectedNodeUi(node, details);
             Component narration;
             if (details.exactPreview()) {
-                narration = Component.translatable(
+                MutableComponent exact = Component.translatable(
                         "gui.taczweaponblueprints.research_bench.tree.card.narration.exact",
                         nodeName(node),
                         selectedUi.message(),
                         exactCostNarration(details),
                         exactMaterialNarration(details),
                         selectedRelationshipSummary(details));
+                selectedTierLine(node).ifPresent(value -> exact.append(". ").append(value));
+                selectedCraftingLine(node).ifPresent(value ->
+                        exact.append(". ").append(value));
+                selectedFragmentLine(node).ifPresent(value -> exact.append(". ").append(value));
+                narration = exact;
             } else if (pinned) {
                 narration = Component.translatable(
                         "gui.taczweaponblueprints.research_bench.tree.card.narration",

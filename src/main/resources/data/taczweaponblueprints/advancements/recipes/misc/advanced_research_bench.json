@@ -1,0 +1,11 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_redstone_block": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": { "items": [{ "items": ["minecraft:redstone_block"] }] }
+    }
+  },
+  "requirements": [["has_redstone_block"]],
+  "rewards": { "recipes": ["taczweaponblueprints:advanced_research_bench"] }
+}

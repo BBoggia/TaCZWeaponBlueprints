@@ -13,6 +13,7 @@ import com.gamergaming.taczweaponblueprints.init.ModItems;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintDiscoveryService;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintLearningService;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintLearningService.Status;
+import com.gamergaming.taczweaponblueprints.progression.PhysicalBlueprintLearningMode;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.gamergaming.taczweaponblueprints.util.ItemNameFilterHelper;
 
@@ -103,6 +104,15 @@ public class BlueprintItem extends Item {
             return false;
         }
         return BlueprintProvenance.allowsRecycling(stack.getTag());
+    }
+
+    public static PhysicalBlueprintLearningMode physicalLearningMode(
+            ItemStack stack,
+            PhysicalBlueprintLearningMode legacyDefault) {
+        if (getBlueprintId(stack).isEmpty()) {
+            return PhysicalBlueprintLearningMode.DISABLED;
+        }
+        return BlueprintProvenance.learningMode(stack.getTag(), legacyDefault);
     }
 
     @Override

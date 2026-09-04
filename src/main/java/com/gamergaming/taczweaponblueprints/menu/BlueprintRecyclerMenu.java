@@ -8,6 +8,7 @@ import com.gamergaming.taczweaponblueprints.init.ModBlocks;
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
 import com.gamergaming.taczweaponblueprints.init.ModMenus;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
+import com.gamergaming.taczweaponblueprints.item.BlueprintFragmentItem;
 import com.gamergaming.taczweaponblueprints.item.BlueprintProvenance;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintRecyclingService;
@@ -15,9 +16,11 @@ import com.gamergaming.taczweaponblueprints.progression.BlueprintReverseEngineer
 import com.gamergaming.taczweaponblueprints.progression.FoundWeaponRecoveryService;
 import com.gamergaming.taczweaponblueprints.progression.ResearchIngredientPlanner;
 import com.gamergaming.taczweaponblueprints.progression.ResearchDataRedemptionService;
+import com.gamergaming.taczweaponblueprints.progression.fragment.BlueprintFragmentAnalysisService;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchDataManager;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchIngredient;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintProgressionPolicyManager;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.core.BlockPos;
@@ -164,15 +167,19 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
 
         ItemStack physicalInput = workstation.getItem(INPUT_SLOT);
         Optional<ResourceLocation> blueprintId = BlueprintItem.getBlueprintId(physicalInput);
+        Optional<ResourceLocation> fragmentId = BlueprintFragmentItem.getTarget(physicalInput);
         BlueprintReverseEngineeringService.Evaluation reverse = blueprintId.isEmpty()
+                        && fragmentId.isEmpty()
                 ? BlueprintReverseEngineeringService.evaluate(player, workstationTransaction())
                 : null;
         ResearchDataRedemptionService.Evaluation researchData = blueprintId.isEmpty()
+                        && fragmentId.isEmpty()
                         && (reverse == null || reverse.blueprintId().isEmpty())
                 ? ResearchDataRedemptionService.evaluateInput(player, physicalInput)
                 : null;
-        Optional<ResourceLocation> physicalId = blueprintId.isPresent()
-                ? blueprintId
+        Optional<ResourceLocation> physicalId = fragmentId.isPresent()
+                ? fragmentId
+                : blueprintId.isPresent() ? blueprintId
                 : reverse != null && reverse.blueprintId().isPresent()
                         ? reverse.blueprintId()
                         : itemId(physicalInput);
@@ -189,7 +196,7 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
         }
 
         BlueprintRecyclerPreview.InputKind inputKind =
-                classifyInput(blueprintId, researchData, reverse);
+                classifyInput(blueprintId, fragmentId, researchData, reverse);
         if (!BlueprintRecyclerActionValidator.supports(inputKind, action)) {
             refreshPreview(player);
             return failure(action, expectedInputId,
@@ -197,7 +204,17 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
         }
 
         BlueprintRecyclerActionContract.ResultCode resultCode;
-        if (action == BlueprintRecyclerActionContract.Action.REVERSE_ENGINEER) {
+        if (action == BlueprintRecyclerActionContract.Action.ARCHIVE_FRAGMENTS) {
+            mutationInProgress = true;
+            try {
+                BlueprintFragmentAnalysisService.Result result =
+                        BlueprintFragmentAnalysisService.analyze(
+                                player, fragmentTransaction());
+                resultCode = BlueprintRecyclerActionContract.ResultCode.from(result.status());
+            } finally {
+                mutationInProgress = false;
+            }
+        } else if (action == BlueprintRecyclerActionContract.Action.REVERSE_ENGINEER) {
             mutationInProgress = true;
             try {
                 BlueprintReverseEngineeringService.Result result =
@@ -358,6 +375,12 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
                     Optional.of(recycling.status()),
                     Optional.empty());
         }
+        Optional<ResourceLocation> fragmentId = BlueprintFragmentItem.getTarget(physicalInput);
+        if (fragmentId.isPresent()) {
+            return BlueprintRecyclerPreview.fragment(
+                    BlueprintFragmentAnalysisService.evaluate(
+                            player, fragmentTransaction()));
+        }
         BlueprintReverseEngineeringService.Evaluation reverse =
                 BlueprintReverseEngineeringService.evaluate(player, workstationTransaction());
         if (reverse.blueprintId().isPresent()) {
@@ -386,7 +409,8 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
                     ingredients,
                     BlueprintRecyclerPreview.WeaponOrigin.from(physicalInput),
                     recovery.pointValue(),
-                    Optional.of(recovery.status()));
+                    Optional.of(recovery.status()),
+                    Optional.empty());
         }
         if (researchData.matchedInput()) {
             return new BlueprintRecyclerPreview(
@@ -434,15 +458,26 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
     static BlueprintRecyclerPreview.InputKind classifyInput(
             Optional<ResourceLocation> blueprintId,
             ResearchDataRedemptionService.Evaluation researchData) {
-        return classifyInput(blueprintId, researchData, null);
+        return classifyInput(blueprintId, Optional.empty(), researchData, null);
     }
 
     static BlueprintRecyclerPreview.InputKind classifyInput(
             Optional<ResourceLocation> blueprintId,
             ResearchDataRedemptionService.Evaluation researchData,
             BlueprintReverseEngineeringService.Evaluation reverse) {
+        return classifyInput(blueprintId, Optional.empty(), researchData, reverse);
+    }
+
+    static BlueprintRecyclerPreview.InputKind classifyInput(
+            Optional<ResourceLocation> blueprintId,
+            Optional<ResourceLocation> fragmentId,
+            ResearchDataRedemptionService.Evaluation researchData,
+            BlueprintReverseEngineeringService.Evaluation reverse) {
         if (blueprintId != null && blueprintId.isPresent()) {
             return BlueprintRecyclerPreview.InputKind.BLUEPRINT;
+        }
+        if (fragmentId != null && fragmentId.isPresent()) {
+            return BlueprintRecyclerPreview.InputKind.BLUEPRINT_FRAGMENT;
         }
         if (reverse != null && reverse.blueprintId().isPresent()) {
             return BlueprintRecyclerPreview.InputKind.PHYSICAL_ITEM;
@@ -577,6 +612,68 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
         };
     }
 
+    private BlueprintFragmentAnalysisService.WorkstationTransaction fragmentTransaction() {
+        return new BlueprintFragmentAnalysisService.WorkstationTransaction() {
+            @Override
+            public ItemStack physicalInput() {
+                return workstation.getItem(INPUT_SLOT);
+            }
+
+            @Override
+            public ItemStack outputStack() {
+                return workstation.getItem(OUTPUT_SLOT);
+            }
+
+            @Override
+            public ItemStack createOutput(
+                    ResourceLocation blueprintId,
+                    BlueprintProvenance provenance) {
+                return BlueprintItem.createBlueprint(blueprintId.toString(), provenance);
+            }
+
+            @Override
+            public boolean consumePhysical(ItemStack expectedInput, int count) {
+                ItemStack current = workstation.getItem(INPUT_SLOT);
+                if (expectedInput == null || count < 0
+                        || !ItemStack.matches(expectedInput, current)
+                        || current.getCount() < count) {
+                    return false;
+                }
+                if (count == 0) {
+                    return true;
+                }
+                current.shrink(count);
+                workstation.setChanged();
+                return true;
+            }
+
+            @Override
+            public boolean placeOutput(ItemStack output, ItemStack expectedOutput) {
+                ItemStack current = workstation.getItem(OUTPUT_SLOT);
+                if (output == null || output.isEmpty() || output.getCount() != 1
+                        || expectedOutput == null
+                        || !ItemStack.matches(expectedOutput, current)
+                        || !current.isEmpty()) {
+                    return false;
+                }
+                workstation.setItem(OUTPUT_SLOT, output.copy());
+                return ItemStack.matches(output, workstation.getItem(OUTPUT_SLOT));
+            }
+
+            @Override
+            public boolean restore(ItemStack physicalInput, ItemStack output) {
+                if (physicalInput == null || output == null) {
+                    return false;
+                }
+                workstation.setItem(INPUT_SLOT, physicalInput.copy());
+                workstation.setItem(OUTPUT_SLOT, output.copy());
+                workstation.setChanged();
+                return ItemStack.matches(physicalInput, workstation.getItem(INPUT_SLOT))
+                        && ItemStack.matches(output, workstation.getItem(OUTPUT_SLOT));
+            }
+        };
+    }
+
     private static BlueprintRecyclerActionContract.ActionResult failure(
             BlueprintRecyclerActionContract.Action action,
             ResourceLocation inputId,
@@ -603,9 +700,17 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
             List<ItemStack> stacks,
             int pointBalance,
             long researchRevision,
-            long catalogRevision) {
+            long catalogRevision,
+            long progressionPolicyRevision,
+            Optional<ResourceLocation> fragmentTarget,
+            int targetArchivedFragments,
+            boolean targetLearned) {
         private WorkstationState {
             stacks = stacks.stream().map(ItemStack::copy).toList();
+            fragmentTarget = fragmentTarget == null ? Optional.empty() : fragmentTarget;
+            if (targetArchivedFragments < 0) {
+                throw new IllegalArgumentException("invalid observed fragment count");
+            }
         }
 
         static WorkstationState capture(
@@ -616,14 +721,26 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
             stacks.add(workstation.getItem(INPUT_SLOT).copy());
             stacks.add(workstation.getItem(OUTPUT_SLOT).copy());
             inventory.items.stream().map(ItemStack::copy).forEach(stacks::add);
-            int points = owner.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
-                    .map(data -> data.getResearchPoints())
-                    .orElse(0);
+            Optional<ResourceLocation> fragmentTarget = BlueprintFragmentItem.getTarget(
+                    workstation.getItem(INPUT_SLOT));
+            IPlayerRecipeDataSnapshot progression = owner
+                    .getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
+                    .map(data -> new IPlayerRecipeDataSnapshot(
+                            data.getResearchPoints(),
+                            fragmentTarget.map(id -> data.getArchivedBlueprintFragments()
+                                    .getOrDefault(id.toString(), 0)).orElse(0),
+                            fragmentTarget.filter(id -> data.hasBlueprint(id.toString()))
+                                    .isPresent()))
+                    .orElse(IPlayerRecipeDataSnapshot.EMPTY);
             return new WorkstationState(
                     stacks,
-                    points,
+                    progression.points(),
                     BlueprintResearchDataManager.INSTANCE.revision(),
-                    BlueprintDataManager.SERVER.catalogRevision());
+                    BlueprintDataManager.SERVER.catalogRevision(),
+                    BlueprintProgressionPolicyManager.INSTANCE.publication().revision(),
+                    fragmentTarget,
+                    progression.archivedFragments(),
+                    progression.learned());
         }
 
         boolean matches(WorkstationState other) {
@@ -631,6 +748,10 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
                     || pointBalance != other.pointBalance
                     || researchRevision != other.researchRevision
                     || catalogRevision != other.catalogRevision
+                    || progressionPolicyRevision != other.progressionPolicyRevision
+                    || !fragmentTarget.equals(other.fragmentTarget)
+                    || targetArchivedFragments != other.targetArchivedFragments
+                    || targetLearned != other.targetLearned
                     || stacks.size() != other.stacks.size()) {
                 return false;
             }
@@ -641,5 +762,13 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
             }
             return true;
         }
+    }
+
+    private record IPlayerRecipeDataSnapshot(
+            int points,
+            int archivedFragments,
+            boolean learned) {
+        private static final IPlayerRecipeDataSnapshot EMPTY =
+                new IPlayerRecipeDataSnapshot(0, 0, false);
     }
 }

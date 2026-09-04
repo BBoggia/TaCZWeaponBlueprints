@@ -2,8 +2,13 @@ package com.gamergaming.taczweaponblueprints.client;
 
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.network.SyncResearchTreePacket;
+import com.gamergaming.taczweaponblueprints.network.SyncBlueprintDataPacket;
 import com.gamergaming.taczweaponblueprints.network.SyncBlueprintJournalPacket;
+import com.gamergaming.taczweaponblueprints.network.SyncCraftingAccessPacket;
 import com.gamergaming.taczweaponblueprints.network.SyncPlayerProgressionPacket;
+import com.gamergaming.taczweaponblueprints.network.SyncPlayerRecipeDataPacket;
+import com.gamergaming.taczweaponblueprints.network.SyncPlayerSupplementalProgressionPacket;
+import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
@@ -31,9 +36,16 @@ public final class ClientConnectionEvents {
         ClientResearchGuidanceState.clear();
         ClientResearchAffordabilityState.clear();
         ClientResearchPointPresentationState.clear();
+        SyncBlueprintDataPacket.clearClientState();
+        SyncPlayerRecipeDataPacket.clearClientState();
         SyncPlayerProgressionPacket.clearClientState();
+        SyncPlayerSupplementalProgressionPacket.clearClientState();
         SyncBlueprintJournalPacket.clearClientState();
         SyncResearchTreePacket.clearClientState();
+        SyncCraftingAccessPacket.clearClientState();
+        ClientCraftingAccessState.clear();
+        BlueprintDataManager.CLIENT.clear();
+        ClientBlueprintCatalog.invalidateCreativeTabs();
     }
 
     @SubscribeEvent

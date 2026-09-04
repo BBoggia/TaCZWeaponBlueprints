@@ -15,6 +15,7 @@ import com.gamergaming.taczweaponblueprints.resource.loot.StrictOptionalFieldCod
 import com.gamergaming.taczweaponblueprints.resource.loot.StrictRecordCodec;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import net.minecraft.resources.ResourceLocation;
@@ -35,9 +36,14 @@ public record BlueprintResearchProfile(
         List<ResourceLocation> entryPointCandidates,
         Map<Domain, List<ResourceLocation>> techEntryPointCandidates,
         Optional<ResourceLocation> techTree,
-        BlueprintReverseEngineeringPolicy reverseEngineering) {
+        BlueprintReverseEngineeringPolicy reverseEngineering,
+        BlueprintProgressionProfilePolicy progression,
+        BlueprintCraftingProfilePolicy crafting) {
     public static final int LEGACY_FORMAT = 1;
-    public static final int CURRENT_FORMAT = 2;
+    public static final int DOMAIN_POLICY_FORMAT = 2;
+    public static final int PROGRESSION_FORMAT = 3;
+    public static final int CRAFTING_FORMAT = 4;
+    public static final int CURRENT_FORMAT = CRAFTING_FORMAT;
 
     private static final Codec<Integer> FORMAT_CODEC = Codec.INT.flatXmap(
             BlueprintResearchProfile::validateFormat,
@@ -51,6 +57,21 @@ public record BlueprintResearchProfile(
                     BlueprintResearchCodecs.RESOURCE_LOCATION.listOf());
     private static final Codec<Map<Domain, DomainPolicy>> DOMAIN_POLICIES_CODEC =
             Codec.unboundedMap(DOMAIN_CODEC, DomainPolicy.CODEC);
+    private static final MapCodec<ProfileExtensions> EXTENSIONS_CODEC =
+            RecordCodecBuilder.mapCodec(instance -> instance.group(
+                    new StrictOptionalFieldCodec<>(
+                            "reverse_engineering",
+                            BlueprintReverseEngineeringPolicy.CODEC)
+                            .forGetter(ProfileExtensions::reverseEngineering),
+                    new StrictOptionalFieldCodec<>(
+                            "progression",
+                            BlueprintProgressionProfilePolicy.CODEC)
+                            .forGetter(ProfileExtensions::progression),
+                    new StrictOptionalFieldCodec<>(
+                            "crafting",
+                            BlueprintCraftingProfilePolicy.CODEC)
+                            .forGetter(ProfileExtensions::crafting))
+                    .apply(instance, ProfileExtensions::new));
 
     private static final Codec<BlueprintResearchProfile> RAW_CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
@@ -95,14 +116,8 @@ public record BlueprintResearchProfile(
                             "tech_tree",
                             BlueprintResearchCodecs.RESOURCE_LOCATION)
                             .forGetter(BlueprintResearchProfile::techTree),
-                    new StrictOptionalFieldCodec<>(
-                            "reverse_engineering",
-                            BlueprintReverseEngineeringPolicy.CODEC)
-                            .xmap(
-                                    value -> value.orElse(BlueprintReverseEngineeringPolicy.DEFAULT),
-                                    Optional::of)
-                            .forGetter(BlueprintResearchProfile::reverseEngineering))
-                    .apply(instance, BlueprintResearchProfile::new));
+                    EXTENSIONS_CODEC.forGetter(BlueprintResearchProfile::extensions))
+                    .apply(instance, BlueprintResearchProfile::fromCodec));
 
     public static final Codec<BlueprintResearchProfile> CODEC = StrictRecordCodec.wrap(
             "blueprint research profile",
@@ -122,7 +137,88 @@ public record BlueprintResearchProfile(
             "entry_point_candidates",
             "tech_entry_point_candidates",
             "tech_tree",
-            "reverse_engineering");
+            "reverse_engineering",
+            "progression",
+            "crafting");
+
+    /** Compatibility constructor for callers compiled against the format-3 record shape. */
+    public BlueprintResearchProfile(
+            int format,
+            boolean journalEnabled,
+            JournalVisibility visibility,
+            boolean researchEnabled,
+            boolean recyclingEnabled,
+            boolean allowUnlearnedRecycling,
+            int recyclingValue,
+            BlueprintResearchCost researchCost,
+            boolean requiresDiscovery,
+            boolean creativeBypassesCost,
+            boolean treeEnabled,
+            Map<Domain, DomainPolicy> domainPolicies,
+            List<ResourceLocation> entryPointCandidates,
+            Map<Domain, List<ResourceLocation>> techEntryPointCandidates,
+            Optional<ResourceLocation> techTree,
+            BlueprintReverseEngineeringPolicy reverseEngineering,
+            BlueprintProgressionProfilePolicy progression) {
+        this(
+                format,
+                journalEnabled,
+                visibility,
+                researchEnabled,
+                recyclingEnabled,
+                allowUnlearnedRecycling,
+                recyclingValue,
+                researchCost,
+                requiresDiscovery,
+                creativeBypassesCost,
+                treeEnabled,
+                domainPolicies,
+                entryPointCandidates,
+                techEntryPointCandidates,
+                techTree,
+                reverseEngineering,
+                progression,
+                defaultCraftingPolicy(format));
+    }
+
+    /** Compatibility constructor for callers compiled against the format-2 record shape. */
+    public BlueprintResearchProfile(
+            int format,
+            boolean journalEnabled,
+            JournalVisibility visibility,
+            boolean researchEnabled,
+            boolean recyclingEnabled,
+            boolean allowUnlearnedRecycling,
+            int recyclingValue,
+            BlueprintResearchCost researchCost,
+            boolean requiresDiscovery,
+            boolean creativeBypassesCost,
+            boolean treeEnabled,
+            Map<Domain, DomainPolicy> domainPolicies,
+            List<ResourceLocation> entryPointCandidates,
+            Map<Domain, List<ResourceLocation>> techEntryPointCandidates,
+            Optional<ResourceLocation> techTree,
+            BlueprintReverseEngineeringPolicy reverseEngineering) {
+        this(
+                format,
+                journalEnabled,
+                visibility,
+                researchEnabled,
+                recyclingEnabled,
+                allowUnlearnedRecycling,
+                recyclingValue,
+                researchCost,
+                requiresDiscovery,
+                creativeBypassesCost,
+                treeEnabled,
+                domainPolicies,
+                entryPointCandidates,
+                techEntryPointCandidates,
+                techTree,
+                reverseEngineering,
+                defaultProgressionPolicy(format),
+                defaultCraftingPolicy(format));
+    }
 
     /** Backwards-compatible constructor for profiles authored before domain policies. */
     public BlueprintResearchProfile(
@@ -157,7 +253,9 @@ public record BlueprintResearchProfile(
                 entryPointCandidates,
                 techEntryPointCandidates,
                 techTree,
-                reverseEngineering);
+                reverseEngineering,
+                defaultProgressionPolicy(format),
+                defaultCraftingPolicy(format));
     }
 
     /** Backwards-compatible constructor for profiles authored before reverse engineering. */
@@ -192,7 +290,9 @@ public record BlueprintResearchProfile(
                 entryPointCandidates,
                 techEntryPointCandidates,
                 techTree,
-                BlueprintReverseEngineeringPolicy.DEFAULT);
+                BlueprintReverseEngineeringPolicy.DEFAULT,
+                defaultProgressionPolicy(format),
+                defaultCraftingPolicy(format));
     }
 
     /** Backwards-compatible constructor for profiles authored before per-domain entries. */
@@ -226,7 +326,9 @@ public record BlueprintResearchProfile(
                 entryPointCandidates,
                 Map.of(),
                 techTree,
-                BlueprintReverseEngineeringPolicy.DEFAULT);
+                BlueprintReverseEngineeringPolicy.DEFAULT,
+                defaultProgressionPolicy(format),
+                defaultCraftingPolicy(format));
     }
 
     /** Backwards-compatible constructor for profiles authored before Tech Tree selection. */
@@ -259,7 +361,9 @@ public record BlueprintResearchProfile(
                 entryPointCandidates,
                 Map.of(),
                 Optional.empty(),
-                BlueprintReverseEngineeringPolicy.DEFAULT);
+                BlueprintReverseEngineeringPolicy.DEFAULT,
+                defaultProgressionPolicy(format),
+                defaultCraftingPolicy(format));
     }
 
     /** Backwards-compatible constructor for profiles authored before tree controls. */
@@ -290,16 +394,19 @@ public record BlueprintResearchProfile(
                 List.of(),
                 Map.of(),
                 Optional.empty(),
-                BlueprintReverseEngineeringPolicy.DEFAULT);
+                BlueprintReverseEngineeringPolicy.DEFAULT,
+                defaultProgressionPolicy(format),
+                defaultCraftingPolicy(format));
     }
 
     public BlueprintResearchProfile {
         if (format < LEGACY_FORMAT || format > CURRENT_FORMAT) {
             throw new IllegalArgumentException("unsupported blueprint research-profile format " + format);
         }
-        if (visibility == null || researchCost == null || reverseEngineering == null) {
+        if (visibility == null || researchCost == null || reverseEngineering == null
+                || progression == null || crafting == null) {
             throw new IllegalArgumentException(
-                    "profile visibility, research cost, and reverse-engineering policy cannot be null");
+                    "profile visibility, research cost, reverse-engineering, progression, and crafting policy cannot be null");
         }
         if (recyclingValue < 0 || recyclingValue > PlayerProgressionLimits.MAX_RESEARCH_POINTS) {
             throw new IllegalArgumentException("profile recycling value is outside the supported range");
@@ -367,13 +474,13 @@ public record BlueprintResearchProfile(
         if (domain == null) {
             throw new IllegalArgumentException("Research Tech Tree domain cannot be null");
         }
-        return format == LEGACY_FORMAT
+        return format < DOMAIN_POLICY_FORMAT
                 ? DomainPolicy.ENABLED
                 : domainPolicies.get(domain);
     }
 
     private static Map<Domain, DomainPolicy> defaultDomainPolicies(int format) {
-        if (format != CURRENT_FORMAT) {
+        if (format < DOMAIN_POLICY_FORMAT) {
             return Map.of();
         }
         EnumMap<Domain, DomainPolicy> defaults = new EnumMap<>(Domain.class);
@@ -408,15 +515,92 @@ public record BlueprintResearchProfile(
     }
 
     private Optional<String> domainPolicyValidationError() {
-        if (format == LEGACY_FORMAT && !domainPolicies.isEmpty()) {
+        if (format < DOMAIN_POLICY_FORMAT && !domainPolicies.isEmpty()) {
             return Optional.of("format-1 profiles cannot declare domain policies");
         }
-        if (format == CURRENT_FORMAT
+        if (format >= DOMAIN_POLICY_FORMAT
                 && !domainPolicies.keySet().equals(EnumSet.allOf(Domain.class))) {
             return Optional.of(
-                    "format-2 profiles must declare weapons, attachments, and ammo domain policies");
+                    "format-2+ profiles must declare weapons, attachments, and ammo domain policies");
+        }
+        // The decoder supplies the canonical singleton only when the field was
+        // absent. Identity therefore also rejects an explicitly declared but
+        // value-equivalent format-2 progression object.
+        if (format < PROGRESSION_FORMAT && progression != BlueprintProgressionProfilePolicy.LEGACY) {
+            return Optional.of("progression requires research-profile format " + PROGRESSION_FORMAT);
+        }
+        if (format < CRAFTING_FORMAT && crafting != BlueprintCraftingProfilePolicy.LEGACY) {
+            return Optional.of("crafting requires research-profile format " + CRAFTING_FORMAT);
         }
         return Optional.empty();
+    }
+
+    private ProfileExtensions extensions() {
+        return new ProfileExtensions(
+                Optional.of(reverseEngineering),
+                format >= PROGRESSION_FORMAT ? Optional.of(progression) : Optional.empty(),
+                format >= CRAFTING_FORMAT ? Optional.of(crafting) : Optional.empty());
+    }
+
+    private static BlueprintResearchProfile fromCodec(
+            int format,
+            boolean journalEnabled,
+            JournalVisibility visibility,
+            boolean researchEnabled,
+            boolean recyclingEnabled,
+            boolean allowUnlearnedRecycling,
+            int recyclingValue,
+            BlueprintResearchCost researchCost,
+            boolean requiresDiscovery,
+            boolean creativeBypassesCost,
+            boolean treeEnabled,
+            Map<Domain, DomainPolicy> domainPolicies,
+            List<ResourceLocation> entryPointCandidates,
+            Map<Domain, List<ResourceLocation>> techEntryPointCandidates,
+            Optional<ResourceLocation> techTree,
+            ProfileExtensions extensions) {
+        return new BlueprintResearchProfile(
+                format,
+                journalEnabled,
+                visibility,
+                researchEnabled,
+                recyclingEnabled,
+                allowUnlearnedRecycling,
+                recyclingValue,
+                researchCost,
+                requiresDiscovery,
+                creativeBypassesCost,
+                treeEnabled,
+                domainPolicies,
+                entryPointCandidates,
+                techEntryPointCandidates,
+                techTree,
+                extensions.reverseEngineering().orElse(BlueprintReverseEngineeringPolicy.DEFAULT),
+                extensions.progression().orElse(defaultProgressionPolicy(format)),
+                extensions.crafting().orElse(defaultCraftingPolicy(format)));
+    }
+
+    private static BlueprintProgressionProfilePolicy defaultProgressionPolicy(int format) {
+        return format >= PROGRESSION_FORMAT
+                ? BlueprintProgressionProfilePolicy.DEFAULT
+                : BlueprintProgressionProfilePolicy.LEGACY;
+    }
+
+    private static BlueprintCraftingProfilePolicy defaultCraftingPolicy(int format) {
+        return format >= CRAFTING_FORMAT
+                ? BlueprintCraftingProfilePolicy.DEFAULT
+                : BlueprintCraftingProfilePolicy.LEGACY;
+    }
+
+    private record ProfileExtensions(
+            Optional<BlueprintReverseEngineeringPolicy> reverseEngineering,
+            Optional<BlueprintProgressionProfilePolicy> progression,
+            Optional<BlueprintCraftingProfilePolicy> crafting) {
+        private ProfileExtensions {
+            reverseEngineering = reverseEngineering == null ? Optional.empty() : reverseEngineering;
+            progression = progression == null ? Optional.empty() : progression;
+            crafting = crafting == null ? Optional.empty() : crafting;
+        }
     }
 
     public record DomainPolicy(boolean treeEnabled, boolean researchEnabled) {

@@ -12,12 +12,20 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.gamergaming.taczweaponblueprints.capabilities.BlueprintLearningMutation;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerRecipeData;
+import com.gamergaming.taczweaponblueprints.progression.eligibility.ResearchAccessFingerprint;
+import com.gamergaming.taczweaponblueprints.progression.eligibility.ResearchAccessSummary;
+import com.gamergaming.taczweaponblueprints.progression.eligibility.ResearchEligibilityBlocker;
+import com.gamergaming.taczweaponblueprints.progression.eligibility.ResearchEligibilityBlockers;
+import com.gamergaming.taczweaponblueprints.progression.eligibility.ResearchRouteEligibilityService;
+import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchInteractionMode;
+import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchTier;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCost;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchIngredient;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchPolicy;
@@ -62,6 +70,134 @@ class ResearchPathUnlockPlannerTest {
         assertEquals(
                 ResearchPathUnlockPlanner.RouteSelectionPolicy.STABLE_MINIMUM_UNLOCKS,
                 ResearchPathUnlockPlanner.routeSelectionPolicy());
+    }
+
+    @Test
+    void anyOfExcludesInaccessiblePurchaseAlternativesBeforeSelectingRoute() {
+        PlayerRecipeData data = data(100);
+        Map<ResourceLocation, BlueprintResearchPolicy> policies = policies(data,
+                spec(C, 1, ResearchRequirements.EMPTY),
+                spec(A, 1, legacy(C)),
+                spec(B, 20, ResearchRequirements.EMPTY),
+                spec(TARGET, 1, anyOf(A, B)));
+
+        ResearchPathUnlockPlanner.Result result = ResearchPathUnlockPlanner.plan(
+                TARGET,
+                data,
+                policies::get,
+                ignored -> false,
+                false,
+                List.of(),
+                ResearchPathAuthority.authored(),
+                id -> !B.equals(id));
+
+        assertTrue(result.successful());
+        assertEquals(List.of(C, A, TARGET), ids(result.plan().orElseThrow()));
+    }
+
+    @Test
+    void accessAwarePreviewSelectsAnEligibleAlternativeInsteadOfBlockingCheapestRoute() {
+        PlayerRecipeData data = data(100);
+        Map<ResourceLocation, BlueprintResearchPolicy> policies = policies(data,
+                spec(C, 1, ResearchRequirements.EMPTY),
+                spec(A, 1, legacy(C)),
+                spec(B, 20, ResearchRequirements.EMPTY),
+                spec(TARGET, 1, anyOf(A, B)));
+        ResearchRouteEligibilityService.Evaluation eligible =
+                new ResearchRouteEligibilityService.Evaluation(
+                        ResearchEligibilityBlockers.NONE,
+                        ResearchAccessSummary.NONE,
+                        new ResearchAccessFingerprint(1L, 2L));
+        ResearchRouteEligibilityService.Evaluation blocked =
+                new ResearchRouteEligibilityService.Evaluation(
+                        new ResearchEligibilityBlockers(List.of(
+                                new ResearchEligibilityBlocker.WorkbenchTier(
+                                        B,
+                                        ResearchInteractionMode.RESEARCH,
+                                        Optional.of(ResearchWorkbenchTier.TIER_1),
+                                        ResearchWorkbenchTier.TIER_3))),
+                        ResearchAccessSummary.workbench(
+                                ResearchWorkbenchTier.TIER_1,
+                                ResearchWorkbenchTier.TIER_3),
+                        new ResearchAccessFingerprint(3L, 4L));
+        ResearchRouteEvaluationService.Request base = evaluationRequest(
+                data, policies, TARGET, List.of());
+
+        ResearchRouteEvaluationService.Evaluation evaluation =
+                ResearchRouteEvaluationService.evaluate(
+                        new ResearchRouteEvaluationService.Request(
+                                base.targetId(),
+                                base.playerData(),
+                                base.selectedPolicy(),
+                                base.policyResolver(),
+                                base.progressionExempt(),
+                                base.pathAuthority(),
+                                base.fingerprintContext(),
+                                base.targetResolver(),
+                                base.inventoryStacks(),
+                                base.creativePlayer(),
+                                base.directPathResearch(),
+                                base.blueprintsEnabled(),
+                                Optional.of(ids -> ids.size() == 1 && B.equals(ids.get(0))
+                                        ? blocked
+                                        : eligible)))
+                        .orElseThrow();
+
+        assertTrue(evaluation.policyEligible());
+        assertEquals(List.of(C, A, TARGET), ids(evaluation.path().orElseThrow()));
+        assertEquals(ResearchAccessSummary.NONE, evaluation.accessSummary());
+    }
+
+    @Test
+    void accessAwarePreviewRetainsTheBlockerWhenNoEligibleRouteExists() {
+        PlayerRecipeData data = data(100);
+        Map<ResourceLocation, BlueprintResearchPolicy> policies = policies(data,
+                spec(A, 1, ResearchRequirements.EMPTY),
+                spec(TARGET, 1, legacy(A)));
+        ResearchAccessSummary summary = ResearchAccessSummary.workbench(
+                ResearchWorkbenchTier.TIER_1,
+                ResearchWorkbenchTier.TIER_2);
+        ResearchRouteEligibilityService.Evaluation eligible =
+                new ResearchRouteEligibilityService.Evaluation(
+                        ResearchEligibilityBlockers.NONE,
+                        ResearchAccessSummary.NONE,
+                        new ResearchAccessFingerprint(1L, 2L));
+        ResearchRouteEligibilityService.Evaluation blocked =
+                new ResearchRouteEligibilityService.Evaluation(
+                        new ResearchEligibilityBlockers(List.of(
+                                new ResearchEligibilityBlocker.WorkbenchTier(
+                                        A,
+                                        ResearchInteractionMode.RESEARCH,
+                                        Optional.of(ResearchWorkbenchTier.TIER_1),
+                                        ResearchWorkbenchTier.TIER_2))),
+                        summary,
+                        new ResearchAccessFingerprint(3L, 4L));
+        ResearchRouteEvaluationService.Request base = evaluationRequest(
+                data, policies, TARGET, List.of());
+
+        ResearchRouteEvaluationService.Evaluation evaluation =
+                ResearchRouteEvaluationService.evaluate(
+                        new ResearchRouteEvaluationService.Request(
+                                base.targetId(),
+                                base.playerData(),
+                                base.selectedPolicy(),
+                                base.policyResolver(),
+                                base.progressionExempt(),
+                                base.pathAuthority(),
+                                base.fingerprintContext(),
+                                base.targetResolver(),
+                                base.inventoryStacks(),
+                                base.creativePlayer(),
+                                base.directPathResearch(),
+                                base.blueprintsEnabled(),
+                                Optional.of(ids -> ids.size() == 1 && A.equals(ids.get(0))
+                                        ? blocked
+                                        : eligible)))
+                        .orElseThrow();
+
+        assertFalse(evaluation.policyEligible());
+        assertTrue(evaluation.path().isEmpty());
+        assertEquals(summary, evaluation.accessSummary());
     }
 
     @Test
@@ -1347,6 +1483,13 @@ class ResearchPathUnlockPlannerTest {
                 TARGET, plan, data, true, context)));
         assertFalse(original.equals(ResearchRouteFingerprint.create(
                 TARGET, plan, data, false, fingerprintContext(4L, 5L, 7L))));
+        assertFalse(original.equals(ResearchRouteFingerprint.create(
+                TARGET,
+                plan,
+                data,
+                false,
+                context,
+                new ResearchAccessFingerprint(1L, 2L))));
     }
 
     @Test
@@ -1531,6 +1674,130 @@ class ResearchPathUnlockPlannerTest {
         assertEquals(
                 List.of(new ResearchPathUnlockPlanner.SelectedRequirement(TARGET, 0, A)),
                 snapshot.selectedRequirements());
+    }
+
+    @Test
+    void routeAccessChecksEveryPendingNodeAndBlocksGuidanceAndAffordabilityState() {
+        PlayerRecipeData data = data(10);
+        Map<ResourceLocation, BlueprintResearchPolicy> policies = policies(data,
+                spec(A, 2, ResearchRequirements.EMPTY),
+                spec(TARGET, 3, legacy(A)));
+        AtomicReference<List<ResourceLocation>> evaluated = new AtomicReference<>();
+        ResearchAccessSummary summary = ResearchAccessSummary.workbench(
+                ResearchWorkbenchTier.TIER_1,
+                ResearchWorkbenchTier.TIER_2);
+        ResearchRouteEligibilityService.Evaluation blocked =
+                new ResearchRouteEligibilityService.Evaluation(
+                        new ResearchEligibilityBlockers(List.of(
+                                new ResearchEligibilityBlocker.WorkbenchTier(
+                                        A,
+                                        ResearchInteractionMode.RESEARCH,
+                                        Optional.of(ResearchWorkbenchTier.TIER_1),
+                                        ResearchWorkbenchTier.TIER_2))),
+                        summary,
+                        new ResearchAccessFingerprint(7L, 9L));
+        ResearchRouteEligibilityService.Evaluation eligible =
+                new ResearchRouteEligibilityService.Evaluation(
+                        ResearchEligibilityBlockers.NONE,
+                        ResearchAccessSummary.NONE,
+                        new ResearchAccessFingerprint(5L, 6L));
+        ResearchRouteEvaluationService.Request base = evaluationRequest(
+                data, policies, TARGET, List.of());
+        ResearchRouteEvaluationService.Evaluation evaluation =
+                ResearchRouteEvaluationService.evaluate(
+                        new ResearchRouteEvaluationService.Request(
+                                base.targetId(),
+                                base.playerData(),
+                                base.selectedPolicy(),
+                                base.policyResolver(),
+                                base.progressionExempt(),
+                                base.pathAuthority(),
+                                base.fingerprintContext(),
+                                base.targetResolver(),
+                                base.inventoryStacks(),
+                                base.creativePlayer(),
+                                base.directPathResearch(),
+                                base.blueprintsEnabled(),
+                                Optional.of(ids -> {
+                                    evaluated.set(ids);
+                                    return ids.size() > 1 ? blocked : eligible;
+                                })))
+                        .orElseThrow();
+        ResearchTreeGraph publicGraph = new ResearchTreeGraph(
+                List.of(
+                        guidanceNode(0, A, ResearchTreeGraph.Availability.AVAILABLE, 0),
+                        guidanceNode(
+                                1,
+                                TARGET,
+                                ResearchTreeGraph.Availability.PREREQUISITES_REQUIRED,
+                                1)),
+                List.of(new ResearchTreeGraph.Edge(A, TARGET)));
+
+        assertEquals(List.of(A, TARGET), evaluated.get());
+        assertEquals(summary, evaluation.accessSummary());
+        assertFalse(evaluation.policyEligible());
+        assertFalse(evaluation.ready());
+        assertTrue(evaluation.routeFingerprint().isEmpty());
+        ResearchGuidanceSnapshot guidance = ResearchRouteEvaluationService.guidanceSnapshot(
+                evaluation, publicGraph, ResearchCostMode.POINTS_AND_ITEMS).orElseThrow();
+        assertEquals(ResearchGuidanceSnapshot.State.POLICY_BLOCKED, guidance.state());
+        assertTrue(guidance.purchaseIds().isEmpty());
+    }
+
+    @Test
+    void singleBlueprintModeUsesTheSameAccessEvaluator() {
+        PlayerRecipeData data = data(10);
+        Map<ResourceLocation, BlueprintResearchPolicy> policies = policies(data,
+                spec(TARGET, 3, ResearchRequirements.EMPTY));
+        AtomicReference<List<ResourceLocation>> evaluated = new AtomicReference<>();
+        ResearchAccessSummary summary = ResearchAccessSummary.gate("gate.test.trial");
+        ResearchRouteEligibilityService.Evaluation blocked =
+                new ResearchRouteEligibilityService.Evaluation(
+                new ResearchEligibilityBlockers(List.of(
+                        new ResearchEligibilityBlocker.Gate(
+                                TARGET,
+                                ResearchInteractionMode.RESEARCH,
+                                0,
+                                new com.gamergaming.taczweaponblueprints.progression.gate
+                                        .ProgressionGateCondition.Criterion(
+                                                id("test:trial"),
+                                                1,
+                                                com.gamergaming.taczweaponblueprints.progression.gate
+                                                        .ProgressionGateScope.RESEARCH,
+                                                "gate.test.trial",
+                                                com.gamergaming.taczweaponblueprints.progression.gate
+                                                        .ProgressionGateCondition.Disclosure.HIDDEN)))),
+                summary,
+                new ResearchAccessFingerprint(11L, 13L));
+        ResearchRouteEligibilityService.Evaluation access = blocked;
+        ResearchRouteEvaluationService.Request base = evaluationRequest(
+                data, policies, TARGET, List.of());
+        ResearchRouteEvaluationService.Evaluation evaluation =
+                ResearchRouteEvaluationService.evaluate(
+                        new ResearchRouteEvaluationService.Request(
+                                base.targetId(),
+                                base.playerData(),
+                                base.selectedPolicy(),
+                                base.policyResolver(),
+                                base.progressionExempt(),
+                                base.pathAuthority(),
+                                base.fingerprintContext(),
+                                base.targetResolver(),
+                                base.inventoryStacks(),
+                                base.creativePlayer(),
+                                false,
+                                base.blueprintsEnabled(),
+                                Optional.of(ids -> {
+                                    evaluated.set(ids);
+                                    return access;
+                                })))
+                        .orElseThrow();
+
+        assertEquals(List.of(TARGET), evaluated.get());
+        assertEquals(summary, evaluation.accessSummary());
+        assertFalse(evaluation.policyEligible());
+        assertFalse(evaluation.ready());
+        assertTrue(evaluation.path().isEmpty());
     }
 
     @Test

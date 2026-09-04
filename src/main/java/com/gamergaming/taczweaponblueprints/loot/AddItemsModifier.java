@@ -9,6 +9,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
+import com.gamergaming.taczweaponblueprints.item.BlueprintFragmentItem;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintLootDataManager;
 import com.google.common.base.Suppliers;
@@ -101,7 +102,8 @@ public class AddItemsModifier extends LootModifier {
         }
 
         int existingBlueprints = (int) generatedLoot.stream()
-                .filter(stack -> stack.getItem() instanceof BlueprintItem)
+                .filter(stack -> stack.getItem() instanceof BlueprintItem
+                        || stack.getItem() instanceof BlueprintFragmentItem)
                 .count();
         int remainingBudget = BlueprintLootSelector.remainingBlueprintBudget(existingBlueprints);
         if (remainingBudget == 0) {
@@ -117,9 +119,23 @@ public class AddItemsModifier extends LootModifier {
         }
         rolls = BlueprintLootSelector.constrainRollsToBudget(rolls, remainingBudget);
 
+        BlueprintFragmentLootResolver.Plan fragmentPlan = BlueprintFragmentLootResolver.resolveRuntime(
+                availableItems.stream()
+                        .map(candidate -> new BlueprintFragmentLootResolver.WeightedTarget(
+                                candidate.blueprintId(), candidate.weight()))
+                        .toList(),
+                context);
         for (int i = 0; i < rolls; i++) {
-            BlueprintLootSelector.selectWeighted(availableItems, random.nextFloat())
-                    .ifPresent(selected -> generatedLoot.add(selected.value().copy()));
+            boolean replaceWithFragment = fragmentPlan.canReplace()
+                    && fragmentPlan.shouldReplace(
+                            random.nextInt(BlueprintFragmentLootResolver.BASIS_POINTS));
+            if (replaceWithFragment) {
+                fragmentPlan.select(random.nextFloat())
+                        .ifPresent(target -> generatedLoot.add(BlueprintFragmentItem.create(target)));
+            } else {
+                BlueprintLootSelector.selectWeighted(availableItems, random.nextFloat())
+                        .ifPresent(selected -> generatedLoot.add(selected.value().copy()));
+            }
         }
         return generatedLoot;
     }

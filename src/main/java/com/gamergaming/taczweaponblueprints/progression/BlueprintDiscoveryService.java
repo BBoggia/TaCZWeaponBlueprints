@@ -5,6 +5,7 @@ import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
+import com.gamergaming.taczweaponblueprints.item.BlueprintFragmentItem;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.resources.ResourceLocation;
@@ -22,6 +23,26 @@ public final class BlueprintDiscoveryService {
         if (stack == null || stack.isEmpty() || !(stack.getItem() instanceof BlueprintItem)) {
             return DiscoveryResult.NOT_BLUEPRINT_ITEM;
         }
+        return discoverInventoryTarget(player, BlueprintItem.getBlueprintId(stack));
+    }
+
+    public static DiscoveryResult discoverInventoryFragment(ServerPlayer player, ItemStack stack) {
+        if (player == null) {
+            return DiscoveryResult.DATA_UNAVAILABLE;
+        }
+        if (stack == null || stack.isEmpty()
+                || !(stack.getItem() instanceof BlueprintFragmentItem)) {
+            return DiscoveryResult.NOT_BLUEPRINT_ITEM;
+        }
+        return discoverInventoryTarget(player, BlueprintFragmentItem.getTarget(stack));
+    }
+
+    private static DiscoveryResult discoverInventoryTarget(
+            ServerPlayer player,
+            java.util.Optional<ResourceLocation> target) {
+        if (target.isEmpty()) {
+            return DiscoveryResult.INVALID_BLUEPRINT;
+        }
         var config = ModConfigs.BLUEPRINT.progressionSnapshot();
         if (!config.blueprintsEnabled() || !config.discoveryTrackingEnabled()) {
             return DiscoveryResult.TRACKING_DISABLED;
@@ -31,15 +52,12 @@ public final class BlueprintDiscoveryService {
                 .orElse(null);
         DiscoveryResult result = discover(
                 data,
-                BlueprintItem.getBpId(stack),
+                target.orElseThrow().toString(),
                 BlueprintDataManager.SERVER,
                 true);
         if (result == DiscoveryResult.DISCOVERED) {
-            ResourceLocation blueprintId = ResourceLocation.tryParse(BlueprintItem.getBpId(stack));
-            if (blueprintId != null) {
-                ResearchPointAwardDispatcher.blueprintTransitions(
-                        player, data, blueprintId, true, false);
-            }
+            ResearchPointAwardDispatcher.blueprintTransitions(
+                    player, data, target.orElseThrow(), true, false);
             BlueprintProgressionSyncScheduler.markDirty(player);
         }
         return result;

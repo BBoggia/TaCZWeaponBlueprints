@@ -19,6 +19,8 @@ import com.gamergaming.taczweaponblueprints.progression.BlueprintRecyclingServic
 import com.gamergaming.taczweaponblueprints.progression.BlueprintReverseEngineeringService;
 import com.gamergaming.taczweaponblueprints.progression.FoundWeaponRecoveryService;
 import com.gamergaming.taczweaponblueprints.progression.ResearchDataRedemptionService;
+import com.gamergaming.taczweaponblueprints.progression.fragment.BlueprintFragmentAnalysisService;
+import com.gamergaming.taczweaponblueprints.progression.fragment.BlueprintFragmentPolicy;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -112,6 +114,24 @@ class BlueprintRecyclerScreenModelTest {
     }
 
     @Test
+    void fragmentArchiveIsTheOnlyActionForAnAuthoritativelyReadyDeposit() {
+        for (BlueprintFragmentAnalysisService.Status status
+                : BlueprintFragmentAnalysisService.Status.values()) {
+            BlueprintRecyclerScreenModel model = BlueprintRecyclerScreenModel.from(
+                    fragment(status),
+                    false);
+            boolean ready = status == BlueprintFragmentAnalysisService.Status.READY;
+
+            assertTrue(model.statusKey().endsWith(status.name().toLowerCase(Locale.ROOT)));
+            assertEquals(ready, model.primaryAction().filter(action ->
+                    action == BlueprintRecyclerActionContract.Action.ARCHIVE_FRAGMENTS)
+                    .isPresent());
+            assertTrue(model.secondaryAction().isEmpty());
+            assertEquals(ready, model.controlsEnabled());
+        }
+    }
+
+    @Test
     void learnedEquipmentHasAnExplicitProminentCopyState() {
         BlueprintRecyclerScreenModel blocked = BlueprintRecyclerScreenModel.from(
                 physical(BlueprintReverseEngineeringService.Status.ALREADY_KNOWN, true),
@@ -196,6 +216,11 @@ class BlueprintRecyclerScreenModelTest {
                             BlueprintReverseEngineeringService.Status.RECOVERY_MODE_DISABLED,
                             status),
                     false).statusKey()));
+        }
+        for (BlueprintFragmentAnalysisService.Status status
+                : BlueprintFragmentAnalysisService.Status.values()) {
+            assertTrue(language.has(BlueprintRecyclerScreenModel.from(
+                    fragment(status), false).statusKey()));
         }
         for (BlueprintRecyclerActionContract.Action action
                 : BlueprintRecyclerActionContract.Action.values()) {
@@ -307,5 +332,31 @@ class BlueprintRecyclerScreenModelTest {
                 BlueprintRecyclerPreview.WeaponOrigin.LOOT_GENERATED,
                 3,
                 Optional.of(recoveryStatus));
+    }
+
+    private static BlueprintRecyclerPreview fragment(
+            BlueprintFragmentAnalysisService.Status status) {
+        boolean ready = status == BlueprintFragmentAnalysisService.Status.READY;
+        return BlueprintRecyclerPreview.fragment(
+                new BlueprintFragmentAnalysisService.Evaluation(
+                        status,
+                        Optional.of(BLUEPRINT),
+                        BlueprintFragmentPolicy.CompletionMode.TARGETED_RESEARCH_BOOST,
+                        1,
+                        ready ? 1 : 0,
+                        ready ? 0 : 1,
+                        2,
+                        ready ? 3 : 2,
+                        ready ? 3 : 2,
+                        5,
+                        0,
+                        0,
+                        false,
+                        false,
+                        0,
+                        4,
+                        100,
+                        false,
+                        ready ? 7L : 0L));
     }
 }

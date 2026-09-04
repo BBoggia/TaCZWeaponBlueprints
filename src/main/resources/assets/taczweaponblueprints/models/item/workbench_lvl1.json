@@ -1,0 +1,20 @@
+{
+  "loader": "forge:obj",
+  "flip_v": true,
+  "model": "taczweaponblueprints:models/item/workbench_lvl1.obj",
+  "automatic_culling": false,
+  "gui_light": "front",
+  "textures": {
+    "texture0": "taczweaponblueprints:block/voxel_white",
+    "particle": "taczweaponblueprints:block/workbench_lvl1"
+  },
+  "display": {
+    "thirdperson_righthand": { "rotation": [70, -145, 0], "translation": [0, 1.5, 0], "scale": [0.32, 0.32, 0.32] },
+    "thirdperson_lefthand": { "rotation": [70, -145, 0], "translation": [0, 1.5, 0], "scale": [0.32, 0.32, 0.32] },
+    "firstperson_righthand": { "rotation": [0, -45, 0], "translation": [0, 0, 0], "scale": [0.38, 0.38, 0.38] },
+    "firstperson_lefthand": { "rotation": [0, -45, 0], "translation": [0, 0, 0], "scale": [0.38, 0.38, 0.38] },
+    "ground": { "rotation": [0, 180, 0], "translation": [0, 2, 0], "scale": [0.25, 0.25, 0.25] },
+    "gui": { "rotation": [20, -35, 0], "translation": [0, -1.5, 0], "scale": [0.48, 0.48, 0.48] },
+    "fixed": { "rotation": [0, 0, 0], "translation": [0, -2, 0], "scale": [0.45, 0.45, 0.45] }
+  }
+}

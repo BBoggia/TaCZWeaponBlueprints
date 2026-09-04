@@ -274,8 +274,8 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
                         entryPoint.resolved().orElseThrow(),
                         activeProfile);
             } else if (entryPoint.unavailable()) {
-                TaCZWeaponBlueprints.LOGGER.error(
-                        "No configured research entry point candidate beginning with {} is present for profile {}",
+                TaCZWeaponBlueprints.LOGGER.warn(
+                        "No active research entry point candidate beginning with {} is present for profile {}",
                         entryPoint.preferred().orElseThrow(),
                         activeProfile);
             }
@@ -321,10 +321,46 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
                     reverseAudit.expertEconomyLoopIds().size(),
                     reverseAudit.expertEconomyLoopIds().stream().limit(12).toList());
         }
+        ProgressionPolicyAccessService.Context policyAccess =
+                ProgressionPolicyAccessService.acquire(
+                        ProgressionPolicyAccessService.Mode.CURRENT_ONLY).orElse(null);
+        if (policyAccess != null
+                && policyAccess.research().revision() == publication.revision()) {
+            int externalWorkstationMappings = policyAccess.config()
+                    .externalWorkstationTiers().size();
+            Optional.ofNullable(policyAccess.policy().snapshot()
+                            .diagnosticsByProfile().get(activeProfile))
+                    .ifPresent(diagnostics -> TaCZWeaponBlueprints.LOGGER.info(
+                            "Progression policy audit for {}: {} included, {} omitted, "
+                                    + "research tiers {}, {} review fallbacks, "
+                                    + "{} gate groups/{} conditions, fragment thresholds {}, "
+                                    + "and {} external workstation mappings",
+                            activeProfile,
+                            diagnostics.includedCount(),
+                            diagnostics.omittedCount(),
+                            diagnostics.researchTierCounts(),
+                            diagnostics.reviewFallbackCount(),
+                            diagnostics.gateGroupCount(),
+                            diagnostics.gateConditionCount(),
+                            diagnostics.fragmentThresholdCounts(),
+                            externalWorkstationMappings));
+        } else {
+            TaCZWeaponBlueprints.LOGGER.warn(
+                    "No revision-matched progression policy publication is active for research revision {} "
+                            + "and catalog revision {}",
+                    publication.revision(),
+                    BlueprintDataManager.SERVER.catalogRevision());
+        }
     }
 
     public BlueprintResearchSnapshot snapshot() {
         return publication.snapshot();
+    }
+
+    /** Clears server-scoped datapack state after the server has fully stopped. */
+    public void clear() {
+        publication = new Publication(BlueprintResearchSnapshot.EMPTY, 0L);
+        BlueprintResearchPolicyResolver.clearCache();
     }
 
     public long revision() {
@@ -406,6 +442,23 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
         BlueprintProgressionConfigSnapshot config = progressionConfig();
         ResolutionContext context = resolutionContext(
                 config.activeProfileId(), config);
+        ProgressionPolicyAccessService.Context policyAccess =
+                ProgressionPolicyAccessService.acquire(
+                        ProgressionPolicyAccessService.Mode.CURRENT_ONLY).orElse(null);
+        Map<ResourceLocation, ResolvedBlueprintProgressionPolicy> progressionPolicies =
+                policyAccess != null
+                        && policyAccess.catalog().revision() == context.catalog().revision()
+                        && policyAccess.research().revision() == context.research().revision()
+                        && policyAccess.profileId().equals(config.activeProfileId())
+                                ? policyAccess.profilePolicies()
+                                : Map.of();
+        Map<ResourceLocation, ResolvedBlueprintCraftingPolicy> craftingPolicies =
+                policyAccess != null
+                        && policyAccess.catalog().revision() == context.catalog().revision()
+                        && policyAccess.research().revision() == context.research().revision()
+                        && policyAccess.profileId().equals(config.activeProfileId())
+                                ? policyAccess.profileCraftingPolicies()
+                                : Map.of();
         BlueprintJournalSnapshot journal = BlueprintJournalBuilder.build(
                 context.catalog().blueprints(),
                 context.research().snapshot(),
@@ -416,7 +469,9 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
                         context.access(),
                         id,
                         context.catalog().blueprints().get(id)),
-                context.automatic().prerequisitePlan().orElse(null));
+                context.automatic().prerequisitePlan().orElse(null),
+                progressionPolicies,
+                craftingPolicies);
         return new PlayerResearchPublication(
                 journal,
                 buildTree(context, playerData),

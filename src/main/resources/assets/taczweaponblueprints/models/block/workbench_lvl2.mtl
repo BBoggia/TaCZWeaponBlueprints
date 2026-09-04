@@ -1,0 +1,1401 @@
+# Quantized voxel colors; texture0 is an opaque white swatch
+
+newmtl RGB_000000
+Ka 0.0 0.0 0.0
+Kd 0.000000 0.000000 0.000000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_001111
+Ka 0.0 0.0 0.0
+Kd 0.000000 0.066667 0.066667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_110000
+Ka 0.0 0.0 0.0
+Kd 0.066667 0.000000 0.000000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_111100
+Ka 0.0 0.0 0.0
+Kd 0.066667 0.066667 0.000000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_111111
+Ka 0.0 0.0 0.0
+Kd 0.066667 0.066667 0.066667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_111122
+Ka 0.0 0.0 0.0
+Kd 0.066667 0.066667 0.133333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_112222
+Ka 0.0 0.0 0.0
+Kd 0.066667 0.133333 0.133333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_220000
+Ka 0.0 0.0 0.0
+Kd 0.133333 0.000000 0.000000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_221100
+Ka 0.0 0.0 0.0
+Kd 0.133333 0.066667 0.000000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_221111
+Ka 0.0 0.0 0.0
+Kd 0.133333 0.066667 0.066667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_221122
+Ka 0.0 0.0 0.0
+Kd 0.133333 0.066667 0.133333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_222200
+Ka 0.0 0.0 0.0
+Kd 0.133333 0.133333 0.000000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_222211
+Ka 0.0 0.0 0.0
+Kd 0.133333 0.133333 0.066667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_222222
+Ka 0.0 0.0 0.0
+Kd 0.133333 0.133333 0.133333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_222233
+Ka 0.0 0.0 0.0
+Kd 0.133333 0.133333 0.200000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_223322
+Ka 0.0 0.0 0.0
+Kd 0.133333 0.200000 0.133333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_223333
+Ka 0.0 0.0 0.0
+Kd 0.133333 0.200000 0.200000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_223344
+Ka 0.0 0.0 0.0
+Kd 0.133333 0.200000 0.266667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_330000
+Ka 0.0 0.0 0.0
+Kd 0.200000 0.000000 0.000000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_331100
+Ka 0.0 0.0 0.0
+Kd 0.200000 0.066667 0.000000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_331111
+Ka 0.0 0.0 0.0
+Kd 0.200000 0.066667 0.066667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_332200
+Ka 0.0 0.0 0.0
+Kd 0.200000 0.133333 0.000000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_332211
+Ka 0.0 0.0 0.0
+Kd 0.200000 0.133333 0.066667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_332222
+Ka 0.0 0.0 0.0
+Kd 0.200000 0.133333 0.133333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_332233
+Ka 0.0 0.0 0.0
+Kd 0.200000 0.133333 0.200000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_333311
+Ka 0.0 0.0 0.0
+Kd 0.200000 0.200000 0.066667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_333322
+Ka 0.0 0.0 0.0
+Kd 0.200000 0.200000 0.133333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_333333
+Ka 0.0 0.0 0.0
+Kd 0.200000 0.200000 0.200000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_333344
+Ka 0.0 0.0 0.0
+Kd 0.200000 0.200000 0.266667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_334444
+Ka 0.0 0.0 0.0
+Kd 0.200000 0.266667 0.266667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_334455
+Ka 0.0 0.0 0.0
+Kd 0.200000 0.266667 0.333333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_334466
+Ka 0.0 0.0 0.0
+Kd 0.200000 0.266667 0.400000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_335566
+Ka 0.0 0.0 0.0
+Kd 0.200000 0.333333 0.400000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_441100
+Ka 0.0 0.0 0.0
+Kd 0.266667 0.066667 0.000000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_441111
+Ka 0.0 0.0 0.0
+Kd 0.266667 0.066667 0.066667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_442200
+Ka 0.0 0.0 0.0
+Kd 0.266667 0.133333 0.000000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_442211
+Ka 0.0 0.0 0.0
+Kd 0.266667 0.133333 0.066667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_442222
+Ka 0.0 0.0 0.0
+Kd 0.266667 0.133333 0.133333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_443300
+Ka 0.0 0.0 0.0
+Kd 0.266667 0.200000 0.000000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_443311
+Ka 0.0 0.0 0.0
+Kd 0.266667 0.200000 0.066667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_443322
+Ka 0.0 0.0 0.0
+Kd 0.266667 0.200000 0.133333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_443333
+Ka 0.0 0.0 0.0
+Kd 0.266667 0.200000 0.200000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_443344
+Ka 0.0 0.0 0.0
+Kd 0.266667 0.200000 0.266667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_444422
+Ka 0.0 0.0 0.0
+Kd 0.266667 0.266667 0.133333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_444433
+Ka 0.0 0.0 0.0
+Kd 0.266667 0.266667 0.200000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_444444
+Ka 0.0 0.0 0.0
+Kd 0.266667 0.266667 0.266667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_444455
+Ka 0.0 0.0 0.0
+Kd 0.266667 0.266667 0.333333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_445544
+Ka 0.0 0.0 0.0
+Kd 0.266667 0.333333 0.266667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_445555
+Ka 0.0 0.0 0.0
+Kd 0.266667 0.333333 0.333333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_445566
+Ka 0.0 0.0 0.0
+Kd 0.266667 0.333333 0.400000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_445577
+Ka 0.0 0.0 0.0
+Kd 0.266667 0.333333 0.466667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_446677
+Ka 0.0 0.0 0.0
+Kd 0.266667 0.400000 0.466667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_446688
+Ka 0.0 0.0 0.0
+Kd 0.266667 0.400000 0.533333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_551111
+Ka 0.0 0.0 0.0
+Kd 0.333333 0.066667 0.066667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_552211
+Ka 0.0 0.0 0.0
+Kd 0.333333 0.133333 0.066667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_553311
+Ka 0.0 0.0 0.0
+Kd 0.333333 0.200000 0.066667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_553322
+Ka 0.0 0.0 0.0
+Kd 0.333333 0.200000 0.133333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_553333
+Ka 0.0 0.0 0.0
+Kd 0.333333 0.200000 0.200000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_554400
+Ka 0.0 0.0 0.0
+Kd 0.333333 0.266667 0.000000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_554411
+Ka 0.0 0.0 0.0
+Kd 0.333333 0.266667 0.066667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_554422
+Ka 0.0 0.0 0.0
+Kd 0.333333 0.266667 0.133333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_554433
+Ka 0.0 0.0 0.0
+Kd 0.333333 0.266667 0.200000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_554444
+Ka 0.0 0.0 0.0
+Kd 0.333333 0.266667 0.266667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_555533
+Ka 0.0 0.0 0.0
+Kd 0.333333 0.333333 0.200000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_555544
+Ka 0.0 0.0 0.0
+Kd 0.333333 0.333333 0.266667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_555555
+Ka 0.0 0.0 0.0
+Kd 0.333333 0.333333 0.333333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_555566
+Ka 0.0 0.0 0.0
+Kd 0.333333 0.333333 0.400000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_555577
+Ka 0.0 0.0 0.0
+Kd 0.333333 0.333333 0.466667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_556666
+Ka 0.0 0.0 0.0
+Kd 0.333333 0.400000 0.400000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_556677
+Ka 0.0 0.0 0.0
+Kd 0.333333 0.400000 0.466667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_556688
+Ka 0.0 0.0 0.0
+Kd 0.333333 0.400000 0.533333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_557788
+Ka 0.0 0.0 0.0
+Kd 0.333333 0.466667 0.533333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_557799
+Ka 0.0 0.0 0.0
+Kd 0.333333 0.466667 0.600000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_662211
+Ka 0.0 0.0 0.0
+Kd 0.400000 0.133333 0.066667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_663311
+Ka 0.0 0.0 0.0
+Kd 0.400000 0.200000 0.066667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_663322
+Ka 0.0 0.0 0.0
+Kd 0.400000 0.200000 0.133333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_663333
+Ka 0.0 0.0 0.0
+Kd 0.400000 0.200000 0.200000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_664400
+Ka 0.0 0.0 0.0
+Kd 0.400000 0.266667 0.000000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_664411
+Ka 0.0 0.0 0.0
+Kd 0.400000 0.266667 0.066667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_664422
+Ka 0.0 0.0 0.0
+Kd 0.400000 0.266667 0.133333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_664433
+Ka 0.0 0.0 0.0
+Kd 0.400000 0.266667 0.200000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_664444
+Ka 0.0 0.0 0.0
+Kd 0.400000 0.266667 0.266667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_665500
+Ka 0.0 0.0 0.0
+Kd 0.400000 0.333333 0.000000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_665511
+Ka 0.0 0.0 0.0
+Kd 0.400000 0.333333 0.066667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_665522
+Ka 0.0 0.0 0.0
+Kd 0.400000 0.333333 0.133333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_665533
+Ka 0.0 0.0 0.0
+Kd 0.400000 0.333333 0.200000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_665544
+Ka 0.0 0.0 0.0
+Kd 0.400000 0.333333 0.266667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_665555
+Ka 0.0 0.0 0.0
+Kd 0.400000 0.333333 0.333333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_665566
+Ka 0.0 0.0 0.0
+Kd 0.400000 0.333333 0.400000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_666644
+Ka 0.0 0.0 0.0
+Kd 0.400000 0.400000 0.266667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_666655
+Ka 0.0 0.0 0.0
+Kd 0.400000 0.400000 0.333333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_666666
+Ka 0.0 0.0 0.0
+Kd 0.400000 0.400000 0.400000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_666677
+Ka 0.0 0.0 0.0
+Kd 0.400000 0.400000 0.466667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_666688
+Ka 0.0 0.0 0.0
+Kd 0.400000 0.400000 0.533333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_667777
+Ka 0.0 0.0 0.0
+Kd 0.400000 0.466667 0.466667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_667788
+Ka 0.0 0.0 0.0
+Kd 0.400000 0.466667 0.533333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_667799
+Ka 0.0 0.0 0.0
+Kd 0.400000 0.466667 0.600000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_668899
+Ka 0.0 0.0 0.0
+Kd 0.400000 0.533333 0.600000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_772211
+Ka 0.0 0.0 0.0
+Kd 0.466667 0.133333 0.066667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_773322
+Ka 0.0 0.0 0.0
+Kd 0.466667 0.200000 0.133333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_774411
+Ka 0.0 0.0 0.0
+Kd 0.466667 0.266667 0.066667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_774422
+Ka 0.0 0.0 0.0
+Kd 0.466667 0.266667 0.133333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_774433
+Ka 0.0 0.0 0.0
+Kd 0.466667 0.266667 0.200000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_775500
+Ka 0.0 0.0 0.0
+Kd 0.466667 0.333333 0.000000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_775511
+Ka 0.0 0.0 0.0
+Kd 0.466667 0.333333 0.066667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_775522
+Ka 0.0 0.0 0.0
+Kd 0.466667 0.333333 0.133333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_775533
+Ka 0.0 0.0 0.0
+Kd 0.466667 0.333333 0.200000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_775544
+Ka 0.0 0.0 0.0
+Kd 0.466667 0.333333 0.266667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_775555
+Ka 0.0 0.0 0.0
+Kd 0.466667 0.333333 0.333333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_776633
+Ka 0.0 0.0 0.0
+Kd 0.466667 0.400000 0.200000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_776644
+Ka 0.0 0.0 0.0
+Kd 0.466667 0.400000 0.266667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_776655
+Ka 0.0 0.0 0.0
+Kd 0.466667 0.400000 0.333333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_776666
+Ka 0.0 0.0 0.0
+Kd 0.466667 0.400000 0.400000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_776677
+Ka 0.0 0.0 0.0
+Kd 0.466667 0.400000 0.466667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_777766
+Ka 0.0 0.0 0.0
+Kd 0.466667 0.466667 0.400000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_777777
+Ka 0.0 0.0 0.0
+Kd 0.466667 0.466667 0.466667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_777788
+Ka 0.0 0.0 0.0
+Kd 0.466667 0.466667 0.533333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_778877
+Ka 0.0 0.0 0.0
+Kd 0.466667 0.533333 0.466667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_778888
+Ka 0.0 0.0 0.0
+Kd 0.466667 0.533333 0.533333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_778899
+Ka 0.0 0.0 0.0
+Kd 0.466667 0.533333 0.600000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_884422
+Ka 0.0 0.0 0.0
+Kd 0.533333 0.266667 0.133333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_884433
+Ka 0.0 0.0 0.0
+Kd 0.533333 0.266667 0.200000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_885533
+Ka 0.0 0.0 0.0
+Kd 0.533333 0.333333 0.200000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_885544
+Ka 0.0 0.0 0.0
+Kd 0.533333 0.333333 0.266667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_886633
+Ka 0.0 0.0 0.0
+Kd 0.533333 0.400000 0.200000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_886644
+Ka 0.0 0.0 0.0
+Kd 0.533333 0.400000 0.266667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_886655
+Ka 0.0 0.0 0.0
+Kd 0.533333 0.400000 0.333333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_886666
+Ka 0.0 0.0 0.0
+Kd 0.533333 0.400000 0.400000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_887744
+Ka 0.0 0.0 0.0
+Kd 0.533333 0.466667 0.266667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_887755
+Ka 0.0 0.0 0.0
+Kd 0.533333 0.466667 0.333333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_887766
+Ka 0.0 0.0 0.0
+Kd 0.533333 0.466667 0.400000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_887777
+Ka 0.0 0.0 0.0
+Kd 0.533333 0.466667 0.466667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_887788
+Ka 0.0 0.0 0.0
+Kd 0.533333 0.466667 0.533333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_888877
+Ka 0.0 0.0 0.0
+Kd 0.533333 0.533333 0.466667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_888888
+Ka 0.0 0.0 0.0
+Kd 0.533333 0.533333 0.533333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_888899
+Ka 0.0 0.0 0.0
+Kd 0.533333 0.533333 0.600000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_889988
+Ka 0.0 0.0 0.0
+Kd 0.533333 0.600000 0.533333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_889999
+Ka 0.0 0.0 0.0
+Kd 0.533333 0.600000 0.600000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_8899AA
+Ka 0.0 0.0 0.0
+Kd 0.533333 0.600000 0.666667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_995533
+Ka 0.0 0.0 0.0
+Kd 0.600000 0.333333 0.200000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_996644
+Ka 0.0 0.0 0.0
+Kd 0.600000 0.400000 0.266667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_996655
+Ka 0.0 0.0 0.0
+Kd 0.600000 0.400000 0.333333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_997744
+Ka 0.0 0.0 0.0
+Kd 0.600000 0.466667 0.266667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_997755
+Ka 0.0 0.0 0.0
+Kd 0.600000 0.466667 0.333333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_997766
+Ka 0.0 0.0 0.0
+Kd 0.600000 0.466667 0.400000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_997777
+Ka 0.0 0.0 0.0
+Kd 0.600000 0.466667 0.466667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_998855
+Ka 0.0 0.0 0.0
+Kd 0.600000 0.533333 0.333333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_998866
+Ka 0.0 0.0 0.0
+Kd 0.600000 0.533333 0.400000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_998877
+Ka 0.0 0.0 0.0
+Kd 0.600000 0.533333 0.466667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_998888
+Ka 0.0 0.0 0.0
+Kd 0.600000 0.533333 0.533333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_999988
+Ka 0.0 0.0 0.0
+Kd 0.600000 0.600000 0.533333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_999999
+Ka 0.0 0.0 0.0
+Kd 0.600000 0.600000 0.600000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_9999AA
+Ka 0.0 0.0 0.0
+Kd 0.600000 0.600000 0.666667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_99AAAA
+Ka 0.0 0.0 0.0
+Kd 0.600000 0.666667 0.666667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_AA7755
+Ka 0.0 0.0 0.0
+Kd 0.666667 0.466667 0.333333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_AA8855
+Ka 0.0 0.0 0.0
+Kd 0.666667 0.533333 0.333333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_AA8866
+Ka 0.0 0.0 0.0
+Kd 0.666667 0.533333 0.400000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_AA8888
+Ka 0.0 0.0 0.0
+Kd 0.666667 0.533333 0.533333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_AA9988
+Ka 0.0 0.0 0.0
+Kd 0.666667 0.600000 0.533333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_AA9999
+Ka 0.0 0.0 0.0
+Kd 0.666667 0.600000 0.600000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_AAAA99
+Ka 0.0 0.0 0.0
+Kd 0.666667 0.666667 0.600000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_AAAAAA
+Ka 0.0 0.0 0.0
+Kd 0.666667 0.666667 0.666667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_AABBBB
+Ka 0.0 0.0 0.0
+Kd 0.666667 0.733333 0.733333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_BB8866
+Ka 0.0 0.0 0.0
+Kd 0.733333 0.533333 0.400000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_BB9966
+Ka 0.0 0.0 0.0
+Kd 0.733333 0.600000 0.400000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_BBAA99
+Ka 0.0 0.0 0.0
+Kd 0.733333 0.666667 0.600000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_BBAAAA
+Ka 0.0 0.0 0.0
+Kd 0.733333 0.666667 0.666667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_BBBBAA
+Ka 0.0 0.0 0.0
+Kd 0.733333 0.733333 0.666667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_BBBBBB
+Ka 0.0 0.0 0.0
+Kd 0.733333 0.733333 0.733333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_BBBBCC
+Ka 0.0 0.0 0.0
+Kd 0.733333 0.733333 0.800000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_BBCCCC
+Ka 0.0 0.0 0.0
+Kd 0.733333 0.800000 0.800000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_CC9966
+Ka 0.0 0.0 0.0
+Kd 0.800000 0.600000 0.400000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_CCCCCC
+Ka 0.0 0.0 0.0
+Kd 0.800000 0.800000 0.800000
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_DDDDDD
+Ka 0.0 0.0 0.0
+Kd 0.866667 0.866667 0.866667
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0
+
+newmtl RGB_EEEEEE
+Ka 0.0 0.0 0.0
+Kd 0.933333 0.933333 0.933333
+Ks 0.0 0.0 0.0
+Ns 10.0
+illum 2
+map_Kd #texture0

@@ -69,7 +69,8 @@ public final class BlueprintLearningService {
                 BlueprintUnlockOrigin.PHYSICAL_BLUEPRINT,
                 blueprintId,
                 config.blueprintsEnabled(),
-                DEFAULT_PHYSICAL_BLUEPRINT_MODE,
+                BlueprintItem.physicalLearningMode(
+                        physicalBlueprint, DEFAULT_PHYSICAL_BLUEPRINT_MODE),
                 BlueprintProgressionAccess.isProgressionExempt(blueprintId));
         Preparation preparation = prepare(
                 request,

@@ -7,6 +7,7 @@ import java.util.function.Supplier;
 import org.jetbrains.annotations.NotNull;
 
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
+import com.gamergaming.taczweaponblueprints.item.BlueprintFragmentItem;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintLootDataManager;
@@ -55,7 +56,8 @@ public final class DynamicBlueprintLootModifier extends LootModifier {
         }
 
         int existingBlueprints = (int) generatedLoot.stream()
-                .filter(stack -> stack.getItem() instanceof BlueprintItem)
+                .filter(stack -> stack.getItem() instanceof BlueprintItem
+                        || stack.getItem() instanceof BlueprintFragmentItem)
                 .count();
         int remainingBudget = BlueprintLootSelector.remainingBlueprintBudget(existingBlueprints);
         Map<ResourceLocation, BlueprintData> catalog = BlueprintDataManager.SERVER.getBlueprintDataMap();
@@ -71,6 +73,7 @@ public final class DynamicBlueprintLootModifier extends LootModifier {
                     binding,
                     context.getLevel().dimension().location(),
                     context.getLuck(),
+                    context,
                     defaults,
                     random,
                     remainingBudget);
@@ -85,6 +88,7 @@ public final class DynamicBlueprintLootModifier extends LootModifier {
             BlueprintLootSnapshot.RuleBinding binding,
             ResourceLocation dimension,
             float luck,
+            LootContext context,
             BlueprintLootPolicyResolver.RuntimeDefaults defaults,
             RandomSource random,
             int remainingBudget) {
@@ -111,11 +115,24 @@ public final class DynamicBlueprintLootModifier extends LootModifier {
         rollCount = BlueprintLootSelector.constrainRollsToBudget(rollCount, remainingBudget);
 
         int added = 0;
+        BlueprintFragmentLootResolver.Plan fragmentPlan = BlueprintFragmentLootResolver.resolveRuntime(
+                policy.candidates().stream()
+                        .map(candidate -> new BlueprintFragmentLootResolver.WeightedTarget(
+                                candidate.blueprintId(), candidate.weight()))
+                        .toList(),
+                context);
         for (int i = 0; i < rollCount; i++) {
-            var selected = policy.select(random.nextFloat());
+            boolean replaceWithFragment = fragmentPlan.canReplace()
+                    && fragmentPlan.shouldReplace(
+                            random.nextInt(BlueprintFragmentLootResolver.BASIS_POINTS));
+            var selected = replaceWithFragment
+                    ? fragmentPlan.select(random.nextFloat())
+                    : policy.select(random.nextFloat());
             if (selected.isPresent()) {
                 ResourceLocation blueprintId = selected.get();
-                generatedLoot.add(BlueprintItem.createBlueprint(blueprintId.toString()));
+                generatedLoot.add(replaceWithFragment
+                        ? BlueprintFragmentItem.create(blueprintId)
+                        : BlueprintItem.createBlueprint(blueprintId.toString()));
                 added++;
             }
         }

@@ -349,7 +349,11 @@ class BlueprintResearchSnapshotTest {
                     Map.of(id("taczweaponblueprints:default"), automatic));
 
             assertEquals(1, loaded.profiles().size());
-            assertEquals(2, packaged.format());
+            assertEquals(BlueprintResearchProfile.CURRENT_FORMAT, packaged.format());
+            assertEquals(
+                    com.gamergaming.taczweaponblueprints.progression.workbench
+                            .ResearchWorkbenchTier.TIER_2,
+                    packaged.progression().fallbackTiers().researchTier());
             assertEquals(BlueprintResearchProfile.DomainPolicy.ENABLED,
                     packaged.domainPolicy(com.gamergaming.taczweaponblueprints.research.tree
                             .ResearchTechTreeContract.Domain.WEAPONS));

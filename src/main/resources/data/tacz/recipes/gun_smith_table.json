@@ -1,0 +1,34 @@
+{
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:false"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "pattern": [
+          "LLL",
+          "IBI",
+          "I I"
+        ],
+        "key": {
+          "L": {
+            "tag": "minecraft:logs"
+          },
+          "I": {
+            "tag": "forge:ingots/iron"
+          },
+          "B": {
+            "item": "minecraft:iron_block"
+          }
+        },
+        "result": {
+          "item": "tacz:gun_smith_table"
+        }
+      }
+    }
+  ]
+}

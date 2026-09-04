@@ -22,6 +22,8 @@ import me.fzzyhmstrs.fzzy_config.validation.misc.ChoiceValidator;
 import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedString;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.network.chat.Component;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
  * Resource-ID text entry that can match catalog suggestions by either their
@@ -54,6 +56,7 @@ public final class BlueprintIdAutocompleteString extends ValidatedString {
     }
 
     @Override
+    @OnlyIn(Dist.CLIENT)
     public AbstractWidget widgetEntry(ChoiceValidator<String> choicePredicate) {
         List<BlueprintIdSuggestion> snapshot = suggestionSnapshot();
         return new SuggestionBackedTextFieldWidget(

@@ -26,6 +26,16 @@ public final class ClientModEvents {
             MenuScreens.register(ModMenus.RESEARCH_BENCH.get(), ResearchBenchScreen::new);
             MenuScreens.register(ModMenus.BLUEPRINT_RECYCLER.get(), BlueprintRecyclerScreen::new);
             ItemBlockRenderTypes.setRenderLayer(ModBlocks.RESEARCH_BENCH.get(), RenderType.cutout());
+            ItemBlockRenderTypes.setRenderLayer(
+                    ModBlocks.ADVANCED_RESEARCH_BENCH.get(), RenderType.cutout());
+            ItemBlockRenderTypes.setRenderLayer(
+                    ModBlocks.EXPERIMENTAL_RESEARCH_BENCH.get(), RenderType.cutout());
+            ItemBlockRenderTypes.setRenderLayer(
+                    ModBlocks.WORKBENCH_LVL1.get(), RenderType.cutout());
+            ItemBlockRenderTypes.setRenderLayer(
+                    ModBlocks.WORKBENCH_LVL2.get(), RenderType.cutout());
+            ItemBlockRenderTypes.setRenderLayer(
+                    ModBlocks.WORKBENCH_LVL3.get(), RenderType.cutout());
         });
     }
 }

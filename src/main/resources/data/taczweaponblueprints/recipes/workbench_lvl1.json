@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IPI",
+    "PCP",
+    "PPP"
+  ],
+  "key": {
+    "I": { "item": "minecraft:iron_ingot" },
+    "P": { "item": "minecraft:spruce_planks" },
+    "C": { "item": "minecraft:crafting_table" }
+  },
+  "result": { "item": "taczweaponblueprints:workbench_lvl1" },
+  "show_notification": true
+}

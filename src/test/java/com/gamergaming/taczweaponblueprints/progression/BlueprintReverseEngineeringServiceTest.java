@@ -209,6 +209,28 @@ class BlueprintReverseEngineeringServiceTest {
         assertTrue(BlueprintProvenance.allowsRecycling(transaction.output.getTag()));
     }
 
+    @Test
+    void reconstructedBlueprintProvenanceCannotRecycleOrBypassTreePrerequisites() {
+        BlueprintProvenance reconstructed = BlueprintProvenance.fragmentReconstructed();
+        CompoundTag root = new CompoundTag();
+        root.put(BlueprintProvenance.TAG_KEY, reconstructed.toTag());
+
+        assertEquals(
+                BlueprintProvenance.Source.FRAGMENT_RECONSTRUCTION,
+                BlueprintProvenance.fromTag(root).orElseThrow().source());
+        assertFalse(BlueprintProvenance.allowsRecycling(root));
+        assertEquals(
+                PhysicalBlueprintLearningMode.REQUIRE_TREE_PREREQUISITES,
+                BlueprintProvenance.learningMode(
+                        root, PhysicalBlueprintLearningMode.BYPASS_TREE_PREREQUISITES));
+
+        root.getCompound(BlueprintProvenance.TAG_KEY).putString("source", "invalid");
+        assertEquals(
+                PhysicalBlueprintLearningMode.DISABLED,
+                BlueprintProvenance.learningMode(
+                        root, PhysicalBlueprintLearningMode.BYPASS_TREE_PREREQUISITES));
+    }
+
     private static BlueprintReverseEngineeringService.Evaluation evaluate(
             TestTransaction transaction,
             PlayerRecipeData data,

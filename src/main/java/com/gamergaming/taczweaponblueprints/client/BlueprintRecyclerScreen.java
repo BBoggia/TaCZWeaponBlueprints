@@ -440,6 +440,24 @@ public final class BlueprintRecyclerScreen
     }
 
     private Component summary(BlueprintRecyclerPreview preview) {
+        if (preview.inputKind() == BlueprintRecyclerPreview.InputKind.BLUEPRINT_FRAGMENT) {
+            var fragment = preview.fragmentEvaluation().orElseThrow();
+            if (fragment.awardedPoints() > 0) {
+                return Component.translatable(
+                        "gui.taczweaponblueprints.blueprint_recycler.fragment.summary_rp",
+                        fragment.archivedBefore(),
+                        fragment.archivedAfterAction(),
+                        fragment.threshold(),
+                        fragment.awardedPoints());
+            }
+            return Component.translatable(
+                    fragment.createsBlueprint()
+                            ? "gui.taczweaponblueprints.blueprint_recycler.fragment.summary_reconstruct"
+                            : "gui.taczweaponblueprints.blueprint_recycler.fragment.summary",
+                    fragment.archivedBefore(),
+                    fragment.archivedAfterDeposit(),
+                    fragment.threshold());
+        }
         if (preview.inputKind() == BlueprintRecyclerPreview.InputKind.PHYSICAL_ITEM) {
             if (preview.recoveryPointValue() > 0) {
                 return Component.translatable(

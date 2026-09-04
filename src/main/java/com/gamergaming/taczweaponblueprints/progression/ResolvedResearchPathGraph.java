@@ -85,7 +85,7 @@ final class ResolvedResearchPathGraph {
                             limits.emergencyTimeoutNanos()),
                     nanoClock);
             inputs = new ResearchPathUnlockPlanner.RequestInputs(
-                    policyResolver, progressionExempt, budget);
+                    policyResolver, progressionExempt, ignored -> true, budget);
         } catch (RuntimeException exception) {
             return Result.failure(
                     BlueprintResearchService.Status.POLICY_UNAVAILABLE,
@@ -96,6 +96,7 @@ final class ResolvedResearchPathGraph {
                 playerData,
                 inputs.policyResolver(),
                 inputs.progressionExempt(),
+                inputs.pendingNodeEligible(),
                 authority,
                 limits,
                 budget);
@@ -106,11 +107,13 @@ final class ResolvedResearchPathGraph {
             IPlayerRecipeData playerData,
             Function<ResourceLocation, BlueprintResearchPolicy> policyResolver,
             Predicate<ResourceLocation> progressionExempt,
+            Predicate<ResourceLocation> pendingNodeEligible,
             ResearchPathAuthority authority,
             BuildLimits limits,
             ResearchPathUnlockPlanner.PlanningBudget budget) {
         if (!validId(targetId) || playerData == null || policyResolver == null
-                || progressionExempt == null || authority == null || limits == null
+                || progressionExempt == null || pendingNodeEligible == null
+                || authority == null || limits == null
                 || budget == null) {
             return Result.failure(
                     BlueprintResearchService.Status.INVALID_INPUT,
@@ -127,6 +130,7 @@ final class ResolvedResearchPathGraph {
                     playerData,
                     policyResolver,
                     progressionExempt,
+                    pendingNodeEligible,
                     authority,
                     limits,
                     budget).build();
@@ -414,6 +418,7 @@ final class ResolvedResearchPathGraph {
         private final IPlayerRecipeData playerData;
         private final Function<ResourceLocation, BlueprintResearchPolicy> policyResolver;
         private final Predicate<ResourceLocation> progressionExempt;
+        private final Predicate<ResourceLocation> pendingNodeEligible;
         private final ResearchPathAuthority authority;
         private final BuildLimits limits;
         private final ResearchPathUnlockPlanner.PlanningBudget budget;
@@ -430,6 +435,7 @@ final class ResolvedResearchPathGraph {
                 IPlayerRecipeData playerData,
                 Function<ResourceLocation, BlueprintResearchPolicy> policyResolver,
                 Predicate<ResourceLocation> progressionExempt,
+                Predicate<ResourceLocation> pendingNodeEligible,
                 ResearchPathAuthority authority,
                 BuildLimits limits,
                 ResearchPathUnlockPlanner.PlanningBudget budget) {
@@ -437,6 +443,7 @@ final class ResolvedResearchPathGraph {
             this.playerData = playerData;
             this.policyResolver = policyResolver;
             this.progressionExempt = progressionExempt;
+            this.pendingNodeEligible = pendingNodeEligible;
             this.authority = authority;
             this.limits = limits;
             this.budget = budget;
@@ -510,6 +517,10 @@ final class ResolvedResearchPathGraph {
                                 progressionExempt);
                 if (status == null) {
                     status = authority.validate(policy).orElse(null);
+                }
+                if (status == null && !policy.learned()
+                        && !pendingNodeEligible.test(blueprintId)) {
+                    status = BlueprintResearchService.Status.POLICY_INELIGIBLE;
                 }
                 draft.policy = policy;
                 draft.status = status;

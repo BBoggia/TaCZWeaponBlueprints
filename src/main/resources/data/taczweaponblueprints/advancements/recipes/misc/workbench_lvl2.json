@@ -1,0 +1,11 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_blast_furnace": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": { "items": [{ "items": ["minecraft:blast_furnace"] }] }
+    }
+  },
+  "requirements": [["has_blast_furnace"]],
+  "rewards": { "recipes": ["taczweaponblueprints:workbench_lvl2"] }
+}

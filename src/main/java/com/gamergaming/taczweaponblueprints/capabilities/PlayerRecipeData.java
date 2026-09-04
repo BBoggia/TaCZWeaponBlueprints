@@ -5,7 +5,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 import net.minecraft.nbt.CompoundTag;
@@ -27,6 +29,10 @@ public class PlayerRecipeData implements IPlayerRecipeData {
     private static final String RESEARCH_POINT_AWARDS_TAG = "ResearchPointAwards";
     private static final String RECENT_UNLOCKS_TAG = "RecentUnlocks";
     private static final String RECENT_UNLOCK_SEQUENCE_TAG = "RecentUnlockSequence";
+    private static final String ARCHIVED_FRAGMENTS_TAG = "ArchivedBlueprintFragments";
+    private static final String PROGRESSION_CRITERIA_TAG = "ProgressionCriteria";
+    private static final String PROGRESS_ID_TAG = "Id";
+    private static final String PROGRESS_VALUE_TAG = "Value";
     private static final String SEQUENCE_TAG = "Sequence";
     private static final String SOURCE_TAG = "Source";
     private static final String TARGET_TAG = "Target";
@@ -39,6 +45,8 @@ public class PlayerRecipeData implements IPlayerRecipeData {
     private final ResearchPointAwardLedger researchPointAwardLedger =
             new ResearchPointAwardLedger();
     private final List<RecentBlueprintUnlockBatch> recentUnlockBatches = new ArrayList<>();
+    private final Map<String, Integer> archivedBlueprintFragments = new TreeMap<>();
+    private final Map<String, Integer> progressionCriteria = new TreeMap<>();
     private int researchPoints;
     private long recentUnlockSequence;
 
@@ -87,6 +95,68 @@ public class PlayerRecipeData implements IPlayerRecipeData {
     @Override
     public List<RecentBlueprintUnlockBatch> getRecentUnlockBatches() {
         return List.copyOf(recentUnlockBatches);
+    }
+
+    @Override
+    public synchronized Map<String, Integer> getArchivedBlueprintFragments() {
+        return Collections.unmodifiableMap(new TreeMap<>(archivedBlueprintFragments));
+    }
+
+    @Override
+    public synchronized Map<String, Integer> getProgressionCriteria() {
+        return Collections.unmodifiableMap(new TreeMap<>(progressionCriteria));
+    }
+
+    @Override
+    public synchronized PlayerProgressValueMutation.Result applyArchivedFragmentMutation(
+            PlayerProgressValueMutation.Request request) {
+        return applyProgressMutation(
+                archivedBlueprintFragments,
+                PlayerProgressionLimits.MAX_FRAGMENT_TARGETS,
+                request);
+    }
+
+    @Override
+    public synchronized PlayerProgressValueMutation.Result applyProgressionCriterionMutation(
+            PlayerProgressValueMutation.Request request) {
+        return applyProgressMutation(
+                progressionCriteria,
+                PlayerProgressionLimits.MAX_PROGRESSION_CRITERIA,
+                request);
+    }
+
+    @Override
+    public synchronized boolean replaceSupplementalProgression(
+            Map<String, Integer> archivedFragments,
+            Map<String, Integer> criteria) {
+        Map<String, Integer> fragmentSnapshot = normalizedProgressSnapshot(
+                archivedFragments,
+                PlayerProgressionLimits.MAX_FRAGMENT_TARGETS);
+        Map<String, Integer> criterionSnapshot = normalizedProgressSnapshot(
+                criteria,
+                PlayerProgressionLimits.MAX_PROGRESSION_CRITERIA);
+        if (fragmentSnapshot == null || criterionSnapshot == null) {
+            return false;
+        }
+        archivedBlueprintFragments.clear();
+        archivedBlueprintFragments.putAll(fragmentSnapshot);
+        progressionCriteria.clear();
+        progressionCriteria.putAll(criterionSnapshot);
+        return true;
+    }
+
+    @Override
+    public synchronized boolean clearArchivedBlueprintFragments() {
+        boolean changed = !archivedBlueprintFragments.isEmpty();
+        archivedBlueprintFragments.clear();
+        return changed;
+    }
+
+    @Override
+    public synchronized boolean clearProgressionCriteria() {
+        boolean changed = !progressionCriteria.isEmpty();
+        progressionCriteria.clear();
+        return changed;
     }
 
     @Override
@@ -384,6 +454,8 @@ public class PlayerRecipeData implements IPlayerRecipeData {
             recentUnlocks.add(value);
         }
         nbt.put(RECENT_UNLOCKS_TAG, recentUnlocks);
+        nbt.put(ARCHIVED_FRAGMENTS_TAG, writeProgressMap(archivedBlueprintFragments));
+        nbt.put(PROGRESSION_CRITERIA_TAG, writeProgressMap(progressionCriteria));
         return nbt;
     }
 
@@ -394,6 +466,8 @@ public class PlayerRecipeData implements IPlayerRecipeData {
         discoveredBlueprints.clear();
         researchPointAwardLedger.clear();
         recentUnlockBatches.clear();
+        archivedBlueprintFragments.clear();
+        progressionCriteria.clear();
         recentUnlockSequence = 0L;
         researchPoints = 0;
         if (nbt == null) {
@@ -429,6 +503,16 @@ public class PlayerRecipeData implements IPlayerRecipeData {
         if (dataVersion >= 3) {
             readRecentUnlockHistory(nbt);
         }
+        if (dataVersion >= 4) {
+            archivedBlueprintFragments.putAll(readProgressMap(
+                    nbt,
+                    ARCHIVED_FRAGMENTS_TAG,
+                    PlayerProgressionLimits.MAX_FRAGMENT_TARGETS));
+            progressionCriteria.putAll(readProgressMap(
+                    nbt,
+                    PROGRESSION_CRITERIA_TAG,
+                    PlayerProgressionLimits.MAX_PROGRESSION_CRITERIA));
+        }
 
     }
 
@@ -437,7 +521,8 @@ public class PlayerRecipeData implements IPlayerRecipeData {
     }
 
     public static String normalizeResourceId(String resourceId) {
-        if (resourceId == null || resourceId.length() > PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH) {
+        if (resourceId == null || resourceId.isBlank()
+                || resourceId.length() > PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH) {
             return null;
         }
         ResourceLocation parsedId = ResourceLocation.tryParse(resourceId);
@@ -479,6 +564,111 @@ public class PlayerRecipeData implements IPlayerRecipeData {
         ListTag list = new ListTag();
         values.forEach(value -> list.add(StringTag.valueOf(value)));
         return list;
+    }
+
+    private static ListTag writeProgressMap(Map<String, Integer> values) {
+        ListTag list = new ListTag();
+        new TreeMap<>(values).forEach((id, value) -> {
+            CompoundTag entry = new CompoundTag();
+            entry.putString(PROGRESS_ID_TAG, id);
+            entry.putInt(PROGRESS_VALUE_TAG, value);
+            list.add(entry);
+        });
+        return list;
+    }
+
+    private static Map<String, Integer> readProgressMap(
+            CompoundTag nbt,
+            String key,
+            int maximumEntries) {
+        if (!nbt.contains(key, Tag.TAG_LIST)) {
+            return Map.of();
+        }
+        ListTag list = nbt.getList(key, Tag.TAG_COMPOUND);
+        if (list.size() > PlayerProgressionLimits.MAX_PERSISTED_PROGRESS_ENTRIES_TO_INSPECT) {
+            return Map.of();
+        }
+        TreeMap<String, Integer> normalized = new TreeMap<>();
+        for (int index = 0; index < list.size(); index++) {
+            CompoundTag entry = list.getCompound(index);
+            String id = normalizeResourceId(entry.getString(PROGRESS_ID_TAG));
+            if (id == null || !entry.contains(PROGRESS_VALUE_TAG, Tag.TAG_ANY_NUMERIC)) {
+                continue;
+            }
+            long rawValue = entry.getLong(PROGRESS_VALUE_TAG);
+            if (rawValue <= 0L) {
+                continue;
+            }
+            int value = rawValue >= PlayerProgressionLimits.MAX_PROGRESS_VALUE
+                    ? PlayerProgressionLimits.MAX_PROGRESS_VALUE
+                    : (int) rawValue;
+            normalized.merge(id, value, Math::max);
+        }
+        while (normalized.size() > maximumEntries) {
+            normalized.pollLastEntry();
+        }
+        return normalized;
+    }
+
+    private static PlayerProgressValueMutation.Result applyProgressMutation(
+            Map<String, Integer> values,
+            int maximumEntries,
+            PlayerProgressValueMutation.Request request) {
+        if (request == null) {
+            throw new IllegalArgumentException("progress mutation cannot be null");
+        }
+        String id = normalizeResourceId(request.progressId());
+        if (id == null) {
+            return PlayerProgressValueMutation.Result.rejected(
+                    PlayerProgressValueMutation.Status.INVALID_IDENTITY,
+                    request,
+                    0);
+        }
+        int current = values.getOrDefault(id, 0);
+        if (current != request.expectedValue()) {
+            return PlayerProgressValueMutation.Result.rejected(
+                    PlayerProgressValueMutation.Status.STALE,
+                    request,
+                    current);
+        }
+        if (current == request.resultingValue()) {
+            return PlayerProgressValueMutation.Result.unchanged(request, current);
+        }
+        if (current == 0 && request.resultingValue() > 0
+                && values.size() >= maximumEntries) {
+            return PlayerProgressValueMutation.Result.rejected(
+                    PlayerProgressValueMutation.Status.CAPACITY_REACHED,
+                    request,
+                    current);
+        }
+        if (request.operation() == PlayerProgressValueMutation.Operation.PREFLIGHT) {
+            return PlayerProgressValueMutation.Result.ready(request, current);
+        }
+        if (request.resultingValue() == 0) {
+            values.remove(id);
+        } else {
+            values.put(id, request.resultingValue());
+        }
+        return PlayerProgressValueMutation.Result.changed(request, current);
+    }
+
+    private static Map<String, Integer> normalizedProgressSnapshot(
+            Map<String, Integer> values,
+            int maximumEntries) {
+        if (values == null || values.size() > maximumEntries) {
+            return null;
+        }
+        TreeMap<String, Integer> normalized = new TreeMap<>();
+        for (Map.Entry<String, Integer> entry : values.entrySet()) {
+            String id = normalizeResourceId(entry.getKey());
+            Integer value = entry.getValue();
+            if (id == null || value == null || value <= 0
+                    || value > PlayerProgressionLimits.MAX_PROGRESS_VALUE
+                    || normalized.putIfAbsent(id, value) != null) {
+                return null;
+            }
+        }
+        return normalized;
     }
 
     private void readRecentUnlockHistory(CompoundTag nbt) {

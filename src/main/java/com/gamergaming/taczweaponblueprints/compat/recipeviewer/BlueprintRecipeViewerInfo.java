@@ -49,6 +49,7 @@ public final class BlueprintRecipeViewerInfo {
 
     public enum Topic {
         RESEARCH_BENCH("research_bench", 3),
+        CRAFTING_WORKBENCH("crafting_workbench", 4),
         BLUEPRINT_ANALYZER("blueprint_analyzer", 3),
         BLUEPRINT("blueprint", 2),
         RESEARCH_DATA("research_data", 2);

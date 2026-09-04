@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:block",
+  "pools": [{
+    "rolls": 1,
+    "entries": [{ "type": "minecraft:item", "name": "taczweaponblueprints:workbench_lvl1" }],
+    "conditions": [
+      { "condition": "minecraft:block_state_property", "block": "taczweaponblueprints:workbench_lvl1", "properties": { "extension": "false" } },
+      { "condition": "minecraft:survives_explosion" }
+    ]
+  }]
+}

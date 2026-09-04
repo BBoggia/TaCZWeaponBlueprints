@@ -1,8 +1,10 @@
 package com.gamergaming.taczweaponblueprints.progression;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -13,6 +15,7 @@ import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.capabilities.BlueprintLearningMutation;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
+import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressValueMutation;
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
@@ -20,6 +23,11 @@ import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintLearningService.LearningTarget;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintLearningService.Preparation;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintLearningService.PreparedLearning;
+import com.gamergaming.taczweaponblueprints.progression.eligibility.ResearchAccessSummary;
+import com.gamergaming.taczweaponblueprints.progression.eligibility.ResearchRouteEligibilityService;
+import com.gamergaming.taczweaponblueprints.progression.fragment.BlueprintFragmentResearchService;
+import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchAuthority;
+import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchContext;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchDataManager;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchPolicy;
@@ -35,21 +43,59 @@ public final class BlueprintResearchService {
 
     /** Researches directly from the player's main inventory and hotbar. */
     public static Result researchFromInventory(ServerPlayer player, ResourceLocation blueprintId) {
+        return Result.failure(
+                Status.WORKBENCH_TIER_REQUIRED,
+                Optional.ofNullable(blueprintId),
+                player == null ? 0 : player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
+                        .map(IPlayerRecipeData::getResearchPoints).orElse(0),
+                TreeResearchResultMode.DIRECT_LEARN);
+    }
+
+    /** Researches with a live, server-derived Research Bench context. */
+    public static Result researchFromInventory(
+            ServerPlayer player,
+            ResourceLocation blueprintId,
+            ResearchWorkbenchContext workbenchContext) {
         if (player == null || !player.isAlive() || !validId(blueprintId)) {
             return Result.failure(Status.INVALID_INPUT, Optional.ofNullable(blueprintId), 0);
         }
-        return research(player, blueprintId, playerInventoryInput(player));
+        if (!ResearchWorkbenchAuthority.validForResearch(player, workbenchContext)) {
+            return Result.failure(
+                    Status.WORKBENCH_TIER_REQUIRED,
+                    Optional.of(blueprintId),
+                    player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
+                            .map(IPlayerRecipeData::getResearchPoints).orElse(0),
+                    TreeResearchResultMode.DIRECT_LEARN);
+        }
+        return research(
+                player,
+                blueprintId,
+                playerInventoryInput(player),
+                workbenchContext);
     }
 
     /**
      * Commits the exact direct-learning path prepared and fingerprinted by the
      * open Research Bench. Economic state and learning capacity are still
-     * rechecked atomically; route selection is deliberately not repeated.
+     * rechecked atomically, including route selection against current policy.
      */
     public static Result researchPreparedPathFromInventory(
             ServerPlayer player,
             ResourceLocation blueprintId,
             ResearchPathUnlockPlanner.Plan preparedPath) {
+        return Result.failure(
+                Status.WORKBENCH_TIER_REQUIRED,
+                Optional.ofNullable(blueprintId),
+                player == null ? 0 : player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
+                        .map(IPlayerRecipeData::getResearchPoints).orElse(0),
+                TreeResearchResultMode.DIRECT_LEARN);
+    }
+
+    public static Result researchPreparedPathFromInventory(
+            ServerPlayer player,
+            ResourceLocation blueprintId,
+            ResearchPathUnlockPlanner.Plan preparedPath,
+            ResearchWorkbenchContext workbenchContext) {
         if (player == null || !player.isAlive() || !validId(blueprintId)
                 || preparedPath == null
                 || preparedPath.nodes().isEmpty()
@@ -73,6 +119,13 @@ public final class BlueprintResearchService {
                     TreeResearchResultMode.DIRECT_LEARN);
         }
         IPlayerRecipeData playerData = resolvedData.orElseThrow();
+        if (!ResearchWorkbenchAuthority.validForResearch(player, workbenchContext)) {
+            return Result.failure(
+                    Status.WORKBENCH_TIER_REQUIRED,
+                    Optional.of(blueprintId),
+                    playerData.getResearchPoints(),
+                    TreeResearchResultMode.DIRECT_LEARN);
+        }
         BlueprintProgressionConfigSnapshot config =
                 ModConfigs.BLUEPRINT.progressionSnapshot();
         if (!config.treeResearchResultMode().learnsDirectly()) {
@@ -82,10 +135,56 @@ public final class BlueprintResearchService {
                     playerData.getResearchPoints(),
                     TreeResearchResultMode.DIRECT_LEARN);
         }
+        ResearchPathUnlockPlanner.Plan currentPath;
+        try {
+            BlueprintResearchDataManager.ResearchPlanningAccess planningAccess =
+                    BlueprintResearchDataManager.INSTANCE.planningAccessFor(playerData);
+            ResearchPathUnlockPlanner.Result replanned = ResearchPathUnlockPlanner.plan(
+                    blueprintId,
+                    playerData,
+                    planningAccess.policyResolver(),
+                    planningAccess.progressionExempt(),
+                    player.isCreative(),
+                    playerInventoryInput(player).stacks(),
+                    planningAccess.authority(),
+                    pendingNodeEligibility(player, playerData, workbenchContext));
+            if (!replanned.successful()) {
+                return Result.failure(
+                        replanned.status(),
+                        Optional.of(blueprintId),
+                        playerData.getResearchPoints(),
+                        TreeResearchResultMode.DIRECT_LEARN);
+            }
+            currentPath = BlueprintFragmentResearchService.adjustRuntimePlan(
+                    replanned.plan().orElseThrow(), playerData);
+        } catch (RuntimeException exception) {
+            return Result.failure(
+                    Status.POLICY_UNAVAILABLE,
+                    Optional.of(blueprintId),
+                    playerData.getResearchPoints(),
+                    TreeResearchResultMode.DIRECT_LEARN);
+        }
+        if (!currentPath.equals(preparedPath)) {
+            return Result.failure(
+                    Status.STALE_POLICY,
+                    Optional.of(blueprintId),
+                    playerData.getResearchPoints(),
+                    TreeResearchResultMode.DIRECT_LEARN);
+        }
+        ResearchRouteEligibilityService.Evaluation access =
+                ResearchRouteEligibilityService.evaluate(
+                        player, currentPath, workbenchContext);
+        if (!access.eligible()) {
+            return Result.failure(
+                    accessFailure(access.summary()),
+                    Optional.of(blueprintId),
+                    playerData.getResearchPoints(),
+                    TreeResearchResultMode.DIRECT_LEARN);
+        }
         Result result = commitPreparedPath(
                 blueprintId,
                 playerData,
-                preparedPath,
+                currentPath,
                 id -> BlueprintLearningService.targetFromCatalog(
                         BlueprintDataManager.SERVER, id),
                 playerInventoryInput(player),
@@ -156,7 +255,8 @@ public final class BlueprintResearchService {
     private static Result research(
             ServerPlayer player,
             ResourceLocation blueprintId,
-            ResearchInput input) {
+            ResearchInput input,
+            ResearchWorkbenchContext workbenchContext) {
         Optional<IPlayerRecipeData> resolvedData =
                 player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve();
         if (resolvedData.isEmpty()) {
@@ -220,8 +320,12 @@ public final class BlueprintResearchService {
                         player.isCreative(),
                         config.blueprintsEnabled(),
                         pathProgressionExempt,
-                        pathAuthority)
-                : research(
+                        pathAuthority,
+                        player,
+                        workbenchContext)
+                : researchSingleWithAccess(
+                        player,
+                        workbenchContext,
                         blueprintId,
                         playerData,
                         policyResolver,
@@ -283,6 +387,32 @@ public final class BlueprintResearchService {
             boolean blueprintsEnabled,
             Predicate<ResourceLocation> progressionExempt,
             ResearchPathAuthority authority) {
+        return researchPath(
+                blueprintId,
+                playerData,
+                policyResolver,
+                targetResolver,
+                input,
+                creativePlayer,
+                blueprintsEnabled,
+                progressionExempt,
+                authority,
+                null,
+                null);
+    }
+
+    private static Result researchPath(
+            ResourceLocation blueprintId,
+            IPlayerRecipeData playerData,
+            Function<ResourceLocation, BlueprintResearchPolicy> policyResolver,
+            Function<ResourceLocation, LearningTarget> targetResolver,
+            ResearchInput input,
+            boolean creativePlayer,
+            boolean blueprintsEnabled,
+            Predicate<ResourceLocation> progressionExempt,
+            ResearchPathAuthority authority,
+            ServerPlayer player,
+            ResearchWorkbenchContext workbenchContext) {
         Optional<ResourceLocation> id = Optional.ofNullable(blueprintId)
                 .filter(BlueprintResearchService::validId);
         if (id.isEmpty() || input == null || progressionExempt == null || authority == null) {
@@ -331,7 +461,8 @@ public final class BlueprintResearchService {
                 progressionExempt,
                 creativePlayer,
                 inputSnapshot,
-                authority);
+                authority,
+                pendingNodeEligibility(player, playerData, workbenchContext));
         if (!planned.successful()) {
             return Result.failure(
                     planned.status(),
@@ -339,10 +470,33 @@ public final class BlueprintResearchService {
                     playerData.getResearchPoints(),
                     TreeResearchResultMode.DIRECT_LEARN);
         }
+        ResearchPathUnlockPlanner.Plan adjustedPath = player == null
+                ? planned.plan().orElseThrow()
+                : BlueprintFragmentResearchService.adjustRuntimePlan(
+                        planned.plan().orElseThrow(), playerData);
+        if (player != null) {
+            if (!ResearchWorkbenchAuthority.validForResearch(player, workbenchContext)) {
+                return Result.failure(
+                        Status.WORKBENCH_TIER_REQUIRED,
+                        id,
+                        playerData.getResearchPoints(),
+                        TreeResearchResultMode.DIRECT_LEARN);
+            }
+            ResearchRouteEligibilityService.Evaluation access =
+                    ResearchRouteEligibilityService.evaluate(
+                            player, adjustedPath, workbenchContext);
+            if (!access.eligible()) {
+                return Result.failure(
+                        accessFailure(access.summary()),
+                        id,
+                        playerData.getResearchPoints(),
+                        TreeResearchResultMode.DIRECT_LEARN);
+            }
+        }
         return commitPath(
                 blueprintId,
                 playerData,
-                planned.plan().orElseThrow(),
+                adjustedPath,
                 targetResolver,
                 input,
                 inputSnapshot,
@@ -479,6 +633,33 @@ public final class BlueprintResearchService {
             targets.add(target);
         }
 
+        for (ResearchPathUnlockPlanner.FragmentSetUse setUse
+                : transaction.fragmentSetUses()) {
+            PlayerProgressValueMutation.Result preflight;
+            try {
+                preflight = playerData.applyArchivedFragmentMutation(
+                        PlayerProgressValueMutation.Request.preflight(
+                                setUse.blueprintId().toString(),
+                                setUse.archivedBefore(),
+                                setUse.archivedAfter()));
+            } catch (RuntimeException exception) {
+                return Result.failure(
+                        Status.TRANSACTION_FAILED,
+                        id,
+                        currentPoints,
+                        TreeResearchResultMode.DIRECT_LEARN);
+            }
+            if (!preflight.successful()) {
+                return Result.failure(
+                        preflight.status() == PlayerProgressValueMutation.Status.CAPACITY_REACHED
+                                ? Status.PROGRESSION_CAPACITY_EXHAUSTED
+                                : Status.STALE_POLICY,
+                        id,
+                        currentPoints,
+                        TreeResearchResultMode.DIRECT_LEARN);
+            }
+        }
+
         if (quote.pointCost() > 0 && !playerData.spendResearchPoints(quote.pointCost())) {
             return Result.failure(
                     Status.STALE_POLICY,
@@ -496,6 +677,29 @@ public final class BlueprintResearchService {
                     id,
                     playerData.getResearchPoints(),
                     TreeResearchResultMode.DIRECT_LEARN);
+        }
+
+        for (ResearchPathUnlockPlanner.FragmentSetUse setUse
+                : transaction.fragmentSetUses()) {
+            PlayerProgressValueMutation.Result committed;
+            try {
+                committed = playerData.applyArchivedFragmentMutation(
+                        PlayerProgressValueMutation.Request.commit(
+                                setUse.blueprintId().toString(),
+                                setUse.archivedBefore(),
+                                setUse.archivedAfter()));
+            } catch (RuntimeException exception) {
+                committed = null;
+            }
+            if (committed == null || !committed.successful()) {
+                boolean restored = rollbackPath(
+                        playerData, input, inputSnapshot, knowledgeSnapshot);
+                return Result.failure(
+                        restored ? Status.STALE_POLICY : Status.ROLLBACK_FAILED,
+                        id,
+                        playerData.getResearchPoints(),
+                        TreeResearchResultMode.DIRECT_LEARN);
+            }
         }
 
         List<LearningTransition> transitions = new ArrayList<>(targets.size());
@@ -584,6 +788,68 @@ public final class BlueprintResearchService {
                 creativePlayer,
                 true,
                 TreeResearchResultMode.CREATE_BLUEPRINT);
+    }
+
+    private static Result researchSingleWithAccess(
+            ServerPlayer player,
+            ResearchWorkbenchContext workbenchContext,
+            ResourceLocation blueprintId,
+            IPlayerRecipeData playerData,
+            Function<ResourceLocation, BlueprintResearchPolicy> policyResolver,
+            Function<ResourceLocation, LearningTarget> targetResolver,
+            ResearchInput input,
+            boolean creativePlayer,
+            boolean blueprintsEnabled,
+            TreeResearchResultMode resultMode) {
+        if (!ResearchWorkbenchAuthority.validForResearch(player, workbenchContext)) {
+            return Result.failure(
+                    Status.WORKBENCH_TIER_REQUIRED,
+                    Optional.of(blueprintId),
+                    playerData.getResearchPoints(),
+                    resultMode);
+        }
+        ResearchRouteEligibilityService.Evaluation access =
+                ResearchRouteEligibilityService.evaluate(
+                        player, List.of(blueprintId), workbenchContext);
+        if (!access.eligible()) {
+            return Result.failure(
+                    accessFailure(access.summary()),
+                    Optional.of(blueprintId),
+                    playerData.getResearchPoints(),
+                    resultMode);
+        }
+        return research(
+                blueprintId,
+                playerData,
+                policyResolver,
+                targetResolver,
+                input,
+                creativePlayer,
+                blueprintsEnabled,
+                resultMode);
+    }
+
+    private static Status accessFailure(ResearchAccessSummary summary) {
+        return switch (summary.kind()) {
+            case WORKBENCH_TIER -> Status.WORKBENCH_TIER_REQUIRED;
+            case PROGRESSION_GATE -> Status.PROGRESSION_GATE_REQUIRED;
+            case POLICY_UNAVAILABLE, NONE -> Status.POLICY_UNAVAILABLE;
+        };
+    }
+
+    private static Predicate<ResourceLocation> pendingNodeEligibility(
+            ServerPlayer player,
+            IPlayerRecipeData playerData,
+            ResearchWorkbenchContext workbenchContext) {
+        if (player == null || workbenchContext == null) {
+            return ignored -> true;
+        }
+        Map<ResourceLocation, Boolean> cached = new LinkedHashMap<>();
+        return blueprintId -> playerData.hasBlueprint(blueprintId.toString())
+                || cached.computeIfAbsent(
+                        blueprintId,
+                        id -> ResearchRouteEligibilityService.evaluate(
+                                player, List.of(id), workbenchContext).eligible());
     }
 
     static Result research(
@@ -880,11 +1146,23 @@ public final class BlueprintResearchService {
                     "Research path transaction failed and restoring recipes threw",
                     exception);
         }
+        boolean supplementalRestored;
+        try {
+            supplementalRestored = playerData.replaceSupplementalProgression(
+                    knowledgeSnapshot.archivedFragments(),
+                    knowledgeSnapshot.progressionCriteria());
+        } catch (RuntimeException exception) {
+            supplementalRestored = false;
+            TaCZWeaponBlueprints.LOGGER.error(
+                    "Research path transaction failed and restoring supplemental progress threw",
+                    exception);
+        }
         if (!progressionRestored) {
             TaCZWeaponBlueprints.LOGGER.error(
                     "Research path transaction failed and its progression snapshot could not be restored");
         }
-        return inventoryRestored && progressionRestored && recipesRestored;
+        return inventoryRestored && progressionRestored && recipesRestored
+                && supplementalRestored;
     }
 
     private static ResearchInput playerInventoryInput(ServerPlayer player) {
@@ -1005,7 +1283,9 @@ public final class BlueprintResearchService {
         PATH_TOO_LARGE,
         ROUTE_TOO_COMPLEX,
         TECH_TREE_UNAVAILABLE,
-        UNSATISFIABLE
+        UNSATISFIABLE,
+        WORKBENCH_TIER_REQUIRED,
+        PROGRESSION_GATE_REQUIRED
     }
 
     /**
@@ -1178,13 +1458,17 @@ public final class BlueprintResearchService {
             Set<String> learnedBlueprints,
             Set<String> discoveredBlueprints,
             Set<String> learnedRecipes,
-            int researchPoints) {
+            int researchPoints,
+            Map<String, Integer> archivedFragments,
+            Map<String, Integer> progressionCriteria) {
         private static KnowledgeSnapshot capture(IPlayerRecipeData playerData) {
             return new KnowledgeSnapshot(
                     Set.copyOf(playerData.getLearnedBlueprints()),
                     Set.copyOf(playerData.getDiscoveredBlueprints()),
                     Set.copyOf(playerData.getLearnedRecipes()),
-                    playerData.getResearchPoints());
+                    playerData.getResearchPoints(),
+                    Map.copyOf(playerData.getArchivedBlueprintFragments()),
+                    Map.copyOf(playerData.getProgressionCriteria()));
         }
     }
 }

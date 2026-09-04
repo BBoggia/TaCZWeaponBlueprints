@@ -1,0 +1,115 @@
+{
+  "format": 1,
+  "current_behavior": {
+    "missing_research_policy": "permitted",
+    "known_gap": "tree-disabled and authored-omitted entries have no crafting-level authority"
+  },
+  "migration_contract": {
+    "existing_config_version": 3,
+    "existing_profile_format": 3,
+    "omitted_entry_compatibility": "explicit_unrestricted",
+    "rewrite_player_progress": false
+  },
+  "fresh_defaults": {
+    "automatic_guns": "automatic_percentile",
+    "authored_guns": "authored_band",
+    "authored_omitted_guns": "disabled",
+    "ammo": "lowest_linked_weapon_with_tier_1_fallback",
+    "attachments": "fixed_tier_1",
+    "blueprint_free_bypasses": "knowledge_only"
+  },
+  "workbench_matrix": {
+    "tier_1": ["tier_1", "tier_2", "tier_3"],
+    "tier_2": ["tier_2", "tier_3"],
+    "tier_3": ["tier_3"],
+    "unrestricted": ["tier_1", "tier_2", "tier_3"],
+    "disabled": []
+  },
+  "scenarios": [
+    {
+      "id": "baseline:automatic_gun",
+      "kind": "gun",
+      "tree_authority": "automatic",
+      "research": "included",
+      "knowledge": "required",
+      "current_crafting": "resolved_research_policy",
+      "target_disposition": "tiered",
+      "target_tier": "tier_3",
+      "target_source": "automatic_percentile"
+    },
+    {
+      "id": "baseline:authored_gun",
+      "kind": "gun",
+      "tree_authority": "authored_only",
+      "research": "included",
+      "knowledge": "required",
+      "current_crafting": "resolved_research_policy",
+      "target_disposition": "tiered",
+      "target_tier": "tier_2",
+      "target_source": "authored_band"
+    },
+    {
+      "id": "baseline:authored_omitted_gun",
+      "kind": "gun",
+      "tree_authority": "authored_only",
+      "research": "omitted",
+      "knowledge": "required",
+      "current_crafting": "permitted_missing_research_policy",
+      "target_disposition": "disabled",
+      "target_source": "profile_fallback"
+    },
+    {
+      "id": "baseline:linked_ammo",
+      "kind": "ammo",
+      "tree_authority": "not_applicable",
+      "research": "omitted",
+      "knowledge": "required",
+      "current_crafting": "permitted_missing_research_policy",
+      "target_disposition": "tiered",
+      "target_tier": "tier_1",
+      "target_source": "linked_weapon"
+    },
+    {
+      "id": "baseline:attachment",
+      "kind": "attachment",
+      "tree_authority": "not_applicable",
+      "research": "omitted",
+      "knowledge": "required",
+      "current_crafting": "permitted_missing_research_policy",
+      "target_disposition": "tiered",
+      "target_tier": "tier_1",
+      "target_source": "category_default"
+    },
+    {
+      "id": "baseline:blueprint_free_gun",
+      "kind": "gun",
+      "tree_authority": "authored_only",
+      "research": "included",
+      "knowledge": "blueprint_free",
+      "current_crafting": "resolved_research_policy",
+      "target_disposition": "tiered",
+      "target_tier": "tier_2",
+      "target_source": "authored_band"
+    },
+    {
+      "id": "baseline:unrestricted_entry",
+      "kind": "attachment",
+      "tree_authority": "not_applicable",
+      "research": "omitted",
+      "knowledge": "blueprint_free",
+      "current_crafting": "permitted_missing_research_policy",
+      "target_disposition": "unrestricted",
+      "target_source": "exact_rule"
+    },
+    {
+      "id": "baseline:disabled_entry",
+      "kind": "ammo",
+      "tree_authority": "not_applicable",
+      "research": "omitted",
+      "knowledge": "required",
+      "current_crafting": "permitted_missing_research_policy",
+      "target_disposition": "disabled",
+      "target_source": "exact_rule"
+    }
+  ]
+}

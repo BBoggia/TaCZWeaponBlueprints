@@ -17,11 +17,20 @@ public final class PlayerProgressionAdminService {
         if (data == null) {
             throw new IllegalArgumentException("player progression data cannot be null");
         }
+        var fragments = data.getArchivedBlueprintFragments();
+        var criteria = data.getProgressionCriteria();
+        if (fragments == null || criteria == null) {
+            throw new IllegalArgumentException("player supplemental progression cannot be null");
+        }
         return new Snapshot(
                 data.getLearnedBlueprints().size(),
                 data.getDiscoveredBlueprints().size(),
                 data.getLearnedRecipes().size(),
-                data.getResearchPoints());
+                data.getResearchPoints(),
+                fragments.size(),
+                fragments.values().stream()
+                        .mapToLong(Integer::longValue).sum(),
+                criteria.size());
     }
 
     public static boolean reset(IPlayerRecipeData data, ResetState state) {
@@ -45,11 +54,21 @@ public final class PlayerProgressionAdminService {
                 data.clearResearchPointAwardLedger();
                 yield true;
             }
+            case FRAGMENTS -> {
+                data.clearArchivedBlueprintFragments();
+                yield true;
+            }
+            case CRITERIA -> {
+                data.clearProgressionCriteria();
+                yield true;
+            }
             case ALL -> {
                 boolean replaced = data.replaceProgression(List.of(), List.of(), 0);
                 if (replaced) {
                     data.replaceRecipes(List.of());
                     data.clearResearchPointAwardLedger();
+                    data.clearArchivedBlueprintFragments();
+                    data.clearProgressionCriteria();
                 }
                 yield replaced;
             }
@@ -84,6 +103,8 @@ public final class PlayerProgressionAdminService {
         DISCOVERED,
         POINTS,
         AWARDS,
+        FRAGMENTS,
+        CRITERIA,
         ALL;
 
         public String serializedName() {
@@ -106,10 +127,20 @@ public final class PlayerProgressionAdminService {
             int learnedBlueprints,
             int discoveredBlueprints,
             int legacyRecipes,
-            int researchPoints) {
+            int researchPoints,
+            int fragmentTargets,
+            long archivedFragments,
+            int progressionCriteria) {
         public Snapshot {
             if (learnedBlueprints < 0 || discoveredBlueprints < learnedBlueprints
-                    || legacyRecipes < 0 || researchPoints < 0) {
+                    || legacyRecipes < 0 || researchPoints < 0
+                    || fragmentTargets < 0
+                    || fragmentTargets > PlayerProgressionLimits.MAX_FRAGMENT_TARGETS
+                    || archivedFragments < 0L
+                    || archivedFragments > (long) PlayerProgressionLimits.MAX_FRAGMENT_TARGETS
+                            * PlayerProgressionLimits.MAX_PROGRESS_VALUE
+                    || progressionCriteria < 0
+                    || progressionCriteria > PlayerProgressionLimits.MAX_PROGRESSION_CRITERIA) {
                 throw new IllegalArgumentException("invalid player progression inspection snapshot");
             }
         }

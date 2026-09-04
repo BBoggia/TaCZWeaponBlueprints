@@ -182,6 +182,155 @@ public final class BlueprintResearchPolicyResolver {
         return CompiledProfile.compile(snapshot, profileId).select(blueprintId, blueprintData);
     }
 
+    /**
+     * Selects only rules that contribute to the legacy/core research definition.
+     * Progression-only rules are resolved by {@link #researchProgressionRuleSelection}
+     * and crafting-only rules by {@link #craftingRuleSelection}; neither may hide
+     * a broader cost, prerequisite, visibility, discovery, recycling, or reverse-
+     * engineering rule.
+     */
+    public static RuleSelection researchDefinitionRuleSelection(
+            BlueprintResearchSnapshot snapshot,
+            ResourceLocation profileId,
+            ResourceLocation blueprintId,
+            BlueprintData blueprintData) {
+        if (snapshot == null || profileId == null || blueprintId == null) {
+            return RuleSelection.NONE;
+        }
+        return CompiledProfile.compile(snapshot, profileId).select(
+                blueprintId,
+                blueprintData,
+                binding -> authorsResearchDefinition(binding.rule()));
+    }
+
+    /**
+     * Selects only rules that contribute to the resolved research-tier,
+     * fragment, or research-gate policy. A more specific crafting-only rule
+     * must not hide a broader research progression rule.
+     */
+    public static RuleSelection researchProgressionRuleSelection(
+            BlueprintResearchSnapshot snapshot,
+            ResourceLocation profileId,
+            ResourceLocation blueprintId,
+            BlueprintData blueprintData) {
+        if (snapshot == null || profileId == null || blueprintId == null) {
+            return RuleSelection.NONE;
+        }
+        return CompiledProfile.compile(snapshot, profileId).select(
+                blueprintId,
+                blueprintData,
+                BlueprintResearchPolicyResolver::authorsResearchProgressionPolicy);
+    }
+
+    /**
+     * Selects only rules that affect crafting through either the independent
+     * format-4 block or the legacy progression fields. A more specific
+     * research-only rule must not hide a broader crafting rule.
+     */
+    public static RuleSelection craftingRuleSelection(
+            BlueprintResearchSnapshot snapshot,
+            ResourceLocation profileId,
+            ResourceLocation blueprintId,
+            BlueprintData blueprintData) {
+        if (snapshot == null || profileId == null || blueprintId == null) {
+            return RuleSelection.NONE;
+        }
+        return CompiledProfile.compile(snapshot, profileId).select(
+                blueprintId,
+                blueprintData,
+                BlueprintResearchPolicyResolver::authorsCraftingPolicy);
+    }
+
+    static Map<ResourceLocation, RuleSelection> craftingRuleSelections(
+            BlueprintResearchSnapshot snapshot,
+            ResourceLocation profileId,
+            Map<ResourceLocation, BlueprintData> catalog) {
+        if (snapshot == null || profileId == null || catalog == null) {
+            throw new IllegalArgumentException(
+                    "crafting rule-selection inputs cannot be null");
+        }
+        CompiledProfile compiled = CompiledProfile.compile(snapshot, profileId);
+        Map<ResourceLocation, RuleSelection> selections = new LinkedHashMap<>();
+        catalog.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey(
+                        Comparator.comparing(ResourceLocation::toString)))
+                .forEach(entry -> selections.put(
+                        entry.getKey(),
+                        compiled.select(
+                                entry.getKey(),
+                                entry.getValue(),
+                                BlueprintResearchPolicyResolver::authorsCraftingPolicy)));
+        return Collections.unmodifiableMap(selections);
+    }
+
+    private static boolean authorsCraftingPolicy(RuleBinding binding) {
+        BlueprintResearchRule rule = binding.rule();
+        if (rule.crafting().isPresent()) {
+            return true;
+        }
+        return rule.progression()
+                .filter(progression -> progression.craftingTier().isPresent()
+                        || progression.gates()
+                                .map(BlueprintResearchPolicyResolver::containsCraftingGate)
+                                .orElse(false))
+                .isPresent();
+    }
+
+    private static boolean authorsResearchProgressionPolicy(RuleBinding binding) {
+        return binding.rule().progression()
+                .filter(progression -> progression.researchTier().isPresent()
+                        || progression.fragmentThreshold().isPresent()
+                        || progression.gates()
+                                .map(BlueprintResearchPolicyResolver::containsResearchGate)
+                                .orElse(false))
+                .isPresent();
+    }
+
+    /** Package-visible so snapshot prerequisite validation uses runtime selection semantics. */
+    static boolean authorsResearchDefinition(BlueprintResearchRule rule) {
+        if (rule == null) {
+            return false;
+        }
+        boolean authorsCoreField = rule.visibility().isPresent()
+                || rule.treeEnabled().isPresent()
+                || rule.researchEnabled().isPresent()
+                || rule.recyclingEnabled().isPresent()
+                || rule.allowUnlearnedRecycling().isPresent()
+                || rule.recyclingValue().isPresent()
+                || rule.researchCost().isPresent()
+                || rule.requiresDiscovery().isPresent()
+                || rule.prerequisiteRequirements().isPresent()
+                || rule.creativeBypassesCost().isPresent()
+                || rule.reverseEngineering().isPresent();
+        if (authorsCoreField) {
+            return true;
+        }
+        // Preserve pre-format-3 target-only rules as deliberate research
+        // assignments. An extension-bearing rule with no core fields belongs to
+        // its progression/crafting projection and must not shadow core research.
+        return rule.progression().isEmpty() && rule.crafting().isEmpty();
+    }
+
+    private static boolean containsResearchGate(
+            com.gamergaming.taczweaponblueprints.progression.gate.ProgressionGateRequirements
+                    requirements) {
+        return requirements.allOf().stream()
+                .flatMap(group -> group.anyOf().stream())
+                .anyMatch(condition -> condition.scope()
+                        != com.gamergaming.taczweaponblueprints.progression.gate
+                                .ProgressionGateScope.CRAFTING);
+    }
+
+    private static boolean containsCraftingGate(
+            com.gamergaming.taczweaponblueprints.progression.gate.ProgressionGateRequirements
+                    requirements) {
+        return requirements.allOf().stream()
+                .flatMap(group -> group.anyOf().stream())
+                .anyMatch(condition -> condition.scope()
+                        != com.gamergaming.taczweaponblueprints.progression.gate
+                                .ProgressionGateScope.RESEARCH);
+    }
+
     private static CacheState cacheState(
             BlueprintResearchSnapshot snapshot,
             Map<ResourceLocation, BlueprintData> catalog,
@@ -246,7 +395,10 @@ public final class BlueprintResearchPolicyResolver {
             return disabledDefinition();
         }
         BlueprintResearchPolicyDefinition base = BlueprintResearchPolicyDefinition.fromProfile(profile);
-        RuleSelection selection = compiledProfile.select(blueprintId, blueprintData);
+        RuleSelection selection = compiledProfile.select(
+                blueprintId,
+                blueprintData,
+                binding -> authorsResearchDefinition(binding.rule()));
         BlueprintResearchPolicyDefinition resolved = selection.selectedRuleId().isEmpty()
                 ? base
                 : base.apply(
@@ -599,11 +751,22 @@ public final class BlueprintResearchPolicyResolver {
         }
 
         private RuleSelection select(ResourceLocation blueprintId, BlueprintData blueprintData) {
-            List<RuleBinding> exact = exactRules.getOrDefault(blueprintId, List.of());
+            return select(blueprintId, blueprintData, ignored -> true);
+        }
+
+        private RuleSelection select(
+                ResourceLocation blueprintId,
+                BlueprintData blueprintData,
+                Predicate<RuleBinding> eligible) {
+            List<RuleBinding> exact = exactRules.getOrDefault(blueprintId, List.of()).stream()
+                    .filter(eligible)
+                    .toList();
             if (!exact.isEmpty()) {
                 return selection(exact, MatchSpecificity.EXACT);
             }
-            List<RuleBinding> tags = tagRules.getOrDefault(blueprintId, List.of());
+            List<RuleBinding> tags = tagRules.getOrDefault(blueprintId, List.of()).stream()
+                    .filter(eligible)
+                    .toList();
             if (!tags.isEmpty()) {
                 return selection(tags, MatchSpecificity.TAG);
             }
@@ -611,6 +774,7 @@ public final class BlueprintResearchPolicyResolver {
                 return RuleSelection.NONE;
             }
             List<RuleBinding> matchingSelectors = selectorRules.stream()
+                    .filter(eligible)
                     .filter(binding -> binding.rule().target().selector()
                             .filter(selector -> selector.matches(blueprintId, blueprintData))
                             .isPresent())

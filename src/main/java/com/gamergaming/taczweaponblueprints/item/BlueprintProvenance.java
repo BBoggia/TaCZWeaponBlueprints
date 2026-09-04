@@ -33,6 +33,15 @@ public record BlueprintProvenance(
                 learningMode);
     }
 
+    /** Reconstructed fragments may create an item, but never a prerequisite bypass. */
+    public static BlueprintProvenance fragmentReconstructed() {
+        return new BlueprintProvenance(
+                CURRENT_FORMAT,
+                Source.FRAGMENT_RECONSTRUCTION,
+                false,
+                PhysicalBlueprintLearningMode.REQUIRE_TREE_PREREQUISITES);
+    }
+
     public CompoundTag toTag() {
         CompoundTag tag = new CompoundTag();
         tag.putInt("format", format);
@@ -73,7 +82,23 @@ public record BlueprintProvenance(
         return fromTag(root).map(BlueprintProvenance::recyclable).orElse(false);
     }
 
+    /** Legacy roots use the configured default; malformed marked roots fail closed. */
+    public static PhysicalBlueprintLearningMode learningMode(
+            CompoundTag root,
+            PhysicalBlueprintLearningMode legacyDefault) {
+        if (legacyDefault == null) {
+            throw new IllegalArgumentException("legacy blueprint learning mode cannot be null");
+        }
+        if (root == null || !root.contains(TAG_KEY)) {
+            return legacyDefault;
+        }
+        return fromTag(root)
+                .map(BlueprintProvenance::learningMode)
+                .orElse(PhysicalBlueprintLearningMode.DISABLED);
+    }
+
     public enum Source {
-        REVERSE_ENGINEERING
+        REVERSE_ENGINEERING,
+        FRAGMENT_RECONSTRUCTION
     }
 }

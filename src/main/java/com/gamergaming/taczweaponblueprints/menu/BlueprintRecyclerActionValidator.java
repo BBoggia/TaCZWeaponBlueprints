@@ -50,6 +50,8 @@ public final class BlueprintRecyclerActionValidator {
             case PHYSICAL_ITEM ->
                     action == BlueprintRecyclerActionContract.Action.REVERSE_ENGINEER
                             || action == BlueprintRecyclerActionContract.Action.RECOVER_POINTS;
+            case BLUEPRINT_FRAGMENT ->
+                    action == BlueprintRecyclerActionContract.Action.ARCHIVE_FRAGMENTS;
             case EMPTY, INVALID -> false;
         };
     }

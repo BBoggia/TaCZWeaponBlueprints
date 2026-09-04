@@ -176,6 +176,39 @@ class SyncPacketTest {
     }
 
     @Test
+    void legacyLearnedRecipeAccumulatorIsConnectionScopedAndMonotonic() {
+        SyncPlayerRecipeDataPacket.ClientAccumulator accumulator =
+                new SyncPlayerRecipeDataPacket.ClientAccumulator();
+        SyncPlayerRecipeDataPacket newer = SyncPlayerRecipeDataPacket
+                .split(Set.of("test:newer"), 20L).get(0);
+        SyncPlayerRecipeDataPacket older = SyncPlayerRecipeDataPacket
+                .split(Set.of("test:older"), 19L).get(0);
+
+        assertEquals(Set.of("test:newer"), accumulator.accept(newer).orElseThrow());
+        assertTrue(accumulator.accept(newer).isEmpty());
+        assertTrue(accumulator.accept(older).isEmpty());
+
+        accumulator.clear();
+        assertEquals(Set.of("test:older"), accumulator.accept(older).orElseThrow());
+
+        Set<String> largeSnapshot = IntStream.range(0, 4_096)
+                .mapToObj(index -> {
+                    String suffix = Integer.toString(index);
+                    return "test:" + "r".repeat(251 - suffix.length()) + suffix;
+                })
+                .collect(Collectors.toSet());
+        var partial = SyncPlayerRecipeDataPacket.split(largeSnapshot, 30L);
+        assertTrue(partial.size() > 1);
+        accumulator.clear();
+        assertTrue(accumulator.accept(partial.get(0)).isEmpty());
+        accumulator.clear();
+        assertEquals(
+                Set.of("test:replacement"),
+                accumulator.accept(SyncPlayerRecipeDataPacket
+                        .split(Set.of("test:replacement"), 30L).get(0)).orElseThrow());
+    }
+
+    @Test
     void blueprintPacketUsesMapKeysAndStableOrdering() {
         ResourceLocation firstId = new ResourceLocation("test", "alpha");
         ResourceLocation secondId = new ResourceLocation("test", "bravo");
@@ -240,6 +273,43 @@ class SyncPacketTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> new SyncBlueprintDataPacket(Map.of(blueprintId, oversizedType)));
+    }
+
+    @Test
+    void legacyBlueprintAccumulatorIsConnectionScopedAndMonotonic() {
+        SyncBlueprintDataPacket.ClientAccumulator accumulator =
+                new SyncBlueprintDataPacket.ClientAccumulator();
+        ResourceLocation newerId = new ResourceLocation("test", "newer");
+        ResourceLocation olderId = new ResourceLocation("test", "older");
+        SyncBlueprintDataPacket newer = SyncBlueprintDataPacket
+                .split(Map.of(newerId, blueprint(newerId)), 20L).get(0);
+        SyncBlueprintDataPacket older = SyncBlueprintDataPacket
+                .split(Map.of(olderId, blueprint(olderId)), 19L).get(0);
+
+        assertEquals(Set.of(newerId), accumulator.accept(newer).orElseThrow().keySet());
+        assertTrue(accumulator.accept(newer).isEmpty());
+        assertTrue(accumulator.accept(older).isEmpty());
+
+        accumulator.clear();
+        assertEquals(Set.of(olderId), accumulator.accept(older).orElseThrow().keySet());
+
+        Map<ResourceLocation, BlueprintData> largeSnapshot = new LinkedHashMap<>();
+        for (int index = 0; index < 2_000; index++) {
+            ResourceLocation id = new ResourceLocation("test", "partial_" + index);
+            largeSnapshot.put(id, blueprint(
+                    id, "n".repeat(256), "t".repeat(256), "rifle"));
+        }
+        var partial = SyncBlueprintDataPacket.split(largeSnapshot, 30L);
+        assertTrue(partial.size() > 1);
+        accumulator.clear();
+        assertTrue(accumulator.accept(partial.get(0)).isEmpty());
+        accumulator.clear();
+        ResourceLocation replacementId = new ResourceLocation("test", "replacement");
+        assertEquals(
+                Set.of(replacementId),
+                accumulator.accept(SyncBlueprintDataPacket.split(
+                        Map.of(replacementId, blueprint(replacementId)), 30L).get(0))
+                        .orElseThrow().keySet());
     }
 
     @Test

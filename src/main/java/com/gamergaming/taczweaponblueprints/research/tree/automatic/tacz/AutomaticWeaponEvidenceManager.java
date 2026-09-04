@@ -27,7 +27,7 @@ public final class AutomaticWeaponEvidenceManager {
     private final TaCZRuntimeWeaponEvidenceAdapter adapter =
             new TaCZRuntimeWeaponEvidenceAdapter();
     private volatile Publication publication =
-            new Publication(AutomaticWeaponEvidenceSnapshot.EMPTY, 0L);
+            Publication.EMPTY;
 
     AutomaticWeaponEvidenceManager() {
     }
@@ -132,7 +132,9 @@ public final class AutomaticWeaponEvidenceManager {
                 capabilityPlacementPlan);
         Publication previous = publication;
         publication = new Publication(
-                snapshot, PublicationRevision.next(previous.revision()));
+                snapshot,
+                PublicationRevision.next(previous.revision()),
+                PublicationState.READY);
         TaCZWeaponBlueprints.LOGGER.info(
                 "Captured automatic weapon evidence revision {}: {}/{} accepted, {} default "
                         + "reference matches, {} add-on candidates, and {} rejected",
@@ -182,10 +184,15 @@ public final class AutomaticWeaponEvidenceManager {
         return publication.snapshot();
     }
 
+    /** Returns snapshot and revision identity from one volatile read. */
+    public Publication publication() {
+        return publication;
+    }
+
     public AutomaticWeaponEvidenceSnapshot snapshotForCatalogRevision(long catalogRevision) {
-        AutomaticWeaponEvidenceSnapshot snapshot = publication.snapshot();
-        return snapshot.matchesCatalogRevision(catalogRevision)
-                ? snapshot
+        Publication current = publication;
+        return current.readyForCatalogRevision(catalogRevision)
+                ? current.snapshot()
                 : AutomaticWeaponEvidenceSnapshot.emptyForCatalog(catalogRevision);
     }
 
@@ -194,7 +201,7 @@ public final class AutomaticWeaponEvidenceManager {
     }
 
     public void clear() {
-        publication = new Publication(AutomaticWeaponEvidenceSnapshot.EMPTY, 0L);
+        publication = Publication.EMPTY;
     }
 
     public void invalidateForCatalogRevision(long catalogRevision) {
@@ -204,11 +211,44 @@ public final class AutomaticWeaponEvidenceManager {
         Publication previous = publication;
         publication = new Publication(
                 AutomaticWeaponEvidenceSnapshot.emptyForCatalog(catalogRevision),
-                PublicationRevision.next(previous.revision()));
+                PublicationRevision.next(previous.revision()),
+                PublicationState.INVALIDATED);
     }
 
-    private record Publication(
+    public enum PublicationState {
+        EMPTY,
+        READY,
+        INVALIDATED
+    }
+
+    /** Atomic evidence value, local revision, and readiness state. */
+    public record Publication(
             AutomaticWeaponEvidenceSnapshot snapshot,
-            long revision) {
+            long revision,
+            PublicationState state) {
+        public static final Publication EMPTY = new Publication(
+                AutomaticWeaponEvidenceSnapshot.EMPTY,
+                0L,
+                PublicationState.EMPTY);
+
+        public Publication {
+            if (snapshot == null || revision < 0L || state == null
+                    || (state == PublicationState.EMPTY
+                            && (revision != 0L
+                                    || !snapshot.equals(
+                                            AutomaticWeaponEvidenceSnapshot.EMPTY)))
+                    || (state != PublicationState.EMPTY && revision == 0L)
+                    || (state == PublicationState.READY
+                            && snapshot.catalogRevision() == 0L)) {
+                throw new IllegalArgumentException(
+                        "automatic weapon evidence publication is inconsistent");
+            }
+        }
+
+        public boolean readyForCatalogRevision(long catalogRevision) {
+            return state == PublicationState.READY
+                    && revision > 0L
+                    && snapshot.matchesCatalogRevision(catalogRevision);
+        }
     }
 }

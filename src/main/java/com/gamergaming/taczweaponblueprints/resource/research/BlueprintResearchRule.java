@@ -9,6 +9,7 @@ import com.gamergaming.taczweaponblueprints.resource.loot.StrictOptionalFieldCod
 import com.gamergaming.taczweaponblueprints.resource.loot.StrictRecordCodec;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import net.minecraft.resources.ResourceLocation;
@@ -29,9 +30,14 @@ public record BlueprintResearchRule(
         Optional<List<ResourceLocation>> prerequisites,
         Optional<ResearchRequirements> prerequisiteGroups,
         Optional<Boolean> creativeBypassesCost,
-        Optional<BlueprintReverseEngineeringOverride> reverseEngineering) {
+        Optional<BlueprintReverseEngineeringOverride> reverseEngineering,
+        Optional<BlueprintProgressionRuleOverride> progression,
+        Optional<BlueprintCraftingRuleOverride> crafting) {
     public static final int LEGACY_FORMAT = 1;
-    public static final int CURRENT_FORMAT = 2;
+    public static final int GROUPED_PREREQUISITE_FORMAT = 2;
+    public static final int PROGRESSION_FORMAT = 3;
+    public static final int CRAFTING_FORMAT = 4;
+    public static final int CURRENT_FORMAT = CRAFTING_FORMAT;
     public static final int MAX_ABSOLUTE_PRIORITY = 1_000_000;
     public static final int MAX_PREREQUISITES =
             ResearchRequirements.MAX_TOTAL_ALTERNATIVES;
@@ -42,6 +48,21 @@ public record BlueprintResearchRule(
     private static final Codec<Integer> PRIORITY_CODEC = Codec.INT.flatXmap(
             BlueprintResearchRule::validatePriority,
             BlueprintResearchRule::validatePriority);
+    private static final MapCodec<RuleExtensions> EXTENSIONS_CODEC =
+            RecordCodecBuilder.mapCodec(instance -> instance.group(
+                    new StrictOptionalFieldCodec<>(
+                            "reverse_engineering",
+                            BlueprintReverseEngineeringOverride.CODEC)
+                            .forGetter(RuleExtensions::reverseEngineering),
+                    new StrictOptionalFieldCodec<>(
+                            "progression",
+                            BlueprintProgressionRuleOverride.CODEC)
+                            .forGetter(RuleExtensions::progression),
+                    new StrictOptionalFieldCodec<>(
+                            "crafting",
+                            BlueprintCraftingRuleOverride.CODEC)
+                            .forGetter(RuleExtensions::crafting))
+                    .apply(instance, RuleExtensions::new));
 
     private static final Codec<BlueprintResearchRule> RAW_CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
@@ -78,11 +99,8 @@ public record BlueprintResearchRule(
                             .forGetter(BlueprintResearchRule::prerequisiteGroups),
                     new StrictOptionalFieldCodec<>("creative_bypasses_cost", Codec.BOOL)
                             .forGetter(BlueprintResearchRule::creativeBypassesCost),
-                    new StrictOptionalFieldCodec<>(
-                            "reverse_engineering",
-                            BlueprintReverseEngineeringOverride.CODEC)
-                            .forGetter(BlueprintResearchRule::reverseEngineering))
-                    .apply(instance, BlueprintResearchRule::new));
+                    EXTENSIONS_CODEC.forGetter(BlueprintResearchRule::extensions))
+                    .apply(instance, BlueprintResearchRule::fromCodec));
 
     public static final Codec<BlueprintResearchRule> CODEC = StrictRecordCodec.wrap(
             "blueprint research rule",
@@ -102,7 +120,88 @@ public record BlueprintResearchRule(
             "prerequisites",
             "prerequisite_groups",
             "creative_bypasses_cost",
-            "reverse_engineering");
+            "reverse_engineering",
+            "progression",
+            "crafting");
+
+    /** Compatibility constructor for callers compiled against the format-3 record shape. */
+    public BlueprintResearchRule(
+            int format,
+            ResourceLocation profile,
+            int priority,
+            BlueprintResearchTarget target,
+            Optional<JournalVisibility> visibility,
+            Optional<Boolean> treeEnabled,
+            Optional<Boolean> researchEnabled,
+            Optional<Boolean> recyclingEnabled,
+            Optional<Boolean> allowUnlearnedRecycling,
+            Optional<Integer> recyclingValue,
+            Optional<BlueprintResearchCost> researchCost,
+            Optional<Boolean> requiresDiscovery,
+            Optional<List<ResourceLocation>> prerequisites,
+            Optional<ResearchRequirements> prerequisiteGroups,
+            Optional<Boolean> creativeBypassesCost,
+            Optional<BlueprintReverseEngineeringOverride> reverseEngineering,
+            Optional<BlueprintProgressionRuleOverride> progression) {
+        this(
+                format,
+                profile,
+                priority,
+                target,
+                visibility,
+                treeEnabled,
+                researchEnabled,
+                recyclingEnabled,
+                allowUnlearnedRecycling,
+                recyclingValue,
+                researchCost,
+                requiresDiscovery,
+                prerequisites,
+                prerequisiteGroups,
+                creativeBypassesCost,
+                reverseEngineering,
+                progression,
+                Optional.empty());
+    }
+
+    /** Compatibility constructor for callers compiled against the format-2 record shape. */
+    public BlueprintResearchRule(
+            int format,
+            ResourceLocation profile,
+            int priority,
+            BlueprintResearchTarget target,
+            Optional<JournalVisibility> visibility,
+            Optional<Boolean> treeEnabled,
+            Optional<Boolean> researchEnabled,
+            Optional<Boolean> recyclingEnabled,
+            Optional<Boolean> allowUnlearnedRecycling,
+            Optional<Integer> recyclingValue,
+            Optional<BlueprintResearchCost> researchCost,
+            Optional<Boolean> requiresDiscovery,
+            Optional<List<ResourceLocation>> prerequisites,
+            Optional<ResearchRequirements> prerequisiteGroups,
+            Optional<Boolean> creativeBypassesCost,
+            Optional<BlueprintReverseEngineeringOverride> reverseEngineering) {
+        this(
+                format,
+                profile,
+                priority,
+                target,
+                visibility,
+                treeEnabled,
+                researchEnabled,
+                recyclingEnabled,
+                allowUnlearnedRecycling,
+                recyclingValue,
+                researchCost,
+                requiresDiscovery,
+                prerequisites,
+                prerequisiteGroups,
+                creativeBypassesCost,
+                reverseEngineering,
+                Optional.empty(),
+                Optional.empty());
+    }
 
     /** Compatibility constructor for the format-1 flat prerequisite contract. */
     public BlueprintResearchRule(
@@ -137,7 +236,9 @@ public record BlueprintResearchRule(
                 prerequisites,
                 Optional.empty(),
                 creativeBypassesCost,
-                reverseEngineering);
+                reverseEngineering,
+                Optional.empty(),
+                Optional.empty());
     }
 
     /** Backwards-compatible constructor for rules authored before reverse engineering. */
@@ -172,6 +273,8 @@ public record BlueprintResearchRule(
                 prerequisites,
                 Optional.empty(),
                 creativeBypassesCost,
+                Optional.empty(),
+                Optional.empty(),
                 Optional.empty());
     }
 
@@ -206,6 +309,8 @@ public record BlueprintResearchRule(
                 prerequisites,
                 Optional.empty(),
                 creativeBypassesCost,
+                Optional.empty(),
+                Optional.empty(),
                 Optional.empty());
     }
 
@@ -236,6 +341,8 @@ public record BlueprintResearchRule(
         prerequisiteGroups = optional(prerequisiteGroups);
         creativeBypassesCost = optional(creativeBypassesCost);
         reverseEngineering = optional(reverseEngineering);
+        progression = optional(progression);
+        crafting = optional(crafting);
     }
 
     private static DataResult<Integer> validateFormat(int value) {
@@ -255,8 +362,9 @@ public record BlueprintResearchRule(
         if (rule.prerequisites().isPresent() && rule.prerequisiteGroups().isPresent()) {
             return DataResult.error(() -> "research rule fields prerequisites and prerequisite_groups are mutually exclusive");
         }
-        if (rule.prerequisiteGroups().isPresent() && rule.format() < CURRENT_FORMAT) {
-            return DataResult.error(() -> "prerequisite_groups requires research-rule format " + CURRENT_FORMAT);
+        if (rule.prerequisiteGroups().isPresent() && rule.format() < GROUPED_PREREQUISITE_FORMAT) {
+            return DataResult.error(() -> "prerequisite_groups requires research-rule format "
+                    + GROUPED_PREREQUISITE_FORMAT);
         }
         if (rule.prerequisiteRequirements().map(ResearchRequirements::alternativeCount).orElse(0)
                 > MAX_PREREQUISITES) {
@@ -266,7 +374,18 @@ public record BlueprintResearchRule(
         if (rule.prerequisiteRequirements().isPresent() && !rule.target().exactOnly()) {
             return DataResult.error(() -> "prerequisite-bearing research rules must use exact blueprint targets");
         }
-        return DataResult.success(rule);
+        if (rule.progression().isPresent() && rule.format() < PROGRESSION_FORMAT) {
+            return DataResult.error(() -> "progression requires research-rule format " + PROGRESSION_FORMAT);
+        }
+        if (rule.crafting().isPresent() && rule.format() < CRAFTING_FORMAT) {
+            return DataResult.error(() -> "crafting requires research-rule format " + CRAFTING_FORMAT);
+        }
+        if (rule.progression().flatMap(BlueprintProgressionRuleOverride::fragmentThreshold).isPresent()
+                && !rule.target().exactOnly()) {
+            return DataResult.error(() ->
+                    "fragment-threshold research rules must use exact blueprint targets");
+        }
+        return validateCraftingConflicts(rule);
     }
 
     private static <T> Optional<T> optional(Optional<T> value) {
@@ -284,13 +403,15 @@ public record BlueprintResearchRule(
         target.validateForSnapshot();
         researchCost.ifPresent(BlueprintResearchCost::validateForSnapshot);
         reverseEngineering.ifPresent(BlueprintReverseEngineeringOverride::validateForSnapshot);
+        progression.ifPresent(ignored -> { });
+        crafting.ifPresent(ignored -> { });
         if (prerequisites.isPresent() && prerequisiteGroups.isPresent()) {
             throw new IllegalArgumentException(
                     "research rule fields prerequisites and prerequisite_groups are mutually exclusive");
         }
-        if (prerequisiteGroups.isPresent() && format < CURRENT_FORMAT) {
+        if (prerequisiteGroups.isPresent() && format < GROUPED_PREREQUISITE_FORMAT) {
             throw new IllegalArgumentException(
-                    "prerequisite_groups requires research-rule format " + CURRENT_FORMAT);
+                    "prerequisite_groups requires research-rule format " + GROUPED_PREREQUISITE_FORMAT);
         }
         if (prerequisiteRequirements().map(ResearchRequirements::alternativeCount).orElse(0)
                 > MAX_PREREQUISITES) {
@@ -301,6 +422,22 @@ public record BlueprintResearchRule(
             throw new IllegalArgumentException(
                     "prerequisite-bearing research rules must use exact blueprint targets");
         }
+        if (progression.isPresent() && format < PROGRESSION_FORMAT) {
+            throw new IllegalArgumentException(
+                    "progression requires research-rule format " + PROGRESSION_FORMAT);
+        }
+        if (crafting.isPresent() && format < CRAFTING_FORMAT) {
+            throw new IllegalArgumentException(
+                    "crafting requires research-rule format " + CRAFTING_FORMAT);
+        }
+        if (progression.flatMap(BlueprintProgressionRuleOverride::fragmentThreshold).isPresent()
+                && !target.exactOnly()) {
+            throw new IllegalArgumentException(
+                    "fragment-threshold research rules must use exact blueprint targets");
+        }
+        validateCraftingConflicts(this).error().ifPresent(error -> {
+            throw new IllegalArgumentException(error.message());
+        });
         if (prerequisites.orElse(List.of()).stream().anyMatch(value ->
                 value == null
                         || value.toString().length() > PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH)) {
@@ -309,5 +446,88 @@ public record BlueprintResearchRule(
         // Self references and cycles are validated only after rule selection.
         // Rejecting them here would make a harmless lower-priority shadowed
         // rule invalidate an otherwise sound snapshot.
+    }
+
+    private RuleExtensions extensions() {
+        return new RuleExtensions(
+                reverseEngineering,
+                format >= PROGRESSION_FORMAT ? progression : Optional.empty(),
+                format >= CRAFTING_FORMAT ? crafting : Optional.empty());
+    }
+
+    private static BlueprintResearchRule fromCodec(
+            int format,
+            ResourceLocation profile,
+            int priority,
+            BlueprintResearchTarget target,
+            Optional<JournalVisibility> visibility,
+            Optional<Boolean> treeEnabled,
+            Optional<Boolean> researchEnabled,
+            Optional<Boolean> recyclingEnabled,
+            Optional<Boolean> allowUnlearnedRecycling,
+            Optional<Integer> recyclingValue,
+            Optional<BlueprintResearchCost> researchCost,
+            Optional<Boolean> requiresDiscovery,
+            Optional<List<ResourceLocation>> prerequisites,
+            Optional<ResearchRequirements> prerequisiteGroups,
+            Optional<Boolean> creativeBypassesCost,
+            RuleExtensions extensions) {
+        return new BlueprintResearchRule(
+                format,
+                profile,
+                priority,
+                target,
+                visibility,
+                treeEnabled,
+                researchEnabled,
+                recyclingEnabled,
+                allowUnlearnedRecycling,
+                recyclingValue,
+                researchCost,
+                requiresDiscovery,
+                prerequisites,
+                prerequisiteGroups,
+                creativeBypassesCost,
+                extensions.reverseEngineering(),
+                extensions.progression(),
+                extensions.crafting());
+    }
+
+    private static DataResult<BlueprintResearchRule> validateCraftingConflicts(
+            BlueprintResearchRule rule) {
+        if (rule.crafting().isEmpty() || rule.progression().isEmpty()) {
+            return DataResult.success(rule);
+        }
+        BlueprintCraftingRuleOverride crafting = rule.crafting().orElseThrow();
+        BlueprintProgressionRuleOverride progression = rule.progression().orElseThrow();
+        if (crafting.disposition().isPresent() && progression.craftingTier().isPresent()) {
+            return DataResult.error(() ->
+                    "crafting.disposition/workbench_tier conflicts with progression.crafting_tier");
+        }
+        if (crafting.gates().isPresent()
+                && progression.gates().filter(BlueprintResearchRule::containsCraftingGate).isPresent()) {
+            return DataResult.error(() ->
+                    "crafting.gates conflicts with crafting-scoped progression.gates");
+        }
+        return DataResult.success(rule);
+    }
+
+    private static boolean containsCraftingGate(
+            com.gamergaming.taczweaponblueprints.progression.gate.ProgressionGateRequirements requirements) {
+        return requirements.allOf().stream()
+                .flatMap(group -> group.anyOf().stream())
+                .anyMatch(condition -> condition.scope()
+                        != com.gamergaming.taczweaponblueprints.progression.gate.ProgressionGateScope.RESEARCH);
+    }
+
+    private record RuleExtensions(
+            Optional<BlueprintReverseEngineeringOverride> reverseEngineering,
+            Optional<BlueprintProgressionRuleOverride> progression,
+            Optional<BlueprintCraftingRuleOverride> crafting) {
+        private RuleExtensions {
+            reverseEngineering = optional(reverseEngineering);
+            progression = optional(progression);
+            crafting = optional(crafting);
+        }
     }
 }

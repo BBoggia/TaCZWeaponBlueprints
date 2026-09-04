@@ -12,11 +12,14 @@ import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionSyncScheduler;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionAccess;
+import com.gamergaming.taczweaponblueprints.progression.PlayerSupplementalProgressionView;
 import com.gamergaming.taczweaponblueprints.progression.ResearchPointPresentationService.Feedback;
 import com.gamergaming.taczweaponblueprints.progression.ResearchPointPresentationService.HelpSnapshot;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePublication;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchDataManager;
+import com.gamergaming.taczweaponblueprints.resource.research.ProgressionPolicyAccessService;
+import com.gamergaming.taczweaponblueprints.resource.research.ResolvedBlueprintProgressionPolicy;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -26,7 +29,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public class NetworkHandler {
-    public static final String PROTOCOL_VERSION = "47";
+    public static final String PROTOCOL_VERSION = "55";
     // A random per-server seed prevents a partial chunk set from an earlier
     // connection being mistaken for a new sync after reconnecting.
     private static final AtomicLong SYNC_SEQUENCE =
@@ -144,6 +147,32 @@ public class NetworkHandler {
                 ResearchAffordabilityResultPacket::new,
                 ResearchAffordabilityResultPacket::handle,
                 Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+
+        // Phase 3 supplemental progression is append-only so existing packet
+        // discriminators retain their established ordering.
+        INSTANCE.registerMessage(id++, SyncPlayerSupplementalProgressionPacket.class,
+                SyncPlayerSupplementalProgressionPacket::toBytes,
+                SyncPlayerSupplementalProgressionPacket::new,
+                SyncPlayerSupplementalProgressionPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+
+        INSTANCE.registerMessage(id++, ResearchWorkbenchModePacket.class,
+                ResearchWorkbenchModePacket::toBytes,
+                ResearchWorkbenchModePacket::new,
+                ResearchWorkbenchModePacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_SERVER));
+
+        INSTANCE.registerMessage(id++, CraftingAccessRequestPacket.class,
+                CraftingAccessRequestPacket::toBytes,
+                CraftingAccessRequestPacket::new,
+                CraftingAccessRequestPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_SERVER));
+
+        INSTANCE.registerMessage(id++, SyncCraftingAccessPacket.class,
+                SyncCraftingAccessPacket::toBytes,
+                SyncCraftingAccessPacket::new,
+                SyncCraftingAccessPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     public static void syncBalancePreset(
@@ -157,6 +186,15 @@ public class NetworkHandler {
     }
 
     public static void syncPlayerRecipeData(ServerPlayer player) {
+        syncPlayerRecipeData(player, true);
+    }
+
+    private static void syncPlayerRecipeData(
+            ServerPlayer player,
+            boolean refreshCraftingWorkbench) {
+        if (refreshCraftingWorkbench) {
+            refreshOpenCraftingWorkbench(player);
+        }
         player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).ifPresent(recipeData -> {
             BlueprintDataManager.SERVER.migrateLegacyUnlocks(recipeData);
             var activeRecipes = RecipeSyncFilter.activeLearnedRecipes(
@@ -170,16 +208,22 @@ public class NetworkHandler {
                             BlueprintDataManager.SERVER.getBlueprintDataMap()));
             SyncPlayerRecipeDataPacket.split(activeRecipes, SYNC_SEQUENCE.incrementAndGet())
                     .forEach(packet -> INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), packet));
-            sendPlayerProgressionData(player, recipeData, true, false);
+            sendPlayerProgressionData(player, recipeData, true, false, true);
         });
     }
 
     public static void syncPlayerProgressionData(ServerPlayer player) {
+        refreshOpenCraftingWorkbench(player);
         player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
-                .ifPresent(recipeData -> sendPlayerProgressionData(player, recipeData, false, false));
+                .ifPresent(recipeData -> sendPlayerProgressionData(
+                        player, recipeData, false, false, true));
     }
 
-    /** Synchronizes a point-only change without rebuilding or transferring an unchanged tree. */
+    /**
+     * Synchronizes a point-only change without rebuilding or transferring an
+     * unchanged tree or supplemental state. Callers that changed fragments or
+     * criteria must use {@link #syncPlayerProgressionData(ServerPlayer)}.
+     */
     public static void syncPlayerPointBalance(ServerPlayer player) {
         // A queued complete publication already contains the current balance.
         // Let it win so this narrow path cannot publish around an older tree.
@@ -187,12 +231,14 @@ public class NetworkHandler {
             return;
         }
         player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
-                .ifPresent(recipeData -> sendPlayerProgressionData(player, recipeData, false, true));
+                .ifPresent(recipeData -> sendPlayerProgressionData(
+                        player, recipeData, false, true, false));
     }
 
     public static void syncJournalData(ServerPlayer player) {
+        refreshOpenCraftingWorkbench(player);
         player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
-                .ifPresent(recipeData -> sendJournalData(player, recipeData, false, false));
+                .ifPresent(recipeData -> sendJournalData(player, recipeData, false, false, true));
         refreshOpenWorkstation(player);
     }
 
@@ -204,8 +250,9 @@ public class NetworkHandler {
     }
 
     public static void syncAllPlayerData(ServerPlayer player) {
+        refreshOpenCraftingWorkbench(player);
         syncBlueprintData(player);
-        syncPlayerRecipeData(player);
+        syncPlayerRecipeData(player, false);
     }
 
     public static void sendResearchBenchPreview(
@@ -302,6 +349,27 @@ public class NetworkHandler {
                 new BlueprintRecyclerActionResultPacket(containerId, requestId, result));
     }
 
+    public static void sendCraftingAccess(
+            ServerPlayer player,
+            com.tacz.guns.inventory.GunSmithTableMenu menu) {
+        if (player != null && menu != null && player.containerMenu == menu
+                && menu instanceof com.gamergaming.taczweaponblueprints.compat.tacz
+                        .TaCZWorkbenchMenuBridge bridge) {
+            long requestId = bridge.taczweaponblueprints$craftingAccessRequestId();
+            if (requestId < 1L) {
+                return;
+            }
+            SyncCraftingAccessPacket.split(
+                            menu.containerId,
+                            requestId,
+                            bridge.taczweaponblueprints$nextCraftingAccessSnapshotId(),
+                            com.gamergaming.taczweaponblueprints.progression
+                                    .CraftingEligibilityService.snapshot(player, menu))
+                    .forEach(packet -> INSTANCE.send(
+                            PacketDistributor.PLAYER.with(() -> player), packet));
+        }
+    }
+
     public static void clearPlayerSyncState(ServerPlayer player) {
         if (player != null) {
             LAST_SENT_RESEARCH_TREES.remove(player.getUUID());
@@ -329,7 +397,8 @@ public class NetworkHandler {
             ServerPlayer player,
             IPlayerRecipeData recipeData,
             boolean forceTree,
-            boolean treeKnownUnchanged) {
+            boolean treeKnownUnchanged,
+            boolean includeSupplementalProgression) {
         if (!treeKnownUnchanged) {
             BlueprintProgressionSyncScheduler.clear(player);
         }
@@ -339,18 +408,29 @@ public class NetworkHandler {
                         recipeData.getResearchPoints(),
                         SYNC_SEQUENCE.incrementAndGet())
                 .forEach(packet -> INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), packet));
-        sendJournalData(player, recipeData, forceTree, treeKnownUnchanged);
-        refreshOpenWorkstation(player);
+        sendJournalData(
+                player,
+                recipeData,
+                forceTree,
+                treeKnownUnchanged,
+                includeSupplementalProgression);
+        if (!treeKnownUnchanged || includeSupplementalProgression) {
+            refreshOpenWorkstation(player);
+        }
     }
 
     private static void sendJournalData(
             ServerPlayer player,
             IPlayerRecipeData recipeData,
             boolean forceTree,
-            boolean treeKnownUnchanged) {
+            boolean treeKnownUnchanged,
+            boolean includeSupplementalProgression) {
         var playerPublication =
                 BlueprintResearchDataManager.INSTANCE.playerPublicationFor(recipeData);
         var snapshot = playerPublication.journal();
+        if (includeSupplementalProgression) {
+            sendSupplementalProgressionData(player, recipeData, playerPublication);
+        }
         var previousTree = LAST_SENT_RESEARCH_TREES.get(player.getUUID());
         boolean reuseKnownTree = treeKnownUnchanged && previousTree != null && !forceTree;
         var tree = reuseKnownTree
@@ -368,12 +448,46 @@ public class NetworkHandler {
         LAST_SENT_RESEARCH_GENERATIONS.put(player.getUUID(), generation);
     }
 
+    private static void sendSupplementalProgressionData(
+            ServerPlayer player,
+            IPlayerRecipeData recipeData,
+            BlueprintResearchDataManager.PlayerResearchPublication playerPublication) {
+        var policyAccess = ProgressionPolicyAccessService.acquire(
+                ProgressionPolicyAccessService.Mode.CURRENT_ONLY).orElse(null);
+        var policies = policyAccess != null
+                        && policyAccess.catalog().revision()
+                                == playerPublication.catalogRevision()
+                        && policyAccess.research().revision()
+                                == playerPublication.researchRevision()
+                ? policyAccess.profilePolicies()
+                : Map.<ResourceLocation, ResolvedBlueprintProgressionPolicy>of();
+        var disclosedBlueprintIds = PlayerSupplementalProgressionView.disclosedBlueprintIds(
+                playerPublication.journal(), playerPublication.tree());
+        var view = PlayerSupplementalProgressionView.create(
+                        recipeData,
+                        disclosedBlueprintIds,
+                        policies);
+        SyncPlayerSupplementalProgressionPacket.split(
+                        view,
+                        SYNC_SEQUENCE.incrementAndGet())
+                .forEach(packet -> INSTANCE.send(
+                        PacketDistributor.PLAYER.with(() -> player), packet));
+    }
+
     private static void refreshOpenWorkstation(ServerPlayer player) {
         if (player.containerMenu instanceof com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu menu) {
             menu.refreshAuthoritativePreview(player);
         } else if (player.containerMenu
                 instanceof com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerMenu menu) {
             menu.refreshAuthoritativePreview(player);
+        }
+    }
+
+    /** Publishes Workbench access before the larger progression streams that follow it. */
+    private static void refreshOpenCraftingWorkbench(ServerPlayer player) {
+        if (player != null
+                && player.containerMenu instanceof com.tacz.guns.inventory.GunSmithTableMenu menu) {
+            sendCraftingAccess(player, menu);
         }
     }
 

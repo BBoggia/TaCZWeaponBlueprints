@@ -7,6 +7,7 @@ import java.util.Comparator;
 import java.util.Set;
 
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
+import com.gamergaming.taczweaponblueprints.progression.eligibility.ResearchAccessFingerprint;
 
 import net.minecraft.resources.ResourceLocation;
 
@@ -20,8 +21,27 @@ public record ResearchRouteFingerprint(long high, long low) {
             IPlayerRecipeData playerData,
             boolean creativePlayer,
             Context context) {
+        return create(
+                target,
+                plan,
+                playerData,
+                creativePlayer,
+                context,
+                ResearchAccessFingerprint.EMPTY);
+    }
+
+    public static ResearchRouteFingerprint create(
+            ResourceLocation target,
+            ResearchPathUnlockPlanner.Plan plan,
+            IPlayerRecipeData playerData,
+            boolean creativePlayer,
+            Context context,
+            ResearchAccessFingerprint accessFingerprint) {
         if (target == null || plan == null || playerData == null || context == null) {
             throw new IllegalArgumentException("research route fingerprint input is invalid");
+        }
+        if (accessFingerprint == null) {
+            throw new IllegalArgumentException("research access fingerprint cannot be null");
         }
         MessageDigest digest = sha256();
         update(digest, "taczweaponblueprints:research_route_fingerprint:v1");
@@ -29,6 +49,9 @@ public record ResearchRouteFingerprint(long high, long low) {
         update(digest, context.catalogRevision());
         update(digest, context.researchRevision());
         update(digest, context.automaticPublicationRevision());
+        update(digest, "research_access");
+        update(digest, accessFingerprint.high());
+        update(digest, accessFingerprint.low());
         updateProgressionConfig(digest, context.progressionConfig());
         updateCanonical(
                 digest,
@@ -64,6 +87,15 @@ public record ResearchRouteFingerprint(long high, long low) {
         for (ResearchPathUnlockPlanner.PlannedNode node : plan.solution().nodes()) {
             update(digest, node.blueprintId().toString());
             update(digest, node.costBypassed() ? 1L : 0L);
+            update(digest, node.policy().researchCost().points());
+        }
+        update(digest, "fragment_set_uses");
+        update(digest, plan.fragmentSetUses().size());
+        for (ResearchPathUnlockPlanner.FragmentSetUse setUse : plan.fragmentSetUses()) {
+            update(digest, setUse.blueprintId().toString());
+            update(digest, setUse.archivedBefore());
+            update(digest, setUse.threshold());
+            update(digest, setUse.pointDiscount());
         }
         update(digest, "route_quote");
         update(digest, plan.quote().pointCost());

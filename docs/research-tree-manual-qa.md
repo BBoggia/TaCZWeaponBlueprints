@@ -43,9 +43,11 @@ scales 1, 2, 3, 4, and Auto where the display supports them. Include 320x240,
 - [ ] Getting Started remains readable and navigable at every required GUI
   scale, narration identifies the page, and hidden blueprints never gain a
   name, icon, ID, cost, prerequisite, or action through the guide.
-- [ ] With JEI only, EMI only, and both installed, the Bench, Analyzer,
-  blueprint, and Research Data information pages are present and localized.
-  They expose no hidden blueprint list and provide no research recipe transfer.
+- [ ] With JEI only, EMI only, and both installed, the Research Bench, crafting
+  Workbench, Blueprint Analyzer, blueprint, and Research Data information pages
+  are present and localized. They expose no hidden blueprint list and provide
+  no research or crafting recipe transfer. The crafting page directs players
+  to an active Workbench recipe list for current server-verified access.
 - [ ] With neither viewer installed, a client and dedicated server reach their
   normal startup markers without missing-class or optional-dependency errors.
 - [ ] Search, zoom controls, tree, contextual tooltip, overlaid rail, and buttons do not overlap or clip.
@@ -248,6 +250,13 @@ scales 1, 2, 3, 4, and Auto where the display supports them. Include 320x240,
 - [ ] Two simultaneous players see different learned/available states without sharing client state.
 - [ ] Locked nodes explain points, discovery, or prerequisite requirements correctly.
 - [ ] Research automatically consumes only the exact required amounts from the main inventory and hotbar and preserves unrelated stacks.
+- [ ] For an any-of prerequisite with a cheaper Tier 3 or gated alternative and
+  a more expensive accessible alternative, a lower-tier Bench selects and
+  prices the accessible route. It reports the blocker only when every complete
+  route is inaccessible.
+- [ ] Revoking an advancement criterion used by a Progression Gate refreshes an
+  already-open Research Bench and disables the affected route without requiring
+  the player to close the screen. Regranting it refreshes the route once.
 - [ ] The Research button and configured hold shortcut produce identical server-authoritative results.
 - [ ] While a request is pending, repeated mouse or keyboard activation cannot submit a duplicate transaction.
 - [ ] A successful whole-path Tech Tree purchase adds exactly one Recent batch
@@ -331,10 +340,24 @@ unchecked until that behavior has been confirmed in a real client/server run.
 - [ ] A datapack-authored prerequisite remains the complete effective prerequisite list for that gun and is never replaced or extended by the connected-mode heuristic.
 - [ ] A legacy rule with `prerequisites: [A, B]` still requires both A and B. A format-2 rule with one `prerequisite_groups` entry containing `any_of: [A, B]` becomes researchable after learning either A or B, while a second singleton group remains independently mandatory.
 - [ ] A partially disclosed any-of group shows its visible alternatives and a bounded hidden-choice count without exposing hidden IDs. Preview/name/silhouette visibility must not reveal whether the group is satisfied; full visibility may show the current satisfaction count.
-- [ ] A client or server still using an older protocol is rejected cleanly. Matching protocol-47 peers reconstruct identical group ordinals, alternatives, hidden counts, disclosure state, aggregate path-purchase previews, typed route-authority failures, route fingerprints, correlated authoritative guidance, bounded Affordable Now batches, and Recent unlock history even when chunks arrive out of order.
+- [ ] A client or server still using an older protocol is rejected cleanly. Matching protocol-55 peers reconstruct identical group ordinals, alternatives, hidden counts, disclosure state, aggregate path-purchase previews, typed route-authority failures, route fingerprints, correlated authoritative guidance, bounded Affordable Now batches, Recent unlock history, disclosure-filtered Blueprint Fragment, crafting-access, and Progression Gate state, and the exact native crafting allow-list with its policy identity even when updates arrive out of order.
+- [ ] With a crafting Workbench open, simulate or pause an incomplete crafting-access response for at least five seconds. Confirm the client retries the original request once, accepts the replacement snapshot, and does not issue additional retries while the same menu remains open.
+- [ ] Open each Research Bench tier and confirm it exposes only the Tech Tree. Open each crafting Workbench level and confirm it exposes only TaCZ crafting. Neither screen should offer a mode-switch button.
+- [ ] Break or replace either half of a crafting Workbench while its menu is open. Moving away or changing dimension must also invalidate the old crafting session.
+- [ ] Learn representative Tier 1, Tier 2, and Tier 3 weapons. Confirm a lower Workbench hides and rejects higher-tier recipes, the appropriate Workbench exposes and crafts them, and Creative bypass follows the server setting without bypassing Progression Gates unless its separate setting is enabled.
+- [ ] In an authored-only profile, omit a recipe-backed weapon from the Tech Tree but give it an explicit format-4 crafting rule. After learning it outside the tree, confirm the correct Workbench shows or rejects it from the crafting policy alone. A missing research assignment must not make crafting policy unavailable.
+- [ ] Give one weapon a broad research-tier or research-gate rule and a more specific crafting-only rule, then reverse the arrangement. Confirm each action selects its own most-specific applicable rule and an override scoped only to the other action does not erase profile-level gates.
+- [ ] Starting from a version-3 server config, upgrade without editing the new crafting controls. Confirm representative guns, ammo, and attachments retain their profile-defined crafting results and existing Blueprint-Free selectors still bypass knowledge only.
+- [ ] Change the ammo and attachment crafting strategies through every fixed-level, no-level, disabled, and profile option. Confirm the matching Workbench recipes update without adding either category to the Tech Tree; for ammo, also verify Match Earliest Gun and its unlinked fallback.
+- [ ] Put one category or subgroup in both the no-level and disabled lists, then add an exact override for one matching blueprint. Disabled must win the broad conflict, the exact override must win for its one target, and changing these settings with a Workbench open must replace the old allow-list before another craft can complete.
+- [ ] Confirm an existing `tacz:gun_smith_table`, an exactly mapped gun-pack workstation, an unknown workstation using the fallback tier, and an unknown unrestricted workstation each follow their configured policy. No TaCZ crafting screen should offer a Research button.
+- [ ] Open a crafting Workbench on a delayed or throttled connection. While the recipe response is pending, confirm TaCZ tabs can initialize but no recipe or previous-menu selection is selectable; the screen should show that it is checking access.
+- [ ] Keep a crafting Workbench open while changing the active profile, tier enforcement, Creative bypass, or a relevant Progression Gate, and while reloading datapacks. Confirm the old selection disappears as soon as the replacement response begins and cannot be crafted while its chunks are still arriving.
+- [ ] Disable blueprint progression and reopen every crafting Workbench level. Confirm the server-approved native TaCZ view includes recipes that are not represented in the blueprint catalog; re-enable progression and confirm recipes remain hidden until a matching restricted response arrives.
+- [ ] Confirm the ordinary `tacz:gun_smith_table` recipe is absent after startup and `/reload`, while an existing table still opens. A higher-priority world datapack may deliberately restore that recipe without restoring any other removed content.
 - [ ] `/gg research status` reports the selected automatic mode and prerequisite strategy, tree, eligible/excluded counts, planned references/groups/alternate-route groups, omissions, branch boundaries, same/cross-family edges and merges, maximum fan-out, the current catalog/research revision pair, and complete candidate/branch-coordinate/decision/finalized-rank counts; a legacy tree may show the explicitly diagnostic Phase-0 counterfactual, while an authoritative grouped tree instead reports live effective-alternative, ancestry, route-cost, chain, branch-entry, per-phase fan-out/family-density, terminal-affordability, warning evidence, and the Phase-6 retain/prototype/insufficient motif decision with its review limits. A stale publication reports `awaiting_rebuild`, a failed rebuild reports its exact stage and bounded reason, and a later revision clears that stale failure.
 - [ ] `/gg research inspect <blueprint>` explains an add-on gun's automatic state, score, confidence, generated rank, optional band, stable sibling order, planned prerequisite or omission, exact branch strategy, parent-family counts, terminal/depth flags, and any grouped route-review outcome/cost bounds/ancestry diversity without adding a line for attachment/ammo entries.
-- [ ] `/gg research export` writes format 18 deterministically, preserves canonical prerequisite-group boundaries plus the legacy prerequisite union, records the automatic strategy, explicit generated relationship shapes and hybrid aggregate counts, planned generated groups, and exact/bounded alternative-route review evidence, includes the complete `grouped_route_quality` distributions/warnings/terminal bounds plus `grouped_route_motif_assessment` signals/recommendations/visual-evidence boundary, and its tree-owned band policy, configured/effective layer width, topology population, branch-prerequisite and publication-completeness summaries, planned and published ranks, topology/economy sections, second-parent quotas, strategy-specific rejection evidence, and per-weapon decision/parent relationships agree with status/inspect for representative authored, automatic, excluded, and unplaced weapons.
+- [ ] `/gg research export` writes format 20 deterministically, preserves canonical prerequisite-group boundaries plus the legacy prerequisite union, records the automatic strategy, explicit generated relationship shapes and hybrid aggregate counts, planned generated groups, and exact/bounded alternative-route review evidence, includes complete independent crafting-policy coverage, dispositions, Workbench levels, assignment sources, selected rules, reasons, and warnings, includes the complete `grouped_route_quality` distributions/warnings/terminal bounds plus `grouped_route_motif_assessment` signals/recommendations/visual-evidence boundary, includes revision-matched research-workstation, Blueprint Fragment, Progression Gate, external-workstation mapping, review-fallback, and omission diagnostics, and its tree-owned band policy, configured/effective layer width, topology population, branch-prerequisite and publication-completeness summaries, planned and published ranks, topology/economy sections, second-parent quotas, strategy-specific rejection evidence, and per-weapon decision/parent relationships agree with status/inspect for representative authored, automatic, excluded, and unplaced weapons.
 - [ ] For the Phase 10 default-rollout check, confirm the packaged profile reports `grouped_routes_v1`; a temporary format-3 profile with `prerequisite_strategy: legacy_and` restores mandatory generated pairs without changing authored prerequisites or learned blueprints, and restoring the packaged profile returns to grouped routes without revoking progress.
 - [ ] At normal zoom and maximum zoom-out, select targets behind singleton, grouped, and mixed requirements. Confirm route highlighting chooses one viable OR route, grouped junctions remain legible, learning an alternative updates satisfaction without resetting the camera, Fit still frames the full tree, and no new top-heavy or excessive-width regression is visible.
 - [ ] In `DIRECT_LEARN`, select a higher unlearned target. Confirm the action reads `Research Path (N)`, RP is the aggregate distinct-node cost, additional material types are disclosed when the six-row preview is truncated, and success learns the prerequisite-first shortest closure plus target. Missing RP/materials and an injected late learning rejection must leave all inventory, points, blueprint/discovery knowledge, and legacy recipe aliases unchanged. In `CREATE_BLUEPRINT`, the same locked target must retain ordinary unmet-prerequisite behavior.
@@ -365,22 +388,59 @@ unchecked until that behavior has been confirmed in a real client/server run.
   the custom profile entirely produces the same compatibility-first behavior.
 - [ ] Existing learned blueprints remain learned after enabling or rearranging Tech Tree presentation data.
 
+## Blueprint Fragment supply
+
+- [ ] Enable a fragment preset and set Fragment Loot Share to 0, 20, and 100 percent. With a fixed loot seed, 0 preserves full-blueprint output, 100 replaces every valid opportunity, and 20 replaces a measured share without increasing the total number of research items.
+- [ ] Generate loot from a player-caused context with learned and unlearned targets. Unlearned targets should appear more often, while learned targets remain possible. Generate a fresh chest without player context and confirm it follows the configured catalog weights instead.
+- [ ] Confirm gun, ammo, and attachment blacklists, rule selectors, disabled kinds, progression exemptions, and fragment-disabled profile entries exclude the same targets from fragment supply that they exclude from the originating blueprint pool.
+- [ ] Put matching fragments together and confirm they stack to 64. Fragments for different targets must remain separate. A valid target must use the current weapon name and record discovery when carried.
+- [ ] Test a malformed target tag and a canonical target removed by a content-pack reload. The item must read Invalid or Unknown respectively, must not crash inventory rendering, and must not disclose a hidden fallback ID.
+- [ ] Run `/gg loot preview <loot_table>` for player-aware and generated-container cases. Confirm the replacement share, target count, expected fragments, thresholds, and exact-override count match `/gg research inspect` and `/gg research export`.
+- [ ] Disable every fragment policy, empty the eligible blueprint pool, then force a stale progression-policy publication during reload testing. Each case must retain normal full-blueprint behavior and must not fail the loot table.
+- [ ] Use loot tables that resolve 8, 256, and at least 4,096 fragment candidates. Confirm generation remains responsive, repeated reloads retain canonical ordering, and the measured replacement rate stays within one percentage point of its configured value over 100,000 successful opportunities.
+
 ## Reloads, content packs, and networking
 
 - [ ] `/reload` while the bench is open replaces the tree and preview atomically.
+- [ ] Have two players use the same Research Bench and submit research requests
+  on the same server tick. Each accepted purchase uses that player's own
+  progression, and a request prepared from superseded shared state is rejected
+  without duplicate item or RP consumption.
+- [ ] Have two players open the same Blueprint Analyzer and try to archive the
+  same fragment stack. Only the first valid transaction commits; the second
+  receives a stale-state result without duplicating output, fragment progress,
+  or RP.
+- [ ] Die, disconnect, reconnect, change dimension, and stop/restart the server
+  with a research preview or deferred update pending. Old sessions and packet
+  chunks must not combine with the new player or server session, while saved
+  knowledge, RP, fragments, and Progression Gate criteria remain intact.
+- [ ] If a reload fault is injected after catalog publication but before
+  automatic-placement or progression-policy publication, the server either
+  rebuilds the complete revision-matched set from the current catalog or keeps
+  research fail-closed with one actionable error; it never advertises a stale
+  route as researchable.
 - [ ] A stale selected node returns safely to Browse after its rule or content is removed.
 - [ ] Removing a TaCZ content pack leaves no broken connector or crash; restoring it makes persisted unlocks usable again.
 - [ ] An unmatched add-on gun receives a named/icon preview node and follows the active automatic-placement/review policy without first finding its physical blueprint.
 - [ ] Under the packaged profile, unmatched ammo and attachments retain their authored 4 RP Preview fallback rules but remain non-researchable and unpublished; enabling their domains makes the fallbacks selectable without fabricating prerequisites.
 - [ ] Large generated add-on weapon families wrap across Tech Tree rows instead of one ultra-wide strip, and repeated reloads produce the same placement.
 - [ ] Changing dormant legacy group metadata during `/reload` does not change the visible Tech Tree or reintroduce a hidden view selector.
-- [ ] Dedicated server rejects a client with any protocol other than `47`.
+- [ ] Dedicated server rejects a client with any protocol other than `55`.
+- [ ] With the Blueprint Journal disabled, identities still disclosed by the Tech Tree receive their Blueprint Fragment and public Progression Gate state. Silhouette, hidden, omitted, and unrelated identities receive no supplemental state.
+- [ ] Select a node with a Bench-tier requirement, a Progression Gate, and archived Blueprint Fragments. Its details and narration list the current/required tier first, the active blocker, then fragment progress; only the selected node receives the small progress/blocker marks.
+- [ ] Open the Blueprint Journal and confirm full-detail entries show their Workbench level, no-level access, or unavailable state. Disclosed fragment targets show progress in details and a compact row suffix only after at least one fragment is archived. Preview, name-only, and silhouette entries reveal no crafting policy, and name-only and silhouette entries reveal neither the target ID nor fragment metadata.
+- [ ] Track a target blocked by the current Bench tier or a Progression Gate. The goal explains the blocked route and `Next` does not recommend a step from that inaccessible route. Affordable Now keeps the target non-affordable even when its RP and materials are sufficient.
+- [ ] Use mouse, keyboard, and narration to inspect the same selected target at a Research Bench and craft it at a Workbench. Tooltips and spoken state identify the action and station tier without requiring an internal ID.
+- [ ] Run `/gg progression inspect <player> <blueprint_id>`, `/gg research inspect <blueprint_id>`, and `/gg progression workstation <workstation_id>`; compare the independent research and crafting results, mapped levels, assignment source/rule/reason/warnings, fragment threshold/progress, and gate groups with the active configuration. Repeat with an entry omitted from the authored Research Tree and confirm its complete crafting assignment is still reported.
 - [ ] Reconnect, dimension change, and respawn do not combine old and new tree chunks.
 
 ## Bench model and blocks
 
 - [ ] Item, first-person, third-person, and inventory icon face forward.
 - [ ] North, east, south, and west placements face the player correctly.
+- [ ] Obstruct or fault-inject the extension-half write during placement. The
+  root is rolled back and the held Bench item is not consumed; a successful
+  retry places both halves.
 - [ ] Both halves open the same menu and cannot be separated by pistons.
 - [ ] Breaking either half removes the complete bench and produces exactly one drop.
 

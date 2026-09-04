@@ -15,12 +15,52 @@ import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits
 import com.gamergaming.taczweaponblueprints.capabilities.RecentBlueprintUnlockBatch;
 import com.gamergaming.taczweaponblueprints.journal.BlueprintJournalEntry;
 import com.gamergaming.taczweaponblueprints.journal.BlueprintJournalSnapshot;
+import com.gamergaming.taczweaponblueprints.progression.fragment.BlueprintFragmentPolicy;
+import com.gamergaming.taczweaponblueprints.progression.DisclosedCraftingAccess;
+import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchTier;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintCraftingDisposition;
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
 
 import io.netty.buffer.Unpooled;
 import net.minecraft.network.FriendlyByteBuf;
 
 class SyncBlueprintJournalPacketTest {
+    @Test
+    void fragmentProgressRoundTripsWithTheJournalEntry() {
+        var id = new net.minecraft.resources.ResourceLocation("test:rifle");
+        BlueprintJournalEntry entry = new BlueprintJournalEntry(
+                0,
+                JournalVisibility.FULL,
+                Optional.of(id),
+                Optional.of("item.test.rifle"),
+                Optional.of("rifle"),
+                Optional.of(new net.minecraft.resources.ResourceLocation("test:slot/rifle")),
+                false, true, true, true, true,
+                10, 1, 1, 2,
+                Optional.of(new BlueprintJournalEntry.FragmentProgress(
+                        4,
+                        5,
+                        BlueprintFragmentPolicy.CompletionMode.TARGETED_RESEARCH_BOOST)),
+                Optional.of(new DisclosedCraftingAccess(
+                        BlueprintCraftingDisposition.TIERED,
+                        Optional.of(ResearchWorkbenchTier.TIER_2))));
+        BlueprintJournalSnapshot snapshot = new BlueprintJournalSnapshot(
+                List.of(entry), List.of(), 20, 100, 0, 1, 1);
+
+        SyncBlueprintJournalPacket packet = SyncBlueprintJournalPacket
+                .split(snapshot, 3L).get(0);
+        FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            packet.toBytes(buffer);
+            SyncBlueprintJournalPacket decoded = new SyncBlueprintJournalPacket(buffer);
+            SyncBlueprintJournalPacket.ClientAccumulator accumulator =
+                    new SyncBlueprintJournalPacket.ClientAccumulator();
+            assertEquals(snapshot, accumulator.accept(decoded).orElseThrow());
+        } finally {
+            buffer.release();
+        }
+    }
+
     @Test
     void chunksRoundTripAndAccumulateAtomicallyOutOfOrder() {
         List<BlueprintJournalEntry> entries = new ArrayList<>();

@@ -122,6 +122,11 @@ public class SyncPlayerRecipeDataPacket {
         ctx.get().setPacketHandled(true);
     }
 
+    /** Drops any partial or completed snapshot retained from the previous connection. */
+    public static void clearClientState() {
+        CLIENT_ACCUMULATOR.clear();
+    }
+
     int estimatedPayloadBytes() {
         int size = 8
                 + BlueprintSyncLimits.varIntBytes(chunkIndex)
@@ -171,32 +176,73 @@ public class SyncPlayerRecipeDataPacket {
         }
     }
 
-    private static final class ClientAccumulator {
-        private long syncId = Long.MIN_VALUE;
+    static final class ClientAccumulator {
+        private boolean initialized;
+        private boolean completed;
+        private long syncId;
         private int expectedChunks;
-        private final Map<Integer, Set<String>> chunks = new TreeMap<>();
+        private final Map<Integer, SyncPlayerRecipeDataPacket> chunks = new TreeMap<>();
 
-        private synchronized Optional<Set<String>> accept(SyncPlayerRecipeDataPacket packet) {
-            if (syncId != packet.syncId) {
+        synchronized Optional<Set<String>> accept(SyncPlayerRecipeDataPacket packet) {
+            if (packet == null) {
+                throw new IllegalArgumentException("learned-recipe packet cannot be null");
+            }
+            if (initialized && Long.compare(packet.syncId, syncId) < 0) {
+                return Optional.empty();
+            }
+            if (!initialized || syncId != packet.syncId) {
+                initialized = true;
+                completed = false;
                 syncId = packet.syncId;
                 expectedChunks = packet.chunkCount;
                 chunks.clear();
             }
+            if (completed) {
+                return Optional.empty();
+            }
             if (expectedChunks != packet.chunkCount) {
+                clear();
                 throw new IllegalArgumentException("Inconsistent learned-recipe synchronization chunk count");
             }
-            chunks.put(packet.chunkIndex, packet.learnedRecipes);
+            SyncPlayerRecipeDataPacket existing = chunks.putIfAbsent(packet.chunkIndex, packet);
+            if (existing != null && !existing.learnedRecipes.equals(packet.learnedRecipes)) {
+                clear();
+                throw new IllegalArgumentException(
+                        "Conflicting duplicate learned-recipe synchronization chunk");
+            }
+            long entryCount = chunks.values().stream()
+                    .mapToLong(chunk -> chunk.learnedRecipes.size())
+                    .sum();
+            if (entryCount > MAX_RECIPES) {
+                clear();
+                throw new IllegalArgumentException(
+                        "Learned-recipe synchronization exceeds the entry limit");
+            }
             if (chunks.size() != expectedChunks) {
                 return Optional.empty();
             }
 
             Set<String> completed = new TreeSet<>();
-            chunks.values().forEach(completed::addAll);
-            if (completed.size() > MAX_RECIPES) {
-                throw new IllegalArgumentException("Completed learned-recipe synchronization exceeds the entry limit");
+            for (SyncPlayerRecipeDataPacket chunk : chunks.values()) {
+                for (String recipeId : chunk.learnedRecipes) {
+                    if (!completed.add(recipeId)) {
+                        clear();
+                        throw new IllegalArgumentException(
+                                "Duplicate learned recipe across synchronization chunks");
+                    }
+                }
             }
             chunks.clear();
+            this.completed = true;
             return Optional.of(Collections.unmodifiableSet(completed));
+        }
+
+        synchronized void clear() {
+            initialized = false;
+            completed = false;
+            syncId = 0L;
+            expectedChunks = 0;
+            chunks.clear();
         }
     }
 }

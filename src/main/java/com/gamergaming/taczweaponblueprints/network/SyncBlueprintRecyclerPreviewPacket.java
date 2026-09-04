@@ -12,6 +12,8 @@ import com.gamergaming.taczweaponblueprints.progression.BlueprintRecyclingServic
 import com.gamergaming.taczweaponblueprints.progression.BlueprintReverseEngineeringService;
 import com.gamergaming.taczweaponblueprints.progression.FoundWeaponRecoveryService;
 import com.gamergaming.taczweaponblueprints.progression.ResearchDataRedemptionService;
+import com.gamergaming.taczweaponblueprints.progression.fragment.BlueprintFragmentAnalysisService;
+import com.gamergaming.taczweaponblueprints.progression.fragment.BlueprintFragmentPolicy;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCost;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchIngredient;
 
@@ -69,6 +71,30 @@ public final class SyncBlueprintRecyclerPreviewPacket {
         buffer.writeVarInt(preview.weaponOrigin().ordinal());
         buffer.writeVarInt(preview.recoveryPointValue());
         writeOptionalEnum(buffer, preview.recoveryStatus());
+        buffer.writeBoolean(preview.fragmentEvaluation().isPresent());
+        if (preview.fragmentEvaluation().isPresent()) {
+            BlueprintFragmentAnalysisService.Evaluation fragment =
+                    preview.fragmentEvaluation().orElseThrow();
+            buffer.writeVarInt(fragment.status().ordinal());
+            writeOptionalId(buffer, fragment.target());
+            buffer.writeVarInt(fragment.completionMode().ordinal());
+            buffer.writeVarInt(fragment.offered());
+            buffer.writeVarInt(fragment.accepted());
+            buffer.writeVarInt(fragment.rejected());
+            buffer.writeVarInt(fragment.archivedBefore());
+            buffer.writeVarInt(fragment.archivedAfterDeposit());
+            buffer.writeVarInt(fragment.archivedAfterAction());
+            buffer.writeVarInt(fragment.threshold());
+            buffer.writeVarInt(fragment.completedSetsBefore());
+            buffer.writeVarInt(fragment.completedSetsAfterDeposit());
+            buffer.writeBoolean(fragment.consumesSet());
+            buffer.writeBoolean(fragment.learnedTarget());
+            buffer.writeVarInt(fragment.awardedPoints());
+            buffer.writeVarInt(fragment.pointBalance());
+            buffer.writeVarInt(fragment.pointCap());
+            buffer.writeBoolean(fragment.createsBlueprint());
+            buffer.writeVarLong(fragment.publicationRevision());
+        }
     }
 
     public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
@@ -148,6 +174,35 @@ public final class SyncBlueprintRecyclerPreviewPacket {
                 buffer,
                 FoundWeaponRecoveryService.Status.values(),
                 "found-weapon recovery status");
+        Optional<BlueprintFragmentAnalysisService.Evaluation> fragmentEvaluation = Optional.empty();
+        if (buffer.readBoolean()) {
+            fragmentEvaluation = Optional.of(new BlueprintFragmentAnalysisService.Evaluation(
+                    readEnum(
+                            buffer,
+                            BlueprintFragmentAnalysisService.Status.values(),
+                            "Blueprint Fragment status"),
+                    readOptionalId(buffer),
+                    readEnum(
+                            buffer,
+                            BlueprintFragmentPolicy.CompletionMode.values(),
+                            "Blueprint Fragment completion mode"),
+                    buffer.readVarInt(),
+                    buffer.readVarInt(),
+                    buffer.readVarInt(),
+                    buffer.readVarInt(),
+                    buffer.readVarInt(),
+                    buffer.readVarInt(),
+                    buffer.readVarInt(),
+                    buffer.readVarInt(),
+                    buffer.readVarInt(),
+                    buffer.readBoolean(),
+                    buffer.readBoolean(),
+                    buffer.readVarInt(),
+                    buffer.readVarInt(),
+                    buffer.readVarInt(),
+                    buffer.readBoolean(),
+                    buffer.readVarLong()));
+        }
         return new BlueprintRecyclerPreview(
                 inputKind,
                 inputId,
@@ -169,7 +224,8 @@ public final class SyncBlueprintRecyclerPreviewPacket {
                 ingredients,
                 weaponOrigin,
                 recoveryPointValue,
-                recoveryStatus);
+                recoveryStatus,
+                fragmentEvaluation);
     }
 
     private static int readContainerId(FriendlyByteBuf buffer) {

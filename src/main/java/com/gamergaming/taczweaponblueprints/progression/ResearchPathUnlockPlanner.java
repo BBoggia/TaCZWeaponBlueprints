@@ -109,6 +109,33 @@ public final class ResearchPathUnlockPlanner {
             boolean creativePlayer,
             List<ItemStack> inventoryStacks,
             ResearchPathAuthority authority) {
+        return plan(
+                targetId,
+                playerData,
+                policyResolver,
+                progressionExempt,
+                creativePlayer,
+                inventoryStacks,
+                authority,
+                ignored -> true);
+    }
+
+    /**
+     * Plans a route after excluding unlearned nodes that the current interaction
+     * cannot acquire, such as alternatives above the active Bench tier or behind
+     * an unmet Progression Gate. Learned support is retained independently by the
+     * graph because acquisition restrictions must not invalidate existing
+     * knowledge.
+     */
+    public static Result plan(
+            ResourceLocation targetId,
+            IPlayerRecipeData playerData,
+            Function<ResourceLocation, BlueprintResearchPolicy> policyResolver,
+            Predicate<ResourceLocation> progressionExempt,
+            boolean creativePlayer,
+            List<ItemStack> inventoryStacks,
+            ResearchPathAuthority authority,
+            Predicate<ResourceLocation> pendingNodeEligible) {
         return planWithControls(
                 targetId,
                 playerData,
@@ -117,6 +144,7 @@ public final class ResearchPathUnlockPlanner {
                 creativePlayer,
                 inventoryStacks,
                 authority,
+                pendingNodeEligible,
                 PlanningLimits.DEFAULT,
                 System::nanoTime);
     }
@@ -131,8 +159,33 @@ public final class ResearchPathUnlockPlanner {
             ResearchPathAuthority authority,
             PlanningLimits limits,
             LongSupplier nanoClock) {
+        return planWithControls(
+                targetId,
+                playerData,
+                policyResolver,
+                progressionExempt,
+                creativePlayer,
+                inventoryStacks,
+                authority,
+                ignored -> true,
+                limits,
+                nanoClock);
+    }
+
+    static Result planWithControls(
+            ResourceLocation targetId,
+            IPlayerRecipeData playerData,
+            Function<ResourceLocation, BlueprintResearchPolicy> policyResolver,
+            Predicate<ResourceLocation> progressionExempt,
+            boolean creativePlayer,
+            List<ItemStack> inventoryStacks,
+            ResearchPathAuthority authority,
+            Predicate<ResourceLocation> pendingNodeEligible,
+            PlanningLimits limits,
+            LongSupplier nanoClock) {
         if (!validId(targetId) || playerData == null || policyResolver == null
-                || progressionExempt == null || authority == null || limits == null
+                || progressionExempt == null || authority == null
+                || pendingNodeEligible == null || limits == null
                 || nanoClock == null
                 || inventoryStacks != null
                         && inventoryStacks.stream().anyMatch(java.util.Objects::isNull)) {
@@ -142,7 +195,8 @@ public final class ResearchPathUnlockPlanner {
         RequestInputs inputs;
         try {
             budget = new PlanningBudget(limits, nanoClock);
-            inputs = new RequestInputs(policyResolver, progressionExempt, budget);
+            inputs = new RequestInputs(
+                    policyResolver, progressionExempt, pendingNodeEligible, budget);
         } catch (RuntimeException exception) {
             return Result.failure(BlueprintResearchService.Status.POLICY_UNAVAILABLE);
         }
@@ -161,6 +215,7 @@ public final class ResearchPathUnlockPlanner {
                         playerData,
                         inputs.policyResolver(),
                         inputs.progressionExempt(),
+                        inputs.pendingNodeEligible(),
                         authority,
                         graphLimits(limits),
                         budget);
@@ -254,6 +309,7 @@ public final class ResearchPathUnlockPlanner {
                     playerData,
                     inputs.policyResolver(),
                     inputs.progressionExempt(),
+                    inputs.pendingNodeEligible(),
                     authority,
                     budget);
         } catch (RuntimeException exception) {
@@ -662,7 +718,10 @@ public final class ResearchPathUnlockPlanner {
         }
         return ResearchIngredientPlanner.plan(stacks, plan.quote().ingredients())
                 .map(ingredientPlan -> new TransactionPlan(
-                        plan.solution(), plan.quote(), ingredientPlan));
+                        plan.solution(),
+                        plan.quote(),
+                        ingredientPlan,
+                        plan.fragmentSetUses()));
     }
 
     private static String ingredientKey(BlueprintResearchIngredient ingredient) {
@@ -685,6 +744,7 @@ public final class ResearchPathUnlockPlanner {
         private final IPlayerRecipeData playerData;
         private final Function<ResourceLocation, BlueprintResearchPolicy> policyResolver;
         private final Predicate<ResourceLocation> progressionExempt;
+        private final Predicate<ResourceLocation> pendingNodeEligible;
         private final ResearchPathAuthority authority;
         private final PlanningBudget budget;
         private final int pointBalance;
@@ -694,11 +754,13 @@ public final class ResearchPathUnlockPlanner {
                 IPlayerRecipeData playerData,
                 Function<ResourceLocation, BlueprintResearchPolicy> policyResolver,
                 Predicate<ResourceLocation> progressionExempt,
+                Predicate<ResourceLocation> pendingNodeEligible,
                 ResearchPathAuthority authority,
                 PlanningBudget budget) {
             this.playerData = playerData;
             this.policyResolver = policyResolver;
             this.progressionExempt = progressionExempt;
+            this.pendingNodeEligible = pendingNodeEligible;
             this.authority = authority;
             this.budget = budget;
             this.pointBalance = playerData.getResearchPoints();
@@ -732,6 +794,10 @@ public final class ResearchPathUnlockPlanner {
                         progressionExempt);
                 if (invalid == null) {
                     invalid = authority.validate(policy).orElse(null);
+                }
+                if (invalid == null && !policy.learned()
+                        && !pendingNodeEligible.test(blueprintId)) {
+                    invalid = BlueprintResearchService.Status.POLICY_INELIGIBLE;
                 }
                 if (invalid != null) {
                     result = Frontier.failure(invalid);
@@ -1124,14 +1190,17 @@ public final class ResearchPathUnlockPlanner {
         private final SelectedUnlockSolution solution;
         private final RouteQuote quote;
         private final ResearchIngredientPlanner.Plan ingredientPlan;
+        private final List<FragmentSetUse> fragmentSetUses;
 
         private TransactionPlan(
                 SelectedUnlockSolution solution,
                 RouteQuote quote,
-                ResearchIngredientPlanner.Plan ingredientPlan) {
+                ResearchIngredientPlanner.Plan ingredientPlan,
+                List<FragmentSetUse> fragmentSetUses) {
             if (solution == null
                     || quote == null
                     || ingredientPlan == null
+                    || fragmentSetUses == null
                     || !quote.equals(ResearchPathUnlockPlanner.quote(solution, null))
                     || ingredientPlan.totalConsumed() != quote.totalMaterialUnits()) {
                 throw new IllegalArgumentException("transaction plan does not match route quote");
@@ -1139,6 +1208,7 @@ public final class ResearchPathUnlockPlanner {
             this.solution = solution;
             this.quote = quote;
             this.ingredientPlan = ingredientPlan;
+            this.fragmentSetUses = List.copyOf(fragmentSetUses);
         }
 
         public SelectedUnlockSolution solution() {
@@ -1153,19 +1223,37 @@ public final class ResearchPathUnlockPlanner {
             return ingredientPlan;
         }
 
+        public List<FragmentSetUse> fragmentSetUses() {
+            return fragmentSetUses;
+        }
+
         public int unlockCount() {
             return solution.unlockCount();
         }
     }
 
     /** Compatibility facade preserving the original planner result API. */
-    public record Plan(SelectedUnlockSolution solution, RouteQuote quote) {
+    public record Plan(
+            SelectedUnlockSolution solution,
+            RouteQuote quote,
+            List<FragmentSetUse> fragmentSetUses) {
         public Plan {
+            fragmentSetUses = fragmentSetUses == null ? List.of() : List.copyOf(fragmentSetUses);
             if (solution == null
                     || quote == null
-                    || !quote.equals(ResearchPathUnlockPlanner.quote(solution, null))) {
+                    || !quote.equals(ResearchPathUnlockPlanner.quote(solution, null))
+                    || fragmentSetUses.size() > solution.unlockCount()
+                    || fragmentSetUses.stream().anyMatch(java.util.Objects::isNull)
+                    || fragmentSetUses.stream().map(FragmentSetUse::blueprintId).distinct().count()
+                            != fragmentSetUses.size()
+                    || fragmentSetUses.stream().anyMatch(use -> !solution.nodes().stream()
+                            .anyMatch(node -> node.blueprintId().equals(use.blueprintId())))) {
                 throw new IllegalArgumentException("invalid research path unlock plan");
             }
+        }
+
+        public Plan(SelectedUnlockSolution solution, RouteQuote quote) {
+            this(solution, quote, List.of());
         }
 
         public Plan(
@@ -1175,7 +1263,8 @@ public final class ResearchPathUnlockPlanner {
                 boolean costBypassed) {
             this(
                     new SelectedUnlockSolution(nodes),
-                    new RouteQuote(pointCost, ingredients, costBypassed));
+                    new RouteQuote(pointCost, ingredients, costBypassed),
+                    List.of());
         }
 
         public List<PlannedNode> nodes() {
@@ -1196,6 +1285,31 @@ public final class ResearchPathUnlockPlanner {
 
         public int unlockCount() {
             return solution.unlockCount();
+        }
+    }
+
+    /** One complete archived set reserved for a discounted newly learned node. */
+    public record FragmentSetUse(
+            ResourceLocation blueprintId,
+            int archivedBefore,
+            int threshold,
+            int pointDiscount) {
+        public FragmentSetUse {
+            if (!validId(blueprintId)
+                    || archivedBefore < threshold
+                    || archivedBefore > com.gamergaming.taczweaponblueprints.progression.fragment
+                            .BlueprintFragmentPolicy.MAX_ARCHIVED_FRAGMENTS
+                    || threshold < 1
+                    || threshold > com.gamergaming.taczweaponblueprints.progression.fragment
+                            .BlueprintFragmentPolicy.MAX_THRESHOLD
+                    || pointDiscount < 1
+                    || pointDiscount > PlayerProgressionLimits.MAX_RESEARCH_POINTS) {
+                throw new IllegalArgumentException("invalid Blueprint Fragment set use");
+            }
+        }
+
+        public int archivedAfter() {
+            return archivedBefore - threshold;
         }
     }
 
@@ -1512,12 +1626,15 @@ public final class ResearchPathUnlockPlanner {
     static final class RequestInputs {
         private final Function<ResourceLocation, BlueprintResearchPolicy> policyResolver;
         private final Predicate<ResourceLocation> progressionExempt;
+        private final Predicate<ResourceLocation> pendingNodeEligible;
 
         RequestInputs(
                 Function<ResourceLocation, BlueprintResearchPolicy> policyResolver,
                 Predicate<ResourceLocation> progressionExempt,
+                Predicate<ResourceLocation> pendingNodeEligible,
                 PlanningBudget budget) {
-            if (policyResolver == null || progressionExempt == null || budget == null) {
+            if (policyResolver == null || progressionExempt == null
+                    || pendingNodeEligible == null || budget == null) {
                 throw new IllegalArgumentException("research planning inputs are invalid");
             }
             Map<ResourceLocation, CachedPolicy> policies = new HashMap<>();
@@ -1554,6 +1671,23 @@ public final class ResearchPathUnlockPlanner {
                 }
                 return cached.exempt();
             };
+            Map<ResourceLocation, CachedEligibility> eligibility = new HashMap<>();
+            this.pendingNodeEligible = id -> {
+                CachedEligibility cached = eligibility.get(id);
+                if (cached == null) {
+                    budget.checkpoint();
+                    try {
+                        cached = new CachedEligibility(pendingNodeEligible.test(id), null);
+                    } catch (RuntimeException exception) {
+                        cached = new CachedEligibility(false, exception);
+                    }
+                    eligibility.put(id, cached);
+                }
+                if (cached.failure() != null) {
+                    throw cached.failure();
+                }
+                return cached.eligible();
+            };
         }
 
         Function<ResourceLocation, BlueprintResearchPolicy> policyResolver() {
@@ -1562,6 +1696,10 @@ public final class ResearchPathUnlockPlanner {
 
         Predicate<ResourceLocation> progressionExempt() {
             return progressionExempt;
+        }
+
+        Predicate<ResourceLocation> pendingNodeEligible() {
+            return pendingNodeEligible;
         }
     }
 
@@ -1572,6 +1710,11 @@ public final class ResearchPathUnlockPlanner {
 
     private record CachedExemption(
             boolean exempt,
+            RuntimeException failure) {
+    }
+
+    private record CachedEligibility(
+            boolean eligible,
             RuntimeException failure) {
     }
 

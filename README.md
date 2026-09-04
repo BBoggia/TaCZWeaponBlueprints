@@ -12,12 +12,17 @@ dimension changes, logout, and server restarts.
 ## Features
 
 - Configurable blueprint loot with live server settings and datapack support.
+- Target-specific Blueprint Fragments that share existing blueprint loot rules,
+  favor unlearned weapons when possible, and can be archived for research
+  discounts or protected blueprint reconstruction.
 - Permanent per-player recipe knowledge enforced by the server.
 - A Blueprint Journal for discoveries, learned recipes, recent unlocks,
   completion, active rules, and a reusable Getting Started guide.
 - An edge-to-edge Research Bench Tech Tree with search, pan, zoom, keyboard
   navigation, an interactive minimap for large trees, and selected-weapon
   details.
+- Three Research Bench tiers for the Tech Tree and three dedicated crafting
+  Workbench levels using TaCZ's native crafting screen.
 - Guided research tools for pinning a target, highlighting its complete route,
   tracking RP and material progress, and filtering to affordable unlocks.
 - Automatic weapon placement based on strength, handling, range, and play
@@ -27,9 +32,9 @@ dimension changes, logout, and server restarts.
 - Shortest-path research that can preview and unlock a complete prerequisite
   route in one atomic transaction.
 - Configurable RP, material, or combined research costs.
-- A Blueprint Analyzer for reverse engineering equipment, recycling learned
-  duplicate blueprints, redeeming Research Data, and handling supported found
-  weapons.
+- A Blueprint Analyzer for archiving Blueprint Fragments, reverse engineering
+  equipment, recycling learned duplicate blueprints, redeeming Research Data,
+  and handling supported found weapons.
 - Optional JEI and EMI information pages that explain the progression
   workstations without exposing hidden research targets or enabling recipe
   transfer bypasses.
@@ -43,9 +48,10 @@ add ammo and attachments to research using the included datapack data.
 2. Explore configured loot locations to find a blueprint or Research Data.
 3. Use a blueprint to learn its recipe permanently.
 4. Open the Blueprint Journal to review progress and ways to earn RP.
-5. Craft a Research Bench to browse and purchase Tech Tree unlocks.
-6. Use the Blueprint Analyzer to reverse engineer equipment or recycle
-   supported items.
+5. Craft a Research Bench to browse and purchase Tech Tree unlocks, then use the
+   appropriate Workbench level to manufacture learned weapons.
+6. Use the Blueprint Analyzer to archive Blueprint Fragments, reverse engineer
+   equipment, or recycle supported items.
 
 ## Requirements
 
@@ -79,6 +85,8 @@ Server controls include:
 - gun, ammo, and attachment blacklists;
 - the Blueprint Journal, Research Bench, and Blueprint Analyzer;
 - RP limits and research cost mode;
+- research and crafting tier enforcement, external workstation mappings, and
+  Creative-mode tier bypass;
 - found-weapon recovery and duplicate recycling;
 - undiscovered blueprint visibility;
 - Creative-mode cost bypass;
@@ -103,8 +111,9 @@ Datapacks can customize:
 - prerequisites and alternate route groups;
 - discovery visibility and tree inclusion;
 - Tech Tree groups, entry points, and presentation;
-- automatic weapon placement; and
-- Research Point awards.
+- automatic weapon placement;
+- Research Point awards; and
+- workstation tiers, Blueprint Fragment rules, and Progression Gates.
 
 Automatic trees include every weapon available for research and generate their
 placement and prerequisites. Authored-only trees include only entries selected
@@ -119,6 +128,11 @@ See the [research-tree authoring guide](docs/research-tree-authoring.md) for
 resource locations, formats, selectors, prerequisites, and tree authority. The
 [operations and migration guide](docs/operations-and-migration.md) covers
 upgrades, reload behavior, save compatibility, and rollback considerations.
+The [Blueprint Fragment supply guide](docs/blueprint-fragment-supply.md)
+explains fragment identity, loot replacement, weighting, and diagnostics.
+The [Research Bench and crafting Workbench guide](docs/research-bench-tiers-and-crafting.md)
+defines tier assignment, direct station recipes, native crafting,
+compatibility tables, and reload behavior.
 
 ## Operator Commands
 
@@ -131,25 +145,31 @@ All `/gg` commands require permission level 2.
 | `/gg loot inspect <loot_table>` | Explain how a loot table is handled. |
 | `/gg loot pool <pool_id>` | Inspect a prepared blueprint pool. |
 | `/gg loot preview <loot_table>` | Preview effective chances, rolls, and expected additions. |
-| `/gg progression inspect <player>` | Inspect a player's blueprint and RP progress. |
-| `/gg progression reset <targets> <state>` | Reset learned, discovered, point, award, or complete progression state. |
+| `/gg progression inspect <player> [blueprint_id]` | Inspect player progress and the independent research/crafting result for a blueprint. |
+| `/gg progression reset <targets> <state>` | Reset learned, discovered, point, award, fragment, criterion, or complete progression state. |
 | `/gg progression points give <targets> <amount>` | Grant RP without exceeding the configured cap. |
+| `/gg progression criteria inspect <player> <criterion>` | Inspect one custom Progression Gate counter. |
+| `/gg progression criteria grant <targets> <criterion> [value]` | Raise a custom criterion to a minimum value. |
+| `/gg progression criteria increment <targets> <criterion> <amount>` | Add progress without exceeding the saved limit. |
+| `/gg progression criteria reset <targets> <criterion>` | Clear one custom criterion without changing other progression. |
 | `/gg research status` | Audit the active research profile and live catalog. |
-| `/gg research inspect <blueprint_id>` | Inspect one blueprint's research rule and requirements. |
+| `/gg research inspect <blueprint_id>` | Explain one blueprint's research and crafting assignments. |
 | `/gg research setup assess` | Recommend a discovery preset for the current server. |
 | `/gg research setup preview <preset>` | Preview a preset without changing server state. |
 | `/gg research setup apply <preset> confirm` | Apply and synchronize a confirmed preset. |
-| `/gg research export` | Export the current authoring catalog and economy review. |
+| `/gg research export` | Export the complete research/crafting catalog and economy review. |
 
 Use vanilla `/reload` after changing datapacks. A rejected reload leaves the
 last working data active.
 
 ## Documentation
 
-- [Current release notes](docs/releases/1.2.0.md)
+- [Current release notes](docs/releases/1.3.0.md)
 - [CurseForge description](docs/curseforge-description.md)
 - [Operations and migration](docs/operations-and-migration.md)
 - [Research-tree authoring](docs/research-tree-authoring.md)
+- [Research Bench and crafting Workbench tiers](docs/research-bench-tiers-and-crafting.md)
+- [Progression Gate criterion API](docs/progression-gate-api.md)
 - [Research costs and found-weapon recovery](docs/research-cost-and-found-weapon-recovery.md)
 - [Shortest-path purchases](docs/research-path-purchases.md)
 - [Capability scoring](docs/research-capability-scoring-v3.md)

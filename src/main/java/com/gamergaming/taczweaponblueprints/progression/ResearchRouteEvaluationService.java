@@ -1,7 +1,9 @@
 package com.gamergaming.taczweaponblueprints.progression;
 
 import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
@@ -10,6 +12,9 @@ import java.util.function.Predicate;
 import com.gamergaming.taczweaponblueprints.capabilities.BlueprintLearningMutation;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
+import com.gamergaming.taczweaponblueprints.progression.eligibility.ResearchAccessFingerprint;
+import com.gamergaming.taczweaponblueprints.progression.eligibility.ResearchAccessSummary;
+import com.gamergaming.taczweaponblueprints.progression.eligibility.ResearchRouteEligibilityService;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchPolicy;
 
@@ -43,8 +48,23 @@ public final class ResearchRouteEvaluationService {
                     BlueprintResearchService.Status.SUCCESS;
             ResearchPathUnlockPlanner.Plan path = null;
             Optional<ResearchRouteFingerprint> routeFingerprint = Optional.empty();
+            ResearchAccessSummary accessSummary = ResearchAccessSummary.NONE;
+
+            if (!request.directPathResearch() && request.accessEvaluator().isPresent()) {
+                ResearchRouteEligibilityService.Evaluation access = request.accessEvaluator()
+                        .orElseThrow().apply(List.of(request.targetId()));
+                if (access == null) {
+                    accessSummary = ResearchAccessSummary.POLICY_UNAVAILABLE;
+                    policyEligible = false;
+                } else {
+                    accessSummary = access.summary();
+                    policyEligible = policyEligible && access.eligible();
+                }
+            }
 
             if (request.directPathResearch()) {
+                AccessCache accessCache = request.accessEvaluator()
+                        .map(AccessCache::new).orElse(null);
                 ResearchPathUnlockPlanner.Result planned = ResearchPathUnlockPlanner.plan(
                         request.targetId(),
                         request.playerData(),
@@ -52,23 +72,47 @@ public final class ResearchRouteEvaluationService {
                         request.progressionExempt(),
                         request.creativePlayer(),
                         request.inventoryStacks(),
-                        request.pathAuthority());
+                        request.pathAuthority(),
+                        accessCache == null
+                                ? ignored -> true
+                                : accessCache::eligibleForPurchase);
                 planningStatus = planned.status();
                 if (planned.successful() && request.blueprintsEnabled()) {
-                    path = planned.plan().orElseThrow();
+                    path = request.pathAdjuster().apply(planned.plan().orElseThrow());
                     pointCost = path.pointCost();
                     unlockCount = path.unlockCount();
                     bypass = path.costBypassed();
                     requirements = path.ingredients();
                     policyEligible = true;
-                    routeFingerprint = Optional.of(ResearchRouteFingerprint.create(
-                            request.targetId(),
-                            path,
-                            request.playerData(),
-                            request.creativePlayer(),
-                            request.fingerprintContext()));
+                    ResearchAccessFingerprint accessFingerprint = ResearchAccessFingerprint.EMPTY;
+                    if (accessCache != null) {
+                        ResearchRouteEligibilityService.Evaluation access =
+                                accessCache.evaluate(path.nodes().stream()
+                                        .map(ResearchPathUnlockPlanner.PlannedNode::blueprintId)
+                                        .toList());
+                        if (access == null) {
+                            accessSummary = ResearchAccessSummary.POLICY_UNAVAILABLE;
+                            policyEligible = false;
+                        } else {
+                            accessSummary = access.summary();
+                            accessFingerprint = access.fingerprint();
+                            policyEligible = access.eligible();
+                        }
+                    }
+                    if (policyEligible) {
+                        routeFingerprint = Optional.of(ResearchRouteFingerprint.create(
+                                request.targetId(),
+                                path,
+                                request.playerData(),
+                                request.creativePlayer(),
+                                request.fingerprintContext(),
+                                accessFingerprint));
+                    }
                 } else {
                     policyEligible = false;
+                    if (accessCache != null) {
+                        accessSummary = accessCache.blockedSummary();
+                    }
                     if (isVisiblePlanningFailure(planned.status())) {
                         pointCost = 0;
                         unlockCount = 1;
@@ -130,7 +174,8 @@ public final class ResearchRouteEvaluationService {
                     planningStatus,
                     routeFingerprint,
                     request.directPathResearch(),
-                    Optional.ofNullable(path)));
+                    Optional.ofNullable(path),
+                    accessSummary));
         } catch (RuntimeException exception) {
             ResearchRouteFailureReporter.report("route evaluation", exception);
             return Optional.empty();
@@ -171,7 +216,7 @@ public final class ResearchRouteEvaluationService {
                         List.of(),
                         Optional.empty()));
             }
-            if (evaluation.path().isEmpty()) {
+            if (evaluation.accessSummary().blocked() || evaluation.path().isEmpty()) {
                 return Optional.of(unavailableGuidance(evaluation, costMode));
             }
             ResearchPathUnlockPlanner.Plan path = evaluation.path().orElseThrow();
@@ -275,6 +320,12 @@ public final class ResearchRouteEvaluationService {
                     ResearchGuidanceSnapshot.State.POLICY_BLOCKED;
             default -> ResearchGuidanceSnapshot.State.ROUTE_UNAVAILABLE;
         };
+        if (evaluation.accessSummary().kind()
+                == ResearchAccessSummary.Kind.POLICY_UNAVAILABLE) {
+            state = ResearchGuidanceSnapshot.State.ROUTE_UNAVAILABLE;
+        } else if (evaluation.accessSummary().blocked()) {
+            state = ResearchGuidanceSnapshot.State.POLICY_BLOCKED;
+        }
         return new ResearchGuidanceSnapshot(
                 evaluation.targetId(),
                 state,
@@ -340,6 +391,62 @@ public final class ResearchRouteEvaluationService {
         return true;
     }
 
+    /** Caches bounded single-node access checks used while exploring OR routes. */
+    private static final class AccessCache {
+        private final Function<List<ResourceLocation>,
+                ResearchRouteEligibilityService.Evaluation> evaluator;
+        private final Map<ResourceLocation, ResearchRouteEligibilityService.Evaluation>
+                nodeEvaluations = new LinkedHashMap<>();
+
+        private AccessCache(Function<List<ResourceLocation>,
+                ResearchRouteEligibilityService.Evaluation> evaluator) {
+            this.evaluator = evaluator;
+        }
+
+        private boolean eligibleForPurchase(ResourceLocation blueprintId) {
+            return nodeEvaluations.computeIfAbsent(
+                    blueprintId,
+                    id -> normalize(evaluator.apply(List.of(id))))
+                    .eligible();
+        }
+
+        private ResearchRouteEligibilityService.Evaluation evaluate(
+                List<ResourceLocation> blueprintIds) {
+            return normalize(evaluator.apply(blueprintIds));
+        }
+
+        private ResearchAccessSummary blockedSummary() {
+            ResearchAccessSummary tier = nodeEvaluations.entrySet().stream()
+                    .filter(entry -> !entry.getValue().eligible())
+                    .map(Map.Entry::getValue)
+                    .map(ResearchRouteEligibilityService.Evaluation::summary)
+                    .filter(summary -> summary.kind()
+                            == ResearchAccessSummary.Kind.WORKBENCH_TIER)
+                    .max(java.util.Comparator.comparingInt(summary -> summary
+                            .requiredTier().orElseThrow().level()))
+                    .orElse(null);
+            if (tier != null) {
+                return tier;
+            }
+            return nodeEvaluations.entrySet().stream()
+                    .filter(entry -> !entry.getValue().eligible())
+                    .sorted(Map.Entry.comparingByKey(
+                            java.util.Comparator.comparing(ResourceLocation::toString)))
+                    .map(Map.Entry::getValue)
+                    .map(ResearchRouteEligibilityService.Evaluation::summary)
+                    .filter(ResearchAccessSummary::blocked)
+                    .findFirst()
+                    .orElse(ResearchAccessSummary.NONE);
+        }
+
+        private static ResearchRouteEligibilityService.Evaluation normalize(
+                ResearchRouteEligibilityService.Evaluation evaluation) {
+            return evaluation == null
+                    ? ResearchRouteEligibilityService.Evaluation.unavailable()
+                    : evaluation;
+        }
+    }
+
     public record Request(
             ResourceLocation targetId,
             IPlayerRecipeData playerData,
@@ -352,13 +459,80 @@ public final class ResearchRouteEvaluationService {
             List<ItemStack> inventoryStacks,
             boolean creativePlayer,
             boolean directPathResearch,
-            boolean blueprintsEnabled) {
+            boolean blueprintsEnabled,
+            Optional<Function<List<ResourceLocation>,
+                    ResearchRouteEligibilityService.Evaluation>> accessEvaluator,
+            java.util.function.UnaryOperator<ResearchPathUnlockPlanner.Plan> pathAdjuster) {
+        public Request(
+                ResourceLocation targetId,
+                IPlayerRecipeData playerData,
+                BlueprintResearchPolicy selectedPolicy,
+                Function<ResourceLocation, BlueprintResearchPolicy> policyResolver,
+                Predicate<ResourceLocation> progressionExempt,
+                ResearchPathAuthority pathAuthority,
+                ResearchRouteFingerprint.Context fingerprintContext,
+                Function<ResourceLocation, BlueprintLearningService.LearningTarget> targetResolver,
+                List<ItemStack> inventoryStacks,
+                boolean creativePlayer,
+                boolean directPathResearch,
+                boolean blueprintsEnabled,
+                Optional<Function<List<ResourceLocation>,
+                        ResearchRouteEligibilityService.Evaluation>> accessEvaluator) {
+            this(
+                    targetId,
+                    playerData,
+                    selectedPolicy,
+                    policyResolver,
+                    progressionExempt,
+                    pathAuthority,
+                    fingerprintContext,
+                    targetResolver,
+                    inventoryStacks,
+                    creativePlayer,
+                    directPathResearch,
+                    blueprintsEnabled,
+                    accessEvaluator,
+                    java.util.function.UnaryOperator.identity());
+        }
+
+        public Request(
+                ResourceLocation targetId,
+                IPlayerRecipeData playerData,
+                BlueprintResearchPolicy selectedPolicy,
+                Function<ResourceLocation, BlueprintResearchPolicy> policyResolver,
+                Predicate<ResourceLocation> progressionExempt,
+                ResearchPathAuthority pathAuthority,
+                ResearchRouteFingerprint.Context fingerprintContext,
+                Function<ResourceLocation, BlueprintLearningService.LearningTarget> targetResolver,
+                List<ItemStack> inventoryStacks,
+                boolean creativePlayer,
+                boolean directPathResearch,
+                boolean blueprintsEnabled) {
+            this(
+                    targetId,
+                    playerData,
+                    selectedPolicy,
+                    policyResolver,
+                    progressionExempt,
+                    pathAuthority,
+                    fingerprintContext,
+                    targetResolver,
+                    inventoryStacks,
+                    creativePlayer,
+                    directPathResearch,
+                    blueprintsEnabled,
+                    Optional.empty(),
+                    java.util.function.UnaryOperator.identity());
+        }
+
         public Request {
+            accessEvaluator = accessEvaluator == null ? Optional.empty() : accessEvaluator;
             if (targetId == null || playerData == null || selectedPolicy == null
                     || !targetId.equals(selectedPolicy.blueprintId())
                     || policyResolver == null || progressionExempt == null
                     || pathAuthority == null || fingerprintContext == null
                     || targetResolver == null || inventoryStacks == null
+                    || pathAdjuster == null
                     || inventoryStacks.stream().anyMatch(java.util.Objects::isNull)) {
                 throw new IllegalArgumentException("research route evaluation request is invalid");
             }
@@ -381,16 +555,20 @@ public final class ResearchRouteEvaluationService {
             BlueprintResearchService.Status planningStatus,
             Optional<ResearchRouteFingerprint> routeFingerprint,
             boolean directPathResearch,
-            Optional<ResearchPathUnlockPlanner.Plan> path) {
+            Optional<ResearchPathUnlockPlanner.Plan> path,
+            ResearchAccessSummary accessSummary) {
         public Evaluation {
             requirements = requirements == null ? List.of() : List.copyOf(requirements);
             routeFingerprint = routeFingerprint == null ? Optional.empty() : routeFingerprint;
             path = path == null ? Optional.empty() : path;
+            accessSummary = accessSummary == null ? ResearchAccessSummary.NONE : accessSummary;
             if (targetId == null || pointCost < 0 || pointBalance < 0 || allocation == null
                     || unlockCount < 1 || planningStatus == null
                     || allocation.ingredientCount() != requirements.size()
                     || !directPathResearch && path.isPresent()
                     || path.isPresent() != routeFingerprint.isPresent()
+                            && !accessSummary.blocked()
+                    || accessSummary.blocked() && policyEligible
                     || ready && (!policyEligible || !ingredientsSatisfied
                             || !transactionCapacityAvailable
                             || !costBypassed && pointBalance < pointCost)) {

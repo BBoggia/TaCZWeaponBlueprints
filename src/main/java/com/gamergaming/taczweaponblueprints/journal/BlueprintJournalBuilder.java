@@ -17,6 +17,8 @@ import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchP
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchPolicyResolver;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchSnapshot;
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
+import com.gamergaming.taczweaponblueprints.resource.research.ResolvedBlueprintProgressionPolicy;
+import com.gamergaming.taczweaponblueprints.resource.research.ResolvedBlueprintCraftingPolicy;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPrerequisiteOverlay;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.AutomaticWeaponPrerequisitePlan;
 
@@ -56,7 +58,8 @@ public final class BlueprintJournalBuilder {
                 playerData,
                 blockedPredicate,
                 ignored -> false,
-                automaticPrerequisites);
+                automaticPrerequisites,
+                Map.of());
     }
 
     public static BlueprintJournalSnapshot build(
@@ -67,9 +70,41 @@ public final class BlueprintJournalBuilder {
             Predicate<String> blockedPredicate,
             Predicate<ResourceLocation> progressionExemptPredicate,
             AutomaticWeaponPrerequisitePlan automaticPrerequisites) {
+        return build(
+                catalog, researchSnapshot, config, playerData, blockedPredicate,
+                progressionExemptPredicate, automaticPrerequisites, Map.of());
+    }
+
+    public static BlueprintJournalSnapshot build(
+            Map<ResourceLocation, BlueprintData> catalog,
+            BlueprintResearchSnapshot researchSnapshot,
+            BlueprintProgressionConfigSnapshot config,
+            IPlayerRecipeData playerData,
+            Predicate<String> blockedPredicate,
+            Predicate<ResourceLocation> progressionExemptPredicate,
+            AutomaticWeaponPrerequisitePlan automaticPrerequisites,
+            Map<ResourceLocation, ResolvedBlueprintProgressionPolicy> progressionPolicies) {
+        return build(
+                catalog, researchSnapshot, config, playerData, blockedPredicate,
+                progressionExemptPredicate, automaticPrerequisites,
+                progressionPolicies, Map.of());
+    }
+
+    public static BlueprintJournalSnapshot build(
+            Map<ResourceLocation, BlueprintData> catalog,
+            BlueprintResearchSnapshot researchSnapshot,
+            BlueprintProgressionConfigSnapshot config,
+            IPlayerRecipeData playerData,
+            Predicate<String> blockedPredicate,
+            Predicate<ResourceLocation> progressionExemptPredicate,
+            AutomaticWeaponPrerequisitePlan automaticPrerequisites,
+            Map<ResourceLocation, ResolvedBlueprintProgressionPolicy> progressionPolicies,
+            Map<ResourceLocation, ResolvedBlueprintCraftingPolicy> craftingPolicies) {
         if (catalog == null || researchSnapshot == null || config == null || playerData == null) {
             return BlueprintJournalSnapshot.EMPTY;
         }
+        progressionPolicies = progressionPolicies == null ? Map.of() : Map.copyOf(progressionPolicies);
+        craftingPolicies = craftingPolicies == null ? Map.of() : Map.copyOf(craftingPolicies);
         if (!config.blueprintsEnabled() || !config.journalEnabled()) {
             return BlueprintJournalSnapshot.EMPTY;
         }
@@ -139,7 +174,12 @@ public final class BlueprintJournalBuilder {
                 continue;
             }
             BlueprintJournalEntry entry = BlueprintJournalEntry.create(
-                    entries.size(), catalogEntry.getValue(), policy);
+                    entries.size(),
+                    catalogEntry.getValue(),
+                    policy,
+                    progressionPolicies.get(catalogEntry.getKey()),
+                    craftingPolicies.get(catalogEntry.getKey()),
+                    archivedFragmentCount(playerData, catalogEntry.getKey()));
             entries.add(entry);
             learned += policy.learned() ? 1 : 0;
             discovered += policy.discovered() ? 1 : 0;
@@ -176,5 +216,16 @@ public final class BlueprintJournalBuilder {
                 learned,
                 discovered,
                 researchable);
+    }
+
+    private static int archivedFragmentCount(
+            IPlayerRecipeData playerData,
+            ResourceLocation blueprintId) {
+        Map<String, Integer> archived = playerData.getArchivedBlueprintFragments();
+        if (archived == null) {
+            return -1;
+        }
+        Integer count = archived.getOrDefault(blueprintId.toString(), 0);
+        return count == null ? -1 : count;
     }
 }

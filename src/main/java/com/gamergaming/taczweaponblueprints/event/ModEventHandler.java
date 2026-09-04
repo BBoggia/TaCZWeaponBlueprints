@@ -2,6 +2,7 @@ package com.gamergaming.taczweaponblueprints.event;
 
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
+import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionSyncScheduler;
 import com.gamergaming.taczweaponblueprints.progression.ResearchPointAwardReconciliationScheduler;
 import com.gamergaming.taczweaponblueprints.progression.ResearchPointPresentationService;
 import com.gamergaming.taczweaponblueprints.progression.StartingBlueprintGrantService;
@@ -37,6 +38,15 @@ public class ModEventHandler {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
             NetworkHandler.syncPlayerRecipeData(serverPlayer);
             ResearchPointPresentationService.syncHelp(serverPlayer);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerChangeGameMode(PlayerEvent.PlayerChangeGameModeEvent event) {
+        if (event.getEntity() instanceof ServerPlayer serverPlayer) {
+            // This event precedes the actual mode change. The end-of-tick
+            // progression flush evaluates Creative bypasses from the new mode.
+            BlueprintProgressionSyncScheduler.markDirty(serverPlayer);
         }
     }
 }

@@ -27,7 +27,17 @@ public final class TaCZWeaponBlueprintsJeiPlugin implements IModPlugin {
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
         registration.addItemStackInfo(
-                new ItemStack(ModItems.RESEARCH_BENCH_ITEM.get()), descriptions(Topic.RESEARCH_BENCH));
+                List.of(
+                        new ItemStack(ModItems.RESEARCH_BENCH_ITEM.get()),
+                        new ItemStack(ModItems.ADVANCED_RESEARCH_BENCH_ITEM.get()),
+                        new ItemStack(ModItems.EXPERIMENTAL_RESEARCH_BENCH_ITEM.get())),
+                descriptions(Topic.RESEARCH_BENCH));
+        registration.addItemStackInfo(
+                List.of(
+                        new ItemStack(ModItems.WORKBENCH_LVL1_ITEM.get()),
+                        new ItemStack(ModItems.WORKBENCH_LVL2_ITEM.get()),
+                        new ItemStack(ModItems.WORKBENCH_LVL3_ITEM.get())),
+                descriptions(Topic.CRAFTING_WORKBENCH));
         registration.addItemStackInfo(
                 new ItemStack(ModItems.BLUEPRINT_RECYCLER_ITEM.get()), descriptions(Topic.BLUEPRINT_ANALYZER));
         registration.addItemStackInfo(

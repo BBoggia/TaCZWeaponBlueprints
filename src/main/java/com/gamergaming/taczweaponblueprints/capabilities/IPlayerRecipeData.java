@@ -2,6 +2,7 @@ package com.gamergaming.taczweaponblueprints.capabilities;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import net.minecraft.nbt.CompoundTag;
 
@@ -42,6 +43,50 @@ public interface IPlayerRecipeData {
         return false;
     }
     default void clearRecentUnlockHistory() {
+    }
+    /**
+     * Optional Blueprint Fragment extension. Empty defaults keep capability
+     * implementations compiled before player data version 4 compatible.
+     */
+    default Map<String, Integer> getArchivedBlueprintFragments() {
+        return Map.of();
+    }
+    /** Optional durable Progression Gate criterion extension. */
+    default Map<String, Integer> getProgressionCriteria() {
+        return Map.of();
+    }
+    default PlayerProgressValueMutation.Result applyArchivedFragmentMutation(
+            PlayerProgressValueMutation.Request request) {
+        if (request == null) {
+            throw new IllegalArgumentException("fragment progress mutation cannot be null");
+        }
+        return PlayerProgressValueMutation.Result.rejected(
+                PlayerProgressValueMutation.Status.UNSUPPORTED,
+                request,
+                0);
+    }
+    default PlayerProgressValueMutation.Result applyProgressionCriterionMutation(
+            PlayerProgressValueMutation.Request request) {
+        if (request == null) {
+            throw new IllegalArgumentException("criterion progress mutation cannot be null");
+        }
+        return PlayerProgressValueMutation.Result.rejected(
+                PlayerProgressValueMutation.Status.UNSUPPORTED,
+                request,
+                0);
+    }
+    /** Atomically replaces both client-presentable supplemental progress maps. */
+    default boolean replaceSupplementalProgression(
+            Map<String, Integer> archivedFragments,
+            Map<String, Integer> criteria) {
+        return archivedFragments != null && archivedFragments.isEmpty()
+                && criteria != null && criteria.isEmpty();
+    }
+    default boolean clearArchivedBlueprintFragments() {
+        return false;
+    }
+    default boolean clearProgressionCriteria() {
+        return false;
     }
     void replaceRecipes(Collection<String> recipeIds);
     boolean replaceProgression(

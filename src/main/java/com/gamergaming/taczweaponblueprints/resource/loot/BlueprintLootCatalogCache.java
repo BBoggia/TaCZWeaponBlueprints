@@ -18,6 +18,11 @@ public final class BlueprintLootCatalogCache {
     private BlueprintLootCatalogCache() {
     }
 
+    /** Releases catalog and loot-snapshot references at the server boundary. */
+    public static synchronized void clear() {
+        cache = CacheState.EMPTY;
+    }
+
     public static List<BlueprintLootEntry> entriesFor(
             BlueprintLootSnapshot snapshot,
             ResourceLocation poolId,

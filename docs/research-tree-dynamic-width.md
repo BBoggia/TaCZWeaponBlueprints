@@ -74,7 +74,7 @@ the complete canvas requires it.
   envelope to the client.
 - Automatic topology version `tacz-gun-placement-v13` identifies the current
   gradual branch, terminal-cohort, and bounded local-prerequisite result.
-- Export format 18 records the topology population, resolved width, width mode,
+- Export format 20 records the topology population, resolved width, width mode,
   configured bounds, canonical branch decisions, and finalized ranks.
   `/gg research status` reports the population and resolved visual-row capacity
   for the active revision-matched automatic publication.

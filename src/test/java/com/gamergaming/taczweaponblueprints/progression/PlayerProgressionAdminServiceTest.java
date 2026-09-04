@@ -11,6 +11,7 @@ import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits
 import com.gamergaming.taczweaponblueprints.capabilities.ResearchPointAwardLedger.ClaimKey;
 import com.gamergaming.taczweaponblueprints.capabilities.ResearchPointAwardLedger.Mutation;
 import com.gamergaming.taczweaponblueprints.capabilities.RecentBlueprintUnlockBatch;
+import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressValueMutation;
 import com.gamergaming.taczweaponblueprints.progression.PlayerProgressionAdminService.ResetState;
 
 class PlayerProgressionAdminServiceTest {
@@ -25,6 +26,9 @@ class PlayerProgressionAdminServiceTest {
         assertEquals(2, data.getDiscoveredBlueprints().size());
         assertEquals(9, data.getResearchPoints());
         assertEquals(1, data.getResearchPointAwardLedger().claimCount());
+        assertEquals(java.util.Map.of("test:learned", 7),
+                data.getArchivedBlueprintFragments());
+        assertEquals(java.util.Map.of("test:trial", 2), data.getProgressionCriteria());
         assertTrue(data.getRecentUnlockBatches().isEmpty());
     }
 
@@ -38,6 +42,8 @@ class PlayerProgressionAdminServiceTest {
         assertEquals(1, data.getDiscoveredBlueprints().size());
         assertEquals(9, data.getResearchPoints());
         assertEquals(1, data.getResearchPointAwardLedger().claimCount());
+        assertEquals(1, data.getArchivedBlueprintFragments().size());
+        assertEquals(1, data.getProgressionCriteria().size());
         assertTrue(data.getRecentUnlockBatches().isEmpty());
     }
 
@@ -63,14 +69,34 @@ class PlayerProgressionAdminServiceTest {
         assertEquals(2, before.discoveredBlueprints());
         assertEquals(1, before.legacyRecipes());
         assertEquals(9, before.researchPoints());
+        assertEquals(1, before.fragmentTargets());
+        assertEquals(7L, before.archivedFragments());
+        assertEquals(1, before.progressionCriteria());
         assertTrue(PlayerProgressionAdminService.reset(all, ResetState.ALL));
         assertTrue(all.getLearnedBlueprints().isEmpty());
         assertTrue(all.getDiscoveredBlueprints().isEmpty());
         assertTrue(all.getLearnedRecipes().isEmpty());
         assertTrue(all.getResearchPointAwardLedger().isEmpty());
         assertEquals(0, all.getResearchPoints());
+        assertTrue(all.getArchivedBlueprintFragments().isEmpty());
+        assertTrue(all.getProgressionCriteria().isEmpty());
         assertTrue(all.getRecentUnlockBatches().isEmpty());
         assertFalse(PlayerProgressionAdminService.reset(null, ResetState.ALL));
+    }
+
+    @Test
+    void fragmentAndCriterionResetsAreIndependent() {
+        PlayerRecipeData fragments = populated();
+        assertTrue(PlayerProgressionAdminService.reset(fragments, ResetState.FRAGMENTS));
+        assertTrue(fragments.getArchivedBlueprintFragments().isEmpty());
+        assertEquals(1, fragments.getProgressionCriteria().size());
+        assertEquals(1, fragments.getLearnedBlueprints().size());
+
+        PlayerRecipeData criteria = populated();
+        assertTrue(PlayerProgressionAdminService.reset(criteria, ResetState.CRITERIA));
+        assertTrue(criteria.getProgressionCriteria().isEmpty());
+        assertEquals(1, criteria.getArchivedBlueprintFragments().size());
+        assertEquals(9, criteria.getResearchPoints());
     }
 
     @Test
@@ -104,6 +130,10 @@ class PlayerProgressionAdminServiceTest {
                 RecentBlueprintUnlockBatch.Source.PHYSICAL_BLUEPRINT,
                 "test:learned",
                 java.util.List.of("test:learned"));
+        data.applyArchivedFragmentMutation(
+                PlayerProgressValueMutation.Request.commit("test:learned", 0, 7));
+        data.applyProgressionCriterionMutation(
+                PlayerProgressValueMutation.Request.commit("test:trial", 0, 2));
         return data;
     }
 }

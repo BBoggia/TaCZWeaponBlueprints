@@ -1,0 +1,8 @@
+{
+  "name": "block.taczweaponblueprints.workbench_lvl3",
+  "display": "tacz:gun_smith_table",
+  "data": "taczweaponblueprints:workbench_lvl3",
+  "id": "taczweaponblueprints:workbench_lvl3",
+  "stack_size": 1,
+  "tooltip": "block.taczweaponblueprints.workbench_lvl3.tooltip"
+}

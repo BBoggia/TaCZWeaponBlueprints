@@ -97,6 +97,12 @@ public final class ResearchPointAwardDataManager
         return lastFailure;
     }
 
+    /** Clears server-scoped datapack state after the server has fully stopped. */
+    public void clear() {
+        publication = new Publication(ResearchPointAwardSnapshot.EMPTY, 0L);
+        lastFailure = Optional.empty();
+    }
+
     public ResearchPointAwardResolver.Resolution resolve(ResearchPointAwardContext context) {
         Publication stable = publication;
         return ResearchPointAwardResolver.resolve(stable.snapshot(), context);

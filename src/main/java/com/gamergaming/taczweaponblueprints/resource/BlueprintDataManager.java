@@ -20,7 +20,10 @@ import com.gamergaming.taczweaponblueprints.progression.BlueprintLearningService
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponEvidenceManager;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponPlacementCandidateManager;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchDataManager;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintAmmoAssociationManager;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintProgressionPolicyManager;
 import com.gamergaming.taczweaponblueprints.resource.research.ResearchTechTreeCatalogValidator;
+import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.tacz.guns.api.item.IAmmo;
 import com.tacz.guns.api.item.IAttachment;
 import com.tacz.guns.api.item.IGun;
@@ -87,27 +90,127 @@ public class BlueprintDataManager {
                     research.snapshot(), rebuilt.blueprints());
             catalogSnapshot = rebuilt;
             rebuild.diagnostics().log(rebuilt.blueprints().size());
-            AutomaticWeaponEvidenceManager.INSTANCE.rebuild(
+            boolean ammoAssociationsReady = BlueprintAmmoAssociationManager.INSTANCE.rebuild(
                     assetsManager,
                     rebuilt.blueprints(),
                     rebuilt.revision());
+            if (!ammoAssociationsReady) {
+                return false;
+            }
+            boolean evidenceReady = AutomaticWeaponEvidenceManager.INSTANCE.rebuild(
+                    assetsManager,
+                    rebuilt.blueprints(),
+                    rebuilt.revision());
+            if (!evidenceReady) {
+                return false;
+            }
             if (research.revision() > 0L) {
-                AutomaticWeaponPlacementCandidateManager.INSTANCE.rebuild(
+                boolean automaticReady = AutomaticWeaponPlacementCandidateManager.INSTANCE.rebuild(
                         research.snapshot(),
                         research.revision(),
                         rebuilt.blueprints(),
                         rebuilt.revision(),
                         AutomaticWeaponEvidenceManager.INSTANCE.snapshotForCatalogRevision(
                                 rebuilt.revision()));
+                if (!automaticReady) {
+                    return false;
+                }
             } else {
                 AutomaticWeaponPlacementCandidateManager.INSTANCE.invalidateForRevisions(
                         rebuilt.revision(), research.revision());
             }
-            return true;
+            return rebuildProgressionPolicy();
         } catch (RuntimeException exception) {
             TaCZWeaponBlueprints.LOGGER.error(
-                    "Unable to rebuild blueprint catalog; preserving the previous {}-entry snapshot",
+                    "Unable to finish blueprint publication rebuild; retaining the latest complete "
+                            + "{}-entry catalog snapshot",
                     catalogSnapshot.blueprints().size(),
+                    exception);
+            return false;
+        }
+    }
+
+    /** Rebuilds config-sensitive progression policy from already-published immutable inputs. */
+    public boolean rebuildProgressionPolicy() {
+        if (this != SERVER) {
+            return false;
+        }
+        CatalogPublication catalog = catalogPublication();
+        BlueprintResearchDataManager.Publication research =
+                BlueprintResearchDataManager.INSTANCE.publication();
+        if (catalog.revision() <= 0L || research.revision() <= 0L) {
+            return false;
+        }
+        return BlueprintProgressionPolicyManager.INSTANCE.rebuild(
+                research.snapshot(),
+                research.revision(),
+                catalog.blueprints(),
+                catalog.revision(),
+                AutomaticWeaponPlacementCandidateManager.INSTANCE.publication(),
+                AutomaticWeaponEvidenceManager.INSTANCE.publication(),
+                BlueprintAmmoAssociationManager.INSTANCE.publication(),
+                ModConfigs.BLUEPRINT.researchFeatureSnapshot());
+    }
+
+    /**
+     * Rebuilds research-revision-sensitive derived publications from the current
+     * complete catalog snapshot. This is the recovery path used when a normal
+     * catalog initialization cannot finish every dependent publication.
+     */
+    public boolean rebuildDerivedPublicationsFromRetainedCatalog() {
+        if (this != SERVER) {
+            return false;
+        }
+        CatalogPublication catalog = catalogPublication();
+        BlueprintResearchDataManager.Publication research =
+                BlueprintResearchDataManager.INSTANCE.publication();
+        if (catalog.revision() <= 0L || research.revision() <= 0L) {
+            return false;
+        }
+        try {
+            CommonAssetsManager assetsManager = null;
+            if (BlueprintAmmoAssociationManager.INSTANCE
+                    .snapshotForCatalogRevision(catalog.revision())
+                    .isEmpty()) {
+                assetsManager = CommonAssetsManager.getInstance();
+                if (assetsManager == null
+                        || !BlueprintAmmoAssociationManager.INSTANCE.rebuild(
+                                assetsManager,
+                                catalog.blueprints(),
+                                catalog.revision())) {
+                    return false;
+                }
+            }
+            if (!AutomaticWeaponEvidenceManager.INSTANCE.publication()
+                    .readyForCatalogRevision(catalog.revision())) {
+                if (assetsManager == null) {
+                    assetsManager = CommonAssetsManager.getInstance();
+                }
+                if (assetsManager == null
+                        || !AutomaticWeaponEvidenceManager.INSTANCE.rebuild(
+                                assetsManager,
+                                catalog.blueprints(),
+                                catalog.revision())) {
+                    return false;
+                }
+            }
+            if (!research.snapshot().automaticPlacementProfiles().isEmpty()) {
+                boolean automaticReady = AutomaticWeaponPlacementCandidateManager.INSTANCE.rebuild(
+                        research.snapshot(),
+                        research.revision(),
+                        catalog.blueprints(),
+                        catalog.revision(),
+                        AutomaticWeaponEvidenceManager.INSTANCE.snapshotForCatalogRevision(
+                                catalog.revision()));
+                if (!automaticReady) {
+                    return false;
+                }
+            }
+            return rebuildProgressionPolicy();
+        } catch (RuntimeException exception) {
+            TaCZWeaponBlueprints.LOGGER.error(
+                    "Unable to rebuild derived blueprint publications from retained catalog revision {}",
+                    catalog.revision(),
                     exception);
             return false;
         }
@@ -300,8 +403,16 @@ public class BlueprintDataManager {
         invalidateServerEvidenceAfterDirectCatalogReplacement();
     }
 
+    /** Clears this side's catalog at a connection or server-lifecycle boundary. */
+    public void clear() {
+        catalogSnapshot = CatalogSnapshot.EMPTY;
+        invalidateServerEvidenceAfterDirectCatalogReplacement();
+    }
+
     private void invalidateServerEvidenceAfterDirectCatalogReplacement() {
         if (this == SERVER) {
+            BlueprintAmmoAssociationManager.INSTANCE.invalidateForCatalogRevision(
+                    catalogSnapshot.revision());
             AutomaticWeaponEvidenceManager.INSTANCE.invalidateForCatalogRevision(
                     catalogSnapshot.revision());
             AutomaticWeaponPlacementCandidateManager.INSTANCE.invalidateForRevisions(

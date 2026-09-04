@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IPI",
+    "RCR",
+    "III"
+  ],
+  "key": {
+    "I": { "item": "minecraft:iron_ingot" },
+    "P": { "item": "minecraft:piston" },
+    "R": { "item": "minecraft:redstone_block" },
+    "C": { "item": "minecraft:cartography_table" }
+  },
+  "result": {
+    "item": "taczweaponblueprints:advanced_research_bench"
+  },
+  "show_notification": true
+}

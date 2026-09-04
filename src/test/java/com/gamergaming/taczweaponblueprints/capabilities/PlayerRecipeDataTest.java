@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.gamergaming.taczweaponblueprints.capabilities.ResearchPointAwardLedger.ClaimKey;
@@ -42,6 +43,20 @@ class PlayerRecipeDataTest {
                 java.util.Collection.class).isDefault());
         assertTrue(IPlayerRecipeData.class
                 .getMethod("clearRecentUnlockHistory").isDefault());
+        assertTrue(IPlayerRecipeData.class
+                .getMethod("getArchivedBlueprintFragments").isDefault());
+        assertTrue(IPlayerRecipeData.class
+                .getMethod("getProgressionCriteria").isDefault());
+        assertTrue(IPlayerRecipeData.class.getMethod(
+                "applyArchivedFragmentMutation",
+                PlayerProgressValueMutation.Request.class).isDefault());
+        assertTrue(IPlayerRecipeData.class.getMethod(
+                "applyProgressionCriterionMutation",
+                PlayerProgressValueMutation.Request.class).isDefault());
+        assertTrue(IPlayerRecipeData.class.getMethod(
+                "replaceSupplementalProgression",
+                Map.class,
+                Map.class).isDefault());
     }
 
     @Test
@@ -72,6 +87,12 @@ class PlayerRecipeDataTest {
                 RecentBlueprintUnlockBatch.Source.TREE_RESEARCH,
                 "tacz:ak47",
                 List.of("tacz:m4a1", "tacz:ak47")));
+        assertTrue(original.applyArchivedFragmentMutation(
+                PlayerProgressValueMutation.Request.commit("tacz:m4a1", 0, 17))
+                .changed());
+        assertTrue(original.applyProgressionCriterionMutation(
+                PlayerProgressValueMutation.Request.commit("test:trial_wins", 0, 3))
+                .changed());
 
         CompoundTag serialized = original.serializeNBT();
         assertEquals(PlayerProgressionLimits.DATA_VERSION, serialized.getInt("DataVersion"));
@@ -86,6 +107,15 @@ class PlayerRecipeDataTest {
                         .toList());
         assertEquals(125, serialized.getInt("ResearchPoints"));
         assertTrue(serialized.contains("ResearchPointAwards", Tag.TAG_COMPOUND));
+        assertEquals("tacz:m4a1", serialized
+                .getList("ArchivedBlueprintFragments", Tag.TAG_COMPOUND)
+                .getCompound(0).getString("Id"));
+        assertEquals(17, serialized
+                .getList("ArchivedBlueprintFragments", Tag.TAG_COMPOUND)
+                .getCompound(0).getInt("Value"));
+        assertEquals("test:trial_wins", serialized
+                .getList("ProgressionCriteria", Tag.TAG_COMPOUND)
+                .getCompound(0).getString("Id"));
 
         PlayerRecipeData restored = new PlayerRecipeData();
         restored.deserializeNBT(serialized);
@@ -96,6 +126,157 @@ class PlayerRecipeDataTest {
         assertEquals(original.getResearchPointAwardLedger().claims(),
                 restored.getResearchPointAwardLedger().claims());
         assertEquals(original.getRecentUnlockBatches(), restored.getRecentUnlockBatches());
+        assertEquals(original.getArchivedBlueprintFragments(),
+                restored.getArchivedBlueprintFragments());
+        assertEquals(original.getProgressionCriteria(), restored.getProgressionCriteria());
+    }
+
+    @Test
+    void supplementalProgressUsesCompareAndSetPreflightCommitAndRollback() {
+        PlayerRecipeData data = new PlayerRecipeData();
+
+        var preflight = data.applyArchivedFragmentMutation(
+                PlayerProgressValueMutation.Request.preflight("test:rifle", 0, 12));
+        assertEquals(PlayerProgressValueMutation.Status.READY, preflight.status());
+        assertTrue(data.getArchivedBlueprintFragments().isEmpty());
+
+        var committed = data.applyArchivedFragmentMutation(
+                PlayerProgressValueMutation.Request.commit("test:rifle", 0, 12));
+        assertEquals(PlayerProgressValueMutation.Status.APPLIED, committed.status());
+        assertEquals(Map.of("test:rifle", 12), data.getArchivedBlueprintFragments());
+        assertEquals(PlayerProgressValueMutation.Status.STALE,
+                data.applyArchivedFragmentMutation(
+                        PlayerProgressValueMutation.Request.commit("test:rifle", 0, 20))
+                        .status());
+
+        var rolledBack = data.applyArchivedFragmentMutation(
+                PlayerProgressValueMutation.Request.rollback("test:rifle", 12, 0));
+        assertEquals(PlayerProgressValueMutation.Status.ROLLED_BACK, rolledBack.status());
+        assertTrue(data.getArchivedBlueprintFragments().isEmpty());
+
+        assertEquals(PlayerProgressValueMutation.Status.INVALID_IDENTITY,
+                data.applyProgressionCriterionMutation(
+                        PlayerProgressValueMutation.Request.commit(" ", 0, 1))
+                        .status());
+        assertEquals(PlayerProgressValueMutation.Status.UNCHANGED,
+                data.applyProgressionCriterionMutation(
+                        PlayerProgressValueMutation.Request.commit("test:unused", 0, 0))
+                        .status());
+        assertThrows(IllegalArgumentException.class,
+                () -> PlayerProgressValueMutation.Request.commit(
+                        "test:invalid", 0, PlayerProgressionLimits.MAX_PROGRESS_VALUE + 1));
+    }
+
+    @Test
+    void supplementalReplacementIsAtomicValidatedAndReadOnly() {
+        PlayerRecipeData data = new PlayerRecipeData();
+        assertTrue(data.replaceSupplementalProgression(
+                Map.of("test:rifle", 4),
+                Map.of("test:trial", 2)));
+        Map<String, Integer> fragmentView = data.getArchivedBlueprintFragments();
+        assertThrows(UnsupportedOperationException.class,
+                () -> fragmentView.put("test:pistol", 1));
+
+        assertFalse(data.replaceSupplementalProgression(
+                Map.of("test:new", 8),
+                Map.of("invalid id", 3)));
+        assertEquals(Map.of("test:rifle", 4), data.getArchivedBlueprintFragments());
+        assertEquals(Map.of("test:trial", 2), data.getProgressionCriteria());
+
+        assertFalse(data.replaceSupplementalProgression(
+                Map.of("test:new", 0),
+                Map.of()));
+        assertEquals(Map.of("test:rifle", 4), data.getArchivedBlueprintFragments());
+    }
+
+    @Test
+    void supplementalMutationRejectsANewEntryAtCapacityButCanUpdateExistingState() {
+        PlayerRecipeData data = new PlayerRecipeData();
+        java.util.LinkedHashMap<String, Integer> fragments = new java.util.LinkedHashMap<>();
+        for (int index = 0; index < PlayerProgressionLimits.MAX_FRAGMENT_TARGETS; index++) {
+            fragments.put("test:fragment_" + index, 1);
+        }
+        assertTrue(data.replaceSupplementalProgression(fragments, Map.of()));
+
+        assertEquals(PlayerProgressValueMutation.Status.CAPACITY_REACHED,
+                data.applyArchivedFragmentMutation(
+                        PlayerProgressValueMutation.Request.preflight("test:overflow", 0, 1))
+                        .status());
+        assertEquals(PlayerProgressValueMutation.Status.APPLIED,
+                data.applyArchivedFragmentMutation(
+                        PlayerProgressValueMutation.Request.commit("test:fragment_0", 1, 2))
+                        .status());
+        assertEquals(2, data.getArchivedBlueprintFragments().get("test:fragment_0"));
+        assertEquals(PlayerProgressionLimits.MAX_FRAGMENT_TARGETS,
+                data.getArchivedBlueprintFragments().size());
+    }
+
+    @Test
+    void versionThreeMigratesWithEmptySupplementalProgressWithoutTrustingFutureTags() {
+        CompoundTag versionThree = new CompoundTag();
+        versionThree.putInt("DataVersion", 3);
+        versionThree.put("ArchivedBlueprintFragments", progressList("test:injected", 12));
+        versionThree.put("ProgressionCriteria", progressList("test:injected", 7));
+
+        PlayerRecipeData restored = new PlayerRecipeData();
+        restored.deserializeNBT(versionThree);
+
+        assertTrue(restored.getArchivedBlueprintFragments().isEmpty());
+        assertTrue(restored.getProgressionCriteria().isEmpty());
+        assertEquals(4, restored.serializeNBT().getInt("DataVersion"));
+    }
+
+    @Test
+    void malformedSupplementalNbtIsRepairedDeterministically() {
+        CompoundTag serialized = new CompoundTag();
+        serialized.putInt("DataVersion", 4);
+        ListTag fragments = new ListTag();
+        for (int index = PlayerProgressionLimits.MAX_FRAGMENT_TARGETS + 1;
+                index >= 0;
+                index--) {
+            CompoundTag entry = new CompoundTag();
+            entry.putString("Id", String.format("test:fragment_%04d", index));
+            entry.putInt("Value", index + 1);
+            fragments.add(entry);
+        }
+        fragments.addAll(progressList("test:fragment_0000", 999));
+        fragments.addAll(progressList("invalid id", 5));
+        fragments.addAll(progressList("test:negative", -1));
+        CompoundTag clamped = new CompoundTag();
+        clamped.putString("Id", "test:clamped");
+        clamped.putLong("Value", Long.MAX_VALUE);
+        fragments.add(clamped);
+        serialized.put("ArchivedBlueprintFragments", fragments);
+
+        PlayerRecipeData restored = new PlayerRecipeData();
+        restored.deserializeNBT(serialized);
+
+        assertEquals(PlayerProgressionLimits.MAX_FRAGMENT_TARGETS,
+                restored.getArchivedBlueprintFragments().size());
+        assertEquals(999, restored.getArchivedBlueprintFragments().get("test:fragment_0000"));
+        assertFalse(restored.getArchivedBlueprintFragments().containsKey("test:fragment_4097"));
+        assertFalse(restored.getArchivedBlueprintFragments().containsKey("invalid id"));
+    }
+
+    @Test
+    void implausiblyLargeSupplementalNbtListIsRejectedWithoutAffectingKnowledge() {
+        CompoundTag serialized = new CompoundTag();
+        serialized.putInt("DataVersion", 4);
+        serialized.put("Blueprints", stringList("test:learned"));
+        ListTag criteria = new ListTag();
+        for (int index = 0;
+                index <= PlayerProgressionLimits.MAX_PERSISTED_PROGRESS_ENTRIES_TO_INSPECT;
+                index++) {
+            criteria.addAll(progressList("test:criterion_" + index, 1));
+        }
+        serialized.put("ProgressionCriteria", criteria);
+
+        PlayerRecipeData restored = new PlayerRecipeData();
+        restored.deserializeNBT(serialized);
+
+        assertEquals(Set.of("test:learned"), restored.getLearnedBlueprints());
+        assertEquals(Set.of("test:learned"), restored.getDiscoveredBlueprints());
+        assertTrue(restored.getProgressionCriteria().isEmpty());
     }
 
     @Test
@@ -321,5 +502,22 @@ class PlayerRecipeDataTest {
         assertEquals(PlayerProgressionLimits.MAX_IDS_PER_COLLECTION, restored.getLearnedBlueprints().size());
         assertEquals(PlayerProgressionLimits.MAX_IDS_PER_COLLECTION, restored.getDiscoveredBlueprints().size());
         assertTrue(restored.getDiscoveredBlueprints().containsAll(restored.getLearnedBlueprints()));
+    }
+
+    private static ListTag progressList(String id, long value) {
+        CompoundTag entry = new CompoundTag();
+        entry.putString("Id", id);
+        entry.putLong("Value", value);
+        ListTag result = new ListTag();
+        result.add(entry);
+        return result;
+    }
+
+    private static ListTag stringList(String... values) {
+        ListTag result = new ListTag();
+        for (String value : values) {
+            result.add(StringTag.valueOf(value));
+        }
+        return result;
     }
 }

@@ -30,7 +30,14 @@ public final class StrictRecordCodec {
                         return DataResult.error(() -> description + " contains unknown field(s): "
                                 + String.join(", ", unknownFields));
                     }
-                    return delegate.decode(ops, input);
+                    try {
+                        return delegate.decode(ops, input);
+                    } catch (RuntimeException exception) {
+                        String detail = exception.getMessage() == null
+                                ? exception.getClass().getSimpleName()
+                                : exception.getMessage();
+                        return DataResult.error(() -> description + " is invalid: " + detail);
+                    }
                 });
             }
         };

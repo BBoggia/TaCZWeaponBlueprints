@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IRI",
+    "PBP",
+    "III"
+  ],
+  "key": {
+    "I": { "item": "minecraft:iron_ingot" },
+    "R": { "item": "minecraft:redstone_block" },
+    "P": { "item": "minecraft:piston" },
+    "B": { "item": "minecraft:blast_furnace" }
+  },
+  "result": { "item": "taczweaponblueprints:workbench_lvl2" },
+  "show_notification": true
+}

@@ -149,13 +149,45 @@ them.
 7. Run `/gg research setup assess` and preview the recommendation; do not apply it until any structural warnings are understood.
 8. Inspect and preview representative loot tables before reopening the server to players.
 
+Existing server configuration files from version 2 migrate to Classic
+progression with Blueprint Fragments disabled. This preserves their established
+research, crafting, and loot behavior. New installations use the tiered
+progression and targeted-fragment defaults; operators of upgraded worlds can
+choose those presets explicitly after reviewing their economy.
+
+Server configuration version 4 adds independent crafting category strategies,
+no-level and disabled category or subgroup selectors, and exact crafting
+overrides. Version-3 files migrate with every new control at its neutral
+`PROFILE` or empty default. Existing blueprint-free selectors remain
+knowledge-only exemptions and are not copied into the new crafting selectors,
+so their established Workbench behavior does not change during migration.
+
+When Blueprint Fragments are enabled, `fragmentLootReplacementPercent` replaces
+that share of successful blueprint opportunities rather than adding more loot.
+The default is 20 percent, and the fragment uses the same rule candidates,
+blacklists, roll budget, and active research profile as the full blueprint it
+replaces. Loot generated with player context favors unlearned targets. Loot
+without player context preserves the configured catalog weights. A reload with
+mismatched catalog, research, progression-policy, or configuration revisions
+temporarily preserves full-blueprint drops instead of creating fragments from
+stale policy. See the [Blueprint Fragment supply guide](blueprint-fragment-supply.md)
+for item validation, target weighting, and preview diagnostics.
+
 The Research Point award foundation advances persisted player progression from
 data version 1 to 2 by adding a bounded, server-only `ResearchPointAwards`
 ledger. Version-1 saves migrate automatically with an empty ledger; learned and
 discovered blueprint IDs, Research Points, and legacy recipe aliases remain
 unchanged and require no world conversion. The ledger is copied across every
-player clone and is not sent to clients. The custom network protocol is
-`47`, so clients and servers must update together. Protocol 47 transfers each
+player clone and is not sent to clients. Player data version 4 adds bounded
+`ArchivedBlueprintFragments` and `ProgressionCriteria` maps. Version-3 saves
+migrate with both maps empty; malformed entries are skipped, duplicate IDs keep
+their highest value, and an oversized but inspectable list retains the
+lexicographically earliest 4,096 canonical IDs. A list with more than 8,192
+serialized entries is rejected as a unit without affecting learned blueprints,
+discoveries, RP, award history, or recent unlocks.
+
+The custom network protocol is `55`, so clients and servers must update
+together. Protocol 50 transfers each
 disclosure-safe research graph, matching group presentation, and optional
 identity-safe Tech Tree metadata as one bounded atomic publication. It also
 transfers canonical prerequisite-group boundaries, visible alternatives,
@@ -164,7 +196,10 @@ the server-resolved curated-overview flag and the coarse gun/ammo/attachment
 kind used by research selectors, plus bounded Tech Tree rank, long sibling
 order, optional visual-band references, placement-origin metadata, an ordered
 bounded table of custom band labels, and the tree-owned resolved 8–28 node
-layer capacity.
+layer capacity. It additionally sends only fragment targets whose blueprint ID
+is disclosed by the current Blueprint Journal or Tech Tree and only durable
+criterion IDs declared public by a disclosed Progression Gate. Hidden and
+unrelated criterion IDs are never written to the client packet.
 It retains hardened progression chunk generations and uses a research-only,
 live-inventory Research Bench preview and correlated authoritative guidance,
 including multi-node unlock count,
@@ -176,6 +211,16 @@ graph with no complete authorized route. The server rejects a Research action
 whose fingerprint no longer matches the freshly prepared attempt, refreshes
 the current preview, and consumes nothing. A matching attempt commits the same
 prepared plan rather than planning the path again.
+For the exact selected identity, that preview also carries the current and
+highest required Research Bench level, its Blueprint Fragment count and
+threshold, and a minimal disclosed crafting result: required Workbench level,
+any Workbench, or unavailable. The client uses this existing response for
+selected-node details, narration, and two tiny selection-only markers; it does
+not poll the server, scan the world, or decorate every ordinary node. Journal
+fragment progress is included only on entries whose identity is already
+disclosed by that Journal publication, while crafting access is limited to
+entries permitted to show full policy details. Assignment rules, sources,
+reasons, and warnings remain operator-only.
 Authoritative guidance requests are accepted only for the matching open Bench
 and latest research publication. Responses expose public route identities only,
 cap route nodes, purchases, selected requirement proofs, and displayed material
@@ -202,9 +247,34 @@ the client never estimates affordability or changes the published layout.
 Exact tracked-goal pricing and Affordable Now are hidden when the server uses
 the `CREATE_BLUEPRINT` compatibility result mode because that mode does not
 purchase a complete prerequisite path.
+
+Protocol 55 also binds each open crafting Workbench recipe response to the
+exact menu request, response sequence, active profile, loaded catalog,
+research data, automatic evidence, ammo associations, crafting rules, and
+effective Workbench context that produced it. The first chunk of a newer
+response immediately clears the previous selection. Until the full response
+arrives, the screen keeps its TaCZ tabs as non-selectable placeholders and
+shows that it is checking access. Late, mixed, conflicting, and duplicate
+response data cannot restore an older selection. Disabling blueprint
+progression uses an explicit server-confirmed unrestricted response so TaCZ
+recipes that are not represented in the blueprint catalog remain available.
+
+Operators can inspect one player's resolved target progress or a crafting
+workstation mapping without opening a Bench:
+
+```text
+/gg progression inspect <player> <blueprint_id>
+/gg progression workstation <workstation_id>
+```
+
+The target form reports tier source, research and crafting tiers, archived
+fragments and threshold, fragment mode, and current unmet Progression Gate
+groups. The workstation form reports the resolved external or native tier,
+mapping source, and unrestricted state.
 Blueprint Analyzer previews independently carry
-duplicate, Research Data, physical-item reverse-engineering, trusted weapon
-origin, and direct found-weapon recovery decisions plus an opaque
+duplicate, Research Data, Blueprint Fragment archiving, physical-item
+reverse-engineering, trusted weapon origin, and direct found-weapon recovery
+decisions plus an opaque
 workstation-state token. It correlates Research Bench
 selection/research results and sends
 bounded disclosure-filtered RP help plus aggregated award feedback. This
@@ -268,7 +338,7 @@ data/<namespace>/taczweaponblueprints/research_point_awards/<path>.json
 Roll out group resources after their referenced profile and rules. Group ranks
 organize the UI only; they never replace prerequisite rules. After `/reload`,
 use `research status`, inspect representative members, and run `research
-export`. Export format 18 retains the format-2 research and presentation fields
+export`. Export format 20 retains the format-2 research and presentation fields
 and the revision-matched automatic-placement summary and per-weapon
 decision: authored, automatic, excluded automatic, or legacy-compatible
 unplaced. Automatic entries
@@ -276,7 +346,10 @@ record their score, confidence, semantic position, generated rank, optional
 band, version identities, and planned prerequisite list or omission reason.
 Format 8 added live topology/economy audits and per-weapon parent, role
 similarity, fan-out, merge, and review evidence. Costs remain owned by research
-policies; the report does not derive them from ranks or tiers.
+policies; the report does not derive them from ranks or tiers. Format 19 also
+records the revision-matched workstation-tier, Blueprint Fragment, and
+Progression Gate publication, including assignment sources and explicit
+omissions.
 Format 9 adds the topology weapon population, effective layer width, width
 mode, and configured minimum/maximum width so an operator can reproduce the
 server's dynamic-width decision.
@@ -336,6 +409,28 @@ Format 18 adds the explicit automatic `requirement_shape` and aggregate
 pure-alternative, mandatory-convergence, and mixed hybrid relationship counts.
 Strict format-17 consumers must migrate explicitly; the canonical group and
 route-review fields retain their meanings.
+Format 19 adds the revision-matched resolved progression-policy summary and
+per-entry workstation tiers, tier-assignment source, Blueprint Fragment policy,
+Progression Gate counts, automatic score/percentile evidence, review fallback,
+and explicit omission reason. It also records the config snapshot that produced
+the publication, including external workstation mappings. Strict format-18
+consumers must migrate explicitly; earlier tree and route fields retain their
+meanings. `selected_progression_rule` is present only when the selected research
+rule contains a non-empty progression override; the entry's existing selected
+rule field remains the source for ordinary research-policy attribution.
+The eager progression-policy publication is limited to 262,144 total
+profile-catalog assignments. Reloads above that aggregate budget retain the
+last working publication instead of attempting an unsafe allocation. For each
+exported profile, the policy and omission maps must be disjoint and together
+cover the complete catalog.
+Format 20 adds a complete independent crafting-policy projection for every
+catalog entry. It records tiered, unrestricted, and disabled dispositions,
+Workbench levels, assignment sources, selected crafting rules, reason codes,
+bounded warnings, and coverage totals separately from Tech Tree research
+inclusion. Research and crafting choose the most-specific applicable rule in
+independent precedence passes, so a rule scoped to one action cannot hide a
+broader rule for the other. Strict format-19 consumers must migrate explicitly;
+the format-19 research, fragment, and gate fields retain their meanings.
 Tech Tree-only members still record
 their domain/lane/tier/order, and groups still record authored IDs absent from
 the live TaCZ catalog. A malformed group,
@@ -411,20 +506,37 @@ an explicit pack-author choice and still requires the separate combat kill
 switch.
 
 The progression reset command accepts `learned`, `discovered`, `points`,
-`awards`, and `all`. The first three preserve RP award history. `awards` clears
-only claim/cooldown/window/budget history, while `all` also clears that ledger
-as part of a complete progression reset. Point spending, datapack removal, and
-configuration changes never clear award history.
+`awards`, `fragments`, `criteria`, and `all`. The first three preserve RP award,
+fragment, and Progression Gate criterion history. `awards`, `fragments`, and
+`criteria` each clear only their named state, while `all` clears every category.
+Point spending, datapack removal, and configuration changes never clear these
+independent histories.
 
-Every explicit progression reset also clears the player's bounded recent-
-unlock list in the Blueprint Journal. This list records successful Tech Tree,
+Operators can inspect or change one custom Progression Gate criterion without
+resetting the rest of a player's state:
+
+```text
+/gg progression criteria inspect <player> <criterion>
+/gg progression criteria grant <targets> <criterion> [value]
+/gg progression criteria increment <targets> <criterion> <amount>
+/gg progression criteria reset <targets> <criterion>
+```
+
+Grant sets a minimum and never lowers an existing value. Increment saturates at
+the saved-data limit. The specific reset does not revoke vanilla advancements.
+See the [Progression Gate criterion API](progression-gate-api.md) for integration
+semantics and Forge events.
+
+Every `/gg progression reset <targets> <state>` reset also clears the player's
+bounded recent-unlock list in the Blueprint Journal. The criterion-specific
+command above leaves recent unlocks unchanged. This list records successful Tech Tree,
 physical-blueprint, and administrator learning batches only; starting grants,
 migrations, failed transactions, discoveries, and RP-only activity do not
 enter it. Unavailable content remains in the separate Unavailable view.
 
 The built-in profile assigns exact research policies to the complete
 recipe-backed TaCZ 1.1.8 catalog: 53 weapons, 95 attachments, and 24 ammunition
-types. Profile format 2 now activates only the 53-weapon tree by default;
+types. The built-in profile uses format 4 and activates only the 53-weapon tree by default;
 attachment and ammunition rules, placements, and RK-6/9mm entry candidates
 remain authored but dormant. The legacy Branches and All Weapons projections
 remain weapon-only and are retained only as hidden compatibility data; the
@@ -534,11 +646,13 @@ To roll back the mod version, stop the server, restore the previous JAR and matc
 - `pool` reports flattened entries/selectors and current pre-blacklist candidates.
 - `preview` applies the current catalog, predicates, defaults, overrides, and immutable blacklist snapshot without consuming RNG.
 - `research status` audits rule assignment plus authored group coverage and missing members for the active profile.
-- `research inspect` reports the selected rule, visibility, cost, prerequisites, and authored group placement for one live blueprint.
-- `research export` writes a sorted format-17 authoring catalog with canonical
-  prerequisite groups, presentation groups, fallback, revision-matched
-  automatic-placement, topology, configured/effective
-  width, per-weapon decision, and economy evidence under the current world directory.
+- `research inspect` reports separate research and crafting results for one live blueprint, including crafting disposition, Workbench level, assignment source, selected rule, reason, and bounded warnings.
+- `research export` writes a sorted format-20 authoring catalog with complete
+  crafting-policy coverage, dispositions, Workbench levels, sources, selected
+  rules, reasons, warnings, canonical prerequisite groups, presentation groups,
+  fallback, revision-matched automatic placement, topology,
+  configured/effective width, per-weapon decision, and economy evidence under
+  the current world directory.
 - `research awards status` reports the independent last-known-good RP award
   revision, definition/group/budget/index counts, trigger totals, and the last
   rejected reload without disclosing player ledger history.
@@ -553,11 +667,12 @@ Third-party TaCZ content packs can contain malformed recipes, language files, mo
 
 JEI and EMI are optional client integrations. A server should not install them
 just for this mod. When either viewer is present, [TaCZ] Weapon Research & Blueprints adds
-generic localized item information only; the current costs and available
-research actions still come from the Research Bench or Blueprint Analyzer. If
-an optional-viewer startup fails, capture a complete client log and verify the
-installed viewer is within JEI 15.x or EMI 1.1.x before treating it as a
-blueprint catalog or world-migration problem.
+generic localized item information only; it does not treat a context-free
+viewer page as an active Workbench. Current costs and available research and
+crafting actions still come from the Research Bench, crafting Workbench, or
+Blueprint Analyzer. If an optional-viewer startup fails, capture
+a complete client log and verify the installed viewer is within JEI 15.x or EMI
+1.1.x before treating it as a blueprint catalog or world-migration problem.
 
 ## Release verification
 
@@ -593,7 +708,7 @@ bundled `connected` mode with `place_connected` review handling, the three
 version identities, dynamic layering with a configured 9–20-node range and its
 baseline resolved width, optional
 tree-owned optional/dynamic/configured presentation bands, the 4,096-candidate
-limit, protocol 47, export format 18, and automatic prerequisite strategy
+limit, protocol 55, export format 20, and automatic prerequisite strategy
 `grouped_routes_v1` unless the
 corresponding contract and compatibility documentation are deliberately
 revised.
@@ -601,7 +716,7 @@ revised.
 The Phase 10 research-guidance handoff writes
 `build/reports/research-guidance-candidate-handoff.json`. It binds the complete
 Phase 9 automated report and manual-QA matrix to the exact candidate JAR,
-preserves the protocol 47/player-data 3/client-settings 3 compatibility tuple,
+preserves the protocol 55/player-data 4/client-settings 3 compatibility tuple,
 and carries 21 clean invariants, 16 packaged classes, and 48 localized surfaces
 into release certification. Its `requires_manual_qa` state is intentional:
 complete the linked runtime matrix before publication rather than treating an
@@ -664,11 +779,48 @@ The grouped-prerequisite Phase 12 visual-refinement gate writes
 `branch-aware-visual-refinement-v1` and verifies client-only family-preserving
 responsive wrapping, bounded grouped-junction clearance, branch-seam pressure,
 and deterministic 287/4,096-node geometry. It does not migrate saves or change
-the published graph: prerequisite groups, semantic ranks, costs, protocol 47,
-export format 18, and the packaged `grouped_routes_v1` strategy remain
+the published graph: prerequisite groups, semantic ranks, costs, protocol 55,
+export format 20, and the packaged `grouped_routes_v1` strategy remain
 authoritative. Before public release, retain the gate report and complete its
 linked before/after screenshot checks at normal and maximum zoom-out.
 
-The report's research-workstation split must record the research-only permanent
-fullscreen Bench, dedicated one-input Blueprint Analyzer, exact action ownership, final
-model/texture contract, recipe discovery route, and manual-QA evidence path.
+The report's research-workstation split must record the permanent fullscreen
+Research Bench, dedicated native TaCZ crafting Workbenches, one-input Blueprint
+Analyzer, exact action ownership, final model and texture contract, recipe
+discovery route, and manual-QA evidence path.
+
+## Tiered Research Benches and crafting Workbenches
+
+The Tier 1 Research Bench, Tier 2 Advanced Research Bench, and Tier 3
+Experimental Research Bench open the permanent Tech Tree. The separate Level
+1, Level 2, and Level 3 Workbenches open TaCZ's native Gun Smith Table interface
+with the same recipe tabs and material-consumption behavior. Each family uses
+its own two-block station, and there is no mode transition between them. Every
+action is validated against the exact server menu, dimension, root position,
+distance, complete structure, workstation ID, and tier.
+
+Crafting remains server-authoritative. A recipe must be canonical and learned or
+progression-exempt. When crafting tiers are enabled, the physical workstation
+must satisfy the resolved crafting tier, and all crafting-scoped Progression
+Gates must pass. The client receives only a bounded allow-list for recipes it
+already knows; hidden gate identities and progress are not sent by this path.
+The server builds this allow-list from the complete crafting-policy projection;
+an intentionally omitted Tech Tree research assignment does not make its
+crafting result missing or unrestricted.
+The response is request-scoped and chunked. If it remains incomplete for five
+seconds, the client may retry the original request once; the server rejects
+additional retries and every attempt to advance the client-owned request ID.
+
+Exact entries in `externalWorkstationTiers` take precedence for TaCZ-compatible
+third-party workstations. Unknown workstations use
+`unknownWorkstationFallbackTier` unless
+`unknownExternalWorkstationsUnrestricted` is enabled. The latter bypasses the
+ordinary crafting-tier band for compatibility, but criterion and advancement
+Progression Gates still apply. Third-party workstations must use TaCZ's native
+Gun Smith Table block entity so the physical source can be authenticated.
+
+The addon overrides only `tacz:gun_smith_table`'s ordinary shaped recipe with a
+false Forge conditional recipe. The TaCZ block, item, menu, assets, Creative
+entry, and existing placed tables remain intact. A higher-priority world or
+server datapack can intentionally restore or replace the recipe. Verify this
+behavior after `/reload` whenever datapack priority changes.

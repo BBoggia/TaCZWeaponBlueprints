@@ -22,6 +22,19 @@ Certification rejects a non-JDK-17 runtime and writes
 `build/reports/release-candidate.json`; retain that report with the exact JAR it
 describes.
 
+The build also runs `verifyTieredProgressionReleaseContract`. This integration
+gate requires clean preset, authored and automatic tree, workstation,
+Blueprint Fragment, Progression Gate, migration, lifecycle, and TaCZ
+compatibility suites. It opens the exact reobfuscated JAR, verifies the runtime
+classes and recipes for all three Bench tiers, fragments, native
+crafting enforcement, public criterion API, and supplemental packets, and
+writes `build/reports/tiered-progression-release.json`. Confirm the report pins
+`tiered-progression-fragments-gates-v1`, protocol 55, player-data version 4,
+server-config version 4, the default presets and thresholds, and the same JAR
+SHA-256 used by the final candidate report. A passing report remains marked
+`requires_runtime_matrix`; it is not evidence that multiplayer and in-game
+checks were completed.
+
 The candidate report also records the research-workstation ownership and
 presentation contract: the permanent fullscreen research-only Bench, the
 single-input Blueprint Analyzer and its three explicit actions, final eight-element
@@ -54,7 +67,7 @@ It binds 21 named route, allocation, lifecycle, packet, persistence, rollback,
 scale, input, migration, cost-mode, compatibility, navigation, paging, and
 lost-response invariants to exact clean JUnit cases and writes
 `build/reports/research-guidance-release.json`. Confirm the report pins
-`research-guidance-qol-v1`, protocol 47, player-data version 3, client-settings
+`research-guidance-qol-v1`, protocol 55, player-data version 4, client-settings
 version 3, 16 packaged feature classes, the 4,096-node public limit, and
 eight-target affordability batches. The release-candidate report must
 reference the same contract and report.
@@ -90,7 +103,7 @@ policy. Packaged-artifact verification separately requires every kernel and
 configuration class plus all twelve localized setting surfaces.
 
 The build also runs `verifyTaperedAutomaticTopologyContract`. It pins automatic
-topology `tacz-gun-placement-v13`, Research Tree protocol 47, export format 18,
+topology `tacz-gun-placement-v13`, Research Tree protocol 55, export format 20,
 and the canonical-coordinate/decision/finalized-rank publication contract;
 requires clean server planning, finalization, diagnostics, client layout,
 network, and packaged-data suites; and writes
@@ -108,7 +121,7 @@ The build also runs `verifyGroupedPrerequisiteAcceptanceContract`. It requires
 all 20 named Phase 7 semantic and integration invariants to resolve to exact,
 clean JUnit cases and writes
 `build/reports/grouped-prerequisite-acceptance.json`. Confirm the report pins
-`truth-tables-integration-v1`, protocol 47, export format 18, and
+`truth-tables-integration-v1`, protocol 55, export format 20, and
 `grouped_routes_v1`, and that the JAR manifest and release-candidate report
 contain the same acceptance contract.
 
@@ -127,7 +140,7 @@ invariants, and writes `build/reports/grouped-route-selection.json`. Confirm it
 pins `group-aware-route-balance-v1`, the grouped
 `group_aware_route_balance_v1` guard, the separate legacy union guard, the
 8.0x proven-imbalance threshold (with 4.0x retained as a p95 warning), protocol
-47, and export format 18. Confirm the
+55, and export format 20. Confirm the
 JAR manifest and release-candidate report contain the same selection contract.
 
 The build also runs `verifyGroupedRouteStabilizationContract`. It consumes the
@@ -149,7 +162,7 @@ and quality-audit cases and writes
 `deliberate-hybrid-generation-v1`, records `hybrid_routes_v1` as an explicit
 opt-in while preserving `grouped_routes_v1` as the packaged default, limits
 scheduled mandatory gateways to at most one per eligible transition rank, and
-records export format 18. Confirm the JAR manifest and release-candidate report
+records export format 20. Confirm the JAR manifest and release-candidate report
 contain the same hybrid-generation contract.
 
 The build also runs `verifyGroupedVisualRefinementContract`. It requires the
@@ -215,7 +228,7 @@ bounded four-point score tolerance, and explicit truncation diagnostics,
 family-preserving responsive row boundaries and bounded ten-pixel lanes for
 additional any-of junctions,
 tree-owned optional/dynamic/configured presentation bands, the 4,096-candidate
-ceiling, protocol 47, export format 18, and packaged automatic prerequisite
+ceiling, protocol 55, export format 20, and packaged automatic prerequisite
 strategy `grouped_routes_v1`. Confirm canonical branch coordinates
 round-trip for every automatic member, two-family layouts receive a visible
 gutter, planned and published ranks are reported separately, and complete

@@ -12,6 +12,9 @@ import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponEvidenceManager;
 import com.gamergaming.taczweaponblueprints.research.tree.automatic.tacz.AutomaticWeaponPlacementCandidateManager;
 import com.gamergaming.taczweaponblueprints.resource.award.ResearchPointAwardBlueprintFacts;
+import com.gamergaming.taczweaponblueprints.resource.award.ResearchPointAwardDataManager;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintProgressionPolicyManager;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintAmmoAssociationManager;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraftforge.event.server.ServerStartingEvent;
@@ -67,7 +70,13 @@ public final class ServerEvents {
         ResearchPointCombatTracker.clear();
         ResearchPointAwardBlueprintFacts.clearCurrentPublication();
         NetworkHandler.clearServerSyncState();
+        BlueprintDataManager.SERVER.clear();
+        BlueprintResearchDataManager.INSTANCE.clear();
+        BlueprintLootDataManager.INSTANCE.clear();
+        ResearchPointAwardDataManager.INSTANCE.clear();
+        BlueprintAmmoAssociationManager.INSTANCE.clear();
         AutomaticWeaponEvidenceManager.INSTANCE.clear();
         AutomaticWeaponPlacementCandidateManager.INSTANCE.clear();
+        BlueprintProgressionPolicyManager.INSTANCE.clear();
     }
 }

@@ -38,6 +38,12 @@ class RootCommandTest {
         var targets = give.getChild("targets");
         assertNotNull(targets);
         assertNotNull(targets.getChild("amount"));
+        var criteria = progression.getChild("criteria");
+        assertNotNull(criteria);
+        assertNotNull(criteria.getChild("inspect"));
+        assertNotNull(criteria.getChild("grant"));
+        assertNotNull(criteria.getChild("increment"));
+        assertNotNull(criteria.getChild("reset"));
 
         var research = root.getChild("research");
         assertNotNull(research);

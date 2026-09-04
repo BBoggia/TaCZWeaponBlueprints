@@ -9,6 +9,7 @@ import com.gamergaming.taczweaponblueprints.progression.BlueprintReverseEngineer
 import com.gamergaming.taczweaponblueprints.progression.FoundWeaponRecoveryService;
 import com.gamergaming.taczweaponblueprints.item.PhysicalWeaponProvenance;
 import com.gamergaming.taczweaponblueprints.progression.ResearchDataRedemptionService;
+import com.gamergaming.taczweaponblueprints.progression.fragment.BlueprintFragmentAnalysisService;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchIngredient;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintReverseEngineeringPolicy;
 
@@ -37,7 +38,8 @@ public record BlueprintRecyclerPreview(
         List<IngredientPreview> ingredients,
         WeaponOrigin weaponOrigin,
         int recoveryPointValue,
-        Optional<FoundWeaponRecoveryService.Status> recoveryStatus) {
+        Optional<FoundWeaponRecoveryService.Status> recoveryStatus,
+        Optional<BlueprintFragmentAnalysisService.Evaluation> fragmentEvaluation) {
     public static final BlueprintRecyclerPreview EMPTY = empty(0, 0);
 
     public BlueprintRecyclerPreview {
@@ -49,6 +51,7 @@ public record BlueprintRecyclerPreview(
                 ? Optional.empty()
                 : reverseEngineeringStatus;
         recoveryStatus = recoveryStatus == null ? Optional.empty() : recoveryStatus;
+        fragmentEvaluation = fragmentEvaluation == null ? Optional.empty() : fragmentEvaluation;
         ingredients = ingredients == null ? List.of() : List.copyOf(ingredients);
         weaponOrigin = weaponOrigin == null ? WeaponOrigin.UNKNOWN : weaponOrigin;
         if (inputKind == null || inputCount < 0
@@ -77,7 +80,8 @@ public record BlueprintRecyclerPreview(
                         || requiredInputCount != 0 || pointCost != 0 || !ingredients.isEmpty()
                         || customizationWillBeLost || alreadyKnown
                         || weaponOrigin != WeaponOrigin.UNKNOWN
-                        || recoveryPointValue != 0 || recoveryStatus.isPresent()) {
+                        || recoveryPointValue != 0 || recoveryStatus.isPresent()
+                        || fragmentEvaluation.isPresent()) {
                     throw new IllegalArgumentException("empty Recycler preview contains input details");
                 }
             }
@@ -88,7 +92,8 @@ public record BlueprintRecyclerPreview(
                         || requiredInputCount != 0 || pointCost != 0 || !ingredients.isEmpty()
                         || customizationWillBeLost || alreadyKnown
                         || weaponOrigin != WeaponOrigin.UNKNOWN
-                        || recoveryPointValue != 0 || recoveryStatus.isPresent()) {
+                        || recoveryPointValue != 0 || recoveryStatus.isPresent()
+                        || fragmentEvaluation.isPresent()) {
                     throw new IllegalArgumentException("invalid Recycler input has an action decision");
                 }
             }
@@ -99,7 +104,8 @@ public record BlueprintRecyclerPreview(
                         || requiredInputCount != 0 || pointCost != 0 || !ingredients.isEmpty()
                         || customizationWillBeLost || alreadyKnown
                         || weaponOrigin != WeaponOrigin.UNKNOWN
-                        || recoveryPointValue != 0 || recoveryStatus.isPresent()) {
+                        || recoveryPointValue != 0 || recoveryStatus.isPresent()
+                        || fragmentEvaluation.isPresent()) {
                     throw new IllegalArgumentException("blueprint Recycler preview is incomplete");
                 }
                 if (recyclingStatus.orElseThrow() == BlueprintRecyclingService.Status.SUCCESS
@@ -115,7 +121,8 @@ public record BlueprintRecyclerPreview(
                         || requiredInputCount != 0 || pointCost != 0 || !ingredients.isEmpty()
                         || customizationWillBeLost || alreadyKnown
                         || weaponOrigin != WeaponOrigin.UNKNOWN
-                        || recoveryPointValue != 0 || recoveryStatus.isPresent()) {
+                        || recoveryPointValue != 0 || recoveryStatus.isPresent()
+                        || fragmentEvaluation.isPresent()) {
                     throw new IllegalArgumentException("Research Data Recycler preview is incomplete");
                 }
                 if (researchDataStatus.orElseThrow() == ResearchDataRedemptionService.Status.SUCCESS
@@ -128,7 +135,7 @@ public record BlueprintRecyclerPreview(
                         || recyclingStatus.isPresent() || researchDataStatus.isPresent()
                         || reverseEngineeringStatus.isEmpty()
                         || outputBlueprintId.filter(inputId.orElseThrow()::equals).isEmpty()
-                        || pointValue != 0) {
+                        || pointValue != 0 || fragmentEvaluation.isPresent()) {
                     throw new IllegalArgumentException(
                             "physical-item Analyzer preview is incomplete");
                 }
@@ -155,7 +162,56 @@ public record BlueprintRecyclerPreview(
                             "ready found-weapon recovery preview lacks trusted value");
                 }
             }
+            case BLUEPRINT_FRAGMENT -> {
+                BlueprintFragmentAnalysisService.Evaluation fragment = fragmentEvaluation
+                        .orElseThrow(() -> new IllegalArgumentException(
+                                "Blueprint Fragment preview lacks an evaluation"));
+                if (inputId.isEmpty() || inputCount < 1
+                        || fragment.target().filter(inputId.orElseThrow()::equals).isEmpty()
+                        || recyclingStatus.isPresent() || researchDataStatus.isPresent()
+                        || reverseEngineeringStatus.isPresent() || recoveryStatus.isPresent()
+                        || outputBlueprintId.isPresent() || requiredInputCount != 0
+                        || pointCost != 0 || !ingredients.isEmpty()
+                        || customizationWillBeLost
+                        || weaponOrigin != WeaponOrigin.UNKNOWN
+                        || recoveryPointValue != 0) {
+                    throw new IllegalArgumentException(
+                            "Blueprint Fragment Analyzer preview is incomplete");
+                }
+            }
         }
+    }
+
+    /** Compatibility constructor for Analyzer previews predating direct recovery. */
+    public BlueprintRecyclerPreview(
+            InputKind inputKind,
+            Optional<ResourceLocation> inputId,
+            int inputCount,
+            int pointValue,
+            int pointBalance,
+            int pointCap,
+            Optional<BlueprintRecyclingService.Status> recyclingStatus,
+            Optional<ResearchDataRedemptionService.Status> researchDataStatus,
+            long stateToken,
+            Optional<ResourceLocation> outputBlueprintId,
+            int requiredInputCount,
+            int pointCost,
+            boolean ingredientsSatisfied,
+            boolean outputAvailable,
+            boolean customizationWillBeLost,
+            boolean alreadyKnown,
+            Optional<BlueprintReverseEngineeringService.Status> reverseEngineeringStatus,
+            List<IngredientPreview> ingredients,
+            WeaponOrigin weaponOrigin,
+            int recoveryPointValue,
+            Optional<FoundWeaponRecoveryService.Status> recoveryStatus) {
+        this(
+                inputKind, inputId, inputCount, pointValue, pointBalance, pointCap,
+                recyclingStatus, researchDataStatus, stateToken, outputBlueprintId,
+                requiredInputCount, pointCost, ingredientsSatisfied, outputAvailable,
+                customizationWillBeLost, alreadyKnown, reverseEngineeringStatus,
+                ingredients, weaponOrigin, recoveryPointValue, recoveryStatus,
+                Optional.empty());
     }
 
     /** Compatibility constructor for Analyzer previews predating direct recovery. */
@@ -199,6 +255,7 @@ public record BlueprintRecyclerPreview(
                 ingredients,
                 WeaponOrigin.UNKNOWN,
                 0,
+                Optional.empty(),
                 Optional.empty());
     }
 
@@ -249,6 +306,36 @@ public record BlueprintRecyclerPreview(
                 Optional.empty(), Optional.empty());
     }
 
+    public static BlueprintRecyclerPreview fragment(
+            BlueprintFragmentAnalysisService.Evaluation evaluation) {
+        if (evaluation == null || evaluation.target().isEmpty()) {
+            throw new IllegalArgumentException("Blueprint Fragment evaluation is unavailable");
+        }
+        return new BlueprintRecyclerPreview(
+                InputKind.BLUEPRINT_FRAGMENT,
+                evaluation.target(),
+                evaluation.offered(),
+                evaluation.awardedPoints(),
+                evaluation.pointBalance(),
+                evaluation.pointCap(),
+                Optional.empty(),
+                Optional.empty(),
+                0L,
+                Optional.empty(),
+                0,
+                0,
+                true,
+                true,
+                false,
+                evaluation.learnedTarget(),
+                Optional.empty(),
+                List.of(),
+                WeaponOrigin.UNKNOWN,
+                0,
+                Optional.empty(),
+                Optional.of(evaluation));
+    }
+
     public boolean actionable() {
         return recyclingStatus.filter(status -> status == BlueprintRecyclingService.Status.SUCCESS)
                 .isPresent()
@@ -257,7 +344,9 @@ public record BlueprintRecyclerPreview(
                 || reverseEngineeringStatus.filter(status ->
                         status == BlueprintReverseEngineeringService.Status.READY).isPresent()
                 || recoveryStatus.filter(status ->
-                        status == FoundWeaponRecoveryService.Status.READY).isPresent();
+                        status == FoundWeaponRecoveryService.Status.READY).isPresent()
+                || fragmentEvaluation.filter(
+                        BlueprintFragmentAnalysisService.Evaluation::ready).isPresent();
     }
 
     public BlueprintRecyclerPreview withStateToken(long token) {
@@ -282,7 +371,8 @@ public record BlueprintRecyclerPreview(
                 ingredients,
                 weaponOrigin,
                 recoveryPointValue,
-                recoveryStatus);
+                recoveryStatus,
+                fragmentEvaluation);
     }
 
     private static void validateId(ResourceLocation id) {
@@ -296,7 +386,8 @@ public record BlueprintRecyclerPreview(
         INVALID,
         BLUEPRINT,
         RESEARCH_DATA,
-        PHYSICAL_ITEM
+        PHYSICAL_ITEM,
+        BLUEPRINT_FRAGMENT
     }
 
     public enum WeaponOrigin {

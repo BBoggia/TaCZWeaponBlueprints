@@ -1,6 +1,9 @@
 package com.gamergaming.taczweaponblueprints.block;
 
+import java.util.Optional;
+
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
+import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchTier;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -35,8 +38,6 @@ import net.minecraftforge.network.NetworkHooks;
 public final class ResearchBenchBlock extends HorizontalDirectionalBlock {
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
     public static final BooleanProperty EXTENSION = BooleanProperty.create("extension");
-    private static final Component TITLE = Component.translatable(
-            "container.taczweaponblueprints.research_bench");
     private static final VoxelShape BASE_SHAPE = Block.box(0, 0, 0, 16, 14, 16);
     private static final VoxelShape NORTH_SHAPE = Shapes.or(
             BASE_SHAPE, Block.box(0, 14, 0, 16, 27, 4));
@@ -46,12 +47,25 @@ public final class ResearchBenchBlock extends HorizontalDirectionalBlock {
             BASE_SHAPE, Block.box(12, 14, 0, 16, 27, 16));
     private static final VoxelShape WEST_SHAPE = Shapes.or(
             BASE_SHAPE, Block.box(0, 14, 0, 4, 27, 16));
+    private static final int TRANSACTION_FLAGS =
+            Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS;
+    private static final ThreadLocal<Integer> STRUCTURE_REPLACEMENT_DEPTH =
+            ThreadLocal.withInitial(() -> 0);
+    private final ResearchWorkbenchTier tier;
 
-    public ResearchBenchBlock(Properties properties) {
+    public ResearchBenchBlock(ResearchWorkbenchTier tier, Properties properties) {
         super(properties);
+        if (tier == null) {
+            throw new IllegalArgumentException("Research Bench tier cannot be null");
+        }
+        this.tier = tier;
         registerDefaultState(stateDefinition.any()
                 .setValue(FACING, Direction.NORTH)
                 .setValue(EXTENSION, false));
+    }
+
+    public ResearchWorkbenchTier tier() {
+        return tier;
     }
 
     @Override
@@ -77,11 +91,79 @@ public final class ResearchBenchBlock extends HorizontalDirectionalBlock {
         super.setPlacedBy(level, pos, state, placer, stack);
         if (!level.isClientSide && !state.getValue(EXTENSION)) {
             BlockPos extensionPos = counterpartPos(pos, state);
-            level.setBlock(
-                    extensionPos,
-                    state.setValue(EXTENSION, true),
-                    Block.UPDATE_ALL);
+            if (!isCounterpart(state, level.getBlockState(extensionPos))
+                    && !level.setBlock(
+                            extensionPos,
+                            state.setValue(EXTENSION, true),
+                            Block.UPDATE_ALL)) {
+                level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+            }
         }
+    }
+
+    /** Places both halves before BlockItem consumes the held Bench item. */
+    public static boolean placeCompleteStructure(
+            Level level,
+            BlockPos rootPos,
+            BlockState targetRoot) {
+        if (level == null || rootPos == null || targetRoot == null
+                || !(targetRoot.getBlock() instanceof ResearchBenchBlock)
+                || targetRoot.getValue(EXTENSION)) {
+            return false;
+        }
+        BlockPos extensionPos = counterpartPos(rootPos, targetRoot);
+        if (!level.getWorldBorder().isWithinBounds(rootPos)
+                || !level.getWorldBorder().isWithinBounds(extensionPos)) {
+            return false;
+        }
+        BlockState sourceRoot = level.getBlockState(rootPos);
+        BlockState sourceExtension = level.getBlockState(extensionPos);
+        BlockState targetExtension = targetRoot.setValue(EXTENSION, true);
+        AtomicTwoPartReplacement.Outcome outcome;
+        beginStructureReplacement();
+        try {
+            outcome = AtomicTwoPartReplacement.replace(
+                    sourceRoot,
+                    sourceExtension,
+                    targetRoot,
+                    targetExtension,
+                    new AtomicTwoPartReplacement.Access<>() {
+                        @Override
+                        public void write(
+                                AtomicTwoPartReplacement.Part part,
+                                BlockState state) {
+                            level.setBlock(
+                                    part == AtomicTwoPartReplacement.Part.FIRST
+                                            ? rootPos
+                                            : extensionPos,
+                                    state,
+                                    TRANSACTION_FLAGS);
+                        }
+
+                        @Override
+                        public BlockState read(AtomicTwoPartReplacement.Part part) {
+                            return level.getBlockState(
+                                    part == AtomicTwoPartReplacement.Part.FIRST
+                                            ? rootPos
+                                            : extensionPos);
+                        }
+                    });
+        } finally {
+            endStructureReplacement();
+        }
+        if (outcome == AtomicTwoPartReplacement.Outcome.SUCCESS) {
+            publishReplacement(
+                    level,
+                    rootPos,
+                    extensionPos,
+                    sourceRoot,
+                    sourceExtension,
+                    targetRoot,
+                    targetExtension);
+            return true;
+        }
+        publishCurrentStates(level, rootPos, extensionPos, sourceRoot, sourceExtension);
+        return false;
     }
 
     @Override
@@ -98,7 +180,9 @@ public final class ResearchBenchBlock extends HorizontalDirectionalBlock {
 
     @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moving) {
-        if (!level.isClientSide && state.getBlock() != newState.getBlock()) {
+        if (!level.isClientSide
+                && !structureReplacementInProgress()
+                && state.getBlock() != newState.getBlock()) {
             BlockPos counterpartPos = counterpartPos(pos, state);
             BlockState counterpart = level.getBlockState(counterpartPos);
             if (isCounterpart(state, counterpart)) {
@@ -140,12 +224,15 @@ public final class ResearchBenchBlock extends HorizontalDirectionalBlock {
             InteractionHand hand,
             BlockHitResult hit) {
         if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
-            BlockPos rootPos = state.getValue(EXTENSION) ? counterpartPos(pos, state) : pos;
-            if (level.getBlockState(rootPos).is(this)) {
+            BlockPos rootPos = rootPosition(pos, state);
+            if (isValidRoot(level, rootPos, tier)) {
                 NetworkHooks.openScreen(
                         serverPlayer,
                         menuProvider(level, rootPos),
-                        buffer -> buffer.writeBlockPos(rootPos));
+                        buffer -> {
+                            buffer.writeBlockPos(rootPos);
+                            buffer.writeVarInt(tier.level());
+                        });
             }
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
@@ -186,6 +273,85 @@ public final class ResearchBenchBlock extends HorizontalDirectionalBlock {
         builder.add(FACING, EXTENSION);
     }
 
+    public static BlockPos rootPosition(BlockPos pos, BlockState state) {
+        if (!(state.getBlock() instanceof ResearchBenchBlock)) {
+            throw new IllegalArgumentException("state is not a Research Bench");
+        }
+        return state.getValue(EXTENSION) ? counterpartPos(pos, state) : pos;
+    }
+
+    public static boolean isValidRoot(
+            BlockGetter level,
+            BlockPos rootPos,
+            ResearchWorkbenchTier expectedTier) {
+        return expectedTier != null
+                && tierAtValidRoot(level, rootPos).filter(tier -> tier == expectedTier).isPresent();
+    }
+
+    /** Resolves a tier only from a complete, matching root/extension structure. */
+    public static Optional<ResearchWorkbenchTier> tierAtValidRoot(
+            BlockGetter level,
+            BlockPos rootPos) {
+        if (level == null || rootPos == null) {
+            return Optional.empty();
+        }
+        BlockState root = level.getBlockState(rootPos);
+        if (!(root.getBlock() instanceof ResearchBenchBlock bench)
+                || root.getValue(EXTENSION)
+                || !isCounterpart(
+                        root,
+                        level.getBlockState(counterpartPos(rootPos, root)))) {
+            return Optional.empty();
+        }
+        return Optional.of(bench.tier);
+    }
+
+    private static void publishReplacement(
+            Level level,
+            BlockPos rootPos,
+            BlockPos extensionPos,
+            BlockState sourceRoot,
+            BlockState sourceExtension,
+            BlockState targetRoot,
+            BlockState targetExtension) {
+        level.sendBlockUpdated(rootPos, sourceRoot, targetRoot, Block.UPDATE_ALL);
+        level.sendBlockUpdated(extensionPos, sourceExtension, targetExtension, Block.UPDATE_ALL);
+        level.updateNeighborsAt(rootPos, targetRoot.getBlock());
+        level.updateNeighborsAt(extensionPos, targetExtension.getBlock());
+    }
+
+    private static void publishCurrentStates(
+            Level level,
+            BlockPos rootPos,
+            BlockPos extensionPos,
+            BlockState sourceRoot,
+            BlockState sourceExtension) {
+        BlockState currentRoot = level.getBlockState(rootPos);
+        BlockState currentExtension = level.getBlockState(extensionPos);
+        level.sendBlockUpdated(rootPos, sourceRoot, currentRoot, Block.UPDATE_ALL);
+        level.sendBlockUpdated(
+                extensionPos, sourceExtension, currentExtension, Block.UPDATE_ALL);
+        level.updateNeighborsAt(rootPos, currentRoot.getBlock());
+        level.updateNeighborsAt(extensionPos, currentExtension.getBlock());
+    }
+
+    private static void beginStructureReplacement() {
+        STRUCTURE_REPLACEMENT_DEPTH.set(STRUCTURE_REPLACEMENT_DEPTH.get() + 1);
+    }
+
+    private static void endStructureReplacement() {
+        int depth = STRUCTURE_REPLACEMENT_DEPTH.get() - 1;
+        if (depth <= 0) {
+            STRUCTURE_REPLACEMENT_DEPTH.remove();
+        } else {
+            STRUCTURE_REPLACEMENT_DEPTH.set(depth);
+        }
+    }
+
+    private static boolean structureReplacementInProgress() {
+        return STRUCTURE_REPLACEMENT_DEPTH.get() > 0;
+    }
+
     private static BlockPos counterpartPos(BlockPos pos, BlockState state) {
         Direction widthDirection = state.getValue(FACING).getClockWise();
         return pos.relative(state.getValue(EXTENSION) ? widthDirection.getOpposite() : widthDirection);
@@ -197,10 +363,11 @@ public final class ResearchBenchBlock extends HorizontalDirectionalBlock {
                 && candidate.getValue(EXTENSION) != state.getValue(EXTENSION);
     }
 
-    private static MenuProvider menuProvider(Level level, BlockPos pos) {
+    private MenuProvider menuProvider(Level level, BlockPos pos) {
         return new SimpleMenuProvider(
                 (containerId, inventory, player) -> ResearchBenchMenu.server(
                         containerId, inventory, level, pos),
-                TITLE);
+                Component.translatable(getDescriptionId()));
     }
+
 }

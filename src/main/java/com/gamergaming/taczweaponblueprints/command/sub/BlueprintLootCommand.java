@@ -6,6 +6,7 @@ import java.util.Locale;
 
 import com.gamergaming.taczweaponblueprints.compat.fzzy_config.BlueprintConfig;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
+import com.gamergaming.taczweaponblueprints.loot.BlueprintFragmentLootResolver;
 import com.gamergaming.taczweaponblueprints.loot.BlueprintLootPolicyResolver;
 import com.gamergaming.taczweaponblueprints.loot.BlueprintLootRuntimeConfig;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
@@ -73,7 +74,9 @@ public final class BlueprintLootCommand {
                 balance.lootChance(),
                 balance.minimumLootRolls(),
                 balance.maximumLootRolls(),
-                blacklistSize()), false);
+                blacklistSize(),
+                ModConfigs.BLUEPRINT.researchFeatureSnapshot()
+                        .fragmentLootReplacementBasisPoints() / 100.0), false);
         context.getSource().sendSuccess(() -> Component.translatable(
                 "commands.taczweaponblueprints.loot.mode",
                 mode(summary)), false);
@@ -177,6 +180,26 @@ public final class BlueprintLootCommand {
                             candidate.blueprintId(),
                             decimal(candidate.weight()),
                             percent(candidate.probability())), false));
+            BlueprintFragmentLootResolver.Plan fragments = BlueprintFragmentLootResolver.resolveRuntime(
+                    policy.candidates().stream()
+                            .map(candidate -> new BlueprintFragmentLootResolver.WeightedTarget(
+                                    candidate.blueprintId(), candidate.weight()))
+                            .toList(),
+                    context.getSource().getEntity() instanceof ServerPlayer player
+                            ? player
+                            : null);
+            context.getSource().sendSuccess(() -> Component.translatable(
+                    "commands.taczweaponblueprints.loot.preview.fragments",
+                    fragments.policyAvailable(),
+                    percent(fragments.replacementBasisPoints()
+                            / (double) BlueprintFragmentLootResolver.BASIS_POINTS),
+                    fragments.candidates().size(),
+                    fragments.playerAware(),
+                    decimal(fragments.expectedFragments(policy.expectedAdditions())),
+                    fragments.thresholdCounts(),
+                    fragments.candidates().stream()
+                            .filter(BlueprintFragmentLootResolver.Candidate::exactThreshold)
+                            .count()), false);
         });
         if (policies.size() > MAX_PREVIEW_RULES) {
             context.getSource().sendSuccess(() -> Component.translatable(
