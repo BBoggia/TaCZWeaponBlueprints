@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "fragments": {
+    "thresholds": {
+      "tier_1": 5,
+      "tier_2": 10,
+      "tier_3": 15
+    },
+    "retained_progress_cap": 1000
+  },
+  "recyclable": true,
+  "learning": "require_tree_prerequisites"
+}

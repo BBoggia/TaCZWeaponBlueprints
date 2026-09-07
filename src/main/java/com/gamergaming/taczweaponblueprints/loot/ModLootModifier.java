@@ -21,6 +21,9 @@ public class ModLootModifier {
     public static final RegistryObject<Codec<ResearchDataLootModifier>> RESEARCH_DATA_MODIFIER =
         LOOT_MODIFIER_SERIALIZERS.register("research_data", ResearchDataLootModifier.CODEC);
 
+    public static final RegistryObject<Codec<ScrapSupplyLootModifier>> SCRAP_SUPPLY_MODIFIER =
+        LOOT_MODIFIER_SERIALIZERS.register("scrap_supply", ScrapSupplyLootModifier.CODEC);
+
     public static void register(IEventBus eventBus) {
         LOOT_MODIFIER_SERIALIZERS.register(eventBus);
     }

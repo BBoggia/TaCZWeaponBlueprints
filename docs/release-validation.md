@@ -16,11 +16,18 @@ Run:
 
 The first command runs the tests, reobfuscates the mod JAR, and validates the
 packaged metadata, JSON, loot-modifier index, and archive hygiene. The second
-also rejects unresolved publication choices such as the stock Forge MDK
-license. The selected root license is packaged into the verified JAR.
+also rejects unresolved publication choices, including a development version,
+pending Unreleased entries, or the stock Forge MDK license. Run it only after
+choosing and preparing the release version; it is expected to remain blocked
+during development. The selected root license is packaged into the verified JAR.
 Certification rejects a non-JDK-17 runtime and writes
 `build/reports/release-candidate.json`; retain that report with the exact JAR it
 describes.
+
+For physical currency and Research Data changes, also use the
+[research economy validation guide](research-economy-validation.md). It covers
+the candidate artifact, two connected clients, item conservation, reloads,
+and saved-player compatibility.
 
 The build also runs `verifyTieredProgressionReleaseContract`. This integration
 gate requires clean preset, authored and automatic tree, workstation,
@@ -29,7 +36,7 @@ compatibility suites. It opens the exact reobfuscated JAR, verifies the runtime
 classes and recipes for all three Bench tiers, fragments, native
 crafting enforcement, public criterion API, and supplemental packets, and
 writes `build/reports/tiered-progression-release.json`. Confirm the report pins
-`tiered-progression-fragments-gates-v1`, protocol 59, player-data version 5,
+`tiered-progression-fragments-gates-v1`, protocol 62, player-data version 5,
 server-config version 4, the default presets and thresholds, and the same JAR
 SHA-256 used by the final candidate report. A passing report remains marked
 `requires_runtime_matrix`; it is not evidence that multiplayer and in-game
@@ -37,9 +44,9 @@ checks were completed.
 
 The candidate report also records the research-workstation ownership and
 presentation contract: the permanent fullscreen research-only Bench, the
-single-input Blueprint Analyzer and its three explicit actions, final eight-element
-256x256 presentation, recipe discovery path, artifact gate, and still-required
-manual-QA matrix.
+Blueprint Analyzer with one input, one output, three station tiers, seven
+context-sensitive server actions, and two-block station models. It records
+recipe discovery, artifact checks, and the still-required manual-QA matrix.
 
 Confirm `unifiedTechTree.viewOrder` contains only `tech_tree` and that
 `dormantCompatibilityViews` lists `branches` and `all_weapons`. Neither dormant
@@ -61,13 +68,13 @@ prove optional runtime classloading.
 The build also runs `verifyResearchGuidanceReleaseContract`. Its Phase 9
 stabilization gate opens the reobfuscated JAR and requires the runtime classes
 and English translations for
-the tracked research goal, server-authoritative route, exact RP and material
+the tracked research goal, server-authoritative route, exact currency and material
 progress, Affordable Now filter, Recent Journal view, and fullscreen minimap.
 It binds 21 named route, allocation, lifecycle, packet, persistence, rollback,
 scale, input, migration, cost-mode, compatibility, navigation, paging, and
 lost-response invariants to exact clean JUnit cases and writes
 `build/reports/research-guidance-release.json`. Confirm the report pins
-`research-guidance-qol-v1`, protocol 59, player-data version 5, client-settings
+`research-guidance-qol-v1`, protocol 62, player-data version 5, client-settings
 version 3, 16 packaged feature classes, the 4,096-node public limit, and
 eight-target affordability batches. The release-candidate report must
 reference the same contract and report.
@@ -103,7 +110,7 @@ policy. Packaged-artifact verification separately requires every kernel and
 configuration class plus all twelve localized setting surfaces.
 
 The build also runs `verifyTaperedAutomaticTopologyContract`. It pins automatic
-topology `tacz-gun-placement-v13`, Research Tree protocol 59, export format 22,
+topology `tacz-gun-placement-v13`, Research Tree protocol 62, export format 22,
 and the canonical-coordinate/decision/finalized-rank publication contract;
 requires clean server planning, finalization, diagnostics, client layout,
 network, and packaged-data suites; and writes
@@ -121,7 +128,7 @@ The build also runs `verifyGroupedPrerequisiteAcceptanceContract`. It requires
 all 20 named Phase 7 semantic and integration invariants to resolve to exact,
 clean JUnit cases and writes
 `build/reports/grouped-prerequisite-acceptance.json`. Confirm the report pins
-`truth-tables-integration-v1`, protocol 59, export format 22, and
+`truth-tables-integration-v1`, protocol 62, export format 22, and
 `grouped_routes_v1`, and that the JAR manifest and release-candidate report
 contain the same acceptance contract.
 
@@ -228,7 +235,7 @@ bounded four-point score tolerance, and explicit truncation diagnostics,
 family-preserving responsive row boundaries and bounded ten-pixel lanes for
 additional any-of junctions,
 tree-owned optional/dynamic/configured presentation bands, the 4,096-candidate
-ceiling, protocol 59, export format 22, and packaged automatic prerequisite
+ceiling, protocol 62, export format 22, and packaged automatic prerequisite
 strategy `grouped_routes_v1`. Confirm canonical branch coordinates
 round-trip for every automatic member, two-family layouts receive a visible
 gutter, planned and published ranks are reported separately, and complete
@@ -248,10 +255,11 @@ appear only for decisive semantic signals, incomplete authority cannot
 authorize a prototype, and pre-junction crossings remain manual visual evidence.
 For a current connected publication, status must report equal candidate,
 canonical-coordinate, decision, and finalized-rank counts with `complete=true`.
-For generation-redesign Phase 9, also confirm the export contains the
-topology audit, per-weapon authoring evidence, and economy review; the packaged
-weapon-only baseline is 418 RP against 218 finite RP, and costs remain under
-`research_policy` authority with the automatic curve disabled.
+Confirm the export contains the topology audit, per-weapon authoring evidence,
+and current economy review. Historical authored-policy fixtures retain a
+418-unit weapon-only baseline and 218 finite award units. Those reference
+figures are not a live automatic-tree price or the current Scrap supply. Use
+the resolved export for the installed catalog and enabled cost policy.
 
 For compatibility-sensitive changes, repeat the dedicated-server and client
 smoke tests documented in `docs/operations-and-migration.md`.
@@ -278,25 +286,25 @@ interaction pass:
 - break each half in separate tests and confirm the complete bench is removed
   with exactly one item drop; confirm pistons cannot split the bench;
 - browse without exposing inventory slots, select an unlearned blueprint, and
-  verify the exact RP and player-inventory material preview in its tooltip;
+  verify the exact currency and player-inventory material preview in its tooltip;
 - confirm single and double clicks only select, the Research button sends one
   request while pending, and confirm the Bench exposes no tab or turn-in action;
-- confirm insufficient points, missing ingredients, and unmet prerequisites
+- confirm insufficient currency, missing ingredients, and unmet prerequisites
   consume nothing;
 - in the packaged `DIRECT_LEARN` mode, complete one research transaction and
   confirm the recipe is learned immediately, no physical blueprint is created,
-  and the exact RP/material cost is consumed;
+  and the exact currency/material cost is consumed;
 - select an unlearned node several ranks above the learned frontier and confirm
-  the button reports `Unlock N`, the preview reports aggregate RP and
+  the button reports `Unlock N`, the preview reports aggregate currency and
   every displayed material count, and one confirmation learns the target plus
   the deterministic shortest prerequisite closure while charging shared nodes
-  once; repeat without enough RP and without one material and confirm no node,
-  point, recipe alias, or inventory slot changes;
+  once; repeat without enough currency and without one material and confirm no node,
+  currency, recipe alias, or inventory slot changes;
 - test mandatory any-of joins with shared prerequisites, one already learned
   route, one progression-exempt alternative, two equal-length routes with
   different materials, and one blocked alternative; confirm the globally
   shortest combined closure wins regardless of current inventory, learned and
-  progression-exempt routes cost nothing, remaining ties use stable RP,
+  progression-exempt routes cost nothing, remaining ties use stable currency cost,
   total-material-unit, then resource-ID order, and blocked alternatives are
   never silently traversed;
 - preview a path with more than six material predicates in compact and
@@ -308,9 +316,9 @@ interaction pass:
 - open the dedicated Blueprint Analyzer, recycle one learned duplicate, and
   confirm exactly one item is consumed for the complete configured award;
 - place an eligible unloaded, attachment-free TaCZ item in the Blueprint
-  Analyzer and confirm its logical target, physical count, RP cost, material
+  Analyzer and confirm its logical target, physical count, currency cost, material
   counts, customization warning, and output readiness match server policy;
-- reverse engineer once and confirm the exact physical count, RP, and materials
+- reverse engineer once and confirm the exact physical count, currency, and materials
   are consumed, exactly one protected physical blueprint appears in the
   extract-only output, and discovery occurs without learning the recipe;
 - repeat with an occupied output, stale inventory, insufficient ammo batch,
@@ -341,14 +349,18 @@ status/inspect/export agreement cases in the manual matrix. Maximum-fixture and
 packaged-resource tests do not prove a real pack's TaCZ recipes or in-game
 interaction behavior.
 
-For Research Point economy sign-off, confirm the candidate report records 15
-definitions, 46 fixed progression RP, a 1-RP once-per-blueprint discovery
-award, a 218-RP pinned-catalog finite maximum, 1,246 RP of pinned research cost,
-1/3/6 Research Data values, and combat disabled by default. Exercise one fresh
-discovery, one retroactive advancement, one milestone crossing, each Research
-Data tier, near-cap rejection, award disable/reenable, `/reload`, relog, and
-restart. Also confirm a near-cap finite advancement or milestone remains
-unclaimed until enough RP is spent and then pays its complete value. Open
-representative note/report/dossier loot tables and confirm their
-12%/8%/5% modifiers coexist with blueprint loot without duplicate global-index
-entries.
+For economy sign-off, confirm the candidate report's `researchEconomy` section
+records physical Scrap plus Data analysis defaults, shared reconstruction,
+independent supply controls, and the current packaged policy resources. The
+older `researchPointEconomy` section is explicitly a historical pinned-policy
+reference. Its 1/3/6 Data values describe legacy redemption, and its catalog
+costs must not be treated as current automatic-tree prices.
+
+Complete the [economy handoff checklist](research-economy-release-handoff.md)
+against the intended pack and final candidate. Exercise both currencies with
+analysis and legacy redemption, disabled Data, independent loot/award switches,
+full inventory, stale requests, finite-claim retry, and previewed withdrawals.
+Banked near-cap checks remain relevant only in banked mode. Confirm Note,
+Report, and Dossier loot modifiers coexist with blueprint and Scrap supply
+without duplicate global-index entries. Preserve native evidence and the final
+artifact hash separately from automated reports marked `requires_manual_qa`.

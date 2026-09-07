@@ -40,6 +40,17 @@ final class AnalyzerPresentationCodec {
                 b.writeVarInt(i.required()); b.writeVarInt(i.inventoryAvailable());
             });
         });
+        // Omit an absent tail to preserve frozen pre-Data payloads exactly.
+        p.data().ifPresent(d -> {
+            b.writeByte(1); b.writeVarInt(d.minimumStation()); b.writeVarInt(d.configuredTiers());
+            b.writeBoolean(d.allowLearned()); b.writeBoolean(d.allowUndiscovered()); b.writeBoolean(d.partialProgressBias());
+            b.writeVarInt(d.reward().ordinal());
+            for (var row : d.stations()) {
+                b.writeVarInt(row.eligibleTiers()); b.writeDouble(row.blueprintProbability());
+                b.writeBoolean(row.blueprintsPossible()); b.writeBoolean(row.fragmentsPossible());
+                b.writeVarInt(row.minimumFragments()); b.writeVarInt(row.maximumFragments());
+            }
+        });
     }
     static AnalyzerPresentation read(FriendlyByteBuf b) {
         int tier = b.readVarInt();
@@ -65,7 +76,17 @@ final class AnalyzerPresentationCodec {
             }
             cost = Optional.of(new AnalyzerPresentation.RecoveryCost(input, points, ingredients, status));
         }
-        return new AnalyzerPresentation(tier, weapon, fragments, cost);
+        var result = new AnalyzerPresentation(tier, weapon, fragments, cost);
+        if (b.isReadable()) {
+            if (b.readUnsignedByte()!=1) throw new IllegalArgumentException("unsupported Data presentation");
+            int minimum=b.readVarInt(), tiers=b.readVarInt(); boolean learned=b.readBoolean(), undiscovered=b.readBoolean(), bias=b.readBoolean();
+            var reward=value(b, AnalysisRewardClass.values());
+            var rows=new ArrayList<com.gamergaming.taczweaponblueprints.menu.ResearchDataPresentation.Station>(3);
+            for (int i=1;i<=3;i++) rows.add(new com.gamergaming.taczweaponblueprints.menu.ResearchDataPresentation.Station(i,b.readVarInt(),b.readDouble(),b.readBoolean(),b.readBoolean(),b.readVarInt(),b.readVarInt()));
+            result=result.withData(new com.gamergaming.taczweaponblueprints.menu.ResearchDataPresentation(minimum,tiers,learned,undiscovered,bias,reward,rows));
+            if (b.isReadable()) throw new IllegalArgumentException("unexpected Data presentation trailing bytes");
+        }
+        return result;
     }
     static void outcome(FriendlyByteBuf b, Optional<AnalyzerOutcomeTable.Result> result) {
         b.writeBoolean(result.isPresent()); result.ifPresent(r -> { b.writeVarInt(r.kind().ordinal()); b.writeVarInt(r.count()); });

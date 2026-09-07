@@ -18,8 +18,13 @@ import net.minecraftforge.network.NetworkEvent;
 /** Bounded server-filtered RP result; contains no definition or target IDs. */
 public final class ResearchPointFeedbackPacket {
     private final Feedback feedback;
+    private final com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy currency;
 
     public ResearchPointFeedbackPacket(Feedback feedback) {
+        this(feedback, com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy.banked(1_000_000_000, 1));
+    }
+    public ResearchPointFeedbackPacket(Feedback feedback, com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy currency) {
+        this.currency = java.util.Objects.requireNonNull(currency);
         if (feedback == null || !feedback.present()) {
             throw new IllegalArgumentException("empty Research Point feedback packet");
         }
@@ -27,6 +32,7 @@ public final class ResearchPointFeedbackPacket {
     }
 
     public ResearchPointFeedbackPacket(FriendlyByteBuf buffer) {
+        currency = ResearchCurrencyPolicyCodec.read(buffer);
         int points = buffer.readVarInt();
         int generic = buffer.readVarInt();
         boolean claimedAtCap = buffer.readBoolean();
@@ -45,6 +51,7 @@ public final class ResearchPointFeedbackPacket {
     }
 
     public void toBytes(FriendlyByteBuf buffer) {
+        ResearchCurrencyPolicyCodec.write(buffer, currency);
         buffer.writeVarInt(feedback.awardedPoints());
         buffer.writeVarInt(feedback.genericAwardCount());
         buffer.writeBoolean(feedback.claimedAtCap());
@@ -61,6 +68,11 @@ public final class ResearchPointFeedbackPacket {
             }
             Minecraft minecraft = Minecraft.getInstance();
             if (minecraft.player == null) {
+                return;
+            }
+            if (currency.kind() == com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy.Kind.PHYSICAL_ITEM) {
+                minecraft.player.displayClientMessage(Component.translatable("message.taczweaponblueprints.currency.awarded",
+                        feedback.awardedPoints(), com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyText.name(currency)), true);
                 return;
             }
             var view = ClientResearchPointPresentationState.acceptFeedback(feedback, Util.getMillis());

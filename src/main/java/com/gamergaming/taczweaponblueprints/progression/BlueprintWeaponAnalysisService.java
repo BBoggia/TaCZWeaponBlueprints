@@ -1,5 +1,8 @@
 package com.gamergaming.taczweaponblueprints.progression;
 
+import com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy;
+import com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPayments;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
@@ -62,7 +65,7 @@ public final class BlueprintWeaponAnalysisService {
         var evaluation = BlueprintReverseEngineeringService.evaluate(station.physicalInput(), station.inventoryStacks(),
                 station.outputStack().isEmpty(), context.research(), context.catalog(), config.activeProfileId(), data.orElseThrow(),
                 ModConfigs.BLUEPRINT::isItemBlacklisted, BlueprintProgressionAccess::isProgressionExempt,
-                config.blueprintsEnabled(), config.pointCap(), null, false, quote.attempt().orElse(null));
+                config.blueprintsEnabled(), config.pointCap(), null, false, quote.attempt().orElse(null), station.currencyPolicy());
         if (quote.status() != AnalyzerPolicyQuote.Status.CONFIGURED) {
             evaluation = evaluation.withStatus(switch (quote.status()) {
                 case STALE_PROGRESSION -> Status.STALE_POLICY;
@@ -83,6 +86,7 @@ public final class BlueprintWeaponAnalysisService {
 
     /** One-use server quote plus a complete physical/progression snapshot and policy/station lease. */
     public static final class Prepared {
+        private final ResearchCurrencyPolicy currency;
         private final Evaluation evaluation;
         private final AnalyzerPolicyQuote quote;
         private final ItemStack input, output;
@@ -97,6 +101,7 @@ public final class BlueprintWeaponAnalysisService {
         private boolean used;
         public Prepared(Evaluation evaluation, AnalyzerPolicyQuote quote, IPlayerRecipeData data,
                         WorkstationTransaction station, BooleanSupplier current) {
+            this.currency = station.currencyPolicy();
             this.evaluation = java.util.Objects.requireNonNull(evaluation);
             this.quote = java.util.Objects.requireNonNull(quote);
             this.current = java.util.Objects.requireNonNull(current);
@@ -119,7 +124,7 @@ public final class BlueprintWeaponAnalysisService {
         public Evaluation evaluation() { return evaluation; }
         public AnalyzerPolicyQuote quote() { return quote; }
         private boolean matches(IPlayerRecipeData data, WorkstationTransaction station) {
-            return current.getAsBoolean() && progression.equals(data.serializeNBT())
+            return currency.equals(station.currencyPolicy()) && current.getAsBoolean() && progression.equals(data.serializeNBT())
                     && ItemStack.matches(input, station.physicalInput()) && ItemStack.matches(output, station.outputStack())
                     && stacksMatch(inventory, station.inventoryStacks());
         }
@@ -152,9 +157,9 @@ public final class BlueprintWeaponAnalysisService {
         var outcomes = prepared.quote.outcomes().orElseThrow();
         try {
             if (!prepared.matches(data, station) || !prepared.output.isEmpty()) return failure(Status.STALE_INPUT, prepared, data);
-            materials = ResearchIngredientPlanner.plan(prepared.inventory, e.cost()).orElse(null);
+            materials = ResearchCurrencyPayments.plan(prepared.currency, prepared.inventory, data, e.cost().points(), e.cost()).orElse(null);
             if (materials == null || prepared.input.getCount() < e.requiredInputCount()
-                    || data.getResearchPoints() < e.cost().points()) return failure(Status.STALE_INPUT, prepared, data);
+                    || ResearchCurrencyPayments.balance(prepared.currency, prepared.inventory, data) < e.cost().points()) return failure(Status.STALE_INPUT, prepared, data);
             var provenance = BlueprintProvenance.reverseEngineered(attempt.outputRecyclable(), attempt.physicalBlueprintLearningMode());
             if (outcomes.blueprintWeight() > 0) {
                 blueprint = station.createOutput(target, provenance);
@@ -191,20 +196,21 @@ public final class BlueprintWeaponAnalysisService {
                 case NO_RESULT -> ItemStack.EMPTY;
             };
             if (!prepared.matches(data, station)) throw new IllegalStateException("analysis state changed during selection");
-            if (e.cost().points() > 0 && !data.spendResearchPoints(e.cost().points())) throw new IllegalStateException("RP write failed");
+            if (!ResearchCurrencyPayments.debitBank(prepared.currency, data, e.cost().points())) throw new IllegalStateException("RP write failed");
             if (!station.consumeMaterials(materials, prepared.inventory)
                     || !station.consumePhysical(prepared.input, e.requiredInputCount())
                     || (!output.isEmpty() && !station.placeOutput(output.copy(), prepared.output))) throw new IllegalStateException("inventory write failed");
             if (discovered && !data.discoverBlueprint(target.toString())) throw new IllegalStateException("discovery write failed");
             var expectedInput = prepared.input.copy(); expectedInput.shrink(e.requiredInputCount());
-            if (!prepared.current.getAsBoolean() || data.getResearchPoints() != points - e.cost().points()
+            if (!prepared.current.getAsBoolean() || data.getResearchPoints() != points - (ResearchCurrencyPayments.physical(prepared.currency) ? 0 : e.cost().points())
+                    || !prepared.currency.equals(station.currencyPolicy())
                     || !prepared.progressionMatchesResult(data, target.toString())
                     || !ItemStack.matches(expectedInput, station.physicalInput()) || !ItemStack.matches(output, station.outputStack())
                     || !stacksMatch(materials.applyToCopies(prepared.inventory), station.inventoryStacks())) {
                 throw new IllegalStateException("analysis postcondition failed");
             }
             return new AttemptResult(new Result(Status.SUCCESS, Optional.of(target), e.requiredInputCount(), e.cost().points(),
-                    data.getResearchPoints(), discovered), Optional.of(selected));
+                    ResearchCurrencyPayments.balance(prepared.currency, station.inventoryStacks(), data), discovered), Optional.of(selected));
         } catch (RuntimeException error) {
             boolean restoredInventory = false, restoredData = false;
             try {

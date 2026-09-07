@@ -45,6 +45,18 @@ public final class BlueprintAnalyzerPolicyResolver {
 
     public static AnalyzerPolicyQuote resolve(Context context, ResourceLocation profileId, ResourceLocation target,
             AnalyzerTier station, BlueprintAnalyzerPolicy.Origin origin, FoundWeaponRecoveryMode recovery) {
+        var quote = resolveLegacy(context, profileId, target, station, origin, recovery);
+        if (context.research().researchData().reconstruction().isEmpty()
+                || quote.outcomes().filter(row -> row.fragmentWeight() > 0).isEmpty()) return quote;
+        var shared = AnalysisReconstructionResolver.resolve(context, profileId, target, station);
+        var status = shared.available() ? quote.status() : AnalyzerPolicyQuote.Status.DISABLED;
+        return new AnalyzerPolicyQuote(quote.profileId(), quote.blueprintId(), quote.analyzerTier(), quote.origin(), status,
+                quote.weaponTier(), quote.tierSource(), quote.reviewRequired(), quote.selectedRuleId(), quote.specificity(),
+                quote.attempt(), quote.outcomes(), shared.policy().threshold(), shared.policy().retainedCap());
+    }
+
+    static AnalyzerPolicyQuote resolveLegacy(Context context, ResourceLocation profileId, ResourceLocation target,
+            AnalyzerTier station, BlueprintAnalyzerPolicy.Origin origin, FoundWeaponRecoveryMode recovery) {
         Objects.requireNonNull(context); Objects.requireNonNull(profileId); Objects.requireNonNull(target);
         Objects.requireNonNull(station); Objects.requireNonNull(origin); Objects.requireNonNull(recovery);
         var profile = context.research().profiles().get(profileId);

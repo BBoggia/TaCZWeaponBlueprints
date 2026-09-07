@@ -57,7 +57,7 @@ public final class ResearchPointAwards {
 
     /** Triggers all winning award groups matching one registered integration ID. */
     public static Result trigger(ServerPlayer player, ResourceLocation sourceId) {
-        return triggerInternal(player, sourceId, isRegistered(sourceId));
+        return triggerLegacy(player, sourceId, isRegistered(sourceId));
     }
 
     /** Permission-checked bridge used by command functions and operators. */
@@ -69,10 +69,16 @@ public final class ResearchPointAwards {
                 && commandSource.hasPermission(2)
                 && player != null
                 && commandSource.getServer() == player.server;
+        return triggerLegacy(player, sourceId, trusted);
+    }
+
+    private static Result triggerLegacy(ServerPlayer player, ResourceLocation sourceId, boolean trusted) {
+        if (com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPayments.physical(ModConfigs.BLUEPRINT.currencyPolicy()))
+            return Result.failure(Status.UNSUPPORTED_CURRENCY_MODE);
         return triggerInternal(player, sourceId, trusted);
     }
 
-    private static Result triggerInternal(
+    static Result triggerInternal(
             ServerPlayer player,
             ResourceLocation sourceId,
             boolean trustedSource) {
@@ -120,7 +126,7 @@ public final class ResearchPointAwards {
         if (result.changed()) {
             ResearchPointPresentationService.syncHelp(player);
         }
-        ResearchPointPresentationService.sendFeedback(player, resolution, result, context);
+        ResearchPointPresentationService.sendFeedback(player, resolution, result, context, config.currencyPolicy());
         int committed = (int) result.awards().stream()
                 .filter(ResearchPointAwardService.AwardResult::committed)
                 .count();
@@ -146,7 +152,8 @@ public final class ResearchPointAwards {
         UNREGISTERED_SOURCE,
         INVALID_SOURCE,
         INVALID_PLAYER,
-        WRONG_THREAD;
+        WRONG_THREAD,
+        UNSUPPORTED_CURRENCY_MODE;
 
         public String serializedName() {
             return name().toLowerCase(java.util.Locale.ROOT);

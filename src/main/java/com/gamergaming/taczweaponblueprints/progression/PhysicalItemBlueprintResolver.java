@@ -88,6 +88,15 @@ public final class PhysicalItemBlueprintResolver {
         return null;
     }
 
+    /** Analysis eligibility may accept loaded guns only when their ammo can be recovered safely. */
+    static InspectedIdentity inspectAnalyzerIdentity(ItemStack stack) {
+        var identity = inspectTaCZIdentity(stack);
+        if (identity == null || identity.kind() != BlueprintKind.GUN) return identity;
+        boolean recoverable = AnalyzerAmmoRecovery.plan(stack).isPresent();
+        return new InspectedIdentity(identity.blueprintId(), identity.kind(), !recoverable,
+                identity.containsAttachments(), identity.modified());
+    }
+
     private static InspectedIdentity inspectGun(ItemStack stack, IGun gun) {
         ResourceLocation gunId = gun.getGunId(stack);
         // TaCZ can retain HasBulletInBarrel on an open-bolt gun even though

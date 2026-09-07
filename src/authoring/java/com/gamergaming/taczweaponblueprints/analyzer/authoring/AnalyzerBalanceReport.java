@@ -118,6 +118,7 @@ public final class AnalyzerBalanceReport {
         result.addProperty("legacy_targets_omitted", legacy);
         result.addProperty("recurrence_states_evaluated", work);
         result.add("rows", rows);
+        if (catalog.has("research_data_economy")) result.add("research_economy", ResearchEconomyReport.create(catalog));
         return result;
     }
 

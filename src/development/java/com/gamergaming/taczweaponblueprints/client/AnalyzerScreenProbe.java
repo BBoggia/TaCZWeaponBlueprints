@@ -70,18 +70,14 @@ public final class AnalyzerScreenProbe {
             if (step==21 || step==22) {
                 var model=BlueprintRecyclerScreenModel.from(screen.getMenu().preview(),false);
                 check(model.statusKey().endsWith("reverse.status.ingredients_required"),"direct RP blockage explains missing materials");
-                var method=BlueprintRecyclerScreen.class.getDeclaredMethod("analyzerLines",BlueprintRecyclerPreview.class,BlueprintRecyclerScreenModel.class);
-                method.setAccessible(true);
-                var lines=(List<Component>)method.invoke(screen,screen.getMenu().preview(),model);
+                var lines=AnalyzerWorkbenchProbeSupport.facts(screen);
                 check(lines.stream().anyMatch(c->c.getString().contains("Paper") && c.getString().contains("0/4")),"blocked recovery lists unpaid materials even with zero computed award");
                 check(lines.stream().noneMatch(c->c.getString().contains("Iron Ingot") || c.getString().contains("Blueprint:")
                         || c.getString().contains("fragments:")),"direct-only screen omits inactive analysis materials and odds");
             }
             if (step==24) {
                 check(screen.getMenu().preview().actionable(),"recycle-only blueprint is still a valid configured action");
-                var method=BlueprintRecyclerScreen.class.getDeclaredMethod("analyzerLines",BlueprintRecyclerPreview.class,BlueprintRecyclerScreenModel.class);
-                method.setAccessible(true);
-                var lines=(List<Component>)method.invoke(screen,screen.getMenu().preview(),BlueprintRecyclerScreenModel.from(screen.getMenu().preview(),false));
+                var lines=AnalyzerWorkbenchProbeSupport.facts(screen);
                 check(lines.stream().anyMatch(c->c.getString().equals("Blueprint learning disabled.")),"screen explains disabled blueprint learning");
                 check(lines.stream().noneMatch(c->c.getString().contains("Archive total:") || c.getString().contains("Saved:")),"no matching fragment progress without a learning reward class");
             }
@@ -89,19 +85,17 @@ public final class AnalyzerScreenProbe {
                 var model=BlueprintRecyclerScreenModel.from(screen.getMenu().preview(),false);
                 check(model.statusKey().endsWith("reverse.status.direct_ready"),"available recovery owns status in choice mode");
                 check(BlueprintRecyclerScreenModel.focusesRecovery(screen.getMenu().preview()),"summary follows the only ready action");
-                var sidebar=BlueprintRecyclerScreen.class.getDeclaredMethod("sidebarLines",BlueprintRecyclerPreview.class);sidebar.setAccessible(true);
-                var summary=(List<Component>)sidebar.invoke(screen,screen.getMenu().preview());
-                check(summary.stream().anyMatch(c->c.getString().equals("7 RP + items")),"sidebar displays recovery cost, not blocked 3 RP analysis");
-                var method=BlueprintRecyclerScreen.class.getDeclaredMethod("analyzerLines",BlueprintRecyclerPreview.class,BlueprintRecyclerScreenModel.class);method.setAccessible(true);
-                var lines=(List<Component>)method.invoke(screen,screen.getMenu().preview(),model);
+                check(AnalyzerWorkbenchContent.cost(screen.getMenu().preview(),model.primaryAction()).currency()==7,"overview follows recovery cost");
+                var lines=AnalyzerWorkbenchProbeSupport.facts(screen);
                 check(lines.stream().anyMatch(c->c.getString().contains(step==25 ? "already learned" : step==27 ? "higher-tier Blueprint Analyzer" : "missing required materials")),"blocked analysis reason remains visible");
                 check(lines.stream().anyMatch(c->c.getString().contains("Paper") && c.getString().contains("4/4")),"active recovery materials remain visible");
                 check(lines.stream().noneMatch(c->c.getString().startsWith("Blueprint:") || c.getString().startsWith("Fragments (")),"inactive odds do not describe the recovery action");
             }
             if (step>=15 && step<=18 && ticks==30) {
                 // Exercise the actual button request, codec, server action, response and feedback.
-                var x=(screen.width-BlueprintRecyclerMenu.Layout.PANEL_WIDTH)/2+BlueprintRecyclerMenu.Layout.DETAIL_X+12;
-                var y=(screen.height-BlueprintRecyclerMenu.Layout.PANEL_HEIGHT)/2+BlueprintRecyclerMenu.Layout.ACTION_Y+8;
+                var actionButton=AnalyzerWorkbenchProbeSupport.button(screen,"primaryButton");
+                var x=actionButton.getX()+2;
+                var y=actionButton.getY()+2;
                 check(screen.mouseClicked(x,y,0),"click Analyzer action"); ticks++; return;
             }
             if (step>=15 && step<=18 && ticks<45) return;
@@ -167,7 +161,10 @@ public final class AnalyzerScreenProbe {
             Minecraft.getInstance().setScreen(new BlueprintRecyclerScreen(screen.getMenu(),Minecraft.getInstance().player.getInventory(),
                     Component.literal("Experimental Blueprint Analyzer — A deliberately very long translated workstation title with additional words for narrow display testing")));
         }
-        if (ticks==10 && (step==14 || step==22 || step==24)) screen.keyPressed(267,0,0);
+        if (ticks==10 && (step==14 || step==22 || step==24)) {
+            try { AnalyzerWorkbenchProbeSupport.openDetails(screen); screen.keyPressed(267,0,0); }
+            catch (ReflectiveOperationException error) { fail(error); }
+        }
     }
     private static BlueprintRecyclerPreview setup(ServerPlayer player,int scenario) {
         if (scenario==21 || scenario==24 || scenario==25) {

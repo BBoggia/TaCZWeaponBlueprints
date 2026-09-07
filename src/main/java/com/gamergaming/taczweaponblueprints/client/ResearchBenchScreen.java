@@ -1,5 +1,7 @@
 package com.gamergaming.taczweaponblueprints.client;
 
+import com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyText;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -225,7 +227,8 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         imageHeight = height;
         super.init();
         activeTreeLayout = ResearchTreeScreenLayout.fullscreen(width, height, false);
-        workbenchLayout = ResearchTreeWorkbenchLayout.create(width, height);
+        workbenchLayout = ResearchTreeWorkbenchLayout.create(width, height,
+                fullscreenOverlayState.pinnedNodeId().isPresent());
         fullscreenOverlayLayout = workbenchLayout.overlays();
         fullscreenRailLayout = ResearchTreeFullscreenRailLayout.forLayout(fullscreenOverlayLayout);
         if (!guidanceInitialized) {
@@ -334,12 +337,12 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                         topPos + activeTreeLayout.groupSelector().y(),
                         activeTreeLayout.groupSelector().width(),
                         activeTreeLayout.groupSelector().height())
-                .createNarration(ignored -> Component.translatable(
+                .createNarration(ignored -> ClientResearchCurrency.text(
                         isTechTreeView()
                                 ? "gui.taczweaponblueprints.research_bench.tree.domain.tooltip"
                                 : "gui.taczweaponblueprints.research_bench.tree.group.tooltip",
                         currentGroupName()))
-                .tooltip(Tooltip.create(Component.translatable(
+                .tooltip(Tooltip.create(ClientResearchCurrency.text(
                         isTechTreeView()
                                 ? "gui.taczweaponblueprints.research_bench.tree.domain.tooltip"
                                 : "gui.taczweaponblueprints.research_bench.tree.group.tooltip",
@@ -1528,7 +1531,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 currentBrowseViewName())));
         Component groupName = currentGroupName();
         groupButton.setMessage(clipped(groupName, activeTreeLayout.groupSelector().width() - 6));
-        groupButton.setTooltip(Tooltip.create(Component.translatable(
+        groupButton.setTooltip(Tooltip.create(ClientResearchCurrency.text(
                 isTechTreeView()
                         ? "gui.taczweaponblueprints.research_bench.tree.domain.tooltip"
                         : "gui.taczweaponblueprints.research_bench.tree.group.tooltip",
@@ -1564,7 +1567,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 .isPresent();
         trackResearchButton.active = trackResearchButton.visible
                 && focusedForTracking.isPresent();
-        trackResearchButton.setMessage(Component.translatable(focusedIsTracked
+        trackResearchButton.setMessage(ClientResearchCurrency.text(focusedIsTracked
                 ? "gui.taczweaponblueprints.research_bench.tree.plan.untrack"
                 : "gui.taczweaponblueprints.research_bench.tree.plan.track"));
         trackResearchButton.setTooltip(Tooltip.create(trackResearchDescription(
@@ -1573,7 +1576,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             boolean railPinned = fullscreenOverlayState.railState()
                     == ResearchTreeFullscreenOverlayState.RailState.PINNED;
             railPinButton.setMessage(Component.literal(railPinned ? "●" : "○"));
-            railPinButton.setTooltip(Tooltip.create(Component.translatable(railPinned
+            railPinButton.setTooltip(Tooltip.create(ClientResearchCurrency.text(railPinned
                     ? "gui.taczweaponblueprints.research_bench.tree.rail.unpin"
                     : "gui.taczweaponblueprints.research_bench.tree.rail.pin")));
             String query = searchBox.getValue().strip();
@@ -1791,6 +1794,11 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         fullscreenContextCardLayout = null;
         var pinned = fullscreenOverlayState.pinnedNodeId().flatMap(treeCanvas.graph()::node);
         ResourceLocation target = pinned.map(ResearchTreeGraph.Node::blueprintId).orElse(null);
+        if (workbenchLayout.inspectorVisible() != pinned.isPresent()) {
+            workbenchLayout = ResearchTreeWorkbenchLayout.create(width, height, pinned.isPresent());
+            treeCanvas.setBounds(activeTreeLayout.mode(), workbenchLayout.canvas());
+            refreshMinimap();
+        }
         treeCanvas.setPinnedNode(target);
         if (!java.util.Objects.equals(inspectorTarget, target)) {
             inspectorTarget = target; inspectorScroll = 0; cancelTreeInteraction();
@@ -1822,6 +1830,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     }
 
     private void renderSceneInspector(GuiGraphics graphics) {
+        if (!workbenchLayout.inspectorVisible()) return;
         var b = workbenchLayout.inspectorContent();
         var selected = fullscreenOverlayState.pinnedNodeId().flatMap(treeCanvas.graph()::node);
         if (selected.isEmpty()) {
@@ -1845,7 +1854,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             if (details.exactPreview()) {
                 addInspectorLines(lines, selectedPointBalanceLabel(details), details.pointsSatisfied() ? GOOD : BAD, b.width());
                 for (var ingredient : details.ingredients()) {
-                    addInspectorLines(lines, Component.translatable(details.costBypassed()
+                    addInspectorLines(lines, ClientResearchCurrency.text(details.costBypassed()
                             ? "gui.taczweaponblueprints.research_bench.tree.card.ingredient_bypassed"
                             : "gui.taczweaponblueprints.research_bench.tree.card.ingredient",
                             ingredientName(ingredient), ingredient.inventoryAvailable(), ingredient.required()),
@@ -2151,7 +2160,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         if (domainIndex < 0 || domainIndex >= menu.entries().size()) {
             return Component.literal("?");
         }
-        return Component.translatable(switch (menu.entryAt(domainIndex).domain()) {
+        return ClientResearchCurrency.text(switch (menu.entryAt(domainIndex).domain()) {
             case WEAPONS ->
                     "gui.taczweaponblueprints.research_bench.tree.domain.weapons.short";
             case ATTACHMENTS ->
@@ -2450,7 +2459,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     }
 
     private MutableComponent railPinNarration() {
-        return Component.translatable(fullscreenOverlayState.railState()
+        return ClientResearchCurrency.text(fullscreenOverlayState.railState()
                 == ResearchTreeFullscreenOverlayState.RailState.PINNED
                         ? "gui.taczweaponblueprints.research_bench.tree.rail.unpin"
                         : "gui.taczweaponblueprints.research_bench.tree.rail.pin");
@@ -2549,7 +2558,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     }
 
     private Component browseViewShortName() {
-        return Component.translatable(switch (treeNavigation.browseView()) {
+        return ClientResearchCurrency.text(switch (treeNavigation.browseView()) {
             case BRANCHES ->
                     "gui.taczweaponblueprints.research_bench.tree.view.branches.short";
             case ALL_WEAPONS ->
@@ -2560,7 +2569,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     }
 
     private Component fullscreenViewActionName() {
-        return Component.translatable(switch (ResearchTreePresentationContract
+        return ClientResearchCurrency.text(switch (ResearchTreePresentationContract
                 .fullscreenViewAction(treeNavigation.browseView(), techTreeAvailable())) {
             case SHOW_ALL_WEAPONS ->
                     "gui.taczweaponblueprints.research_bench.tree.view.action.show_all_weapons";
@@ -2572,7 +2581,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     }
 
     private Component fullscreenViewActionShortName() {
-        return Component.translatable(switch (ResearchTreePresentationContract
+        return ClientResearchCurrency.text(switch (ResearchTreePresentationContract
                 .fullscreenViewAction(treeNavigation.browseView(), techTreeAvailable())) {
             case SHOW_ALL_WEAPONS ->
                     "gui.taczweaponblueprints.research_bench.tree.view.all_weapons.short";
@@ -2599,7 +2608,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     }
 
     private Component currentBrowseViewName() {
-        return Component.translatable(switch (treeNavigation.browseView()) {
+        return ClientResearchCurrency.text(switch (treeNavigation.browseView()) {
             case BRANCHES -> "gui.taczweaponblueprints.research_bench.tree.view.branches";
             case ALL_WEAPONS -> "gui.taczweaponblueprints.research_bench.tree.view.all_weapons";
             case TECH_TREE -> "gui.taczweaponblueprints.research_bench.tree.view.tech_tree";
@@ -2626,7 +2635,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                         .<Component>map(key -> Component.translatableWithFallback(
                         key, view.title()))
                         .orElseGet(() -> Component.literal(view.title())))
-                .orElseGet(() -> Component.translatable(switch (domain) {
+                .orElseGet(() -> ClientResearchCurrency.text(switch (domain) {
                     case WEAPONS -> "gui.taczweaponblueprints.tech_tree.domain.weapons";
                     case ATTACHMENTS -> "gui.taczweaponblueprints.tech_tree.domain.attachments";
                     case AMMO -> "gui.taczweaponblueprints.tech_tree.domain.ammo";
@@ -2731,10 +2740,10 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
 
     private Component nodeName(ResearchTreeGraph.Node node) {
         if (!node.visibility().revealsName()) {
-            return Component.translatable(ResearchTreeGraph.REDACTED_NAME_KEY);
+            return ClientResearchCurrency.text(ResearchTreeGraph.REDACTED_NAME_KEY);
         }
         return net.minecraft.client.resources.language.I18n.exists(node.nameKey())
-                ? Component.translatable(node.nameKey()) : Component.literal(node.blueprintId().getPath().replace('_', ' '));
+                ? ClientResearchCurrency.text(node.nameKey()) : Component.literal(node.blueprintId().getPath().replace('_', ' '));
     }
 
     @Override
@@ -2922,6 +2931,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
 
     private void renderFullscreenContextCardBackground(GuiGraphics graphics) {
         if (isTechTreeView() && workbenchLayout != null) {
+            if (!workbenchLayout.inspectorVisible()) return;
             var b = workbenchLayout.inspector(); graphics.fill(b.x(), b.y(), b.right(), b.bottom(), 0xff18232e);
             graphics.renderOutline(b.x(), b.y(), b.width(), b.height(), BORDER); return;
         }
@@ -3085,7 +3095,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 ResearchTreeStatusGlyph.forSymbol(symbol));
         graphics.drawString(
                 font,
-                Component.translatable(labelKey),
+                ClientResearchCurrency.text(labelKey),
                 x + ResearchTreeStatusGlyph.SIZE + 3,
                 y,
                 TEXT,
@@ -3114,7 +3124,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         }
         boolean guidance = guidanceContains(mouseX, mouseY);
         boolean contextCard = (sceneBranchButton != null && sceneBranchButton.visible && sceneBranchButton.isMouseOver(mouseX, mouseY))
-                || (isTechTreeView() && workbenchLayout != null && workbenchLayout.inspector().contains(mouseX, mouseY))
+                || (isTechTreeView() && workbenchLayout != null && workbenchLayout.inspectorVisible() && workbenchLayout.inspector().contains(mouseX, mouseY))
                 || (fullscreenContextCardLayout != null
                 && fullscreenContextCardLayout.card().contains(mouseX, mouseY))
                 || (returnToSelectionButton != null
@@ -3310,7 +3320,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             } else {
                 graphics.drawCenteredString(font, "?", slot.x() + 9, slot.y() + 5, MUTED);
             }
-            Component count = Component.translatable(details.costBypassed()
+            Component count = ClientResearchCurrency.text(details.costBypassed()
                             ? "gui.taczweaponblueprints.research_bench.tree.card.ingredient_bypassed"
                             : "gui.taczweaponblueprints.research_bench.tree.card.ingredient",
                     ingredientName(ingredient),
@@ -3525,7 +3535,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                     .filter("request_throttled"::equals)
                     .isPresent();
             return new SelectedNodeUi(
-                    Component.translatable(
+                    ClientResearchCurrency.text(
                             throttled
                                     ? "message.taczweaponblueprints.research.request_throttled"
                                     : "gui.taczweaponblueprints.research_bench.tree.selection.selection_failed"),
@@ -3554,7 +3564,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             case WORKBENCH_TIER -> current.accessSummary().requiredTier().map(tier ->
                     Component.translatable(
                             "gui.taczweaponblueprints.research_bench.tree.selection.requires_workbench",
-                            Component.translatable(workbenchNameKey(tier))));
+                            ClientResearchCurrency.text(workbenchNameKey(tier))));
             case PROGRESSION_GATE -> current.accessSummary().messageKey()
                     .map(Component::translatable);
             case NONE, POLICY_UNAVAILABLE -> Optional.empty();
@@ -3583,7 +3593,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         }
         var progression = currentPreview().progression();
         return progression.currentTier().isPresent() && progression.requiredTier().isPresent()
-                ? Optional.of(Component.translatable(
+                ? Optional.of(ClientResearchCurrency.text(
                         isTechTreeView() ? "gui.taczweaponblueprints.research_bench.tree.scene.tiers"
                                 : "gui.taczweaponblueprints.research_bench.tree.progression.tier",
                         progression.currentTier().orElseThrow().level(),
@@ -3613,7 +3623,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 node.blueprintId(), treeCanvas.authoritativeSelectedId(), currentPreview())) {
             return Optional.empty();
         }
-        return currentPreview().progression().fragments().map(progress -> Component.translatable(
+        return currentPreview().progression().fragments().map(progress -> ClientResearchCurrency.text(
                 progress.discountApplied()
                         ? "gui.taczweaponblueprints.research_bench.tree.progression.fragments_discounted"
                         : progress.complete()
@@ -3690,12 +3700,12 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             ResearchTreeSelectedNodePresenter.Presentation presentation) {
         if (presentation.pointsEnabled() && presentation.materialsEnabled()
                 && presentation.ingredientTypeCount() > 0) {
-            return Component.translatable(
+            return ClientResearchCurrency.text(
                     "gui.taczweaponblueprints.research_bench.tree.cost.points_and_items",
                     presentation.pointCost());
         }
         if (presentation.pointsEnabled()) {
-            return Component.translatable(
+            return ClientResearchCurrency.text(
                     "gui.taczweaponblueprints.research_bench.tree.cost",
                     presentation.pointCost());
         }
@@ -3714,10 +3724,10 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                     "gui.taczweaponblueprints.research_bench.tree.cost_bypassed");
         }
         if (!presentation.pointsEnabled()) {
-            return Component.translatable(
+            return ClientResearchCurrency.text(
                     "gui.taczweaponblueprints.research_bench.tree.cost.points_disabled");
         }
-        return Component.translatable(
+        return ClientResearchCurrency.text(
                 "gui.taczweaponblueprints.research_bench.tree.tooltip.balance",
                 presentation.pointBalance());
     }
@@ -3779,7 +3789,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 ResearchTreePresentationContract.emptyTreeState(
                         treeNavigation.browseView(),
                         treeProjections.publication().graph().nodes().isEmpty());
-        return Component.translatable(switch (state) {
+        return ClientResearchCurrency.text(switch (state) {
             case EMPTY_OVERVIEW ->
                     "gui.taczweaponblueprints.research_bench.tree.overview.empty";
             case EMPTY_TECH_TREE ->
@@ -4003,23 +4013,25 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     }
 
     private Component researchPointBalance() {
-        return Component.translatable(
+        return ClientResearchCurrency.text(
                 "gui.taczweaponblueprints.research_bench.tree.balance",
                 researchPoints);
     }
 
     private int compactBalanceWidth(Component balance) {
-        return Math.min(72, font.width(balance));
+        return Math.min(84, font.width(balance)+(ClientResearchCurrency.icon().isEmpty()?0:12));
     }
 
     private void drawResearchPointBalance(
             GuiGraphics graphics,
             Component balance,
             int balanceWidth) {
+        var icon=ClientResearchCurrency.icon();
+        if(!icon.isEmpty()) {graphics.pose().pushPose();graphics.pose().translate(DETAIL_X+DETAIL_WIDTH-balanceWidth-6,DETAIL_Y+3,0);graphics.pose().scale(.625f,.625f,1);graphics.renderItem(icon,0,0);graphics.pose().popPose();}
         graphics.drawString(
                 font,
-                clipped(balance, balanceWidth),
-                DETAIL_X + DETAIL_WIDTH - balanceWidth - 6,
+                clipped(balance, balanceWidth-(icon.isEmpty()?0:12)),
+                DETAIL_X + DETAIL_WIDTH - balanceWidth - 6+(icon.isEmpty()?0:12),
                 DETAIL_Y + 5,
                 ACCENT,
                 false);
@@ -4060,7 +4072,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         if (techPortal.isPresent()) {
             ResearchTechTreeLayout.PortalTarget target = techPortal.orElseThrow();
             List<Component> lines = new ArrayList<>();
-            lines.add(Component.translatable(
+            lines.add(ClientResearchCurrency.text(
                     target.direction() == ResearchTechTreeProjection.Direction.REQUIREMENT
                             ? "gui.taczweaponblueprints.research_bench.tree.portal.domain_requirement"
                             : "gui.taczweaponblueprints.research_bench.tree.portal.domain_unlock",
@@ -4083,7 +4095,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             List<Component> lines = new ArrayList<>();
             if (target.destinationGroupCount() == 1) {
                 Component destination = groupName(link.remoteGroupId());
-                lines.add(Component.translatable(
+                lines.add(ClientResearchCurrency.text(
                         link.direction() == ResearchTreeProjection.Direction.REQUIREMENT
                                 ? "gui.taczweaponblueprints.research_bench.tree.portal.requirement"
                                 : "gui.taczweaponblueprints.research_bench.tree.portal.unlock",
@@ -4098,7 +4110,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                         "gui.taczweaponblueprints.research_bench.tree.portal.connections",
                         target.connectionCount()));
             }
-            lines.add(Component.translatable(
+            lines.add(ClientResearchCurrency.text(
                     target.destinationGroupCount() == 1
                             ? "gui.taczweaponblueprints.research_bench.tree.portal.open"
                             : "gui.taczweaponblueprints.research_bench.tree.portal.open_connected"));
@@ -4123,11 +4135,37 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         lines.add(nodeName(node));
         lines.add(nodeStatus(node));
         lines.addAll(selectedProgressionLines(node));
+        if (isTechTreeView() && !treeCanvas.sceneLabelsVisible() && node.visibility().revealsIcon()) {
+            renderWeaponHoverPreview(graphics, node, lines, mouseX, mouseY);
+            return;
+        }
         graphics.renderComponentTooltip(
                 font,
                 List.copyOf(lines),
                 mouseX,
                 mouseY);
+    }
+
+    private void renderWeaponHoverPreview(GuiGraphics graphics, ResearchTreeGraph.Node node,
+            List<Component> lines, int mouseX, int mouseY) {
+        int textWidth = Math.min(240, width - 16) - 16;
+        var wrapped = new ArrayList<net.minecraft.util.FormattedCharSequence>();
+        for (var line : lines) wrapped.addAll(font.split(line, textWidth));
+        int maximumLines = Math.max(1, (height - 16 - 76) / font.lineHeight);
+        int shown = Math.min(maximumLines, wrapped.size());
+        var bounds = ResearchTreeDetailPolicy.hoverBounds(width, height, mouseX, mouseY,
+                76 + shown * font.lineHeight);
+        graphics.pose().pushPose();
+        graphics.pose().translate(0, 0, 400);
+        try {
+            graphics.fill(bounds.x(), bounds.y(), bounds.right(), bounds.bottom(), 0xff111820);
+            graphics.renderOutline(bounds.x(), bounds.y(), bounds.width(), bounds.height(), BORDER);
+            for (int i = 0; i < shown; i++) graphics.drawString(font, wrapped.get(i),
+                    bounds.x() + 8, bounds.y() + 8 + i * font.lineHeight, TEXT, false);
+            treeCanvas.renderNodeArt(graphics, node, new ResearchTreeScene.Bounds(
+                    bounds.x() + 8, bounds.bottom() - 60, bounds.width() - 16, 52));
+            graphics.flush();
+        } finally { graphics.pose().popPose(); }
     }
 
     private int nodeBorderColor(ResearchTreeGraph.Node node) {
@@ -4152,7 +4190,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
 
     private Component nodeStatus(ResearchTreeGraph.Node node) {
         if (node.availability() == ResearchTreeGraph.Availability.AVAILABLE && !canAfford(node)) {
-            return Component.translatable("gui.taczweaponblueprints.research_bench.tree.status.points");
+            return ClientResearchCurrency.text("gui.taczweaponblueprints.research_bench.tree.status.points");
         }
         return Component.translatable(
                 "gui.taczweaponblueprints.research_bench.tree.status."
@@ -4222,16 +4260,16 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 .orElseThrow();
         return switch (publishedResearchCostMode()) {
             case POINTS_ONLY -> switch (recommendation.reason()) {
-                case OPENS_PATHS -> Component.translatable(
+                case OPENS_PATHS -> ClientResearchCurrency.text(
                         "gui.taczweaponblueprints.research_bench.tree.recommendation.opens_paths",
                         nodeName(node),
                         recommendation.immediateUnlockCount(),
                         recommendation.pointCost());
-                case WITHIN_POINT_BUDGET -> Component.translatable(
+                case WITHIN_POINT_BUDGET -> ClientResearchCurrency.text(
                         "gui.taczweaponblueprints.research_bench.tree.recommendation.within_budget",
                         nodeName(node),
                         recommendation.pointCost());
-                case LOWEST_COST -> Component.translatable(
+                case LOWEST_COST -> ClientResearchCurrency.text(
                         "gui.taczweaponblueprints.research_bench.tree.recommendation.lowest_cost",
                         nodeName(node),
                         recommendation.pointCost());
@@ -4252,18 +4290,18 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                         node.ingredientTypeCount());
             };
             case POINTS_AND_ITEMS -> switch (recommendation.reason()) {
-                case OPENS_PATHS -> Component.translatable(
+                case OPENS_PATHS -> ClientResearchCurrency.text(
                         "gui.taczweaponblueprints.research_bench.tree.recommendation.opens_paths.points_and_items",
                         nodeName(node),
                         recommendation.immediateUnlockCount(),
                         recommendation.pointCost(),
                         node.ingredientTypeCount());
-                case WITHIN_POINT_BUDGET -> Component.translatable(
+                case WITHIN_POINT_BUDGET -> ClientResearchCurrency.text(
                         "gui.taczweaponblueprints.research_bench.tree.recommendation.within_budget.points_and_items",
                         nodeName(node),
                         recommendation.pointCost(),
                         node.ingredientTypeCount());
-                case LOWEST_COST -> Component.translatable(
+                case LOWEST_COST -> ClientResearchCurrency.text(
                         "gui.taczweaponblueprints.research_bench.tree.recommendation.lowest_cost.points_and_items",
                         nodeName(node),
                         recommendation.pointCost(),
@@ -4438,7 +4476,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                         "gui.taczweaponblueprints.research_bench.tree.plan.no_next"));
         String partial = plan.costComplete() ? "" : ".partial";
         return switch (publishedResearchCostMode()) {
-            case POINTS_ONLY -> Component.translatable(
+            case POINTS_ONLY -> ClientResearchCurrency.text(
                     "gui.taczweaponblueprints.research_bench.tree.plan.summary.points_only"
                             + partial,
                     plan.remainingSteps(),
@@ -4450,7 +4488,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                     plan.remainingSteps(),
                     plan.remainingIngredientTypes(),
                     nextStep);
-            case POINTS_AND_ITEMS -> Component.translatable(
+            case POINTS_AND_ITEMS -> ClientResearchCurrency.text(
                     "gui.taczweaponblueprints.research_bench.tree.plan.summary"
                             + partial,
                     plan.remainingSteps(),
@@ -4490,7 +4528,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                     "gui.taczweaponblueprints.research_bench.tree.goal.costs_bypassed");
         }
         MutableComponent summary = Component.empty();
-        presentation.points().ifPresent(progress -> summary.append(Component.translatable(
+        presentation.points().ifPresent(progress -> summary.append(ClientResearchCurrency.text(
                 "gui.taczweaponblueprints.research_bench.tree.goal.progress.points",
                 progress.available(),
                 progress.required())));
@@ -4523,7 +4561,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 || presentation.status()
                         == ResearchGoalProgressPresenter.Status.MISSING_POINTS_AND_MATERIALS) {
             MutableComponent progress = Component.empty();
-            presentation.points().ifPresent(value -> progress.append(Component.translatable(
+            presentation.points().ifPresent(value -> progress.append(ClientResearchCurrency.text(
                     "gui.taczweaponblueprints.research_bench.tree.goal.progress.points",
                     value.available(),
                     value.required())));
@@ -5078,7 +5116,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         if (isTechTreeView() && guidanceContains(mouseX,mouseY)) {
             cancelTreeInteraction(); helpScroll=Math.max(0,helpScroll+(delta<0?24:delta>0?-24:0)); return true;
         }
-        if (isTechTreeView() && workbenchLayout != null && workbenchLayout.inspector().contains(mouseX, mouseY)
+        if (isTechTreeView() && workbenchLayout != null && workbenchLayout.inspectorVisible() && workbenchLayout.inspector().contains(mouseX, mouseY)
                 && !guidanceContains(mouseX, mouseY) && !searchOverlayContains(mouseX, mouseY)) {
             cancelTreeInteraction();
             inspectorScroll = Math.max(0, Math.min(inspectorMaximumScroll, inspectorScroll + (delta < 0 ? 30 : delta > 0 ? -30 : 0)));
@@ -5290,7 +5328,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         if (guidanceVisible) {
             output.add(
                     NarratedElementType.HINT,
-                    Component.translatable(
+                    ClientResearchCurrency.text(
                             isTechTreeView() ? "gui.taczweaponblueprints.research_bench.tree.scene.help"
                                     : "gui.taczweaponblueprints.research_bench.tree.guide.narration"));
             return;
@@ -5381,7 +5419,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             SelectedNodeUi selectedUi,
             ResearchTreeSelectedNodePresenter.Presentation details) {
         return switch (details.costMode()) {
-            case POINTS_ONLY -> Component.translatable(
+            case POINTS_ONLY -> ClientResearchCurrency.text(
                     "gui.taczweaponblueprints.research_bench.tree.narration.points_only",
                     nodeName(node),
                     selectedUi.message(),
@@ -5395,7 +5433,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                     details.directRequirementCount(),
                     details.immediateUnlockCount(),
                     details.ingredientTypeCount());
-            case POINTS_AND_ITEMS -> Component.translatable(
+            case POINTS_AND_ITEMS -> ClientResearchCurrency.text(
                     "gui.taczweaponblueprints.research_bench.tree.narration.points_and_items",
                     nodeName(node),
                     selectedUi.message(),
@@ -5413,12 +5451,12 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                     "gui.taczweaponblueprints.research_bench.tree.path.cost_unavailable");
         }
         return details.costBypassed()
-                ? Component.translatable(
+                ? ClientResearchCurrency.text(
                         "gui.taczweaponblueprints.research_bench.tree.card.narration.cost_bypassed")
                 : !details.pointsEnabled()
-                        ? Component.translatable(
+                        ? ClientResearchCurrency.text(
                                 "gui.taczweaponblueprints.research_bench.tree.card.narration.points_disabled")
-                : Component.translatable(
+                : ClientResearchCurrency.text(
                         "gui.taczweaponblueprints.research_bench.tree.card.narration.cost",
                         details.pointCost(),
                         details.pointBalance());
@@ -5794,7 +5832,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             } else {
                 graphics.drawCenteredString(
                         font,
-                        Component.translatable(switch (domain) {
+                        ClientResearchCurrency.text(switch (domain) {
                             case WEAPONS ->
                                     "gui.taczweaponblueprints.research_bench.tree.domain.weapons.short";
                             case ATTACHMENTS ->
@@ -5814,7 +5852,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             Component hint = !active
                     ? Component.translatable(
                             "gui.taczweaponblueprints.research_bench.tree.domain.unavailable")
-                    : Component.translatable(selected
+                    : ClientResearchCurrency.text(selected
                                     ? "gui.taczweaponblueprints.research_bench.tree.domain.selected"
                                     : "gui.taczweaponblueprints.research_bench.tree.domain.available",
                             nodeCount);
@@ -5999,12 +6037,12 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 hint = Component.translatable(
                         "gui.taczweaponblueprints.research_bench.tree.domain.unavailable");
             } else if (isTechTreeView() && visibleBlueprintCount >= 0) {
-                hint = Component.translatable(selected
+                hint = ClientResearchCurrency.text(selected
                                 ? "gui.taczweaponblueprints.research_bench.tree.domain.selected"
                                 : "gui.taczweaponblueprints.research_bench.tree.domain.available",
                         visibleBlueprintCount);
             } else {
-                hint = Component.translatable(selected
+                hint = ClientResearchCurrency.text(selected
                         ? "gui.taczweaponblueprints.research_bench.tree.rail.entry.selected"
                         : "gui.taczweaponblueprints.research_bench.tree.rail.entry.available");
             }
@@ -6038,7 +6076,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             visible = relation.isPresent();
             active = visible;
             relation.ifPresent(node -> {
-                Component description = Component.translatable(
+                Component description = ClientResearchCurrency.text(
                         slot.kind() == ResearchTreeDetailLayout.RelationKind.REQUIREMENT
                                 ? "gui.taczweaponblueprints.research_bench.tree.relationship.requirement_button"
                                 : "gui.taczweaponblueprints.research_bench.tree.relationship.unlock_button",

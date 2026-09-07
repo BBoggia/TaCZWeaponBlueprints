@@ -33,6 +33,7 @@ public final class BlueprintResearchSnapshot {
             Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of(),
             Map.of(), Map.of(), Map.of());
 
+    private final ResearchDataSnapshot researchData;
     private final Map<ResourceLocation, BlueprintLootTag> tags;
     private final Map<ResourceLocation, BlueprintResearchProfile> profiles;
     private final Map<ResourceLocation, BlueprintResearchRule> rules;
@@ -63,6 +64,7 @@ public final class BlueprintResearchSnapshot {
             Map<ResourceLocation, Map<ResourceLocation, ProgressionCoordinate>>
                     techTreeProgressionByProfile,
             Map<ResourceLocation, TechTreeIndex> techTreeIndexes) {
+        this.researchData = ResearchDataSnapshot.EMPTY;
         this.tags = immutableMap(tags);
         this.profiles = immutableMap(profiles);
         this.rules = immutableMap(rules);
@@ -79,6 +81,31 @@ public final class BlueprintResearchSnapshot {
         Map<ResourceLocation,List<com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeBranch>> branches = new LinkedHashMap<>();
         this.techTrees.forEach((id,tree) -> branches.put(id,ResearchTechTreeBranches.compile(id,tree,this.techTreeEntryBundles)));
         this.authoredBranches = Collections.unmodifiableMap(branches);
+    }
+
+    public ResearchDataSnapshot researchData() { return researchData; }
+
+    public BlueprintResearchSnapshot withResearchData(ResearchDataSnapshot data) {
+        java.util.Objects.requireNonNull(data).validateAgainst(this);
+        return new BlueprintResearchSnapshot(this, data);
+    }
+
+    private BlueprintResearchSnapshot(BlueprintResearchSnapshot source, ResearchDataSnapshot data) {
+        this.researchData = data;
+        this.tags = source.tags;
+        this.profiles = source.profiles;
+        this.rules = source.rules;
+        this.groups = source.groups;
+        this.techTrees = source.techTrees;
+        this.techTreeEntryBundles = source.techTreeEntryBundles;
+        this.automaticPlacementProfiles = source.automaticPlacementProfiles;
+        this.automaticPlacementProfilesByTree = source.automaticPlacementProfilesByTree;
+        this.rulesByProfile = source.rulesByProfile;
+        this.groupsByProfile = source.groupsByProfile;
+        this.placementsByProfile = source.placementsByProfile;
+        this.techTreeProgressionByProfile = source.techTreeProgressionByProfile;
+        this.techTreeIndexes = source.techTreeIndexes;
+        this.authoredBranches = source.authoredBranches;
     }
 
     public static BlueprintResearchSnapshot create(

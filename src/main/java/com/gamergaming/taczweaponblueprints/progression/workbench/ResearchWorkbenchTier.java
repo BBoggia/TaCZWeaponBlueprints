@@ -4,7 +4,7 @@ import java.util.Locale;
 import java.util.Optional;
 
 /** Ordered workstation capability; higher tiers inherit every lower-tier action. */
-public enum ResearchWorkbenchTier {
+public enum ResearchWorkbenchTier implements me.fzzyhmstrs.fzzy_config.util.EnumTranslatable {
     TIER_1(1),
     TIER_2(2),
     TIER_3(3);
@@ -62,4 +62,5 @@ public enum ResearchWorkbenchTier {
             default -> throw new IllegalArgumentException("unknown workbench tier: " + value);
         };
     }
+    @Override public String prefix() { return "config.taczweaponblueprints.blueprint.workbenchTier"; }
 }

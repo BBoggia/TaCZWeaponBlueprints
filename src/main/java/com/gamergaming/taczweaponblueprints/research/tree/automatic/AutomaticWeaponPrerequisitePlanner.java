@@ -1457,31 +1457,57 @@ public final class AutomaticWeaponPrerequisitePlanner {
             Map<ResourceLocation, PositionedWeapon> positioned,
             AnchorIndex anchorIndex) {
         ProgressionBucket targetBucket = ProgressionBucket.of(targetPosition);
-        List<ResourceLocation> sameBucket = anchorIndex.usableByBucket()
-                .getOrDefault(targetBucket, List.of()).stream()
-                .filter(id -> !id.equals(target)
-                        && POSITION_ORDER.compare(
-                                positioned.get(id).position(), targetPosition) < 0)
-                .toList();
-
         ProgressionBucket previousBucket = anchorIndex.usableByBucket().lowerKey(targetBucket);
-        List<ResourceLocation> previousAuthored = previousBucket == null
-                ? List.of()
-                : anchorIndex.authoredByBucket().getOrDefault(previousBucket, List.of()).stream()
-                        .filter(id -> !id.equals(target))
-                        .toList();
-        Set<ResourceLocation> authored = Set.copyOf(previousAuthored);
-        List<ResourceLocation> previousAutomatic = previousBucket == null
-                ? List.of()
-                : anchorIndex.usableByBucket().get(previousBucket).stream()
-                        .filter(id -> !id.equals(target) && !authored.contains(id))
-                        .toList();
+        return anchorCandidates(target, targetPosition,
+                anchorIndex.usableByBucket().getOrDefault(targetBucket, List.of()),
+                previousBucket == null ? List.of() : anchorIndex.authoredByBucket().getOrDefault(previousBucket, List.of()),
+                previousBucket == null ? List.of() : anchorIndex.automaticByBucket().getOrDefault(previousBucket, List.of()),
+                id -> positioned.get(id).position());
+    }
 
-        LinkedHashSet<ResourceLocation> result = new LinkedHashSet<>();
-        result.addAll(rotated(target, sameBucket));
-        result.addAll(rotated(target, previousAuthored));
-        result.addAll(rotated(target, previousAutomatic));
-        return List.copyOf(result);
+    /** Lists are immutable, position-sorted index buckets; the previous buckets are disjoint. */
+    static List<ResourceLocation> anchorCandidates(ResourceLocation target, ProgressionPosition targetPosition,
+            List<ResourceLocation> sameBucket, List<ResourceLocation> previousAuthored,
+            List<ResourceLocation> previousAutomatic,
+            java.util.function.Function<ResourceLocation, ProgressionPosition> positions) {
+        // Strictly earlier positions exclude the target and all peers with the same sibling order.
+        int low = 0, high = sameBucket.size();
+        while (low < high) {
+            int middle = (low + high) >>> 1;
+            if (POSITION_ORDER.compare(positions.apply(sameBucket.get(middle)), targetPosition) < 0)
+                low = middle + 1;
+            else high = middle;
+        }
+        return new AnchorCandidates(target, sameBucket, low, previousAuthored, previousAutomatic);
+    }
+
+    /** Retains exact historical rotation/order while reading only candidates selection actually visits. */
+    private static final class AnchorCandidates extends java.util.AbstractList<ResourceLocation>
+            implements java.util.RandomAccess {
+        private final List<List<ResourceLocation>> buckets;
+        private final int[] lengths, offsets;
+        private final int size;
+
+        private AnchorCandidates(ResourceLocation target, List<ResourceLocation> sameBucket, int earlier,
+                List<ResourceLocation> authored, List<ResourceLocation> automatic) {
+            buckets = List.of(sameBucket, authored, automatic);
+            lengths = new int[] {earlier, authored.size(), automatic.size()};
+            offsets = new int[3];
+            for (int i = 0; i < lengths.length; i++)
+                offsets[i] = lengths[i] < 2 ? 0 : stableIndex(target, lengths[i]);
+            size = earlier + authored.size() + automatic.size();
+        }
+
+        @Override public int size() { return size; }
+        @Override public ResourceLocation get(int index) {
+            java.util.Objects.checkIndex(index, size);
+            for (int bucket = 0; bucket < lengths.length; bucket++) {
+                int length = lengths[bucket];
+                if (index < length) return buckets.get(bucket).get((index + offsets[bucket]) % length);
+                index -= length;
+            }
+            throw new AssertionError("anchor index outside its buckets");
+        }
     }
 
     private static List<ResourceLocation> rotated(
@@ -2431,10 +2457,11 @@ public final class AutomaticWeaponPrerequisitePlanner {
         }
     }
 
-    /** Immutable per-plan lookup that keeps anchor discovery linear in bucket size. */
+    /** Immutable sorted buckets support logarithmic prefix lookup and lazy candidate traversal. */
     private record AnchorIndex(
             NavigableMap<ProgressionBucket, List<ResourceLocation>> usableByBucket,
-            NavigableMap<ProgressionBucket, List<ResourceLocation>> authoredByBucket) {
+            NavigableMap<ProgressionBucket, List<ResourceLocation>> authoredByBucket,
+            NavigableMap<ProgressionBucket, List<ResourceLocation>> automaticByBucket) {
         private static AnchorIndex create(
                 Map<ResourceLocation, PositionedWeapon> positioned,
                 Map<ResourceLocation, BlueprintResearchPolicy> policies,
@@ -2442,6 +2469,8 @@ public final class AutomaticWeaponPrerequisitePlanner {
             NavigableMap<ProgressionBucket, List<ResourceLocation>> usableBuckets =
                     new TreeMap<>();
             NavigableMap<ProgressionBucket, List<ResourceLocation>> authoredBuckets =
+                    new TreeMap<>();
+            NavigableMap<ProgressionBucket, List<ResourceLocation>> automaticBuckets =
                     new TreeMap<>();
             positioned.forEach((id, weapon) -> {
                 var proposal = candidates.eligibleProposal(id);
@@ -2457,12 +2486,15 @@ public final class AutomaticWeaponPrerequisitePlanner {
                 usableBuckets.computeIfAbsent(bucket, ignored -> new ArrayList<>()).add(id);
                 if (weapon.authored()) {
                     authoredBuckets.computeIfAbsent(bucket, ignored -> new ArrayList<>()).add(id);
+                } else {
+                    automaticBuckets.computeIfAbsent(bucket, ignored -> new ArrayList<>()).add(id);
                 }
             });
             Comparator<ResourceLocation> order = anchorOrder(positioned);
             return new AnchorIndex(
                     freeze(usableBuckets, order),
-                    freeze(authoredBuckets, order));
+                    freeze(authoredBuckets, order),
+                    freeze(automaticBuckets, order));
         }
 
         private static NavigableMap<ProgressionBucket, List<ResourceLocation>> freeze(

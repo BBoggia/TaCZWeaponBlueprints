@@ -55,7 +55,7 @@ import net.minecraftforge.fml.common.Mod;
 public final class AnalyzerStationProbe {
     private static final String OUTPUT = System.getProperty("tacz.analyzerStationsQA.output");
     private static final boolean TRANSACTIONS = Boolean.getBoolean("tacz.analyzerTransactionsQA.enabled");
-    private static final String WORLD = TRANSACTIONS ? "Analyzer A4 QA" : "Analyzer A3 QA";
+    private static final String WORLD = Boolean.getBoolean("tacz.researchCurrencyQA.enabled") ? "Research Currency QA" : TRANSACTIONS ? "Analyzer A4 QA" : "Analyzer A3 QA";
     private static final String MARKER = TRANSACTIONS ? ".analyzer-transactions-copy" : ".analyzer-stations-copy";
     private static final AtomicInteger SAVED = new AtomicInteger();
     private static final AtomicInteger CHECKS = new AtomicInteger();
@@ -110,7 +110,7 @@ public final class AnalyzerStationProbe {
                 result.addProperty("assertions", CHECKS.get()); result.addProperty("captures", SAVED.get());
                 result.addProperty("world", WORLD); result.addProperty("passed", true);
                 Files.writeString(Path.of(OUTPUT).resolve("complete.json"), new GsonBuilder().setPrettyPrinting().create().toJson(result));
-                finished = true; mc.stop(); return;
+                finished = true; if(Boolean.getBoolean("tacz.researchDataScreenQA.enabled")) ResearchDataScreenProbe.start(Path.of(OUTPUT)); else mc.stop(); return;
             }
             if (ready) {
                 ticks++;
@@ -127,7 +127,8 @@ public final class AnalyzerStationProbe {
                     check(player != null, "QA player connected");
                     if (scenario == 0) {
                         verifyStations(player);
-                        if (TRANSACTIONS) AnalyzerTransactionProbe.verify(player, stationPos, Path.of(OUTPUT));
+                        if (Boolean.getBoolean("tacz.researchCurrencyQA.enabled")) ResearchCurrencyProbe.verify(player, stationPos, Path.of(OUTPUT));
+                        else if (TRANSACTIONS) AnalyzerTransactionProbe.verify(player, stationPos, Path.of(OUTPUT));
                     }
                     player.closeContainer();
                     if (scenario < 3) {
@@ -148,6 +149,15 @@ public final class AnalyzerStationProbe {
     }
 
     private static void verifyStations(ServerPlayer player) throws Exception {
+        var config=com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT;
+        var kind=config.researchCurrencyKind.get();var mode=config.researchDataBehavior.get();
+        try {
+            config.researchCurrencyKind.validateAndSet(com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy.Kind.BANKED_RP);
+            config.researchDataBehavior.validateAndSet(com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPolicy.Behavior.LEGACY_CURRENCY);
+            config.initializeLoadedSnapshots();verifyLegacyStations(player);
+        } finally {config.researchCurrencyKind.validateAndSet(kind);config.researchDataBehavior.validateAndSet(mode);config.initializeLoadedSnapshots();}
+    }
+    private static void verifyLegacyStations(ServerPlayer player) throws Exception {
         var level = player.serverLevel();
         player.closeContainer(); player.getInventory().clearContent();
         stationPos = player.blockPosition().offset(3, 0, 0);

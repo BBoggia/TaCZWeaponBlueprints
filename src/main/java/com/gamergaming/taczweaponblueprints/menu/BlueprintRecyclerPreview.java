@@ -45,7 +45,8 @@ public record BlueprintRecyclerPreview(
 
     public BlueprintRecyclerPreview {
         presentation = presentation == null ? AnalyzerPresentation.EMPTY : presentation;
-        if (presentation.weapon().isPresent() && inputKind != InputKind.PHYSICAL_ITEM
+        if (presentation.data().isPresent() && inputKind != InputKind.DATA_ANALYSIS
+                || presentation.weapon().isPresent() && inputKind != InputKind.PHYSICAL_ITEM
                 || presentation.recoveryCost().isPresent() && inputKind != InputKind.PHYSICAL_ITEM
                 || presentation.fragments().isPresent() && inputKind != InputKind.BLUEPRINT_FRAGMENT)
             throw new IllegalArgumentException("Analyzer presentation does not match input");
@@ -119,6 +120,13 @@ public record BlueprintRecyclerPreview(
                                 || pointValue > pointCap - Math.min(pointBalance, pointCap))) {
                     throw new IllegalArgumentException("ready blueprint preview is not affordable");
                 }
+            }
+            case DATA_ANALYSIS -> {
+                if (inputId.isEmpty() || inputCount < 1 || researchDataStatus.isEmpty() || recyclingStatus.isPresent()
+                        || reverseEngineeringStatus.isPresent() || outputBlueprintId.isPresent() || pointValue != 0
+                        || requiredInputCount != 1 || customizationWillBeLost || alreadyKnown || weaponOrigin != WeaponOrigin.UNKNOWN
+                        || recoveryPointValue != 0 || recoveryStatus.isPresent() || fragmentEvaluation.isPresent())
+                    throw new IllegalArgumentException("invalid Data analysis preview");
             }
             case RESEARCH_DATA -> {
                 if (inputId.isEmpty() || inputCount < 1
@@ -423,7 +431,8 @@ public record BlueprintRecyclerPreview(
         BLUEPRINT,
         RESEARCH_DATA,
         PHYSICAL_ITEM,
-        BLUEPRINT_FRAGMENT
+        BLUEPRINT_FRAGMENT,
+        DATA_ANALYSIS
     }
 
     public enum WeaponOrigin {

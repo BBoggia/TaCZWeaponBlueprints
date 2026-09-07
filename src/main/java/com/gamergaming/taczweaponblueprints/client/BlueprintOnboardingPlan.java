@@ -20,6 +20,10 @@ public record BlueprintOnboardingPlan(List<Step> steps, List<HelpEntry> earningH
     public static BlueprintOnboardingPlan from(
             BlueprintJournalSnapshot journal,
             HelpSnapshot help) {
+        return from(journal,help,com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPolicy.Behavior.LEGACY_CURRENCY);
+    }
+    public static BlueprintOnboardingPlan from(BlueprintJournalSnapshot journal, HelpSnapshot help,
+            com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPolicy.Behavior mode) {
         BlueprintJournalSnapshot stableJournal = journal == null
                 ? BlueprintJournalSnapshot.EMPTY
                 : journal;
@@ -38,7 +42,8 @@ public record BlueprintOnboardingPlan(List<Step> steps, List<HelpEntry> earningH
                         new Step("research", hasKnowledge
                                 ? State.COMPLETE
                                 : State.LATER),
-                        new Step("analyzer", State.OPTIONAL)),
+                        new Step(mode == com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPolicy.Behavior.ANALYSIS ? "analyzer_analysis"
+                                : mode == com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPolicy.Behavior.DISABLED ? "analyzer_disabled" : "analyzer", State.OPTIONAL)),
                 stableHelp.entries());
     }
 

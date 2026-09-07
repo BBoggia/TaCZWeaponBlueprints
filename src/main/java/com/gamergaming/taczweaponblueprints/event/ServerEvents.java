@@ -39,6 +39,9 @@ public final class ServerEvents {
             TaCZWeaponBlueprints.LOGGER.error("BlueprintDataManager initialization failed.");
         }
 
+        TaCZWeaponBlueprints.LOGGER.info("Research economy: currency={}, Data={}. Upgrades preserve saved RP and do not convert items. Inspect with /gg progression currency inspect <player>; use currency legacy apply for banked redemption or currency withdraw preview <player> <amount> for an explicit physical withdrawal.",
+                com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.currencyPolicy().kind(),
+                com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.dataSettings().behavior());
         BlueprintLootSnapshot lootSnapshot = BlueprintLootDataManager.INSTANCE.snapshot();
         if (lootSnapshot.active()) {
             TaCZWeaponBlueprints.LOGGER.info(
@@ -76,6 +79,8 @@ public final class ServerEvents {
         ResearchPointAwardDataManager.INSTANCE.clear();
         BlueprintAmmoAssociationManager.INSTANCE.clear();
         AutomaticWeaponEvidenceManager.INSTANCE.clear();
+        com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencySyncTracker.clear();
+            com.gamergaming.taczweaponblueprints.command.sub.ResearchCurrencyMigrationCommand.PENDING.clear();
         AutomaticWeaponPlacementCandidateManager.INSTANCE.clear();
         BlueprintProgressionPolicyManager.INSTANCE.clear();
     }

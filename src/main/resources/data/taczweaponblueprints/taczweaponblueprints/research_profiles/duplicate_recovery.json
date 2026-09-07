@@ -1,5 +1,5 @@
 {
-  "format": 4,
+  "format": 5,
   "journal_enabled": true,
   "tree_enabled": false,
   "visibility": "silhouette",
@@ -56,12 +56,30 @@
       "crafting": "tier_2"
     },
     "authored_tier_bands": {
-      "starter": {"research": "tier_1", "crafting": "tier_1"},
-      "basic": {"research": "tier_1", "crafting": "tier_1"},
-      "established": {"research": "tier_2", "crafting": "tier_2"},
-      "advanced": {"research": "tier_2", "crafting": "tier_2"},
-      "elite": {"research": "tier_3", "crafting": "tier_3"},
-      "apex": {"research": "tier_3", "crafting": "tier_3"}
+      "starter": {
+        "research": "tier_1",
+        "crafting": "tier_1"
+      },
+      "basic": {
+        "research": "tier_1",
+        "crafting": "tier_1"
+      },
+      "established": {
+        "research": "tier_2",
+        "crafting": "tier_2"
+      },
+      "advanced": {
+        "research": "tier_2",
+        "crafting": "tier_2"
+      },
+      "elite": {
+        "research": "tier_3",
+        "crafting": "tier_3"
+      },
+      "apex": {
+        "research": "tier_3",
+        "crafting": "tier_3"
+      }
     },
     "fragments": {
       "mode": "targeted_research_boost",
@@ -164,5 +182,131 @@
       "tacz:12g",
       "tacz:45_70"
     ]
+  },
+  "analyzer": {
+    "mode": "tiered",
+    "fallback_weapon_tier": "tier_2",
+    "minimum_analyzer_tier": "tier_1",
+    "allowed_origins": [
+      "found",
+      "crafted",
+      "unknown"
+    ],
+    "attempt": {
+      "enabled": true,
+      "input_count": 1,
+      "cost": {
+        "points": 3,
+        "ingredients": [
+          {
+            "items": [
+              "minecraft:iron_ingot"
+            ],
+            "count": 2
+          }
+        ]
+      },
+      "allow_known": false,
+      "allow_modified": true,
+      "physical_blueprint_learning": "require_tree_prerequisites",
+      "output_recyclable": false
+    },
+    "reconstruction": {
+      "thresholds": {
+        "tier_1": 5,
+        "tier_2": 10,
+        "tier_3": 15
+      },
+      "retained_progress_cap": 1000
+    },
+    "tiers": {
+      "tier_1": {
+        "tier_1": {
+          "outcomes": {
+            "blueprint_weight": 70,
+            "fragment_weight": 30,
+            "no_result_weight": 0,
+            "min_fragments": 1,
+            "max_fragments": 1
+          }
+        },
+        "tier_2": {
+          "outcomes": {
+            "blueprint_weight": 30,
+            "fragment_weight": 50,
+            "no_result_weight": 20,
+            "min_fragments": 1,
+            "max_fragments": 1
+          }
+        },
+        "tier_3": {
+          "outcomes": {
+            "blueprint_weight": 10,
+            "fragment_weight": 40,
+            "no_result_weight": 50,
+            "min_fragments": 1,
+            "max_fragments": 1
+          }
+        }
+      },
+      "tier_2": {
+        "tier_1": {
+          "outcomes": {
+            "blueprint_weight": 100,
+            "fragment_weight": 0,
+            "no_result_weight": 0,
+            "min_fragments": 0,
+            "max_fragments": 0
+          }
+        },
+        "tier_2": {
+          "outcomes": {
+            "blueprint_weight": 70,
+            "fragment_weight": 30,
+            "no_result_weight": 0,
+            "min_fragments": 1,
+            "max_fragments": 1
+          }
+        },
+        "tier_3": {
+          "outcomes": {
+            "blueprint_weight": 30,
+            "fragment_weight": 50,
+            "no_result_weight": 20,
+            "min_fragments": 1,
+            "max_fragments": 1
+          }
+        }
+      },
+      "tier_3": {
+        "tier_1": {
+          "outcomes": {
+            "blueprint_weight": 100,
+            "fragment_weight": 0,
+            "no_result_weight": 0,
+            "min_fragments": 0,
+            "max_fragments": 0
+          }
+        },
+        "tier_2": {
+          "outcomes": {
+            "blueprint_weight": 100,
+            "fragment_weight": 0,
+            "no_result_weight": 0,
+            "min_fragments": 0,
+            "max_fragments": 0
+          }
+        },
+        "tier_3": {
+          "outcomes": {
+            "blueprint_weight": 80,
+            "fragment_weight": 20,
+            "no_result_weight": 0,
+            "min_fragments": 1,
+            "max_fragments": 1
+          }
+        }
+      }
+    }
   }
 }

@@ -42,10 +42,10 @@ class BlueprintKnowledgeFlowPhaseOneTest {
                 Arrays.stream(TreeResearchResultMode.values())
                         .map(Enum::name)
                         .toList());
-        assertEquals("59", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("62", NetworkHandler.PROTOCOL_VERSION);
         assertEquals(
                 Set.of("RECYCLE", "REDEEM", "REDEEM_STACK", "REVERSE_ENGINEER",
-                        "RECOVER_POINTS", "ARCHIVE_FRAGMENTS"),
+                        "RECOVER_POINTS", "ARCHIVE_FRAGMENTS", "ANALYZE_DATA"),
                 Arrays.stream(BlueprintRecyclerActionContract.Action.values())
                         .map(Enum::name)
                         .collect(Collectors.toSet()));

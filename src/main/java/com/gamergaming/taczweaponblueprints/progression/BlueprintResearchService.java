@@ -1,5 +1,8 @@
 package com.gamergaming.taczweaponblueprints.progression;
 
+import com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy;
+import com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPayments;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -41,18 +44,29 @@ public final class BlueprintResearchService {
     private BlueprintResearchService() {
     }
 
+    private static int activeBalance(ServerPlayer player) {
+        return player == null ? 0 : player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
+                .map(data -> ResearchCurrencyPayments.balance(ModConfigs.BLUEPRINT.currencyPolicy(), player.getInventory().items, data)).orElse(0);
+    }
+    private static Result activeFailure(ServerPlayer player, Result result) {
+        return result.successful() ? result : Result.failure(result.status(), result.blueprintId(), activeBalance(player), result.resultMode());
+    }
+
     /** Researches directly from the player's main inventory and hotbar. */
     public static Result researchFromInventory(ServerPlayer player, ResourceLocation blueprintId) {
         return Result.failure(
                 Status.WORKBENCH_TIER_REQUIRED,
                 Optional.ofNullable(blueprintId),
-                player == null ? 0 : player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
-                        .map(IPlayerRecipeData::getResearchPoints).orElse(0),
+                activeBalance(player),
                 TreeResearchResultMode.DIRECT_LEARN);
     }
 
     /** Researches with a live, server-derived Research Bench context. */
-    public static Result researchFromInventory(
+    public static Result researchFromInventory(ServerPlayer player, ResourceLocation blueprintId, ResearchWorkbenchContext workbenchContext) {
+        return activeFailure(player, researchFromInventoryInternal(player, blueprintId, workbenchContext));
+    }
+
+    private static Result researchFromInventoryInternal(
             ServerPlayer player,
             ResourceLocation blueprintId,
             ResearchWorkbenchContext workbenchContext) {
@@ -86,12 +100,15 @@ public final class BlueprintResearchService {
         return Result.failure(
                 Status.WORKBENCH_TIER_REQUIRED,
                 Optional.ofNullable(blueprintId),
-                player == null ? 0 : player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
-                        .map(IPlayerRecipeData::getResearchPoints).orElse(0),
+                activeBalance(player),
                 TreeResearchResultMode.DIRECT_LEARN);
     }
 
-    public static Result researchPreparedPathFromInventory(
+    public static Result researchPreparedPathFromInventory(ServerPlayer player, ResourceLocation blueprintId, ResearchPathUnlockPlanner.Plan preparedPath, ResearchWorkbenchContext workbenchContext) {
+        return activeFailure(player, researchPreparedPathFromInventoryInternal(player, blueprintId, preparedPath, workbenchContext));
+    }
+
+    private static Result researchPreparedPathFromInventoryInternal(
             ServerPlayer player,
             ResourceLocation blueprintId,
             ResearchPathUnlockPlanner.Plan preparedPath,
@@ -530,7 +547,7 @@ public final class BlueprintResearchService {
                     TreeResearchResultMode.DIRECT_LEARN);
         }
         ResearchPathUnlockPlanner.RouteQuote quote = path.quote();
-        if (currentPoints < quote.pointCost()) {
+        if (ResearchCurrencyPayments.balance(input.currencyPolicy(), inputSnapshot, playerData) < quote.pointCost()) {
             return Result.failure(
                     Status.POINTS_REQUIRED,
                     id,
@@ -547,6 +564,10 @@ public final class BlueprintResearchService {
                     TreeResearchResultMode.DIRECT_LEARN);
         }
         ResearchPathUnlockPlanner.TransactionPlan transaction = prepared.orElseThrow();
+        var currency = input.currencyPolicy();
+        var payment = ResearchCurrencyPayments.plan(currency, inputSnapshot, playerData, quote.pointCost(), quote.ingredients());
+        if (payment.isEmpty()) return Result.failure(Status.INGREDIENTS_REQUIRED, id,
+                ResearchCurrencyPayments.balance(currency, inputSnapshot, playerData), TreeResearchResultMode.DIRECT_LEARN);
 
         KnowledgeSnapshot knowledgeSnapshot;
         try {
@@ -660,7 +681,8 @@ public final class BlueprintResearchService {
             }
         }
 
-        if (quote.pointCost() > 0 && !playerData.spendResearchPoints(quote.pointCost())) {
+        if (!currency.equals(input.currencyPolicy()) || !inventoryMatches(inputSnapshot, input.stacks())
+                || !ResearchCurrencyPayments.debitBank(currency, playerData, quote.pointCost())) {
             return Result.failure(
                     Status.STALE_POLICY,
                     id,
@@ -668,7 +690,9 @@ public final class BlueprintResearchService {
                     TreeResearchResultMode.DIRECT_LEARN);
         }
         try {
-            input.consume(transaction.ingredientPlan());
+            input.consume(payment.orElseThrow());
+            if (!inventoryMatches(payment.orElseThrow().applyToCopies(inputSnapshot), input.stacks()))
+                throw new IllegalStateException("research path payment was not retained");
         } catch (RuntimeException exception) {
             boolean restored = rollbackPath(
                     playerData, input, inputSnapshot, knowledgeSnapshot);
@@ -742,7 +766,7 @@ public final class BlueprintResearchService {
                 Status.SUCCESS,
                 id,
                 quote.pointCost(),
-                playerData.getResearchPoints(),
+                ResearchCurrencyPayments.balance(currency, input.stacks(), playerData),
                 quote.costBypassed(),
                 TreeResearchResultMode.DIRECT_LEARN,
                 transitions.stream().anyMatch(LearningTransition::learnedChanged),
@@ -944,6 +968,7 @@ public final class BlueprintResearchService {
             return Result.failure(Status.POLICY_INELIGIBLE, id, currentPoints, resultMode);
         }
 
+        var currency = input.currencyPolicy();
         boolean bypassCost = creativePlayer && policy.creativeBypassesCost();
         List<ItemStack> inputSnapshot = input.stacks();
         if (inputSnapshot == null || inputSnapshot.stream().anyMatch(java.util.Objects::isNull)) {
@@ -951,11 +976,11 @@ public final class BlueprintResearchService {
         }
         ResearchIngredientPlanner.Plan plan = new ResearchIngredientPlanner.Plan(new int[inputSnapshot.size()]);
         if (!bypassCost) {
-            if (currentPoints < policy.researchCost().points()) {
+            if (ResearchCurrencyPayments.balance(input.currencyPolicy(), inputSnapshot, playerData) < policy.researchCost().points()) {
                 return Result.failure(Status.POINTS_REQUIRED, id, currentPoints, resultMode);
             }
             Optional<ResearchIngredientPlanner.Plan> resolvedPlan =
-                    ResearchIngredientPlanner.plan(inputSnapshot, policy.researchCost());
+                    ResearchCurrencyPayments.plan(input.currencyPolicy(), inputSnapshot, playerData, policy.researchCost().points(), policy.researchCost());
             if (resolvedPlan.isEmpty()) {
                 return Result.failure(Status.INGREDIENTS_REQUIRED, id, currentPoints, resultMode);
             }
@@ -1003,7 +1028,8 @@ public final class BlueprintResearchService {
         }
 
         int pointsSpent = bypassCost ? 0 : policy.researchCost().points();
-        if (pointsSpent > 0 && !playerData.spendResearchPoints(pointsSpent)) {
+        if (!currency.equals(input.currencyPolicy()) || !inventoryMatches(inputSnapshot, input.stacks())
+                || !ResearchCurrencyPayments.debitBank(currency, playerData, pointsSpent)) {
             return Result.failure(
                     Status.STALE_POLICY,
                     id,
@@ -1012,6 +1038,8 @@ public final class BlueprintResearchService {
         }
         try {
             input.consume(plan);
+            if (!inventoryMatches(plan.applyToCopies(inputSnapshot), input.stacks()))
+                throw new IllegalStateException("research payment was not retained");
             if (resultMode.createsPhysicalBlueprint() && !input.deliver(output)) {
                 boolean restored = rollback(
                         playerData, input, inputSnapshot, currentPoints);
@@ -1051,7 +1079,7 @@ public final class BlueprintResearchService {
                 Status.SUCCESS,
                 id,
                 pointsSpent,
-                playerData.getResearchPoints(),
+                ResearchCurrencyPayments.balance(currency, input.stacks(), playerData),
                 bypassCost,
                 resultMode,
                 learning != null && learning.learnedChanged(),
@@ -1167,6 +1195,7 @@ public final class BlueprintResearchService {
 
     private static ResearchInput playerInventoryInput(ServerPlayer player) {
         return new ResearchInput() {
+            @Override public ResearchCurrencyPolicy currencyPolicy() { return ModConfigs.BLUEPRINT.currencyPolicy(); }
             @Override
             public List<ItemStack> stacks() {
                 return player.getInventory().items.stream()
@@ -1241,11 +1270,18 @@ public final class BlueprintResearchService {
         return output.isEmpty() || overflowDrop.test(output);
     }
 
+    private static boolean inventoryMatches(List<ItemStack> expected, List<ItemStack> actual) {
+        if (expected == null || actual == null || expected.size() != actual.size()) return false;
+        for (int i = 0; i < expected.size(); i++) if (!ItemStack.matches(expected.get(i), actual.get(i))) return false;
+        return true;
+    }
+
     private static boolean validId(ResourceLocation id) {
         return id != null && id.toString().length() <= PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH;
     }
 
     interface ResearchInput {
+        default ResearchCurrencyPolicy currencyPolicy() { return ResearchCurrencyPolicy.banked(PlayerProgressionLimits.MAX_RESEARCH_POINTS, 1); }
         List<ItemStack> stacks();
 
         boolean canAcceptOutput();

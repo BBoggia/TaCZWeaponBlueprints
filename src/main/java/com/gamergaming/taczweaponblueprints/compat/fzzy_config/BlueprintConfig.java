@@ -1,5 +1,7 @@
 package com.gamergaming.taczweaponblueprints.compat.fzzy_config;
 
+import net.minecraft.resources.ResourceLocation;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -35,6 +37,7 @@ import com.gamergaming.taczweaponblueprints.progression.DuplicateBlueprintPolicy
 import com.gamergaming.taczweaponblueprints.progression.FoundWeaponRecoveryMode;
 import com.gamergaming.taczweaponblueprints.progression.ResearchCostMode;
 import com.gamergaming.taczweaponblueprints.progression.TreeResearchResultMode;
+import com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy;
 import com.gamergaming.taczweaponblueprints.progression.fragment.BlueprintFragmentPolicy;
 import com.gamergaming.taczweaponblueprints.progression.workbench.CraftingWorkbenchTierResolver;
 import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchTier;
@@ -52,6 +55,9 @@ import me.fzzyhmstrs.fzzy_config.annotations.WithPerms;
 import me.fzzyhmstrs.fzzy_config.config.Config;
 import me.fzzyhmstrs.fzzy_config.config.ConfigGroup;
 import me.fzzyhmstrs.fzzy_config.event.api.ServerUpdateContext;
+import me.fzzyhmstrs.fzzy_config.entry.EntryChecker;
+import me.fzzyhmstrs.fzzy_config.entry.EntryValidator.ValidationType;
+import me.fzzyhmstrs.fzzy_config.util.ValidationResult;
 import me.fzzyhmstrs.fzzy_config.validation.ValidatedField;
 import me.fzzyhmstrs.fzzy_config.validation.collection.ValidatedChoiceList;
 import me.fzzyhmstrs.fzzy_config.validation.collection.ValidatedSet;
@@ -62,6 +68,7 @@ import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedEnum;
 import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedString;
 import me.fzzyhmstrs.fzzy_config.validation.number.ValidatedDouble;
 import me.fzzyhmstrs.fzzy_config.validation.number.ValidatedInt;
+import me.fzzyhmstrs.fzzy_config.validation.number.ValidatedNumber;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraftforge.fml.loading.FMLPaths;
@@ -79,6 +86,8 @@ public class BlueprintConfig extends Config {
     private static final String RESOURCE_LOCATION_PATTERN =
             "(?=.{1," + PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH + "}$)"
                     + "[a-z0-9_.-]+:[a-z0-9/._-]+";
+    private static final Pattern CURRENCY_ITEM_PATTERN = Pattern.compile(
+            "(?!minecraft:air$)" + RESOURCE_LOCATION_PATTERN);
     private static final Pattern PERSISTED_BALANCE_PRESET = Pattern.compile(
             "(?m)^\\s*balancePreset\\s*=\\s*\"([A-Z_]+)\"\\s*(?:#.*)?$");
     private static final String TRANSLATION_PREFIX = ModConfigs.BASE_KEY + "blueprint.";
@@ -120,7 +129,7 @@ public class BlueprintConfig extends Config {
     public ConfigGroup discoveryAndLoot = new ConfigGroup("discoveryAndLoot");
     @WithPerms(opLevel = 2)
     public ValidatedEnum<BlueprintBalancePreset> balancePreset =
-            new ValidatedEnum<>(BlueprintBalancePreset.BALANCED, ValidatedEnum.WidgetType.CYCLING);
+            new ValidatedEnum<>(BlueprintBalancePreset.BALANCED, ValidatedEnum.WidgetType.POPUP);
 
     @WithPerms(opLevel = 2)
     public ValidatedCondition<JournalVisibility> maximumUndiscoveredVisibility = customDiscovery(
@@ -128,7 +137,7 @@ public class BlueprintConfig extends Config {
 
     @WithPerms(opLevel = 2)
     public ValidatedCondition<Double> blueprintSpawnChance = customDiscovery(
-            new ValidatedDouble(0.2, 1.0, 0.0));
+            DisplayUnitNumber.percent(0.2));
 
     @WithPerms(opLevel = 2)
     public ValidatedCondition<Integer> minBlueprints = customDiscovery(
@@ -148,26 +157,59 @@ public class BlueprintConfig extends Config {
     public ValidatedCondition<TreeResearchResultMode> treeResearchResultMode = researchEnabled(
             new ValidatedEnum<>(TreeResearchResultMode.DIRECT_LEARN));
 
+    @ConfigGroup.Pop
     @WithPerms(opLevel = 2)
-    public ValidatedCondition<Integer> researchPointCap = blueprintsEnabled(new ValidatedInt(
+    public ValidatedCondition<Boolean> creativeBypassesResearchCost = researchEnabled(
+            new ValidatedBoolean(false));
+
+    public ConfigGroup currency = new ConfigGroup("currency");
+    @WithPerms(opLevel = 2)
+    public ValidatedEnum<ResearchCurrencyPolicy.Kind> researchCurrencyKind =
+            new ValidatedEnum<>(ResearchCurrencyPolicy.Kind.PHYSICAL_ITEM);
+
+    @WithPerms(opLevel = 2)
+    public ValidatedCondition<String> researchCurrencyItem = physicalCurrencySetting(currencyItemSetting());
+
+    @WithPerms(opLevel = 2)
+    public ValidatedCondition<Boolean> enableScrapLoot = physicalCurrencySetting(new ValidatedBoolean(true));
+    @WithPerms(opLevel = 2)
+    public ValidatedCondition<Integer> scrapLootBudget = uiCondition(new ValidatedInt(32,64,0),
+            () -> researchCurrencyKind.get() == ResearchCurrencyPolicy.Kind.PHYSICAL_ITEM && enableScrapLoot.get(),
+            TRANSLATION_PREFIX + "condition.currencyLoot");
+
+    @WithPerms(opLevel = 2)
+    public ValidatedCondition<Integer> researchPointCap = uiCondition(new ValidatedInt(
             BlueprintProgressionConfigSnapshot.DEFAULT_POINT_CAP,
             MAX_CONFIGURED_RESEARCH_POINT_CAP,
-            0));
+            0, ValidatedNumber.WidgetType.TEXTBOX), () -> enableBlueprints.get() && researchCurrencyKind.get() == ResearchCurrencyPolicy.Kind.BANKED_RP,
+            "config.taczweaponblueprints.blueprint.researchPointCap.banked_only");
 
     @WithPerms(opLevel = 2)
     public ValidatedCondition<Boolean> enableResearchPointAwards = blueprintsEnabled(
             new ValidatedBoolean(true));
 
+    @ConfigGroup.Pop
     @WithPerms(opLevel = 2)
     public ValidatedCondition<Boolean> enableCombatResearchPointAwards = uiCondition(
             new ValidatedBoolean(false),
             () -> enableBlueprints.get() && enableResearchPointAwards.get(),
             TRANSLATION_PREFIX + "condition.researchPointAwards");
 
+    public ConfigGroup researchData = new ConfigGroup("researchData");
+    @WithPerms(opLevel = 2)
+    public ValidatedEnum<com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPolicy.Behavior> researchDataBehavior =
+            new ValidatedEnum<>(com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPolicy.Behavior.ANALYSIS);
+    @WithPerms(opLevel = 2)
+    public ValidatedCondition<Boolean> researchDataAllowLearned = uiCondition(new ValidatedBoolean(true),
+            () -> researchDataBehavior.get() == com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPolicy.Behavior.ANALYSIS,
+            TRANSLATION_PREFIX + "condition.dataAnalysis");
+    @WithPerms(opLevel = 2)
+    public ValidatedCondition<Boolean> researchDataAllowUndiscovered = uiCondition(new ValidatedBoolean(true),
+            () -> researchDataBehavior.get() == com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPolicy.Behavior.ANALYSIS,
+            TRANSLATION_PREFIX + "condition.dataAnalysis");
     @ConfigGroup.Pop
     @WithPerms(opLevel = 2)
-    public ValidatedCondition<Boolean> creativeBypassesResearchCost = researchEnabled(
-            new ValidatedBoolean(false));
+    public ValidatedBoolean enableResearchDataLoot = new ValidatedBoolean(true);
 
     public ConfigGroup tieredProgression = new ConfigGroup("tieredProgression");
     @WithPerms(opLevel = 2)
@@ -182,13 +224,13 @@ public class BlueprintConfig extends Config {
     public ConfigGroup craftingAccess = new ConfigGroup("craftingAccess");
     @WithPerms(opLevel = 2)
     public ValidatedEnum<AmmoCraftingStrategy> ammoCraftingStrategy =
-            new ValidatedEnum<>(AmmoCraftingStrategy.PROFILE, ValidatedEnum.WidgetType.CYCLING);
+            new ValidatedEnum<>(AmmoCraftingStrategy.PROFILE, ValidatedEnum.WidgetType.POPUP);
 
     @ConfigGroup.Pop
     @WithPerms(opLevel = 2)
     public ValidatedEnum<AttachmentCraftingStrategy> attachmentCraftingStrategy =
             new ValidatedEnum<>(AttachmentCraftingStrategy.PROFILE,
-                    ValidatedEnum.WidgetType.CYCLING);
+                    ValidatedEnum.WidgetType.POPUP);
 
     public ConfigGroup analyzer = new ConfigGroup("analyzer");
     @WithPerms(opLevel = 2)
@@ -255,11 +297,13 @@ public class BlueprintConfig extends Config {
             new HashSet<>(),
             blueprintIdAutocomplete("oldgun:pf60_ammo", BlueprintKind.AMMO));
 
+    @ConfigGroup.Pop
     @WithPerms(opLevel = 2)
     public ValidatedSet<String> attachmentBlacklist = new ValidatedSet<>(
             new HashSet<>(),
             blueprintIdAutocomplete("tacz:extended_mag_1", BlueprintKind.ATTACHMENT));
 
+    public ConfigGroup customTiers = new ConfigGroup("customTiers", true);
     @WithPerms(opLevel = 2)
     public ValidatedCondition<Boolean> customEnforceResearchTiers = customProgression(
             new ValidatedBoolean(true));
@@ -294,12 +338,14 @@ public class BlueprintConfig extends Config {
     @WithPerms(opLevel = 2)
     public ValidatedBoolean creativeBypassesProgressionGates = new ValidatedBoolean(false);
 
+    @ConfigGroup.Pop
     @WithPerms(opLevel = 2)
     public ValidatedCondition<ResearchWorkbenchTier> linkedAmmoFallbackTier = uiCondition(
             new ValidatedEnum<>(ResearchWorkbenchTier.TIER_1),
             () -> ammoCraftingStrategy.get() == AmmoCraftingStrategy.LINKED_WEAPON,
             TRANSLATION_PREFIX + "condition.linkedAmmo");
 
+    public ConfigGroup advancedCrafting = new ConfigGroup("advancedCrafting", true);
     @WithPerms(opLevel = 2)
     public ValidatedChoiceList<String> craftingUnrestrictedKinds = new ValidatedChoiceList<>(
             List.of(),
@@ -342,6 +388,7 @@ public class BlueprintConfig extends Config {
                     BlueprintConfig::craftingDisabledItemTypeDescription,
                     ValidatedChoiceList.WidgetType.SCROLLABLE);
 
+    @ConfigGroup.Pop
     @WithPerms(opLevel = 2)
     public ValidatedStringMap<CraftingAccessOverride> exactCraftingOverrides =
             new ValidatedStringMap<>(
@@ -349,11 +396,12 @@ public class BlueprintConfig extends Config {
                     blueprintIdAutocomplete(),
                     new ValidatedEnum<>(CraftingAccessOverride.TIER_1));
 
+    public ConfigGroup ordinaryFragments = new ConfigGroup("ordinaryFragments", true);
     @WithPerms(opLevel = 2)
     public ValidatedStringMap<Integer> exactFragmentThresholds = new ValidatedStringMap<>(
             Map.of(),
             blueprintIdAutocomplete(),
-            new ValidatedInt(10, MAX_CONFIGURED_FRAGMENT_THRESHOLD, 1));
+            new ValidatedInt(10, MAX_CONFIGURED_FRAGMENT_THRESHOLD, 1, ValidatedNumber.WidgetType.TEXTBOX));
 
     @WithPerms(opLevel = 2)
     public ValidatedCondition<BlueprintFragmentPolicy.CompletionMode> customFragmentMode = customFragments(
@@ -361,19 +409,19 @@ public class BlueprintConfig extends Config {
 
     @WithPerms(opLevel = 2)
     public ValidatedCondition<Integer> tierOneFragmentThreshold = customFragments(
-            new ValidatedInt(5, MAX_CONFIGURED_FRAGMENT_THRESHOLD, 1));
+            new ValidatedInt(5, MAX_CONFIGURED_FRAGMENT_THRESHOLD, 1, ValidatedNumber.WidgetType.TEXTBOX));
 
     @WithPerms(opLevel = 2)
     public ValidatedCondition<Integer> tierTwoFragmentThreshold = customFragments(
-            new ValidatedInt(10, MAX_CONFIGURED_FRAGMENT_THRESHOLD, 1));
+            new ValidatedInt(10, MAX_CONFIGURED_FRAGMENT_THRESHOLD, 1, ValidatedNumber.WidgetType.TEXTBOX));
 
     @WithPerms(opLevel = 2)
     public ValidatedCondition<Integer> tierThreeFragmentThreshold = customFragments(
-            new ValidatedInt(15, MAX_CONFIGURED_FRAGMENT_THRESHOLD, 1));
+            new ValidatedInt(15, MAX_CONFIGURED_FRAGMENT_THRESHOLD, 1, ValidatedNumber.WidgetType.TEXTBOX));
 
     @WithPerms(opLevel = 2)
     public ValidatedCondition<Integer> fragmentRetainedProgressCap = customFragments(
-            new ValidatedInt(1_000, MAX_CONFIGURED_FRAGMENT_PROGRESS, 1));
+            new ValidatedInt(1_000, MAX_CONFIGURED_FRAGMENT_PROGRESS, 1, ValidatedNumber.WidgetType.TEXTBOX));
 
     @WithPerms(opLevel = 2)
     public ValidatedCondition<BlueprintFragmentDiscountType> fragmentDiscountType = customFragments(
@@ -381,11 +429,12 @@ public class BlueprintConfig extends Config {
 
     @WithPerms(opLevel = 2)
     public ValidatedCondition<Integer> fragmentDiscountValue = customFragments(
-            new ValidatedInt(2_500, 10_000, 1));
+            DisplayUnitNumber.integer(2_500, 10_000, 1,
+                    () -> fragmentDiscountType.get() == BlueprintFragmentDiscountType.PERCENTAGE ? 100 : 1));
 
     @WithPerms(opLevel = 2)
     public ValidatedCondition<Integer> learnedTargetFragmentResearchPoints = customFragments(
-            new ValidatedInt(1, MAX_CONFIGURED_RESEARCH_POINT_CAP, 0));
+            new ValidatedInt(1, MAX_CONFIGURED_RESEARCH_POINT_CAP, 0, ValidatedNumber.WidgetType.TEXTBOX));
 
     @ConfigGroup.Pop
     @WithPerms(opLevel = 2)
@@ -395,6 +444,9 @@ public class BlueprintConfig extends Config {
     private transient volatile BlueprintAccessConfigSnapshot accessSnapshot;
     private transient volatile ResearchPointAwardConfigSnapshot awardSnapshot;
     private transient volatile ResearchFeatureConfigSnapshot researchFeatureSnapshot;
+    private transient volatile ResearchCurrencyPolicy currencyPolicy;
+    private transient volatile com.gamergaming.taczweaponblueprints.progression.ResearchDataSettings dataSettings;
+    public com.gamergaming.taczweaponblueprints.progression.ResearchDataSettings dataSettings() { return dataSettings; }
     
     public BlueprintConfig() {
         super(TaCZWeaponBlueprints.loc("blueprint"));
@@ -512,6 +564,11 @@ public class BlueprintConfig extends Config {
         return researchFeatureSnapshot;
     }
 
+    /** Published currency identity; invalid item settings are rejected by field validation. */
+    public ResearchCurrencyPolicy currencyPolicy() {
+        return currencyPolicy;
+    }
+
     public BlueprintBalanceSettings balanceSettings() {
         return BlueprintBalanceSettings.resolve(
                 balancePreset.get(),
@@ -541,6 +598,20 @@ public class BlueprintConfig extends Config {
         boolean persisted = isBalancePresetPersisted(preset);
         int synchronizedPlayers = server == null ? 0 : refreshOnlinePlayers(server);
         return new BalancePresetApplication(changed, persisted, synchronizedPlayers);
+    }
+
+    /** Explicit legacy preset: preserve every unrelated field, balance and archive. */
+    public synchronized boolean applyLegacyEconomy(MinecraftServer server) {
+        researchCurrencyKind.validateAndSet(ResearchCurrencyPolicy.Kind.BANKED_RP);
+        researchDataBehavior.validateAndSet(com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPolicy.Behavior.LEGACY_CURRENCY);
+        publishProgressionSnapshot();
+        save();
+        if (server != null) refreshOnlinePlayers(server);
+        try {
+            String stored = java.nio.file.Files.readString(configFile());
+            return stored.matches("(?s).*researchCurrencyKind\\s*=\\s*\"BANKED_RP\".*")
+                    && stored.matches("(?s).*researchDataBehavior\\s*=\\s*\"LEGACY_CURRENCY\".*");
+        } catch (java.io.IOException e) { return false; }
     }
 
     /** Applies an authoritative server publication on a remote client without marking a GUI edit. */
@@ -629,7 +700,40 @@ public class BlueprintConfig extends Config {
         return path.resolve(getName() + ".toml");
     }
 
+    private ValidatedString currencyItemSetting() {
+        // The regex-based Fzzy corrector extracts matching substrings. Currency IDs must instead
+        // be accepted whole or keep the previous value, never become a different denomination.
+        return new ValidatedString(ResearchCurrencyPolicy.SCRAP.toString(), new EntryChecker<>() {
+            private final String error = "researchCurrencyItem must be a canonical namespace:path item ID of at most "
+                    + PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH + " characters, excluding minecraft:air";
+
+            @Override public ValidationResult<String> validateEntry(String input, ValidationType type) {
+                return CURRENCY_ITEM_PATTERN.matcher(input).matches()
+                        ? ValidationResult.Companion.success(input) : ValidationResult.Companion.error(input, error);
+            }
+
+            @Override public ValidationResult<String> correctEntry(String input, ValidationType type) {
+                if (validateEntry(input, type).isValid()) return ValidationResult.Companion.success(input);
+                return ValidationResult.Companion.error(researchCurrencyItem == null
+                        ? ResearchCurrencyPolicy.SCRAP.toString() : researchCurrencyItem.get(), error);
+            }
+        });
+    }
+
     private void publishProgressionSnapshot() {
+        var previous = currencyPolicy;
+        var kind = researchCurrencyKind.get();
+        var item = kind == ResearchCurrencyPolicy.Kind.PHYSICAL_ITEM
+                ? java.util.Optional.of(new ResourceLocation(researchCurrencyItem.get()))
+                : java.util.Optional.<ResourceLocation>empty();
+        int cap = kind == ResearchCurrencyPolicy.Kind.BANKED_RP ? researchPointCap.get() : 0;
+        if (previous == null || previous.kind() != kind || !previous.item().equals(item) || previous.pointCap() != cap) {
+            currencyPolicy = new ResearchCurrencyPolicy(kind, item, cap,
+                    previous == null ? 1L : Math.incrementExact(previous.revision()));
+        }
+        dataSettings = new com.gamergaming.taczweaponblueprints.progression.ResearchDataSettings(
+                researchDataBehavior.get(), new com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPoolResolver.Defaults(
+                        researchDataAllowLearned.get(), researchDataAllowUndiscovered.get()));
         progressionSnapshot = BlueprintProgressionConfigSnapshot.from(this);
         accessSnapshot = BlueprintAccessConfigSnapshot.from(this);
         awardSnapshot = ResearchPointAwardConfigSnapshot.from(this, progressionSnapshot);
@@ -687,6 +791,11 @@ public class BlueprintConfig extends Config {
                 () -> enableBlueprints.get()
                         && balancePreset.get() == BlueprintBalancePreset.CUSTOM,
                 TRANSLATION_PREFIX + "condition.customDiscovery");
+    }
+
+    private <T> ValidatedCondition<T> physicalCurrencySetting(ValidatedField<T> field) {
+        return uiCondition(field, () -> researchCurrencyKind.get() == ResearchCurrencyPolicy.Kind.PHYSICAL_ITEM,
+                TRANSLATION_PREFIX + "condition.physicalCurrency");
     }
 
     private static <T> ValidatedCondition<T> uiCondition(

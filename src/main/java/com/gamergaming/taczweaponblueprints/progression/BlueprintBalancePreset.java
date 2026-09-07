@@ -6,7 +6,7 @@ import java.util.Locale;
  * Reversible discovery-pacing overlays for servers that do not want to tune
  * the individual loot and undiscovered-visibility settings by hand.
  */
-public enum BlueprintBalancePreset {
+public enum BlueprintBalancePreset implements me.fzzyhmstrs.fzzy_config.util.EnumTranslatable {
     CUSTOM,
     ACCESSIBLE,
     BALANCED,
@@ -26,4 +26,5 @@ public enum BlueprintBalancePreset {
             throw new IllegalArgumentException("unknown balance preset " + value, exception);
         }
     }
+    @Override public String prefix() { return "config.taczweaponblueprints.blueprint.balancePreset"; }
 }

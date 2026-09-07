@@ -100,7 +100,7 @@ public final class ResearchPointAwardDispatcher {
         if (result.changed()) {
             ResearchPointPresentationService.syncHelp(player);
         }
-        ResearchPointPresentationService.sendFeedback(player, resolution, result, context);
+        ResearchPointPresentationService.sendFeedback(player, resolution, result, context, config.currencyPolicy());
         return new DispatchResult(result.awardedPoints(), result.changed());
     }
 
@@ -139,7 +139,7 @@ public final class ResearchPointAwardDispatcher {
         if (result.changed()) {
             ResearchPointPresentationService.syncHelp(player);
         }
-        ResearchPointPresentationService.sendFeedback(player, resolution, result, context);
+        ResearchPointPresentationService.sendFeedback(player, resolution, result, context, config.currencyPolicy());
         return new DispatchResult(result.awardedPoints(), result.changed());
     }
 
@@ -370,7 +370,7 @@ public final class ResearchPointAwardDispatcher {
         ResearchPointAwardService.BatchResult result = ResearchPointAwardService.awardResolved(
                 player, data, resolution, context, config, gameTime);
         scheduleRetryIfNeeded(player, resolution, result);
-        ResearchPointPresentationService.sendFeedback(player, resolution, result, context);
+        ResearchPointPresentationService.sendFeedback(player, resolution, result, context, config.currencyPolicy());
         return new DispatchResult(result.awardedPoints(), result.changed());
     }
 
@@ -407,7 +407,7 @@ public final class ResearchPointAwardDispatcher {
                     retryScheduled = true;
                 }
                 ResearchPointPresentationService.sendFeedback(
-                        player, award.award(), result, award.context());
+                        player, award.award(), result, award.context(), config.currencyPolicy());
                 points += result.awardedPoints();
                 changed |= result.committed();
             }

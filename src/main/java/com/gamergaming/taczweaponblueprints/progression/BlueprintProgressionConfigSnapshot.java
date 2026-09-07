@@ -6,6 +6,7 @@ import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchP
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
 
 import net.minecraft.resources.ResourceLocation;
+import com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy;
 
 /**
  * Immutable view of synchronized, coarse progression policy. Datapacks still
@@ -24,11 +25,24 @@ public record BlueprintProgressionConfigSnapshot(
         ResourceLocation activeProfileId,
         TreeResearchResultMode treeResearchResultMode,
         ResearchCostMode researchCostMode,
-        FoundWeaponRecoveryMode foundWeaponRecoveryMode) {
+        FoundWeaponRecoveryMode foundWeaponRecoveryMode,
+        ResearchCurrencyPolicy currencyPolicy) {
     public static final int DEFAULT_POINT_CAP = 10_000;
 
+    public BlueprintProgressionConfigSnapshot(boolean blueprintsEnabled, boolean discoveryTrackingEnabled,
+            boolean journalEnabled, JournalVisibility maximumUndiscoveredVisibility, boolean researchEnabled,
+            DuplicateBlueprintPolicy duplicatePolicy, boolean allowUnlearnedRecycling, int pointCap,
+            boolean creativeBypassesResearchCost, ResourceLocation activeProfileId,
+            TreeResearchResultMode treeResearchResultMode, ResearchCostMode researchCostMode,
+            FoundWeaponRecoveryMode foundWeaponRecoveryMode) {
+        this(blueprintsEnabled, discoveryTrackingEnabled, journalEnabled, maximumUndiscoveredVisibility,
+                researchEnabled, duplicatePolicy, allowUnlearnedRecycling, pointCap, creativeBypassesResearchCost,
+                activeProfileId, treeResearchResultMode, researchCostMode, foundWeaponRecoveryMode,
+                ResearchCurrencyPolicy.banked(pointCap, 1));
+    }
+
     public BlueprintProgressionConfigSnapshot {
-        if (maximumUndiscoveredVisibility == null || duplicatePolicy == null
+        if (currencyPolicy == null || maximumUndiscoveredVisibility == null || duplicatePolicy == null
                 || activeProfileId == null || treeResearchResultMode == null
                 || researchCostMode == null || foundWeaponRecoveryMode == null) {
             throw new IllegalArgumentException("progression configuration contains null required state");
@@ -122,7 +136,7 @@ public record BlueprintProgressionConfigSnapshot(
                 profileId,
                 config.treeResearchResultMode.get(),
                 config.researchCostMode.get(),
-                config.foundWeaponRecoveryMode.get());
+                config.foundWeaponRecoveryMode.get(), config.currencyPolicy());
     }
 
     public BlueprintResearchPolicy apply(BlueprintResearchPolicy policy) {
@@ -149,6 +163,7 @@ public record BlueprintProgressionConfigSnapshot(
                         && researchEnabled
                         && creativeBypassesResearchCost
                         && policy.creativeBypassesCost(),
-                pointCap).withResearchCost(researchCostMode.apply(policy.researchCost()));
+                currencyPolicy.kind() == ResearchCurrencyPolicy.Kind.PHYSICAL_ITEM
+                        ? PlayerProgressionLimits.MAX_RESEARCH_POINTS : pointCap).withResearchCost(researchCostMode.apply(policy.researchCost()));
     }
 }

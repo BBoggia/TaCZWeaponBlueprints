@@ -51,6 +51,7 @@ public class ModGlobalLootModifiersProvider extends GlobalLootModifierProvider {
 
     @Override
     protected void start() {
+        add("scrap_supply", new com.gamergaming.taczweaponblueprints.loot.ScrapSupplyLootModifier(new LootItemCondition[0], com.gamergaming.taczweaponblueprints.loot.ScrapSupplyLootModifier.defaults()));
         add("dynamic_blueprints", new DynamicBlueprintLootModifier(new LootItemCondition[0]));
 
         addResearchData("note", ModItems.RESEARCH_NOTE.get().getDefaultInstance(), 0.12f, NOTE_LOOT_TABLES);

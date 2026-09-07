@@ -49,6 +49,14 @@ Build and certify the exact release candidate:
 - Run the release build again after any source, resource, metadata, or
   documentation correction that affects the candidate.
 
+Also complete the [research economy handoff](research-economy-release-handoff.md)
+for currency or Data releases. Retain the actual mode/configuration matrix,
+client/server versions, catalog and datapack list, native lifecycle evidence,
+and production-install playtest results with the exact artifact digest. Review
+[currency migration](research-currency-migration.md) before updating established
+servers. A development handoff and adapted-artifact run do not mark the final
+production-install checklist complete.
+
 ## Publish
 
 - Create an annotated `v<version>` tag on the validated commit. The tag must

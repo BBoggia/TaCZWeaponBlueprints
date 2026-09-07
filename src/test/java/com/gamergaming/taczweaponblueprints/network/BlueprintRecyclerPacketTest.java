@@ -1,6 +1,8 @@
 package com.gamergaming.taczweaponblueprints.network;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
@@ -25,6 +27,32 @@ class BlueprintRecyclerPacketTest {
     private static final ResourceLocation BLUEPRINT = new ResourceLocation("test:rifle");
     private static final ResourceLocation RESEARCH_NOTE =
             new ResourceLocation("taczweaponblueprints:research_note");
+
+    @Test
+    void dataAnalysisPreviewAndOutcomeRoundTripWithoutTargetLeakage() {
+        var preview = new BlueprintRecyclerPreview(BlueprintRecyclerPreview.InputKind.DATA_ANALYSIS,
+                Optional.of(RESEARCH_NOTE), 3, 0, 8, 100, Optional.empty(),
+                Optional.of(ResearchDataRedemptionService.Status.SUCCESS), 11L, Optional.empty(), 1, 0,
+                true, true, false, false, Optional.empty(), java.util.List.of(), BlueprintRecyclerPreview.WeaponOrigin.UNKNOWN,
+                0, Optional.empty(), Optional.empty());
+        var buffer = buffer();
+        try {
+            new SyncBlueprintRecyclerPreviewPacket(9, preview).toBytes(buffer);
+            assertEquals(preview, new SyncBlueprintRecyclerPreviewPacket(buffer).preview());
+            var outcome = new com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable.Result(
+                    com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable.Kind.FRAGMENTS, 64);
+            var result = new BlueprintRecyclerActionContract.ActionResult(BlueprintRecyclerActionContract.Action.ANALYZE_DATA,
+                    Optional.of(RESEARCH_NOTE), BlueprintRecyclerActionContract.ResultCode.SUCCESS, Optional.of(outcome)).withStateToken(12L);
+            buffer.clear(); new BlueprintRecyclerActionResultPacket(9, 1, result).toBytes(buffer);
+            assertEquals(result, new BlueprintRecyclerActionResultPacket(buffer).result());
+            assertTrue(preview.outputBlueprintId().isEmpty());
+            var model = com.gamergaming.taczweaponblueprints.client.BlueprintRecyclerScreenModel.from(preview, false);
+            assertEquals(BlueprintRecyclerActionContract.Action.ANALYZE_DATA, model.primaryAction().orElseThrow());
+            assertTrue(model.secondaryAction().isEmpty());
+            assertFalse(com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerActionValidator.supports(
+                    preview.inputKind(), BlueprintRecyclerActionContract.Action.REDEEM_STACK));
+        } finally { buffer.release(); }
+    }
 
     @Test
     void everyActionRoundTripsWithItsExpectedPhysicalInput() {

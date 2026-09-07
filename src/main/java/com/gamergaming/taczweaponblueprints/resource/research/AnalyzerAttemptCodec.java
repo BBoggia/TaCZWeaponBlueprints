@@ -13,7 +13,7 @@ final class AnalyzerAttemptCodec {
                     return inspect(ops, value, 0).flatMap(ignored -> BlueprintReverseEngineeringOverride.CODEC.decode(ops, value));
                 }
             });
-    private static <T> DataResult<Boolean> inspect(DynamicOps<T> ops, T value, int depth) {
+    static <T> DataResult<Boolean> inspect(DynamicOps<T> ops, T value, int depth) {
         if (depth > 8) return DataResult.error(() -> "Analyzer attempt nesting exceeds the supported structure");
         if (value == null || value.equals(ops.empty())) return DataResult.error(() -> "Analyzer attempt fields cannot be null");
         var map = ops.getMap(value).result();

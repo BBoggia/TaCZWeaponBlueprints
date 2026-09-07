@@ -1,111 +1,74 @@
 package com.gamergaming.taczweaponblueprints.client;
 
-import com.gamergaming.taczweaponblueprints.progression.BlueprintReverseEngineeringService;
-
-import java.util.Optional;
-import java.util.List;
-import java.util.ArrayList;
-import com.gamergaming.taczweaponblueprints.menu.AnalyzerPresentation;
-import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
-
+import java.util.*;
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
-import com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerActionContract;
-import com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerMenu;
-import com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerPreview;
-import com.gamergaming.taczweaponblueprints.network.BlueprintRecyclerActionPacket;
-import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
-
+import com.gamergaming.taczweaponblueprints.init.ModItems;
+import com.gamergaming.taczweaponblueprints.menu.*;
+import com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerActionContract.Action;
+import com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerMenu.Layout;
+import com.gamergaming.taczweaponblueprints.network.*;
+import com.gamergaming.taczweaponblueprints.progression.*;
+import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
-import net.minecraft.client.gui.narration.NarratedElementType;
-import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.gui.narration.*;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.item.Item;
+import net.minecraft.world.item.*;
 import net.minecraftforge.registries.ForgeRegistries;
 
-/** Two-slot Analyzer with a scalable, localization-safe information panel. */
-public final class BlueprintRecyclerScreen
-        extends AbstractContainerScreen<BlueprintRecyclerMenu>
+/** Horizontal workstation overview with an optional, independently scrollable explanation. */
+public final class BlueprintRecyclerScreen extends AbstractContainerScreen<BlueprintRecyclerMenu>
         implements BlueprintRecyclerActionResultListener {
-    private static final int PANEL = 0xF0141920;
-    private static final int SECTION = 0xE0202730;
-    private static final int SLOT = 0xFF0B0F14;
-    private static final int BORDER = 0xFF68798C;
-    private static final int MUTED = 0xFF9FAAB5;
-    private static final int TEXT = 0xFFE8EDF2;
-    private static final int ACCENT = 0xFFE4C56A;
-    private static final int GOOD = 0xFF70C98B;
-    private static final int BAD = 0xFFFF7777;
-    private final BlueprintRecyclerRequestTracker requests =
-            new BlueprintRecyclerRequestTracker();
-    private final BlueprintRecyclerFeedbackState feedback =
-            new BlueprintRecyclerFeedbackState();
-    private Button primaryButton;
-    private Button secondaryButton;
-    private Optional<BlueprintRecyclerActionContract.Action> primaryAction = Optional.empty();
-    private Optional<BlueprintRecyclerActionContract.Action> secondaryAction = Optional.empty();
-    private Optional<BlueprintRecyclerActionContract.Action> confirmationAction = Optional.empty();
-    private int confirmationTicks;
-    private int detailScroll;
-    private static final int DETAIL_LINES = 6;
-    private static final String ANALYZER = "gui.taczweaponblueprints.analyzer.";
-    private BlueprintRecyclerPreview observedPreview = BlueprintRecyclerPreview.EMPTY;
+    private static final int PANEL=0xFF202224, SLOT=0xFF111315, BORDER=0xFF555A5D;
+    private static final int TEXT=0xFFE7E8E4, MUTED=0xFFB0B4B5, ACCENT=0xFFE4C56A, GOOD=0xFF79CC98, BAD=0xFFFF9B87;
+    private static final ResourceLocation METAL=TaCZWeaponBlueprints.loc("textures/gui/analyzer_metal.png");
+    private static final ResourceLocation BLUEPRINT_ICON=TaCZWeaponBlueprints.loc("textures/item/blueprint_base.png");
+    private static final String ANALYZER="gui.taczweaponblueprints.analyzer.";
+    private static final int DETAIL_LINES=7, PRIMARY_X=196, PRIMARY_WIDTH=112, DETAILS_X=140;
+    private final BlueprintRecyclerRequestTracker requests=new BlueprintRecyclerRequestTracker();
+    private final BlueprintRecyclerFeedbackState feedback=new BlueprintRecyclerFeedbackState();
+    private Button primaryButton, modeButton, detailsButton, closeButton;
+    private Optional<Action> primaryAction=Optional.empty(), preferredAction=Optional.empty(), confirmationAction=Optional.empty();
+    private int confirmationTicks, detailScroll;
+    private boolean detailsOpen, pointerOverDetails;
+    private BlueprintRecyclerPreview observedPreview=BlueprintRecyclerPreview.EMPTY;
+    private final List<HoverText> hoverTexts=new ArrayList<>();
+    private record HoverText(int x,int y,int width,int height,Component text) { }
 
-    public BlueprintRecyclerScreen(
-            BlueprintRecyclerMenu menu,
-            Inventory inventory,
-            Component title) {
-        super(menu, inventory, title);
-        imageWidth = BlueprintRecyclerMenu.Layout.PANEL_WIDTH;
-        imageHeight = BlueprintRecyclerMenu.Layout.PANEL_HEIGHT;
-        titleLabelX = 10;
-        titleLabelY = 7;
-        inventoryLabelX = BlueprintRecyclerMenu.Layout.PLAYER_X;
-        inventoryLabelY = BlueprintRecyclerMenu.Layout.PLAYER_LABEL_Y;
+    public BlueprintRecyclerScreen(BlueprintRecyclerMenu menu,Inventory inventory,Component title) {
+        super(menu,inventory,title);imageWidth=Layout.PANEL_WIDTH;imageHeight=Layout.PANEL_HEIGHT;
     }
-
-    @Override
-    protected void init() {
-        super.init();
-        observedPreview = menu.preview();
-        primaryButton = addRenderableWidget(Button.builder(
-                Component.empty(), ignored -> primaryAction.ifPresent(this::request))
-                .bounds(
-                        leftPos + BlueprintRecyclerMenu.Layout.DETAIL_X,
-                        topPos + BlueprintRecyclerMenu.Layout.ACTION_Y,
-                        BlueprintRecyclerMenu.Layout.DETAIL_WIDTH,
-                        BlueprintRecyclerMenu.Layout.ACTION_HEIGHT)
-                .build());
-        int splitButtonWidth = splitButtonWidth();
-        secondaryButton = addRenderableWidget(Button.builder(
-                Component.empty(), ignored -> secondaryAction.ifPresent(this::request))
-                .bounds(
-                        leftPos + BlueprintRecyclerMenu.Layout.DETAIL_X
-                                + splitButtonWidth
-                                + BlueprintRecyclerMenu.Layout.ACTION_GAP,
-                        topPos + BlueprintRecyclerMenu.Layout.ACTION_Y,
-                        splitButtonWidth,
-                        BlueprintRecyclerMenu.Layout.ACTION_HEIGHT)
-                .build());
-        primaryButton.setTabOrderGroup(0);
-        secondaryButton.setTabOrderGroup(1);
-        updateControls();
-        setFocused(null);
+    @Override protected void init() {
+        super.init(); observedPreview=menu.preview();
+        primaryButton=addRenderableWidget(new WorkbenchButton(leftPos+PRIMARY_X,topPos+Layout.ACTION_Y,PRIMARY_WIDTH,20,
+                Component.empty(),b->primaryAction.ifPresent(this::request),true));
+        detailsButton=addRenderableWidget(new WorkbenchButton(leftPos+DETAILS_X,topPos+Layout.ACTION_Y,48,20,
+                w("details"),b->{detailsOpen=!detailsOpen;detailScroll=0;updateControls();triggerImmediateNarration(true);},false));
+        modeButton=addRenderableWidget(new WorkbenchButton(leftPos+198,topPos+6,62,16,Component.empty(),b->{
+            var model=BlueprintRecyclerScreenModel.from(menu.preview(),requests.pending());
+            preferredAction=primaryAction.equals(model.primaryAction())?model.secondaryAction():model.primaryAction();
+            clearConfirmation();feedback.clear();detailScroll=0;updateControls();triggerImmediateNarration(true);
+        },false));
+        closeButton=addRenderableWidget(new WorkbenchButton(leftPos+296,topPos+6,16,16,Component.literal("×"),b->onClose(),false));
+        closeButton.setTooltip(Tooltip.create(Component.translatable("gui.done")));
+        primaryButton.setTabOrderGroup(0); modeButton.setTabOrderGroup(1); detailsButton.setTabOrderGroup(2); closeButton.setTabOrderGroup(3);
+        updateControls();setFocused(null);
     }
-
     @Override
     protected void containerTick() {
         super.containerTick();
         BlueprintRecyclerPreview currentPreview = menu.preview();
         if (!currentPreview.equals(observedPreview)) {
             clearConfirmation();
-            if (!currentPreview.inputId().equals(observedPreview.inputId())) detailScroll = 0;
+            if (!currentPreview.inputId().equals(observedPreview.inputId()) || currentPreview.inputKind() != observedPreview.inputKind()) {
+                detailScroll = 0; detailsOpen = false; preferredAction = Optional.empty();
+            }
             feedback.reconcile(currentPreview);
             observedPreview = currentPreview;
             triggerImmediateNarration(true);
@@ -126,6 +89,7 @@ public final class BlueprintRecyclerScreen
 
     @Override
     public void onClose() {
+        menu.setWorkstationSlotsVisible(true);
         requests.clear();
         feedback.clear();
         clearConfirmation();
@@ -192,243 +156,178 @@ public final class BlueprintRecyclerScreen
     }
 
     private void updateControls() {
-        if (primaryButton == null || secondaryButton == null) {
+        if(primaryButton==null)return;
+        menu.setWorkstationSlotsVisible(!detailsOpen);
+        var p=menu.preview();var model=BlueprintRecyclerScreenModel.from(p,requests.pending());
+        primaryAction=AnalyzerWorkbenchContent.selected(model,preferredAction);
+        primaryButton.visible=true;primaryButton.active=primaryAction.isPresent()&&model.controlsEnabled();
+        primaryButton.setMessage(primaryAction.map(this::actionLabel).orElse(w("unavailable")));
+        primaryButton.setTooltip(Tooltip.create(actionExplanation(p)));
+        modeButton.visible=!detailsOpen&&model.secondaryAction().isPresent();modeButton.active=modeButton.visible&&!requests.pending();
+        var alternate=primaryAction.equals(model.primaryAction())?model.secondaryAction():model.primaryAction();
+        modeButton.setMessage(alternate.map(a->w(a==Action.RECOVER_POINTS?"choose_recovery":a==Action.REVERSE_ENGINEER?"choose_analysis":a==Action.REDEEM_STACK?"choose_stack":"choose_one")).orElse(Component.empty()));
+        modeButton.setTooltip(alternate.map(a->Tooltip.create(w("switch_action",actionLabel(a)))).orElse(null));
+        detailsButton.setMessage(w(detailsOpen?"back":"details"));
+        detailsButton.active=p.inputKind()!=BlueprintRecyclerPreview.InputKind.EMPTY||detailsOpen;
+        if(getFocused()==modeButton&&!modeButton.visible)setFocused(detailsButton);
+    }
+    private Component actionLabel(Action action) {
+        if(confirmationAction.filter(action::equals).isPresent())return w("confirm_recovery");
+        return switch(action) {
+            case ANALYZE_DATA -> w("analyze_one");
+            case REVERSE_ENGINEER -> w("analyze_weapon");
+            case RECOVER_POINTS -> w("recover");
+            case REDEEM -> w("redeem_one");
+            case REDEEM_STACK -> w("redeem_stack");
+            case RECYCLE -> w("recycle");
+            case ARCHIVE_FRAGMENTS -> w(menu.preview().fragmentEvaluation().filter(f->f.createsBlueprint()).isPresent()?"reconstruct":"archive");
+        };
+    }
+    @Override public void render(GuiGraphics g,int mouseX,int mouseY,float partialTick) {
+        pointerOverDetails=overDetails(mouseX,mouseY);hoverTexts.clear();renderBackground(g);super.render(g,mouseX,mouseY,partialTick);
+        if(!detailsOpen||mouseY>=topPos+Layout.ACTION_Y)renderTooltip(g,mouseX,mouseY);
+        for(var hover:hoverTexts)if(mouseX>=leftPos+hover.x()&&mouseX<leftPos+hover.x()+hover.width()
+                &&mouseY>=topPos+hover.y()&&mouseY<topPos+hover.y()+hover.height()) {
+            g.renderTooltip(font,font.split(hover.text(),Math.min(260,width-16)),mouseX,mouseY);break;
+        }
+    }
+    @Override protected void renderBg(GuiGraphics g,float delta,int mouseX,int mouseY) {
+        g.fill(leftPos,topPos,leftPos+imageWidth,topPos+imageHeight,PANEL);
+        g.blit(METAL,leftPos+2,topPos+2,0,0,imageWidth-4,imageHeight-4,1254,1254);
+        g.renderOutline(leftPos,topPos,imageWidth,imageHeight,0xFF151719);
+        g.renderOutline(leftPos+1,topPos+1,imageWidth-2,imageHeight-2,0xFF82878A);
+        g.renderOutline(leftPos+2,topPos+2,imageWidth-4,imageHeight-4,0xFF373B3D);
+        g.fill(leftPos+2,topPos+1,leftPos+imageWidth-2,topPos+2,0xFFB1B4B4);
+        g.fill(leftPos+1,topPos+2,leftPos+2,topPos+imageHeight-2,0xFF9A9E9E);
+        g.fill(leftPos+3,topPos+23,leftPos+imageWidth-3,topPos+24,BORDER);
+        g.fill(leftPos+8,topPos+106,leftPos+imageWidth-8,topPos+107,BORDER);
+        g.fill(leftPos+8,topPos+132,leftPos+imageWidth-8,topPos+133,BORDER);
+        slot(g,Layout.INPUT_X,Layout.INPUT_Y,28,0xFF638CAA);
+        slot(g,Layout.OUTPUT_X,Layout.OUTPUT_Y,28,BORDER);
+        for(int row=0;row<3;row++)for(int col=0;col<9;col++)slot(g,Layout.PLAYER_X+col*Layout.PLAYER_SPACING,Layout.PLAYER_Y+row*Layout.PLAYER_SPACING,22,BORDER);
+        for(int col=0;col<9;col++)slot(g,Layout.PLAYER_X+col*Layout.PLAYER_SPACING,Layout.HOTBAR_Y,22,BORDER);
+    }
+    private void slot(GuiGraphics g,int x,int y,int size,int color) {
+        int pad=(size-16)/2;
+        g.fill(leftPos+x-pad,topPos+y-pad,leftPos+x+16+pad,topPos+y+16+pad,SLOT);
+        g.renderOutline(leftPos+x-pad,topPos+y-pad,size,size,color);
+        g.renderOutline(leftPos+x-pad+1,topPos+y-pad+1,size-2,size-2,0xFF282C2E);
+        g.fill(leftPos+x-pad+1,topPos+y-pad+1,leftPos+x+15+pad,topPos+y-pad+2,0xFF929797);
+        g.fill(leftPos+x-pad+1,topPos+y-pad+1,leftPos+x-pad+2,topPos+y+15+pad,0xFF777D7F);
+        g.fill(leftPos+x-pad+2,topPos+y-pad+2,leftPos+x+14+pad,topPos+y-pad+3,0xFF08090A);
+    }
+    @Override protected void renderLabels(GuiGraphics g,int mouseX,int mouseY) {
+        var p=menu.preview();var model=BlueprintRecyclerScreenModel.from(p,requests.pending());
+        line(g,Component.translatable("block.taczweaponblueprints.blueprint_recycler"),12,9,modeButton.visible?180:246,TEXT);
+        int tier=p.presentation().stationTier()>0?p.presentation().stationTier():menu.analyzerTier().map(t->t.level()).orElse(0);
+        if(tier>0)line(g,w("tier",tier),270,9,22,0xFF83B0D0);
+        line(g,playerInventoryTitle,12,136,160,MUTED);
+        if(detailsOpen)renderDetails(g,p);else renderOverview(g,p,model);
+        renderCost(g,p);
+    }
+    private void renderOverview(GuiGraphics g,BlueprintRecyclerPreview p,BlueprintRecyclerScreenModel model) {
+        Component name=inputName(p);
+        wrapped(g,name,12,28,68,2,TEXT);
+        centered(g,Component.translatable("gui.taczweaponblueprints.blueprint_recycler.input"),40,49,60,MUTED);
+        centered(g,Component.translatable("gui.taczweaponblueprints.blueprint_recycler.output"),280,49,54,MUTED);
+        if(p.inputKind()==BlueprintRecyclerPreview.InputKind.EMPTY&&visibleFeedback(p).isPresent()) {
+            line(g,tr("result.title"),86,30,164,TEXT);
+            feedback.visibleTarget().ifPresent(target->line(g,targetName(target),86,42,164,MUTED));
+            wrapped(g,notice(p,model),86,57,164,4,GOOD);
             return;
         }
-        BlueprintRecyclerScreenModel model =
-                BlueprintRecyclerScreenModel.from(menu.preview(), requests.pending());
-        primaryAction = model.primaryAction();
-        secondaryAction = model.secondaryAction();
-
-        boolean split = secondaryAction.isPresent();
-        primaryButton.setWidth(split
-                ? splitButtonWidth()
-                : BlueprintRecyclerMenu.Layout.DETAIL_WIDTH);
-        primaryButton.visible = primaryAction.isPresent();
-        primaryButton.active = primaryButton.visible && model.controlsEnabled();
-        primaryButton.setMessage(primaryAction
-                .map(action -> Component.translatable(
-                        actionMessageKey(action)))
-                .orElse(Component.empty()));
-        primaryButton.setTooltip(primaryAction
-                .map(action -> Tooltip.create(actionTooltip(action)))
-                .orElse(null));
-
-        secondaryButton.visible = secondaryAction.isPresent();
-        secondaryButton.active = secondaryButton.visible && model.controlsEnabled();
-        secondaryButton.setMessage(secondaryAction
-                .map(action -> Component.translatable(
-                        actionMessageKey(action)))
-                .orElse(Component.empty()));
-        secondaryButton.setTooltip(secondaryAction
-                .map(action -> Tooltip.create(actionTooltip(action)))
-                .orElse(null));
-        primaryButton.setMessage(clipped(primaryButton.getMessage(), primaryButton.getWidth() - 8));
-        secondaryButton.setMessage(clipped(secondaryButton.getMessage(), secondaryButton.getWidth() - 8));
-        if (getFocused() == primaryButton && !primaryButton.visible
-                || getFocused() == secondaryButton && !secondaryButton.visible) {
-            setFocused(null);
+        var overview=AnalyzerWorkbenchContent.overview(p,primaryAction);
+        line(g,overview.heading(),86,30,164,TEXT);
+        if(p.inputKind()==BlueprintRecyclerPreview.InputKind.EMPTY||p.inputKind()==BlueprintRecyclerPreview.InputKind.INVALID) {
+            wrapped(g,overview.subtitle(),86,47,164,4,MUTED);return;
         }
-    }
-
-    @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics);
-        super.render(graphics, mouseX, mouseY, partialTick);
-        renderTooltip(graphics, mouseX, mouseY);
-        renderDetailsTooltip(graphics, mouseX, mouseY);
-    }
-
-    @Override
-    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        graphics.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, PANEL);
-        graphics.renderOutline(leftPos, topPos, imageWidth, imageHeight, BORDER);
-        graphics.fill(
-                leftPos + BlueprintRecyclerMenu.Layout.SECTION_X,
-                topPos + BlueprintRecyclerMenu.Layout.SECTION_Y,
-                leftPos + BlueprintRecyclerMenu.Layout.SECTION_X
-                        + BlueprintRecyclerMenu.Layout.SECTION_WIDTH,
-                topPos + BlueprintRecyclerMenu.Layout.SECTION_Y
-                        + BlueprintRecyclerMenu.Layout.SECTION_HEIGHT,
-                SECTION);
-        graphics.renderOutline(
-                leftPos + BlueprintRecyclerMenu.Layout.SECTION_X,
-                topPos + BlueprintRecyclerMenu.Layout.SECTION_Y,
-                BlueprintRecyclerMenu.Layout.SECTION_WIDTH,
-                BlueprintRecyclerMenu.Layout.SECTION_HEIGHT,
-                BORDER);
-        graphics.fill(
-                leftPos + BlueprintRecyclerMenu.Layout.DIVIDER_X,
-                topPos + BlueprintRecyclerMenu.Layout.SECTION_Y + 1,
-                leftPos + BlueprintRecyclerMenu.Layout.DIVIDER_X + 1,
-                topPos + BlueprintRecyclerMenu.Layout.SECTION_Y
-                        + BlueprintRecyclerMenu.Layout.SECTION_HEIGHT - 1,
-                BORDER);
-        drawSlot(graphics, BlueprintRecyclerMenu.Layout.INPUT_X,
-                BlueprintRecyclerMenu.Layout.INPUT_Y, ACCENT);
-        drawSlot(graphics, BlueprintRecyclerMenu.Layout.OUTPUT_X,
-                BlueprintRecyclerMenu.Layout.OUTPUT_Y, GOOD);
-        graphics.drawCenteredString(
-                font,
-                Component.literal("→"),
-                leftPos + (BlueprintRecyclerMenu.Layout.INPUT_X
-                        + BlueprintRecyclerMenu.Layout.OUTPUT_X) / 2 + 8,
-                topPos + BlueprintRecyclerMenu.Layout.INPUT_Y + 4,
-                MUTED);
-        drawPlayerInventory(graphics);
-    }
-
-    private void drawPlayerInventory(GuiGraphics graphics) {
-        for (int row = 0; row < 3; row++) {
-            for (int column = 0; column < 9; column++) {
-                drawSlot(
-                        graphics,
-                        BlueprintRecyclerMenu.Layout.PLAYER_X
-                                + column * BlueprintRecyclerMenu.Layout.PLAYER_SPACING,
-                        BlueprintRecyclerMenu.Layout.PLAYER_Y
-                                + row * BlueprintRecyclerMenu.Layout.PLAYER_SPACING,
-                        BORDER);
-            }
+        line(g,overview.subtitle(),86,42,164,MUTED);
+        overview.progress().ifPresent(progress->{
+            int barX=86,barY=53,barWidth=164;
+            g.fill(barX,barY,barX+barWidth,barY+3,SLOT);
+            int saved=(int)Math.min(barWidth,(long)barWidth*progress.saved()/progress.threshold());
+            int after=(int)Math.min(barWidth,(long)barWidth*(progress.saved()+progress.incoming())/progress.threshold());
+            g.fill(barX,barY,barX+saved,barY+3,0xFF638CAA);
+            g.fill(barX+saved,barY,barX+after,barY+3,ACCENT);
+        });
+        int y=overview.progress().isPresent()?59:55;
+        for(var row:overview.rows()) {
+            renderIcon(g,row.icon(),86,y-1);
+            int valueWidth=font.width(row.value());int labelWidth=148-(valueWidth==0?0:valueWidth+6);
+            line(g,row.label(),102,y,labelWidth,TEXT);
+            if(valueWidth>0)line(g,row.value(),250-valueWidth,y,valueWidth,ACCENT);
+            y+=13;
         }
-        for (int column = 0; column < 9; column++) {
-            drawSlot(
-                    graphics,
-                    BlueprintRecyclerMenu.Layout.PLAYER_X
-                            + column * BlueprintRecyclerMenu.Layout.PLAYER_SPACING,
-                    BlueprintRecyclerMenu.Layout.HOTBAR_Y,
-                    BORDER);
-        }
+        Component notice=notice(p,model);
+        if (notice.getString().isEmpty()) notice = ammunitionReturn(p).orElse(Component.empty());
+        if(!notice.getString().isEmpty())line(g,notice,12,97,296,feedback.visibleCode().filter(c->c==BlueprintRecyclerActionContract.ResultCode.SUCCESS).isPresent()?GOOD:ACCENT);
     }
-
-    private void drawSlot(GuiGraphics graphics, int x, int y, int borderColor) {
-        graphics.fill(leftPos + x - 1, topPos + y - 1, leftPos + x + 17, topPos + y + 17, SLOT);
-        graphics.renderOutline(leftPos + x - 1, topPos + y - 1, 18, 18, borderColor);
-    }
-
-    @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        BlueprintRecyclerPreview preview = menu.preview();
-        BlueprintRecyclerScreenModel model =
-                BlueprintRecyclerScreenModel.from(preview, requests.pending());
-        graphics.drawString(font, clipped(title, imageWidth - 20), titleLabelX, titleLabelY, TEXT, false);
-        if (preview.presentation().stationTier() > 0) graphics.drawString(font, clipped(tr("tier", preview.presentation().stationTier()), 92), 14, 24, MUTED, false);
-        graphics.drawCenteredString(
-                font,
-                clipped(
-                        Component.translatable(
-                                "gui.taczweaponblueprints.blueprint_recycler.input"),
-                        42),
-                BlueprintRecyclerMenu.Layout.INPUT_X + 8,
-                35,
-                MUTED);
-        graphics.drawCenteredString(
-                font,
-                clipped(
-                        Component.translatable(
-                                "gui.taczweaponblueprints.blueprint_recycler.output"),
-                        42),
-                BlueprintRecyclerMenu.Layout.OUTPUT_X + 8,
-                35,
-                MUTED);
-        if (detailed(preview)) {
-            renderAnalyzerDetails(graphics, preview, model);
-            graphics.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, MUTED, false);
-            return;
+    private void renderIcon(GuiGraphics g,AnalyzerWorkbenchContent.Icon kind,int x,int y) {
+        if(kind==AnalyzerWorkbenchContent.Icon.BLUEPRINT) {
+            // A category icon has no target; do not create an invalid blueprint for the item renderer.
+            g.blit(BLUEPRINT_ICON,x,y,12,12,0,0,64,64,64,64);return;
         }
-        graphics.drawString(
-                font,
-                clipped(
-                        (feedback.visibleOutcome().isPresent() || feedback.visibleFragments().isPresent()) ? tr("result.title") : Component.translatable(model.headingKey()),
-                        BlueprintRecyclerMenu.Layout.DETAIL_WIDTH),
-                BlueprintRecyclerMenu.Layout.DETAIL_X,
-                30,
-                TEXT,
-                false);
-        Optional<BlueprintRecyclerActionContract.ResultCode> visibleFeedback =
-                visibleFeedback(preview);
-        Component status = status(model, visibleFeedback);
-        if (visibleFeedback.isEmpty()
-                && model.statusEmphasis()
-                        == BlueprintRecyclerScreenModel.StatusEmphasis.NOTICE) {
-            graphics.fill(
-                    BlueprintRecyclerMenu.Layout.DETAIL_X - 4,
-                    40,
-                    BlueprintRecyclerMenu.Layout.DETAIL_X
-                            + BlueprintRecyclerMenu.Layout.DETAIL_WIDTH,
-                    71,
-                    0x60362E17);
-            graphics.renderOutline(
-                    BlueprintRecyclerMenu.Layout.DETAIL_X - 4,
-                    40,
-                    BlueprintRecyclerMenu.Layout.DETAIL_WIDTH + 4,
-                    31,
-                    ACCENT);
-        }
-        int statusColor = requests.pending() || feedback.visibleOutcome().filter(o -> o.kind() == com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable.Kind.NO_RESULT).isPresent()
-                ? ACCENT
-                : visibleFeedback.isPresent()
-                        ? visibleFeedback.orElseThrow()
-                                == BlueprintRecyclerActionContract.ResultCode.SUCCESS ? GOOD : BAD
-                        : switch (model.statusEmphasis()) {
-                            case POSITIVE -> GOOD;
-                            case NOTICE -> ACCENT;
-                            case MUTED -> MUTED;
-                        };
-        drawLimitedLines(
-                graphics,
-                status,
-                BlueprintRecyclerMenu.Layout.DETAIL_X,
-                44,
-                BlueprintRecyclerMenu.Layout.DETAIL_WIDTH,
-                3,
-                statusColor);
-        if (model.summaryVisible()) {
-            drawLimitedLines(
-                    graphics,
-                    summary(preview),
-                    BlueprintRecyclerMenu.Layout.DETAIL_X,
-                    76,
-                    BlueprintRecyclerMenu.Layout.DETAIL_WIDTH,
-                    2,
-                    ACCENT);
-        }
-        graphics.drawString(
-                font,
-                playerInventoryTitle,
-                inventoryLabelX,
-                inventoryLabelY,
-                MUTED,
-                false);
+        ItemStack stack=switch(kind) {
+            case BLUEPRINT -> new ItemStack(ModItems.BLUEPRINT_ITEM.get());
+            case FRAGMENT -> new ItemStack(ModItems.BLUEPRINT_FRAGMENT.get());
+            case CURRENCY -> ClientResearchCurrency.icon();
+            case NONE -> ItemStack.EMPTY;
+        };
+        if(stack.isEmpty())return;
+        g.pose().pushPose();g.pose().translate(x,y,0);g.pose().scale(.75f,.75f,1);g.renderItem(stack,0,0);g.pose().popPose();
     }
-
-    private void drawLimitedLines(
-            GuiGraphics graphics,
-            Component text,
-            int x,
-            int y,
-            int width,
-            int maximumLines,
-            int color) {
-        int lineNumber = 0;
-        for (FormattedCharSequence line : font.split(text, width)) {
-            graphics.drawString(
-                    font,
-                    line,
-                    x,
-                    y + lineNumber * (font.lineHeight + 1),
-                    color,
-                    false);
-            if (++lineNumber == maximumLines) {
-                break;
-            }
+    private Optional<Component> ammunitionReturn(BlueprintRecyclerPreview p) {
+        if (p.inputKind()!=BlueprintRecyclerPreview.InputKind.PHYSICAL_ITEM) return Optional.empty();
+        return com.gamergaming.taczweaponblueprints.progression.AnalyzerAmmoRecovery.plan(menu.inputStack())
+                .filter(plan->plan.count()>0).map(plan->Component.translatable(
+                        "gui.taczweaponblueprints.blueprint_recycler.ammo_return",plan.count(),plan.ammunition().getHoverName()));
+    }
+    private Component inputName(BlueprintRecyclerPreview p) {
+        if(p.inputKind()==BlueprintRecyclerPreview.InputKind.EMPTY)return Component.empty();
+        if(p.inputKind()==BlueprintRecyclerPreview.InputKind.PHYSICAL_ITEM||p.inputKind()==BlueprintRecyclerPreview.InputKind.BLUEPRINT_FRAGMENT||p.inputKind()==BlueprintRecyclerPreview.InputKind.BLUEPRINT)
+            return p.inputId().<Component>map(this::targetName).orElse(menu.inputStack().getHoverName());
+        return menu.inputStack().getHoverName();
+    }
+    private Component notice(BlueprintRecyclerPreview p,BlueprintRecyclerScreenModel model) {
+        var visible=visibleFeedback(p);
+        if(visible.isPresent()&&feedback.visibleFragments().isPresent()) {
+            var result=feedback.visibleFragments().orElseThrow();
+            return w(result.blueprintCreated()?"receipt_blueprint":"receipt_archive",result.archived(),result.retained(),result.saved());
         }
+        if(requests.pending()||visible.isPresent())return status(model,visible);
+        if(confirmationAction.isPresent())return w("confirm_warning");
+        if(!model.controlsEnabled())return ClientResearchCurrency.text(model.statusKey());
+        if(p.customizationWillBeLost())return tr("modified");
+        if(p.presentation().weapon().filter(w->w.blueprintLearningDisabled()).isPresent()&&!AnalyzerWorkbenchContent.recovery(p,primaryAction))return tr("learning.disabled");
+        if(p.alreadyKnown()&&primaryAction.filter(a->a==Action.REVERSE_ENGINEER).isPresent())return w("known_copy");
+        return Component.empty();
     }
-
-    private static int splitButtonWidth() {
-        return (BlueprintRecyclerMenu.Layout.DETAIL_WIDTH
-                - BlueprintRecyclerMenu.Layout.ACTION_GAP) / 2;
+    private void renderCost(GuiGraphics g,BlueprintRecyclerPreview p) {
+        if(p.inputKind()==BlueprintRecyclerPreview.InputKind.EMPTY||p.inputKind()==BlueprintRecyclerPreview.InputKind.INVALID)return;
+        var cost=AnalyzerWorkbenchContent.cost(p,primaryAction);
+        // The complete cost tooltip owns this strip, including shortened material summaries.
+        hoverTexts.add(new HoverText(12,109,120,21,actionExplanation(p)));
+        line(g,w(cost.currency()==0?"free":"cost",cost.currency()),12,111,120,cost.currency()>p.pointBalance()?BAD:MUTED);
+        Component consumption=consumption(p,cost);
+        if(!cost.materials().isEmpty())consumption=w("consumes_materials",cost.input());
+        line(g,consumption,12,121,120,MUTED);
     }
-
+    private Component consumption(BlueprintRecyclerPreview p,AnalyzerWorkbenchContent.Cost cost) {
+        if(p.inputKind()==BlueprintRecyclerPreview.InputKind.BLUEPRINT_FRAGMENT)
+            return w(cost.input()==0?"uses_saved":"deposit",cost.input());
+        return w(primaryAction.filter(a->a==Action.REDEEM_STACK).isPresent()?"consumes_up_to":"consumes",cost.input());
+    }
+    private Component actionExplanation(BlueprintRecyclerPreview p) {
+        var cost=AnalyzerWorkbenchContent.cost(p,primaryAction);
+        var result=consumption(p,cost).copy();
+        result.append("\n").append(w(cost.currency()==0?"free":"cost",cost.currency()));
+        if(cost.currency()>0)result.append("\n").append(w("balance",p.pointBalance()));
+        for(var material:cost.materials())result.append("\n").append(materialLine(material));
+        if(p.customizationWillBeLost())result.append("\n").append(tr("modified"));
+        if(primaryAction.filter(a->a==Action.RECOVER_POINTS).isPresent()&&!p.alreadyKnown())result.append("\n").append(w("confirm_warning"));
+        if(primaryAction.filter(a->a==Action.REDEEM_STACK).isPresent())result.append("\n").append(w("stack_stops"));
+        return result;
+    }
     private Component clipped(Component component, int width) {
         String value = component.getString();
         if (font.width(value) <= width) {
@@ -461,125 +360,9 @@ public final class BlueprintRecyclerScreen
             return tr(f.blueprintCreated() ? "result.reconstructed" : "result.archived", f.archived(), f.retained(), f.saved());
         }
         return visibleFeedback
-                .map(result -> Component.translatable(
+                .map(result -> ClientResearchCurrency.text(
                         BlueprintRecyclerScreenModel.resultKey(result)))
-                .orElseGet(() -> Component.translatable(model.statusKey()));
-    }
-
-    private Component summary(BlueprintRecyclerPreview preview) {
-        if (preview.inputKind() == BlueprintRecyclerPreview.InputKind.EMPTY && feedback.visibleTarget().isPresent())
-            return targetName(feedback.visibleTarget().orElseThrow());
-        if (preview.inputKind() == BlueprintRecyclerPreview.InputKind.BLUEPRINT_FRAGMENT) {
-            var fragment = preview.fragmentEvaluation().orElseThrow();
-            if (fragment.awardedPoints() > 0) {
-                return Component.translatable(
-                        "gui.taczweaponblueprints.blueprint_recycler.fragment.summary_rp",
-                        fragment.archivedBefore(),
-                        fragment.archivedAfterAction(),
-                        fragment.threshold(),
-                        fragment.awardedPoints());
-            }
-            return Component.translatable(
-                    fragment.createsBlueprint()
-                            ? "gui.taczweaponblueprints.blueprint_recycler.fragment.summary_reconstruct"
-                            : "gui.taczweaponblueprints.blueprint_recycler.fragment.summary",
-                    fragment.archivedBefore(),
-                    fragment.archivedAfterDeposit(),
-                    fragment.threshold());
-        }
-        if (preview.inputKind() == BlueprintRecyclerPreview.InputKind.PHYSICAL_ITEM) {
-            if (preview.recoveryPointValue() > 0) {
-                return Component.translatable(
-                        preview.customizationWillBeLost()
-                                ? "gui.taczweaponblueprints.blueprint_recycler.reverse.summary_recovery_modified"
-                                : "gui.taczweaponblueprints.blueprint_recycler.reverse.summary_recovery",
-                        preview.pointCost(),
-                        preview.recoveryPointValue(),
-                        preview.pointBalance(),
-                        preview.pointCap());
-            }
-            return Component.translatable(
-                    preview.customizationWillBeLost()
-                            ? "gui.taczweaponblueprints.blueprint_recycler.reverse.summary_modified"
-                            : "gui.taczweaponblueprints.blueprint_recycler.reverse.summary",
-                    preview.requiredInputCount(),
-                    preview.pointCost());
-        }
-        if (preview.pointValue() > 0) {
-            return Component.translatable(
-                    preview.inputKind() == BlueprintRecyclerPreview.InputKind.RESEARCH_DATA
-                            ? "gui.taczweaponblueprints.blueprint_recycler.summary_next"
-                            : "gui.taczweaponblueprints.blueprint_recycler.summary",
-                    preview.pointValue(), preview.pointBalance(), preview.pointCap());
-        }
-        return Component.translatable(
-                "gui.taczweaponblueprints.blueprint_recycler.balance",
-                preview.pointBalance(),
-                preview.pointCap());
-    }
-
-    private Component detailsNarration() {
-        BlueprintRecyclerPreview preview = menu.preview();
-        BlueprintRecyclerScreenModel model =
-                BlueprintRecyclerScreenModel.from(preview, requests.pending());
-        if (detailed(preview)) {
-            MutableComponent result = title.copy();
-            for (Component line : analyzerLines(preview, model)) result.append("\n").append(line);
-            for (Component line : sidebarLines(preview)) result.append("\n").append(line);
-            return result.append("\n").append(actionSummary(model));
-        }
-        MutableComponent details = model.summaryVisible()
-                ? Component.translatable(
-                        "gui.taczweaponblueprints.blueprint_recycler.narration",
-                        Component.translatable(model.headingKey()),
-                        status(model, visibleFeedback(preview)),
-                        summary(preview),
-                        actionSummary(model))
-                : Component.translatable(
-                        "gui.taczweaponblueprints.blueprint_recycler.narration.compact",
-                        Component.translatable(model.headingKey()),
-                        status(model, visibleFeedback(preview)),
-                        actionSummary(model));
-        if (model.summaryVisible()
-                && preview.inputKind()
-                        == BlueprintRecyclerPreview.InputKind.PHYSICAL_ITEM) {
-            for (BlueprintRecyclerPreview.IngredientPreview ingredient
-                    : preview.ingredients()) {
-                details.append("\n").append(Component.translatable(
-                        "gui.taczweaponblueprints.blueprint_recycler.reverse.material",
-                        ingredientLabel(ingredient),
-                        ingredient.inventoryAvailable(),
-                        ingredient.required()));
-            }
-            details.append("\n").append(Component.translatable(
-                    "gui.taczweaponblueprints.blueprint_recycler.reverse.origin."
-                            + preview.weaponOrigin().name().toLowerCase(java.util.Locale.ROOT)));
-            if (confirmationAction.isPresent()) {
-                details.append("\n").append(Component.translatable(
-                        "gui.taczweaponblueprints.blueprint_recycler.action.recover_points.confirm_hint"));
-            }
-        }
-        return details;
-    }
-
-    private String actionMessageKey(BlueprintRecyclerActionContract.Action action) {
-        if (action == BlueprintRecyclerActionContract.Action.ARCHIVE_FRAGMENTS)
-            return ANALYZER + (menu.preview().fragmentEvaluation().filter(f -> f.createsBlueprint()).isPresent() ? "action.reconstruct" : "action.archive");
-        if (action == BlueprintRecyclerActionContract.Action.REVERSE_ENGINEER && menu.preview().presentation().weapon().isPresent())
-            return ANALYZER + "action.analyze";
-        String base = BlueprintRecyclerScreenModel.actionKey(action);
-        return confirmationAction.filter(action::equals).isPresent()
-                ? base + ".confirm"
-                : base;
-    }
-
-    private String actionTooltipKey(BlueprintRecyclerActionContract.Action action) {
-        String base = BlueprintRecyclerScreenModel.actionKey(action);
-        if (action == BlueprintRecyclerActionContract.Action.RECOVER_POINTS
-                && !menu.preview().alreadyKnown()) {
-            return base + ".warning";
-        }
-        return base + ".tooltip";
+                .orElseGet(() -> ClientResearchCurrency.text(model.statusKey()));
     }
 
     private void clearConfirmation() {
@@ -610,232 +393,152 @@ public final class BlueprintRecyclerScreen
         return label;
     }
 
-    private Component actionSummary(BlueprintRecyclerScreenModel model) {
-        if (model.primaryAction().isEmpty()) {
-            return Component.translatable(
-                    "gui.taczweaponblueprints.blueprint_recycler.narration.no_action");
-        }
-        if (!model.controlsEnabled()) {
-            return Component.translatable(
-                    "gui.taczweaponblueprints.blueprint_recycler.narration.waiting");
-        }
-        Component primary = Component.translatable(
-                actionMessageKey(model.primaryAction().orElseThrow()));
-        return model.secondaryAction()
-                .<Component>map(action -> Component.translatable(
-                        "gui.taczweaponblueprints.blueprint_recycler.narration.actions",
-                        primary,
-                        Component.translatable(actionMessageKey(action))))
-                .orElse(primary);
-    }
-
-    private void renderDetailsTooltip(
-            GuiGraphics graphics,
-            int mouseX,
-            int mouseY) {
-        if (detailed(menu.preview())) {
-            int x = mouseX - leftPos, y = mouseY - topPos;
-            Component hover = null;
-            if (x >= BlueprintRecyclerMenu.Layout.DETAIL_X && x < imageWidth - 12 && y >= 29 && y < 95) {
-                var lines = analyzerLines(menu.preview(), BlueprintRecyclerScreenModel.from(menu.preview(), requests.pending()));
-                int index = detailScroll + (y - 29) / 11;
-                if (index < lines.size()) hover = lines.get(index);
-            } else if (x >= 12 && x < BlueprintRecyclerMenu.Layout.DIVIDER_X - 2 && y >= 80 && y < 120) {
-                var lines = sidebarLines(menu.preview());
-                int index = (y - 80) / 10;
-                if (index < lines.size()) hover = lines.get(index);
-            } else if (y >= 5 && y < 19 && x >= 8 && x < imageWidth - 8) hover = title;
-            if (hover != null) graphics.renderTooltip(font, font.split(hover, Math.max(80, Math.min(220, width - 32))), mouseX, mouseY);
-            return;
-        }
-        if (mouseX < leftPos + BlueprintRecyclerMenu.Layout.DETAIL_X
-                || mouseX >= leftPos + BlueprintRecyclerMenu.Layout.DETAIL_X
-                        + BlueprintRecyclerMenu.Layout.DETAIL_WIDTH
-                || mouseY < topPos + 28
-                || mouseY >= topPos + BlueprintRecyclerMenu.Layout.ACTION_Y) {
-            return;
-        }
-        int maximumWidth = Math.max(80, Math.min(220, width - 32));
-        graphics.renderTooltip(
-                font,
-                font.split(detailsNarration(), maximumWidth),
-                mouseX,
-                mouseY);
-    }
-
-    private static Component tr(String key, Object... values) { return Component.translatable(ANALYZER + key, values); }
-
-    private boolean detailed(BlueprintRecyclerPreview p) {
-        return p.inputKind() == BlueprintRecyclerPreview.InputKind.PHYSICAL_ITEM
-                || p.inputKind() == BlueprintRecyclerPreview.InputKind.BLUEPRINT_FRAGMENT;
-    }
-
-    private Component targetName(BlueprintRecyclerPreview p) {
-        return p.inputId().<Component>map(this::targetName).orElse(Component.empty());
-    }
     private Component targetName(ResourceLocation id) {
         var data = BlueprintDataManager.presentationCatalog().getBlueprintData(id.toString());
         if (data == null) return Component.literal(id.toString());
-        var name = Component.translatable(data.getNameKey());
+        var name = ClientResearchCurrency.text(data.getNameKey());
         return name.getString().equals(data.getNameKey()) ? Component.literal(id.toString()) : name;
     }
 
-    private List<Component> sidebarLines(BlueprintRecyclerPreview p) {
-        var lines = new ArrayList<Component>();
-        if (p.inputKind() == BlueprintRecyclerPreview.InputKind.PHYSICAL_ITEM) {
-            boolean recoveryFocused = BlueprintRecyclerScreenModel.focusesRecovery(p);
-            var c = p.presentation().recoveryCost();
-            lines.add(tr("consumes", recoveryFocused && c.isPresent() ? c.orElseThrow().inputCount() : p.requiredInputCount()));
-            lines.add(tr(recoveryFocused && c.isPresent() ? (c.orElseThrow().ingredients().isEmpty() ? "cost" : "cost_materials")
-                    : (p.ingredients().isEmpty() ? "cost" : "cost_materials"), recoveryFocused && c.isPresent() ? c.orElseThrow().points() : p.pointCost()));
-            if (p.presentation().recoveryCost().isPresent() && !recoveryFocused) {
-                var cost = p.presentation().recoveryCost().orElseThrow();
-                lines.add(cost.status() != com.gamergaming.taczweaponblueprints.progression.BlueprintReverseEngineeringService.Status.READY
-                        ? tr("recovery_cost_pending", cost.points())
-                        : tr(cost.ingredients().isEmpty() ? "recovery_cost" : "recovery_cost_materials", cost.points(), p.recoveryPointValue()));
-            }
-            if (recoveryFocused && c.filter(cost -> cost.status() == com.gamergaming.taczweaponblueprints.progression.BlueprintReverseEngineeringService.Status.READY).isPresent())
-                lines.add(tr("recovery_award", p.recoveryPointValue()));
-            if (!recoveryFocused) p.presentation().weapon().filter(w -> w.reward().isPresent() && w.threshold() > 0).ifPresent(w -> lines.add(tr("saved", w.saved(), w.threshold())));
-        } else {
-            var f = p.fragmentEvaluation().orElseThrow();
-            lines.add(tr("accepts", f.accepted()));
-            lines.add(tr("keeps", f.rejected()));
-            lines.add(f.status() == com.gamergaming.taczweaponblueprints.progression.fragment.BlueprintFragmentAnalysisService.Status.FRAGMENTS_DISABLED
-                    ? tr("saved_count", f.archivedBefore()) : tr("saved", f.archivedBefore(), f.threshold()));
-        }
-        if (lines.size() < 4) lines.add(tr("balance", p.pointBalance()));
-        return List.copyOf(lines);
+    private static Component tr(String key,Object... values){return ClientResearchCurrency.text(ANALYZER+key,values);}
+    private static Component w(String key,Object... values){return AnalyzerWorkbenchContent.text(key,values);}
+    private Component materialLine(BlueprintRecyclerPreview.IngredientPreview material) {
+        return Component.translatable("gui.taczweaponblueprints.blueprint_recycler.reverse.material",ingredientLabel(material),material.inventoryAvailable(),material.required());
     }
-
-    private List<Component> analyzerLines(BlueprintRecyclerPreview p, BlueprintRecyclerScreenModel model) {
-        var lines = new ArrayList<Component>();
-        boolean recoveryFocused = BlueprintRecyclerScreenModel.focusesRecovery(p);
-        lines.add(targetName(p));
-        var weapon = p.presentation().weapon();
-        lines.add(weapon.isPresent() ? tr("tiers", p.presentation().stationTier(),
-                weapon.orElseThrow().tier() == 0 ? "?" : weapon.orElseThrow().tier()) : tr("station", p.presentation().stationTier()));
-        Component decision = status(model, visibleFeedback(p));
-        if (!requests.pending() && visibleFeedback(p).isEmpty() && p.fragmentEvaluation().filter(f -> f.ready() && f.createsBlueprint()).isPresent())
-            decision = tr("ready_reconstruct");
-        lines.add(decision);
-        if (recoveryFocused && p.reverseEngineeringStatus().filter(s -> s != BlueprintReverseEngineeringService.Status.RECOVERY_MODE_DISABLED).isPresent())
-            lines.add(tr("analysis_status", Component.translatable(BlueprintRecyclerScreenModel.analysisStatusKey(p))));
-        if (weapon.isPresent() && !recoveryFocused) {
-            var w = weapon.orElseThrow();
-            w.outcomes().ifPresent(o -> {
-                lines.add(tr("odds.blueprint", AnalyzerProbabilityText.format(o.blueprintWeight(), o.totalWeight())));
-                lines.add(tr("odds.fragments", o.minimumFragments() == o.maximumFragments() ? Integer.toString(o.minimumFragments())
-                        : o.minimumFragments() + "–" + o.maximumFragments(), AnalyzerProbabilityText.format(o.fragmentWeight(), o.totalWeight())));
-                lines.add(tr("odds.no_result", AnalyzerProbabilityText.format(o.noResultWeight(), o.totalWeight())));
-            });
-            if (w.reward().isPresent() && w.threshold() > 0) {
-                lines.add(tr("saved", w.saved(), w.threshold()));
-                if (w.saved() >= w.threshold()) lines.add(tr("stored_set"));
-                if (w.totalSaved() >= w.cap()) lines.add(tr("archive_full"));
-                lines.add(tr("archive", w.totalSaved(), w.cap()));
-            }
-            w.reward().ifPresent(reward -> { lines.add(tr("learning." + (reward.learningMode() == com.gamergaming.taczweaponblueprints.progression.PhysicalBlueprintLearningMode.BYPASS_TREE_PREREQUISITES ? "bypass" : "prerequisites")));
-                lines.add(tr(reward.recyclable() ? "recyclable" : "protected")); });
-            if (w.blueprintLearningDisabled()) lines.add(tr("learning.disabled"));
+    private List<Component> explanation(BlueprintRecyclerPreview p) {
+        var lines=new ArrayList<Component>();
+        if(p.inputKind()!=BlueprintRecyclerPreview.InputKind.EMPTY)lines.add(inputName(p));
+        if(p.presentation().data().isPresent()) {
+            var data=p.presentation().data().orElseThrow();
+            lines.add(ResearchDataPresentationText.tr(data.allowLearned()?"duplicates_allowed":"duplicates_excluded"));
+            lines.add(ResearchDataPresentationText.tr(data.allowUndiscovered()?"undiscovered_allowed":"discovered_only"));
+            for(var station:data.stations())if(station.tier()!=p.presentation().stationTier())lines.add(station.available()
+                    ?ResearchDataPresentationText.tr("station_compare",station.tier(),ResearchDataPresentationText.full(station),ResearchDataPresentationText.quantity(station))
+                    :ResearchDataPresentationText.tr("station_unavailable",station.tier()));
+            if(data.partialProgressBias())lines.add(ResearchDataPresentationText.tr("partial_bias"));
+            rewardDetails(lines,data.reward());
         }
-        if (p.inputKind() == BlueprintRecyclerPreview.InputKind.BLUEPRINT_FRAGMENT) {
-            var f = p.fragmentEvaluation().orElseThrow();
-            lines.add(f.status() == com.gamergaming.taczweaponblueprints.progression.fragment.BlueprintFragmentAnalysisService.Status.FRAGMENTS_DISABLED
-                    ? tr("saved_count", f.archivedBefore()) : tr("fragment.saved", f.archivedBefore(), f.threshold()));
-            lines.add(tr("fragment.transfer", f.accepted(), f.rejected()));
-            lines.add(tr(f.createsBlueprint() ? "fragment.reconstruct" : "fragment.after", f.archivedAfterAction()));
-            if (f.awardedPoints() > 0) lines.add(tr("fragment.rp", f.awardedPoints()));
-            p.presentation().fragments().ifPresent(a -> {
-                lines.add(tr("archive", a.totalSaved(), a.cap()));
-                a.outputReward().ifPresent(reward -> {
-                    lines.add(tr(reward.recyclable() ? "recyclable" : "protected"));
-                    lines.add(tr("learning." + (reward.learningMode() == com.gamergaming.taczweaponblueprints.progression.PhysicalBlueprintLearningMode.BYPASS_TREE_PREREQUISITES ? "bypass" : "prerequisites")));
-                });
+        if(p.inputKind()==BlueprintRecyclerPreview.InputKind.PHYSICAL_ITEM) {
+            ammunitionReturn(p).ifPresent(line->{lines.add(line);lines.add(Component.translatable(
+                    "gui.taczweaponblueprints.blueprint_recycler.ammo_overflow"));});
+            boolean recovery=AnalyzerWorkbenchContent.recovery(p,primaryAction);
+            p.presentation().weapon().ifPresent(weapon->{
+                if(!recovery&&weapon.threshold()>0) {
+                    lines.add(tr("saved",weapon.saved(),weapon.threshold()));
+                    lines.add(tr("archive",weapon.totalSaved(),weapon.cap()));
+                    if(weapon.saved()>=weapon.threshold())lines.add(tr("stored_set"));
+                }
+                if(!recovery)weapon.reward().ifPresent(reward->rewardDetails(lines,reward));
+            });
+            if(recovery&&p.reverseEngineeringStatus().filter(s->s!=BlueprintReverseEngineeringService.Status.READY&&s!=BlueprintReverseEngineeringService.Status.RECOVERY_MODE_DISABLED).isPresent())
+                lines.add(tr("analysis_status",ClientResearchCurrency.text(BlueprintRecyclerScreenModel.analysisStatusKey(p))));
+            lines.add(Component.translatable("gui.taczweaponblueprints.blueprint_recycler.reverse.origin."+p.weaponOrigin().name().toLowerCase(Locale.ROOT)));
+        }
+        if(p.inputKind()==BlueprintRecyclerPreview.InputKind.BLUEPRINT_FRAGMENT) {
+            var fragment=p.fragmentEvaluation().orElseThrow();
+            if(fragment.completionMode()==com.gamergaming.taczweaponblueprints.progression.fragment.BlueprintFragmentPolicy.CompletionMode.TARGETED_RESEARCH_BOOST)
+                lines.add(w("discount_fragments"));
+            p.presentation().fragments().ifPresent(f->{
+                lines.add(tr("archive",f.totalSaved(),f.cap()));
+                f.outputReward().ifPresent(reward->rewardDetails(lines,reward));
                 lines.add(tr("fragment.separate"));
             });
-        } else {
-            if (!recoveryFocused) {
-                lines.add(tr("analysis_status", Component.translatable(BlueprintRecyclerScreenModel.analysisStatusKey(p))));
-                lines.add(tr("consumption", p.requiredInputCount(), p.pointCost()));
-                for (var i : p.ingredients()) lines.add(materialLine(i));
-            }
-            if (p.customizationWillBeLost()) lines.add(tr("modified"));
-            lines.add(Component.translatable("gui.taczweaponblueprints.blueprint_recycler.reverse.origin." + p.weaponOrigin().name().toLowerCase(java.util.Locale.ROOT)));
-            p.presentation().recoveryCost().ifPresent(c -> {
-                lines.add(c.status() != com.gamergaming.taczweaponblueprints.progression.BlueprintReverseEngineeringService.Status.READY
-                        ? tr("recovery_pending", c.inputCount(), c.points()) : tr("recovery", c.inputCount(), c.points(), p.recoveryPointValue()));
-                p.recoveryStatus().ifPresent(s -> lines.add(Component.translatable("gui.taczweaponblueprints.blueprint_recycler.recovery.status." + s.name().toLowerCase(java.util.Locale.ROOT))));
-                if (c.status() != com.gamergaming.taczweaponblueprints.progression.BlueprintReverseEngineeringService.Status.READY)
-                    lines.add(Component.translatable("gui.taczweaponblueprints.blueprint_recycler.reverse.status." + c.status().name().toLowerCase(java.util.Locale.ROOT)));
-                for (var i : c.ingredients()) lines.add(materialLine(i));
-            });
+            if(fragment.rejected()>0)lines.add(w("left_in_input",fragment.rejected()));
         }
-        return List.copyOf(lines);
+        var cost=AnalyzerWorkbenchContent.cost(p,primaryAction);
+        for(var material:cost.materials())lines.add(materialLine(material));
+        if(cost.currency()>0)lines.add(w("balance",p.pointBalance()));
+        if(lines.isEmpty())lines.add(w("supported_inputs"));
+        // Components retain translation/style identity; deduplicate by rendered message for narration too.
+        var unique=new LinkedHashMap<String,Component>();
+        for(var line:lines)unique.putIfAbsent(line.getString(),line);
+        return List.copyOf(unique.values());
     }
-
-    private Component materialLine(BlueprintRecyclerPreview.IngredientPreview i) {
-        return Component.translatable("gui.taczweaponblueprints.blueprint_recycler.reverse.material", ingredientLabel(i), i.inventoryAvailable(), i.required());
+    private void rewardDetails(List<Component> lines,com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisRewardClass reward) {
+        lines.add(tr(reward.recyclable()?"recyclable":"protected"));
+        lines.add(tr("learning."+(reward.learningMode()==PhysicalBlueprintLearningMode.BYPASS_TREE_PREREQUISITES?"bypass":"prerequisites")));
     }
-
-    private Component actionTooltip(BlueprintRecyclerActionContract.Action action) {
-        MutableComponent text = Component.translatable(actionMessageKey(action)).append("\n")
-                .append(Component.translatable(actionTooltipKey(action)));
-        var p = menu.preview();
-        if (action == BlueprintRecyclerActionContract.Action.REVERSE_ENGINEER) {
-            text.append("\n").append(tr("consumption", p.requiredInputCount(), p.pointCost()));
-            if (!p.ingredients().isEmpty()) text.append("\n").append(tr("materials_help"));
-            if (p.presentation().weapon().isPresent()) text.append("\n").append(tr("attempt_warning"));
-        } else if (action == BlueprintRecyclerActionContract.Action.RECOVER_POINTS) p.presentation().recoveryCost().ifPresent(c -> {
-            text.append("\n").append(tr("recovery", c.inputCount(), c.points(), p.recoveryPointValue()));
-            if (!c.ingredients().isEmpty()) text.append("\n").append(tr("materials_help"));
-        });
-        return text;
+    private List<FormattedCharSequence> detailLines() {
+        var lines=new ArrayList<FormattedCharSequence>();
+        for(var text:explanation(menu.preview()))lines.addAll(font.split(text,imageWidth-36));
+        return lines;
     }
-
-    private void renderAnalyzerDetails(GuiGraphics g, BlueprintRecyclerPreview p, BlueprintRecyclerScreenModel model) {
-        var lines = analyzerLines(p, model);
-        detailScroll = Math.max(0, Math.min(detailScroll, lines.size() - Math.min(DETAIL_LINES, lines.size())));
-        for (int row = 0; row < DETAIL_LINES && row + detailScroll < lines.size(); row++) {
-            int index = row + detailScroll;
-            int decisionColor = requests.pending() ? ACCENT : feedback.visibleCode().isPresent()
-                    ? feedback.visibleCode().orElseThrow() != BlueprintRecyclerActionContract.ResultCode.SUCCESS ? BAD
-                        : feedback.visibleOutcome().filter(o -> o.kind() == com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable.Kind.NO_RESULT).isPresent() ? ACCENT : GOOD
-                    : model.controlsEnabled() ? GOOD : model.statusEmphasis() == BlueprintRecyclerScreenModel.StatusEmphasis.NOTICE ? ACCENT : MUTED;
-            int color = index == 0 ? TEXT : index == 2 ? decisionColor : index >= 3 && index <= 5 ? ACCENT : MUTED;
-            g.drawString(font, clipped(lines.get(index), BlueprintRecyclerMenu.Layout.DETAIL_WIDTH - 6), BlueprintRecyclerMenu.Layout.DETAIL_X, 29 + row * 11, color, false);
+    private void renderDetails(GuiGraphics g,BlueprintRecyclerPreview p) {
+        // Finish the item-count text batch before covering the raised container items.
+        g.flush();
+        g.pose().pushPose();g.pose().translate(0,0,300);
+        g.fill(8,25,imageWidth-8,106,PANEL);
+        var lines=detailLines();detailScroll=Math.max(0,Math.min(detailScroll,Math.max(0,lines.size()-DETAIL_LINES)));
+        for(int i=0;i<DETAIL_LINES&&i+detailScroll<lines.size();i++)g.drawString(font,lines.get(i+detailScroll),14,30+i*10,TEXT,false);
+        if(lines.size()>DETAIL_LINES) {
+            int thumb=Math.max(6,70*DETAIL_LINES/lines.size());int offset=(70-thumb)*detailScroll/(lines.size()-DETAIL_LINES);
+            g.fill(imageWidth-14,30,imageWidth-12,100,SLOT);g.fill(imageWidth-14,30+offset,imageWidth-12,30+offset+thumb,ACCENT);
         }
-        if (lines.size() > DETAIL_LINES) {
-            int x = BlueprintRecyclerMenu.Layout.DETAIL_X + BlueprintRecyclerMenu.Layout.DETAIL_WIDTH - 2;
-            g.fill(x, 29, x + 2, 94, BORDER);
-            int thumb = Math.max(6, 65 * DETAIL_LINES / lines.size());
-            int offset = (65 - thumb) * detailScroll / (lines.size() - DETAIL_LINES);
-            g.fill(x, 29 + offset, x + 2, 29 + offset + thumb, ACCENT);
-        }
-        var side = sidebarLines(p);
-        for (int i = 0; i < Math.min(4, side.size()); i++) g.drawString(font, clipped(side.get(i), 92), 14, 80 + i * 10, i == 1 ? ACCENT : MUTED, false);
+        g.flush();
+        g.pose().popPose();
     }
-
-    @Override public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
-        if (detailed(menu.preview()) && mouseX >= leftPos + BlueprintRecyclerMenu.Layout.DETAIL_X
-                && mouseX < leftPos + imageWidth - 8 && mouseY >= topPos + 22 && mouseY < topPos + BlueprintRecyclerMenu.Layout.ACTION_Y) {
-            scrollDetails(amount > 0 ? -1 : 1); return true;
-        }
-        return super.mouseScrolled(mouseX, mouseY, amount);
+    private void line(GuiGraphics g,Component text,int x,int y,int width,int color) {
+        if(width<=0||text.getString().isEmpty())return;
+        g.drawString(font,clipped(text,width),x,y,color,false);
+        if(font.width(text)>width)hoverTexts.add(new HoverText(x,y,width,10,text));
     }
-    @Override public boolean keyPressed(int key, int scan, int modifiers) {
-        if (detailed(menu.preview()) && (key == 266 || key == 267)) { scrollDetails(key == 266 ? -DETAIL_LINES : DETAIL_LINES); return true; }
-        return super.keyPressed(key, scan, modifiers);
+    private void wrapped(GuiGraphics g,Component text,int x,int y,int width,int rows,int color) {
+        var parts=font.split(text,width);
+        for(int i=0;i<Math.min(rows,parts.size());i++)g.drawString(font,parts.get(i),x,y+10*i,color,false);
+        if(parts.size()>rows)hoverTexts.add(new HoverText(x,y,width,rows*10,text));
+    }
+    private void centered(GuiGraphics g,Component text,int x,int y,int width,int color) {
+        Component visible=clipped(text,width);g.drawString(font,visible,x-font.width(visible)/2,y,color,false);
+        if(font.width(text)>width)hoverTexts.add(new HoverText(x-width/2,y,width,10,text));
+    }
+    private boolean overDetails(double x,double y) {return detailsOpen&&x>=leftPos+8&&x<leftPos+imageWidth-8&&y>=topPos+24&&y<topPos+106;}
+    @Override public boolean mouseClicked(double x,double y,int button) {
+        // Details covers real workstation slots. Never let a click reach an obscured slot.
+        if(overDetails(x,y))return true;return super.mouseClicked(x,y,button);
+    }
+    @Override public boolean mouseDragged(double x,double y,int button,double dx,double dy) {
+        if(overDetails(x,y))return true;return super.mouseDragged(x,y,button,dx,dy);
+    }
+    @Override public boolean mouseReleased(double x,double y,int button) {
+        if(overDetails(x,y))return super.mouseReleased(leftPos+imageWidth-5,topPos+imageHeight-5,button);return super.mouseReleased(x,y,button);
+    }
+    @Override public boolean mouseScrolled(double x,double y,double amount) {
+        if(overDetails(x,y)){scrollDetails(amount>0?-1:1);return true;}return super.mouseScrolled(x,y,amount);
+    }
+    @Override public boolean keyPressed(int key,int scan,int modifiers) {
+        if(detailsOpen&&key==256){detailsOpen=false;updateControls();setFocused(detailsButton);return true;}
+        if(detailsOpen&&(key==266||key==267)){scrollDetails(key==266?-DETAIL_LINES:DETAIL_LINES);return true;}
+        if(pointerOverDetails&&(Arrays.stream(minecraft.options.keyHotbarSlots).anyMatch(binding->binding.matches(key,scan))
+                ||minecraft.options.keyDrop.matches(key,scan)||minecraft.options.keySwapOffhand.matches(key,scan)))return true;
+        return super.keyPressed(key,scan,modifiers);
     }
     private void scrollDetails(int amount) {
-        int size = analyzerLines(menu.preview(), BlueprintRecyclerScreenModel.from(menu.preview(), requests.pending())).size();
-        detailScroll = Math.max(0, Math.min(Math.max(0, size - DETAIL_LINES), detailScroll + amount));
-        triggerImmediateNarration(true);
+        detailScroll=Math.max(0,Math.min(Math.max(0,detailLines().size()-DETAIL_LINES),detailScroll+amount));triggerImmediateNarration(true);
     }
-
-    @Override
-    protected void updateNarrationState(NarrationElementOutput output) {
-        super.updateNarrationState(output);
-        output.add(NarratedElementType.HINT, detailsNarration());
+    private Component detailsNarration() {
+        var p=menu.preview();var model=BlueprintRecyclerScreenModel.from(p,requests.pending());
+        var overview=AnalyzerWorkbenchContent.overview(p,primaryAction);
+        var result=title.copy().append("\n").append(inputName(p)).append("\n").append(overview.heading()).append("\n").append(overview.subtitle());
+        for(var row:overview.rows())result.append("\n").append(row.label()).append(" ").append(row.value());
+        result.append("\n").append(notice(p,model)).append("\n").append(actionExplanation(p));
+        if(detailsOpen)for(var line:explanation(p))result.append("\n").append(line);
+        return result;
+    }
+    @Override protected void updateNarrationState(NarrationElementOutput output) {
+        super.updateNarrationState(output);output.add(NarratedElementType.HINT,detailsNarration());
+    }
+    private static final class WorkbenchButton extends Button {
+        private final boolean primary;
+        WorkbenchButton(int x,int y,int width,int height,Component label,OnPress press,boolean primary) {
+            super(x,y,width,height,label,press,DEFAULT_NARRATION);this.primary=primary;
+        }
+        @Override protected void renderWidget(GuiGraphics g,int mouseX,int mouseY,float delta) {
+            int base=!active?0xFF303335:primary?(isHoveredOrFocused()?0xFF92742F:0xFF78602E):(isHoveredOrFocused()?0xFF454A4D:0xFF323638);
+            int edge=active&&primary?0xFFBBA164:active&&isHoveredOrFocused()?0xFFB0B6BA:BORDER;
+            g.fill(getX(),getY(),getX()+width,getY()+height,base);g.renderOutline(getX(),getY(),width,height,edge);
+            g.fill(getX()+1,getY()+height-2,getX()+width-1,getY()+height-1,0xFF141617);
+            var font=Minecraft.getInstance().font;
+            renderScrollingString(g,font,4,active?TEXT:0xFF858B8E);
+        }
     }
 }

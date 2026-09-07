@@ -6,7 +6,7 @@ import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbe
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintCraftingAccessPolicy;
 
 /** Approachable server-config strategy for ammo crafting access. */
-public enum AmmoCraftingStrategy {
+public enum AmmoCraftingStrategy implements me.fzzyhmstrs.fzzy_config.util.EnumTranslatable {
     PROFILE,
     LINKED_WEAPON,
     TIER_1,
@@ -28,4 +28,5 @@ public enum AmmoCraftingStrategy {
             case DISABLED -> Optional.of(BlueprintCraftingAccessPolicy.DISABLED);
         };
     }
+    @Override public String prefix() { return "config.taczweaponblueprints.blueprint.ammoCraftingStrategy"; }
 }

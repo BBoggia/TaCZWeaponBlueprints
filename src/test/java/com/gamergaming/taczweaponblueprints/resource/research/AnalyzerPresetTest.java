@@ -40,18 +40,16 @@ class AnalyzerPresetTest {
                 Map.of(id("taczweaponblueprints:default"),decode(ResearchTechTreeDefinition.CODEC,json(resources.resolve("research_tech_trees/default.json")))),
                 Map.of(),Map.of(id("taczweaponblueprints:default"),decode(ResearchAutomaticPlacementProfile.CODEC,json(resources.resolve("research_automatic_placement_profiles/default.json")))));
     }
-    @Test void optInProfilesPreserveEveryUnrelatedBundledSetting() throws Exception {
+    @Test void bundledTieredPolicyMatchesExampleAndLegacyPreservesUnrelatedSettings() throws Exception {
         var shipped = json(Path.of("src/main/resources" + PROFILE_PATH));
-        assertFalse(shipped.has("analyzer")); assertEquals(4, shipped.get("format").getAsInt());
+        assertEquals(shipped, json(ROOT.resolve("tiered" + PROFILE_PATH)));
+        var analyzer = shipped.remove("analyzer"); shipped.addProperty("format", 4);
         assertEquals(shipped, json(ROOT.resolve("legacy" + PROFILE_PATH)));
-        var tiered = json(ROOT.resolve("tiered" + PROFILE_PATH));
-        var analyzer = tiered.remove("analyzer"); tiered.addProperty("format", 4);
-        assertEquals(shipped, tiered);
         assertEquals(BlueprintAnalyzerPolicy.Mode.TIERED, decode(BlueprintAnalyzerPolicy.CODEC, analyzer).mode());
     }
-    @Test void allNinePresetPairsRetainProtectedUsefulProgressAndIndependentLegacyPolicy() throws Exception {
+    @Test void allNineStockPairsApplyMismatchRiskAndKeepIndependentLegacyPolicy() throws Exception {
         int[][] odds = {{70,30,10},{100,70,30},{100,100,80}};
-        var profile = decode(BlueprintResearchProfile.CODEC, json(ROOT.resolve("tiered" + PROFILE_PATH)));
+        var profile = decode(BlueprintResearchProfile.CODEC, json(Path.of("src/main/resources" + PROFILE_PATH)));
         for (int weapon = 1; weapon <= 3; weapon++) {
             var rule = decode(BlueprintResearchRule.CODEC, JsonParser.parseString("{\"format\":5,\"profile\":\""+PROFILE+"\",\"target\":{\"blueprints\":[\""+AK+"\"]},\"analyzer\":{\"weapon_tier\":\"tier_"+weapon+"\"}}"));
             var snapshot = snapshot(profile, Map.of(id("test:tier"),rule), Map.of());
@@ -59,12 +57,15 @@ class AnalyzerPresetTest {
                 var q = quote(snapshot,AK,station);
                 assertEquals(AnalyzerPolicyQuote.Status.CONFIGURED,q.status());
                 assertEquals(odds[station-1][weapon-1]/100d,q.outcomes().orElseThrow().blueprintProbability());
-                assertEquals(0,q.outcomes().orElseThrow().noResultWeight());
+                int empty = weapon > station ? (weapon - station == 2 ? 50 : 20) : 0;
+                assertEquals(empty,q.outcomes().orElseThrow().noResultWeight());
+                assertEquals(100-odds[station-1][weapon-1]-empty,q.outcomes().orElseThrow().fragmentWeight());
+                assertEquals(q.outcomes().orElseThrow().fragmentWeight()>0 ? 1 : 0,q.outcomes().orElseThrow().minimumFragments());
                 assertEquals(weapon*5,q.fragmentThreshold());
                 var a=q.attempt().orElseThrow();assertEquals(3,a.cost().points());assertEquals(1,a.inputCount().orElseThrow());
                 assertFalse(a.allowKnown());assertFalse(a.outputRecyclable());
                 assertEquals(PhysicalBlueprintLearningMode.REQUIRE_TREE_PREREQUISITES,a.physicalBlueprintLearningMode());
-                assertTrue(AnalyzerBalanceModel.estimate(q.outcomes().orElseThrow(),q.fragmentThreshold()).maximumAttempts().isPresent());
+                assertEquals(weapon <= station,AnalyzerBalanceModel.estimate(q.outcomes().orElseThrow(),q.fragmentThreshold()).maximumAttempts().isPresent());
             }
             assertEquals(0,BlueprintResearchPolicyResolver.reverseEngineeringPolicyFor(snapshot,CATALOG,PROFILE,AK).cost().points());
         }

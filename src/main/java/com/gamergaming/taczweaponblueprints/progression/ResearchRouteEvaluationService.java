@@ -1,5 +1,8 @@
 package com.gamergaming.taczweaponblueprints.progression;
 
+import com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy;
+import com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPayments;
+
 import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -127,7 +130,11 @@ public final class ResearchRouteEvaluationService {
                             request.inventoryStacks(), requirements).orElseThrow()
                     : ResearchPathUnlockPlanner.allocateInventory(
                             path, request.inventoryStacks()).orElseThrow().allocation();
-            boolean ingredientsSatisfied = bypass || allocation.complete();
+            var currency = request.fingerprintContext().progressionConfig().currencyPolicy();
+            int availableCurrency = ResearchCurrencyPayments.balance(currency, request.inventoryStacks(), request.playerData());
+            boolean ingredientsSatisfied = bypass || (allocation.complete()
+                    && (!ResearchCurrencyPayments.physical(currency)
+                        || ResearchCurrencyPayments.plan(currency, request.inventoryStacks(), request.playerData(), pointCost, requirements).isPresent()));
             boolean transactionCapacityAvailable = true;
             if (policyEligible && path != null) {
                 transactionCapacityAvailable = pathCapacityAvailable(
@@ -156,13 +163,13 @@ public final class ResearchRouteEvaluationService {
                 }
             }
             boolean ready = policyEligible
-                    && (bypass || request.playerData().getResearchPoints() >= pointCost)
+                    && (bypass || availableCurrency >= pointCost)
                     && ingredientsSatisfied
                     && transactionCapacityAvailable;
             return Optional.of(new Evaluation(
                     request.targetId(),
                     pointCost,
-                    request.playerData().getResearchPoints(),
+                    availableCurrency,
                     policyEligible,
                     ingredientsSatisfied,
                     transactionCapacityAvailable,

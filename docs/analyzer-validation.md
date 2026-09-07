@@ -34,6 +34,11 @@ Prepare an output directory, for example `build/analyzer-acceptance`, with:
 - `server/config/` and `server/tacz/`: compatible development configuration and
   the TaCZ gun pack. The active profile must be `duplicate_recovery`, with
   blueprints enabled and found recovery set to `PROTECTED_BLUEPRINT_ONLY`.
+- Set `researchCurrencyKind = "BANKED_RP"` and
+  `researchDataBehavior = "LEGACY_CURRENCY"` explicitly in this disposable
+  server's Blueprint configuration. This harness validates the banked weapon
+  preset and legacy Data path. Use the [economy acceptance harness](research-economy-validation.md)
+  for default Scrap/Data analysis and two-player lifecycle coverage.
 - `server/eula.txt`: an already accepted server EULA, supplied by the operator.
 - `server/server.properties`: `level-name=world`, `server-ip=127.0.0.1`,
   `server-port=25577`, `online-mode=false`, and `max-players=1`. Bind only to

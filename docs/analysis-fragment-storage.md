@@ -1,12 +1,12 @@
 # Analysis fragment storage and reconstruction
 
-Analysis fragments carry target-specific progress toward a physical blueprint. They preserve the recycling and learning permissions of the earned reward. They cannot supply Research Bench discounts or direct Research Points (RP), even after the player learns the target.
+Analysis fragments carry target-specific progress toward a physical blueprint. They preserve the recycling and learning permissions of the earned reward. They cannot supply Research Bench discounts or direct currency returns, even after the player learns the target.
 
 The optional [Analyzer presets and migration guide](analyzer-presets-and-balancing.md)
 explains how to enable reconstruction, adjust thresholds, and return to legacy
 analysis while preserving saved counts and fragment identities.
 
-**Tiered weapon analysis produces marked fragments, and the Analyzer menu archives and reconstructs them.** Legacy weapon policies remain deterministic, and ordinary fragments keep their current preset. This document defines the implemented storage and transaction API; the [Analyzer behavior contract](analyzer-behavior-contract.md) defines the complete planned feature.
+**Research Data and tiered weapon analysis produce marked fragments; the Analyzer archives and reconstructs them.** Matching target and reward classes combine across both sources. Legacy weapon policies remain deterministic, and ordinary fragments keep their current preset. This document defines the storage and transaction API; the [Analyzer behavior contract](analyzer-behavior-contract.md) covers the workstation.
 
 ## Item identity
 
@@ -71,6 +71,10 @@ Versions 0–4 load with an empty analysis archive. Valid ordinary progress load
 
 Counts are raw progress. They do not store thresholds or completed-set totals. Changing a threshold or lowering a retention cap does not erase saved counts or create a blueprint on reload. Removed targets and disabled policies retain their saved entries. The existing capability clone path copies this data on both death and non-death clones.
 
+## Shared target settings
+
+Pack authors can define reconstruction independently of weapon-attempt eligibility through [shared reconstruction settings](research-data-policies.md#shared-reconstruction-definition). Explicit target and profile settings take precedence over existing Analyzer reconstruction; an enabled shared fallback supports owned fragments when weapon analysis uses legacy mode. Existing packs without shared settings retain their current rules. Threshold changes preserve archived counts, and current restrictions cannot grant an acquired fragment additional permissions.
+
 ## Mutation and reconstruction API
 
 `IPlayerRecipeData.getArchivedAnalysisFragments` returns a detached immutable map. `AnalysisFragmentMutation` compares and replaces all four classes for one target through preflight, commit, and rollback operations. Ordinary mutations also enforce the combined limits. The three-map `replaceSupplementalProgression` overload replaces ordinary fragments, criteria, and analysis fragments together after validating every channel. The older two-map overload preserves existing analysis state.
@@ -87,7 +91,7 @@ The service takes a server-supplied policy with an explicit target and revision.
 
 ## Synchronization, inspection, and reset
 
-Protocol 59 retains the supplemental analysis-count channel and adds Analyzer preview and result details. Clients and servers must use matching protocol versions. Only targets whose identity is already disclosed by the current Blueprint Journal or Tech Tree are included; analysis progress does not disclose a hidden target. Ordinary discount progress and public criteria remain separate fields.
+Protocol 62 retains the supplemental analysis-count channel and adds Analyzer preview and result details. Clients and servers must use matching protocol versions. Only targets whose identity is already disclosed by the current Blueprint Journal or Tech Tree are included; analysis progress does not disclose a hidden target. Ordinary discount progress and public criteria remain separate fields.
 
 Each analysis wire entry contains a bounded canonical target ID followed by four nonnegative VarInts in this fixed order: protected/prerequisites, protected/bypass, recyclable/prerequisites, recyclable/bypass. This order is explicit in the serializer and does not use enum ordinals. Empty entries, invalid totals, duplicate IDs, byte-budget overflow, and combined archive-limit overflow are rejected. Reordered chunks publish only after a complete valid snapshot arrives. Empty snapshots clear previously synchronized analysis counts; disconnect clears the accumulator.
 

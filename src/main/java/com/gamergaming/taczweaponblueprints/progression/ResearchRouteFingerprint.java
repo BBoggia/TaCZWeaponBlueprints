@@ -134,6 +134,9 @@ public record ResearchRouteFingerprint(long high, long low) {
             MessageDigest digest,
             BlueprintProgressionConfigSnapshot config) {
         update(digest, "progression_config");
+        update(digest, config.currencyPolicy().kind().name());
+        update(digest, config.currencyPolicy().item().map(Object::toString).orElse(""));
+        update(digest, config.currencyPolicy().revision());
         update(digest, config.blueprintsEnabled() ? 1L : 0L);
         update(digest, config.discoveryTrackingEnabled() ? 1L : 0L);
         update(digest, config.journalEnabled() ? 1L : 0L);

@@ -24,20 +24,20 @@ class BlueprintKnowledgeFlowPhaseFiveTest {
     void analyzerWireAndSlotExtensionsAreAppendOnlyAndExact() {
         assertEquals(
                 List.of("RECYCLE", "REDEEM", "REDEEM_STACK", "REVERSE_ENGINEER",
-                        "RECOVER_POINTS", "ARCHIVE_FRAGMENTS"),
+                        "RECOVER_POINTS", "ARCHIVE_FRAGMENTS", "ANALYZE_DATA"),
                 Arrays.stream(BlueprintRecyclerActionContract.Action.values())
                         .map(Enum::name)
                         .toList());
         assertEquals(
                 List.of("EMPTY", "INVALID", "BLUEPRINT", "RESEARCH_DATA", "PHYSICAL_ITEM",
-                        "BLUEPRINT_FRAGMENT"),
+                        "BLUEPRINT_FRAGMENT", "DATA_ANALYSIS"),
                 Arrays.stream(BlueprintRecyclerPreview.InputKind.values())
                         .map(Enum::name)
                         .toList());
         assertEquals(0, BlueprintRecyclerMenu.INPUT_SLOT);
         assertEquals(1, BlueprintRecyclerMenu.OUTPUT_SLOT);
         assertEquals(2, BlueprintRecyclerMenu.FIRST_PLAYER_SLOT);
-        assertEquals("59", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("62", NetworkHandler.PROTOCOL_VERSION);
     }
 
     @Test

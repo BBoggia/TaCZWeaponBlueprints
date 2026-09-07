@@ -31,19 +31,18 @@ public class CapabilityEventHandler {
     public static void onPlayerClone(PlayerEvent.Clone event) {
         // Forge also clones players when they leave the End. Copy on every clone,
         // not only death clones, so learned recipes survive that transition.
-        event.getOriginal().reviveCaps();
-        try {
-            event.getOriginal().getCapability(ModCapabilities.PLAYER_RECIPE_DATA).ifPresent(oldData -> {
-                event.getEntity().getCapability(ModCapabilities.PLAYER_RECIPE_DATA).ifPresent(newData -> {
-                    copyRecipeData(oldData, newData);
-                });
-            });
-        } finally {
-            event.getOriginal().invalidateCaps();
-        }
+        // reviveCaps only reopens the entity dispatcher; it cannot revive the
+        // provider's invalidated LazyOptional. Serialization still owns the
+        // backend and remains available after invalidation. Read only our tag,
+        // without reopening another mod's capabilities on the removed player.
+        var saved = event.getOriginal().serializeNBT();
+        event.getEntity().getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
+                .ifPresent(newData -> copySerializedRecipeData(saved, newData));
     }
 
-    static void copyRecipeData(IPlayerRecipeData original, IPlayerRecipeData clone) {
-        clone.deserializeNBT(original.serializeNBT());
+    static void copySerializedRecipeData(net.minecraft.nbt.CompoundTag player, IPlayerRecipeData clone) {
+        var caps = player.getCompound("ForgeCaps");
+        if (caps.contains(PLAYER_RECIPE_DATA_ID.toString(), net.minecraft.nbt.Tag.TAG_COMPOUND))
+            clone.deserializeNBT(caps.getCompound(PLAYER_RECIPE_DATA_ID.toString()).copy());
     }
 }

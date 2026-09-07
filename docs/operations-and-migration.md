@@ -1,5 +1,15 @@
 # Operations and Migration
 
+## Economy upgrade choices
+
+New configurations and older files missing economy selectors use physical Scrap
+and Research Data analysis. Saved RP remains intact and separate from carried
+Scrap. Choose banked RP explicitly to keep using that balance; choose
+`LEGACY_CURRENCY` as well to preserve fixed Data redemption. The
+[configuration guide](research-currency-configuration.md) covers all combinations.
+Follow [currency migration](research-currency-migration.md) to retain those
+settings before first startup or preview a deliberate one-way withdrawal.
+
 ## Supported runtime
 
 The current build targets Minecraft 1.20.1, Forge 47.x, TaCZ 1.1.8-hotfix,
@@ -13,7 +23,7 @@ and grouped-route generator for every recipe-backed weapon, including add-on
 weapons. Its old authored coordinates and prerequisite declarations remain
 dormant compatibility data and never mix into the active automatic weapon
 graph. Research costs follow
-the generated capability tier (2/4/6/8/10/12 RP), while attachment and ammo
+the generated capability tier (2/4/6/8/10/12 currency units), while attachment and ammo
 research remains authored but disabled by default.
 
 Install the blueprint mod and required dependencies on both client and server. TaCZ gun content packs remain normal TaCZ resources and do not need to be declared as Forge mods.
@@ -25,11 +35,11 @@ that needs a temporary compatibility window. Changing the setting requires no
 world conversion and does not rewrite existing knowledge or physical items.
 In `DIRECT_LEARN`, selecting a higher locked node previews and can purchase a
 globally shortest viable prerequisite closure. Among equally short closures,
-the server compares RP cost, total material units, and canonical blueprint IDs.
-Inventory and RP affect readiness without changing that canonical route.
+the server compares currency cost, total material units, and canonical blueprint IDs.
+Inventory and currency affect readiness without changing that canonical route.
 Progression-exempt alternatives satisfy their groups without being purchased.
 The server charges every
-distinct newly learned node's aggregate RP and materials exactly once and
+distinct newly learned node's aggregate currency and materials exactly once and
 commits the complete path atomically. `CREATE_BLUEPRINT` intentionally retains
 single-node behavior because creating one physical item cannot represent a
 multi-node permanent unlock.
@@ -68,7 +78,7 @@ selectors with `/gg research status` after changing packs or configuration.
 
 `researchCostMode` is a synchronized server policy. `POINTS_AND_ITEMS` is the
 compatibility default; `POINTS_ONLY` suppresses authored item/tag ingredients,
-and `ITEMS_ONLY` suppresses authored RP costs. The source datapack costs are not
+and `ITEMS_ONLY` suppresses authored currency costs. The source datapack costs are not
 rewritten, so changing the mode or returning to the default restores them. The
 same effective cost is used by single-node research, shortest-path purchases,
 server previews, commands, and economy exports.
@@ -82,15 +92,18 @@ third-party path, fail closed and retain protected behavior.
 
 The other modes are `RECYCLABLE_BLUEPRINT`, `DIRECT_RP_ONLY`, and
 `PLAYER_CHOICE`. Direct conversion uses the target's existing recycling value,
-still pays the target's reverse-engineering RP/material cost, applies the RP cap
-after that cost, consumes the weapon once, and does not learn the blueprint.
+still pays the target's reverse-engineering currency/material cost, consumes the
+weapon once, and does not learn the blueprint. Banked mode applies the RP cap
+after payment; physical mode requires complete delivery through compatible
+Analyzer Output and main inventory, with no dropped overflow.
 The Analyzer requires a second confirmation before directly converting an
 unlearned weapon. Target recycling gates and the global duplicate-recycling
 policy remain economy controls; a recovery mode does not silently override
 them. Disabling `physical_blueprint_learning` blocks protected blueprint
-learning, but it does not block direct RP recovery or an explicitly
+learning, but it does not block direct currency recovery or an explicitly
 recyclable-only output because neither path teaches the recipe. See
-`docs/research-cost-and-found-weapon-recovery.md` for the full matrix.
+[research costs and found-weapon recovery](research-cost-and-found-weapon-recovery.md)
+for the full matrix.
 
 ## Balance presets and setup assistant
 
@@ -190,10 +203,10 @@ Player-data version 5 adds `ArchivedAnalysisFragments` with four named reward
 classes per target. Versions 0–4 load with that archive empty. Analysis progress
 is reconstruction-only and shares the target-count and hard per-target bounds
 with ordinary fragments. Existing ordinary counts load first and are never
-displaced by the new channel. Protocol 59 synchronizes disclosed analysis counts
+displaced by the new channel. Protocol 62 synchronizes disclosed analysis counts
 alongside ordinary fragments and public criteria. See
 [analysis fragment storage](analysis-fragment-storage.md) for the implemented
-format and API; Analyzer menu integration remains pending.
+format, API, and Analyzer archiving/reconstruction behavior.
 
 Optional [Analyzer datapacks and balance reports](analyzer-presets-and-balancing.md)
 provide tiered starting values without changing existing installations. Merge
@@ -201,7 +214,7 @@ only the Analyzer extension when your pack already customizes the active
 profile. Disabling tiered analysis preserves marked fragments and saved counts;
 it does not convert them into ordinary discounts or RP.
 
-The custom network protocol is `59`, so clients and servers must update
+The custom network protocol is `62`, so clients and servers must update
 together. Protocol 50 transfers each
 disclosure-safe research graph, matching group presentation, and optional
 identity-safe Tech Tree metadata as one bounded atomic publication. It also
@@ -449,7 +462,8 @@ the format-19 research, fragment, and gate fields retain their meanings.
 Format 21 adds authored Tech Tree branches. Format 22 adds `analyzer_policy`
 to gun entries, including effective tiered odds, costs, reconstruction thresholds,
 and rule evidence. These policy-only projections use a labelled protected-mode
-baseline; Analyzer gameplay remains deterministic. See
+baseline. Weapon gameplay uses the resolved legacy or tiered policy; bundled
+Research Data uses its separate analysis policies. See
 [Blueprint Analyzer policy authoring](analyzer-policy-authoring.md) for profile/rule
 format 5 and the export contract. Strict format-21 consumers must migrate explicitly.
 Tech Tree-only members still record
@@ -462,7 +476,10 @@ the last published research snapshot.
 Permission-level-2 operators may grant RP with
 `/gg progression points give <targets> <amount>`. Grants respect the live
 `researchPointCap`, synchronize successful balances immediately, and leave
-learned/discovered blueprint state unchanged.
+learned/discovered blueprint state unchanged. These grants remain banked even
+in physical mode. Use `/gg progression currency give <targets> <amount>` for
+the active currency; [currency integrations](research-currency-integrations.md)
+describes delivery and the Java API.
 
 New configurations use a 10,000 RP balance cap. The Server Settings slider is
 bounded to 0-100,000 so accidental extreme values do not make the control
@@ -495,36 +512,41 @@ spawner, bred, and summoned sources. Neither setting
 changes duplicate recycling, trusted operator grants, balances, or saved award
 history.
 
-### Built-in Research Point economy
+### Built-in research economy
 
-The bundled publication contains 15 enabled definitions. A first discovery of
-any current-catalog blueprint grants 1 RP once for that blueprint, including
-retroactive reconciliation. Discovery thresholds at 10 and 25 and learned
-thresholds at 5, 15, and 30 grant 18 finite RP in total. Acquire Hardware,
-Diamonds!, A Terrible Fortress, Into Fire, The End?, and Free the End grant a
-further 28 finite RP and reconcile for existing players. Every bundled finite
-reward uses `require_full`: when its full value cannot fit below the RP cap, the
-claim remains unconsumed and the reconciliation scheduler retries it after the
-player spends RP.
+The bundled award publication contains 15 enabled definitions. First discovery
+of a current-catalog blueprint grants one active-currency unit once per target,
+including configured reconciliation. Discovery and learning milestones supply
+18 finite units; Acquire Hardware, Diamonds!, A Terrible Fortress, Into Fire,
+The End?, and Free the End supply another 28. These amounts use the selected
+physical item or banked RP. All bundled finite rewards require full delivery;
+failed delivery leaves the claim available for the reconciliation scheduler.
+Physical event awards can use bounded drops; banked awards require cap space.
 
-For the pinned TaCZ 1.1.8 catalog, the maximum first-discovery plus fixed
-milestone/advancement income is 218 RP against 1,246 RP of complete default-tree
-research cost. It is intentionally supplemental; duplicate recycling,
-exploration, and pack-authored sources remain relevant.
+Finite income depends on the installed catalog and is supplemental. Use a fresh
+`/gg research export` and the [economy report](research-economy-balance.md) for
+actual research prices and modeled sources. Historical pinned catalog totals
+in earlier release reports are not the current world's economy.
 
-Research Notes, Reports, and Dossiers redeem for exactly 1, 3, and 6 RP with
-`require_full` overflow, so a near-cap balance never consumes an item for a
-partial award. Notes have a 12% chance in abandoned-mineshaft, simple-dungeon,
-and pillager-outpost chests. Reports have an 8% chance in stronghold-library,
+Research Notes, Reports, and Dossiers default to analysis. Their weapon pools
+are T1, T1–2, and T1–3, and station tiers improve quantities and blueprint odds.
+Legacy Data redemption still supplies 1, 3, and 6 active-currency units with
+`require_full` delivery. Its manual actions do not consume an item for a partial
+reward or drop overflow.
+
+Notes have a 12% chance in abandoned-mineshaft, simple-dungeon, and
+pillager-outpost chests. Reports have an 8% chance in stronghold-library,
 woodland-mansion, and bastion-treasure chests. Dossiers have a 5% chance in
 ancient-city and End-city-treasure chests. These eight
 `taczweaponblueprints:research_data/*` global loot modifiers can be replaced or
-removed by a datapack independently of the award values. The global RP award
-kill switch also prevents their built-in loot injection while disabled.
+removed independently of award values. `enableResearchDataLoot` controls their
+injection independently of processing mode and `enableResearchPointAwards`.
 
-No built-in `entity_killed` or `integration` award is shipped. Combat remains
-an explicit pack-author choice and still requires the separate combat kill
-switch.
+Scrap has its own chest and player-kill supply modifier and `enableScrapLoot`
+switch. The [supply guide](research-economy-balance.md#first-scrap-and-renewable-supply)
+lists tables, quantities, and the per-roll budget. No built-in `entity_killed`
+or `integration` award definition ships; these remain explicit pack-author
+choices. The separate combat award switch does not control Scrap loot.
 
 The progression reset command accepts `learned`, `discovered`, `points`,
 `awards`, `fragments`, `criteria`, and `all`. The first three preserve RP award,
@@ -729,7 +751,7 @@ bundled `connected` mode with `place_connected` review handling, the three
 version identities, dynamic layering with a configured 9–20-node range and its
 baseline resolved width, optional
 tree-owned optional/dynamic/configured presentation bands, the 4,096-candidate
-limit, protocol 59, export format 22, and automatic prerequisite strategy
+limit, protocol 62, export format 22, and automatic prerequisite strategy
 `grouped_routes_v1` unless the
 corresponding contract and compatibility documentation are deliberately
 revised.
@@ -737,7 +759,7 @@ revised.
 The Phase 10 research-guidance handoff writes
 `build/reports/research-guidance-candidate-handoff.json`. It binds the complete
 Phase 9 automated report and manual-QA matrix to the exact candidate JAR,
-preserves the protocol 59/player-data 5/client-settings 3 compatibility tuple,
+preserves the protocol 62/player-data 5/client-settings 3 compatibility tuple,
 and carries 21 clean invariants, 16 packaged classes, and 48 localized surfaces
 into release certification. Its `requires_manual_qa` state is intentional:
 complete the linked runtime matrix before publication rather than treating an
@@ -800,7 +822,7 @@ The grouped-prerequisite Phase 12 visual-refinement gate writes
 `branch-aware-visual-refinement-v1` and verifies client-only family-preserving
 responsive wrapping, bounded grouped-junction clearance, branch-seam pressure,
 and deterministic 287/4,096-node geometry. It does not migrate saves or change
-the published graph: prerequisite groups, semantic ranks, costs, protocol 59,
+the published graph: prerequisite groups, semantic ranks, costs, protocol 62,
 export format 22, and the packaged `grouped_routes_v1` strategy remain
 authoritative. Before public release, retain the gate report and complete its
 linked before/after screenshot checks at normal and maximum zoom-out.

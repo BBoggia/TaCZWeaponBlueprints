@@ -1,5 +1,7 @@
 package com.gamergaming.taczweaponblueprints.progression;
 
+import com.gamergaming.taczweaponblueprints.progression.currency.*;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -34,6 +36,9 @@ public final class ResearchDataRedemptionService {
     }
 
     public static Evaluation evaluate(ServerPlayer player) {
+        var mode = ModConfigs.BLUEPRINT.dataSettings().behavior();
+        if (mode != com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPolicy.Behavior.LEGACY_CURRENCY)
+            return Evaluation.failure(mode == com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPolicy.Behavior.DISABLED ? Status.DATA_DISABLED : Status.STATION_REQUIRED, activeBalance(player), ModConfigs.BLUEPRINT.currencyPolicy().pointCap());
         ServerState state = serverState(player);
         if (state == null) {
             return Evaluation.failure(
@@ -41,16 +46,19 @@ public final class ResearchDataRedemptionService {
                     0,
                     0);
         }
-        return findCandidate(
+        return currencyEvaluation(player, state, findCandidate(
                 inventory(player),
                 state.data(),
                 ResearchPointAwardDataManager.INSTANCE.snapshot(),
                 state.config(),
                 gameTime(player),
-                false).evaluation();
+                false));
     }
 
     public static Result redeem(ServerPlayer player, boolean bulk) {
+        var mode = ModConfigs.BLUEPRINT.dataSettings().behavior();
+        if (mode != com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPolicy.Behavior.LEGACY_CURRENCY)
+            return Result.failure(mode == com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPolicy.Behavior.DISABLED ? Status.DATA_DISABLED : Status.STATION_REQUIRED, activeBalance(player));
         ServerState state = serverState(player);
         if (state == null) {
             return Result.failure(
@@ -68,12 +76,16 @@ public final class ResearchDataRedemptionService {
                 state.config(),
                 gameTime(player),
                 maximum);
-        publishSuccess(player, result);
+        publishSuccess(player, result, state.config().currencyPolicy());
         return result;
     }
 
     /** Evaluates only the physical stack supplied by a workstation slot. */
     public static Evaluation evaluateInput(ServerPlayer player, ItemStack input) {
+        if (input != null && !input.isEmpty() && !ResearchDataAnalysisService.legacyAllowed(input))
+            return new Evaluation(ModConfigs.BLUEPRINT.dataSettings().behavior() == com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPolicy.Behavior.DISABLED ? Status.DATA_DISABLED : Status.STATION_REQUIRED, itemId(input), Math.min(64, input.getCount()), 0,
+                    player == null ? 0 : ResearchCurrencyPayments.balance(ModConfigs.BLUEPRINT.currencyPolicy(), player.getInventory().items,
+                            player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElse(null)), ModConfigs.BLUEPRINT.currencyPolicy().pointCap());
         Optional<ResourceLocation> inputId = itemId(input);
         int inputCount = input == null ? 0 : input.getCount();
         ServerState state = serverState(player);
@@ -89,16 +101,16 @@ public final class ResearchDataRedemptionService {
         if (inputId.isEmpty() || inputCount <= 0) {
             return Evaluation.failure(
                     Status.NO_MATCH,
-                    state.data().getResearchPoints(),
-                    state.config().pointCap());
+                    activeBalance(player, state.data(), state.config()),
+                    state.config().currencyPolicy().pointCap());
         }
-        return findCandidate(
+        return currencyEvaluation(player, state, findCandidate(
                 List.of(new DirectStackEntry(input, inputCount)),
                 state.data(),
                 ResearchPointAwardDataManager.INSTANCE.snapshot(),
                 state.config(),
                 gameTime(player),
-                true).evaluation();
+                true));
     }
 
     /**
@@ -117,6 +129,7 @@ public final class ResearchDataRedemptionService {
                     player == null ? Status.INVALID_PLAYER : Status.PLAYER_DATA_UNAVAILABLE,
                     0);
         }
+        if (!ResearchDataAnalysisService.legacyAllowed(input)) return Result.failure(Status.STATION_REQUIRED, activeBalance(player, state.data(), state.config()));
         Optional<ResourceLocation> actualId = itemId(input);
         if (expectedInputId == null
                 || expectedInputCount < 1
@@ -126,7 +139,7 @@ public final class ResearchDataRedemptionService {
                 || !actualId.filter(expectedInputId::equals).isPresent()
                 || input == null
                 || input.getCount() != expectedInputCount) {
-            return Result.failure(Status.STALE_INVENTORY, state.data().getResearchPoints());
+            return Result.failure(Status.STALE_INVENTORY, activeBalance(player, state.data(), state.config()));
         }
 
         int maximum = bulk ? expectedInputCount : 1;
@@ -138,7 +151,7 @@ public final class ResearchDataRedemptionService {
                 state.config(),
                 gameTime(player),
                 maximum);
-        publishSuccess(player, result);
+        publishSuccess(player, result, state.config().currencyPolicy());
         return result;
     }
 
@@ -181,7 +194,7 @@ public final class ResearchDataRedemptionService {
         if (maximum < 1
                 || maximum > PlayerProgressionLimits.MAX_RESEARCH_DATA_REDEMPTIONS_PER_ACTION) {
             return Result.failure(Status.NO_ELIGIBLE_AWARD,
-                    data == null ? 0 : data.getResearchPoints());
+                    activeBalance(player, data, config));
         }
         int consumed = 0;
         int points = 0;
@@ -195,6 +208,15 @@ public final class ResearchDataRedemptionService {
             }
 
             InventoryEntry entry = candidate.entry().orElseThrow();
+            if (player != null && ResearchCurrencyPayments.physical(config.currencyPolicy())) {
+                var external = externalTransaction(entry, candidate, player, data);
+                var live = external.currencyContext();
+                var request = new ResearchCurrencyPlanner.Request(0, List.of(), candidate.evaluation().pointValue(), external.destination(),
+                        ResearchPointTransactionService.OverflowPolicy.REQUIRE_FULL);
+                var delivery = entry.inventorySlot() >= 0 ? ResearchCurrencyPlanner.prepareWithInput(live.policy(), live.read(), request, entry.inventorySlot(), 1)
+                        : ResearchCurrencyPlanner.prepare(live.policy(), live.read(), request);
+                if (!delivery.quote().ready()) { terminal = Status.DELIVERY_FULL; break; }
+            }
             // Reject an already-stale candidate before callbacks. The external
             // transaction repeats this check after cancellable pre-award events.
             if (!entry.matches(
@@ -210,7 +232,7 @@ public final class ResearchDataRedemptionService {
                             candidate.context(),
                             config,
                             gameTime,
-                            externalTransaction(entry, candidate))
+                            externalTransaction(entry, candidate, player, data))
                     : ResearchPointAwardService.awardResolved(
                             player,
                             data,
@@ -218,7 +240,7 @@ public final class ResearchDataRedemptionService {
                             candidate.context(),
                             config,
                             gameTime,
-                            externalTransaction(entry, candidate));
+                            externalTransaction(entry, candidate, player, data));
             if (!award.pointsChanged()) {
                 terminal = award.awards().stream().anyMatch(value ->
                         value.status() == ResearchPointAwardService.Status.EXTERNAL_STATE_CHANGED)
@@ -230,9 +252,18 @@ public final class ResearchDataRedemptionService {
             points += award.awardedPoints();
             terminal = Status.SUCCESS;
         }
-        return points > 0
-                ? new Result(Status.SUCCESS, consumed, points, data.getResearchPoints())
-                : Result.failure(terminal, data == null ? 0 : data.getResearchPoints());
+        int balance = activeBalance(player, data, config);
+        return points > 0 ? new Result(Status.SUCCESS, consumed, points, balance) : Result.failure(terminal, balance);
+    }
+
+    private static int activeBalance(ServerPlayer player) {
+        return player == null ? 0 : ResearchCurrencyPayments.balance(ModConfigs.BLUEPRINT.currencyPolicy(), player.getInventory().items,
+                player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElse(null));
+    }
+
+    private static int activeBalance(ServerPlayer player, IPlayerRecipeData data, ResearchPointAwardConfigSnapshot config) {
+        return player == null ? data == null ? 0 : data.getResearchPoints()
+                : ResearchCurrencyPayments.balance(config.currencyPolicy(), player.getInventory().items, data);
     }
 
     private static Candidate findCandidate(
@@ -346,20 +377,54 @@ public final class ResearchDataRedemptionService {
 
     private static ResearchPointAwardService.ExternalTransaction externalTransaction(
             InventoryEntry entry,
-            Candidate candidate) {
+            Candidate candidate, ServerPlayer player, IPlayerRecipeData data) {
+        ItemStack before = entry.snapshot();
+        ItemStack after = before.copy(); after.shrink(1);
         ResourceLocation expectedId = candidate.evaluation().itemId().orElseThrow();
         Set<ResourceLocation> expectedTags = candidate.context().targetTags();
         return new ResearchPointAwardService.ExternalTransaction() {
             @Override
             public boolean valid() {
-                return entry.matches(expectedId, expectedTags);
+                return (player == null || ResearchDataAnalysisService.legacyAllowed(expectedId)) && entry.matches(expectedId, expectedTags)
+                        && (before.isEmpty() || ItemStack.matches(before, entry.snapshot()));
             }
 
             @Override
             public void commit() {
+                if (!valid()) throw new IllegalStateException("Research Data input changed");
                 entry.consumeOne();
             }
+            @Override public boolean verifiable() { return !before.isEmpty(); }
+            @Override public int inventorySlot() { return entry.inventorySlot(); }
+            @Override public boolean committed() { return ItemStack.matches(after, entry.snapshot()); }
+            @Override public boolean rollback() {
+                if (ItemStack.matches(before, entry.snapshot())) return true;
+                return committed() && entry.restore(before);
+            }
+            @Override public ResearchCurrencyTransaction.Context currencyContext() {
+                return player == null ? null : entry.inventorySlot() >= 0 ? PlayerResearchCurrencyContext.inventory(player, data)
+                        : ResearchCurrencyManual.context(player, data);
+            }
+            @Override public ResearchCurrencyPlanner.Destination destination() {
+                var context = currencyContext(); return context == null ? ResearchCurrencyPlanner.Destination.INVENTORY_ONLY : context.destination();
+            }
         };
+    }
+
+    private static Evaluation currencyEvaluation(ServerPlayer player, ServerState state, Candidate candidate) {
+        var e = candidate.evaluation();
+        if (!ResearchCurrencyPayments.physical(state.config().currencyPolicy())) return e;
+        Status status = e.status();
+        if (e.redeemable() && candidate.entry().isPresent()) {
+            var external = externalTransaction(candidate.entry().orElseThrow(), candidate, player, state.data());
+            var live = external.currencyContext();
+            var request = new ResearchCurrencyPlanner.Request(0, List.of(), e.pointValue(), external.destination(), ResearchPointTransactionService.OverflowPolicy.REQUIRE_FULL);
+            var plan = external.inventorySlot() >= 0 ? ResearchCurrencyPlanner.prepareWithInput(live.policy(), live.read(), request, external.inventorySlot(), 1)
+                    : ResearchCurrencyPlanner.prepare(live.policy(), live.read(), request);
+            if (!plan.quote().ready()) status = Status.DELIVERY_FULL;
+        }
+        return new Evaluation(status, e.itemId(), e.availableItems(), e.pointValue(),
+                ResearchCurrencyPayments.balance(state.config().currencyPolicy(), player.getInventory().items, state.data()), 0);
     }
 
     private static ServerState serverState(ServerPlayer player) {
@@ -382,7 +447,7 @@ public final class ResearchDataRedemptionService {
                 : Optional.ofNullable(ForgeRegistries.ITEMS.getKey(stack.getItem()));
     }
 
-    private static void publishSuccess(ServerPlayer player, Result result) {
+    private static void publishSuccess(ServerPlayer player, Result result, ResearchCurrencyPolicy currency) {
         if (player == null || result == null || !result.successful()) {
             return;
         }
@@ -393,7 +458,7 @@ public final class ResearchDataRedemptionService {
                         result.awardedPoints(),
                         result.consumedItems(),
                         false,
-                        List.of()));
+                        List.of()), currency);
         ResearchPointPresentationService.syncHelp(player);
     }
 
@@ -405,6 +470,9 @@ public final class ResearchDataRedemptionService {
         int count();
 
         void consumeOne();
+        default ItemStack snapshot() { return ItemStack.EMPTY; }
+        default boolean restore(ItemStack stack) { return false; }
+        default int inventorySlot() { return -1; }
 
         default boolean matches(
                 ResourceLocation expectedId,
@@ -426,9 +494,10 @@ public final class ResearchDataRedemptionService {
             this.slot = slot;
         }
 
-        private ItemStack stack() {
-            return inventory.get(slot);
-        }
+        private ItemStack stack() { return inventory.get(slot); }
+        @Override public ItemStack snapshot() { return stack().copy(); }
+        @Override public boolean restore(ItemStack stack) { inventory.set(slot, stack.copy()); return ItemStack.matches(stack, snapshot()); }
+        @Override public int inventorySlot() { return slot; }
 
         @Override
         public ResourceLocation itemId() {
@@ -483,6 +552,9 @@ public final class ResearchDataRedemptionService {
             expectedCount--;
         }
 
+        @Override public ItemStack snapshot() { return stack.copy(); }
+        @Override public boolean restore(ItemStack before) { stack.setCount(before.getCount()); expectedCount = before.getCount(); return ItemStack.matches(stack, before); }
+
         @Override
         public boolean matches(
                 ResourceLocation expectedId,
@@ -499,7 +571,11 @@ public final class ResearchDataRedemptionService {
         NO_MATCH,
         NO_ELIGIBLE_AWARD,
         POINT_CAP_REACHED,
-        STALE_INVENTORY
+        STALE_INVENTORY,
+        DELIVERY_FULL,
+        STATION_REQUIRED, DATA_DISABLED, ALL_LEARNED, EMPTY_POOL, STATION_TIER_REQUIRED,
+        OUTPUT_OCCUPIED, POINTS_REQUIRED, INGREDIENTS_REQUIRED, PROGRESSION_CAPACITY_EXHAUSTED,
+        TRANSACTION_FAILED, ROLLBACK_FAILED
     }
 
     public record Evaluation(
@@ -534,8 +610,8 @@ public final class ResearchDataRedemptionService {
          */
         public boolean matchedInput() {
             boolean matchedStatus = switch (status) {
-                case SUCCESS, NO_ELIGIBLE_AWARD, POINT_CAP_REACHED -> true;
-                case INVALID_PLAYER, PLAYER_DATA_UNAVAILABLE, NO_MATCH, STALE_INVENTORY -> false;
+                case SUCCESS, NO_ELIGIBLE_AWARD, POINT_CAP_REACHED, DELIVERY_FULL -> true;
+                default -> false;
             };
             return matchedStatus && itemId.isPresent() && availableItems > 0;
         }

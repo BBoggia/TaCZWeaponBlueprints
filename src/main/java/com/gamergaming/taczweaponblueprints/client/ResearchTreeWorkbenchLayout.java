@@ -4,8 +4,11 @@ import com.gamergaming.taczweaponblueprints.client.ResearchTreeScreenLayout.Rect
 
 /** Single owner of the persistent Tech Tree canvas, inspector, header and overlay space. */
 public record ResearchTreeWorkbenchLayout(ResearchTreeFullscreenLayout.Layout overlays, Rect header,
-        Rect canvas, Rect inspector, Rect inspectorContent, Rect action, Rect track, Rect target, Rect branch) {
+        Rect canvas, Rect inspector, boolean inspectorVisible, Rect inspectorContent, Rect action, Rect track, Rect target, Rect branch) {
     public static ResearchTreeWorkbenchLayout create(int width, int height) {
+        return create(width, height, true);
+    }
+    public static ResearchTreeWorkbenchLayout create(int width, int height, boolean inspectorVisible) {
         var overlays = ResearchTreeFullscreenLayout.forScreen(width, height);
         // Leave room for the filter and Branch controls even at the minimum GUI size.
         var search = overlays.searchField();
@@ -25,8 +28,9 @@ public record ResearchTreeWorkbenchLayout(ResearchTreeFullscreenLayout.Layout ov
             inspector = new Rect(x, bottom - ih, width - x - 8, ih);
             canvas = new Rect(x, top, width - x - 8, inspector.y() - top - 6);
         }
+        if (!inspectorVisible) canvas = new Rect(x, top, width - x - 8, bottom - top);
         int row = inspector.bottom() - 26;
-        return new ResearchTreeWorkbenchLayout(overlays, new Rect(x, 30, width - x - 8, 14), canvas, inspector,
+        return new ResearchTreeWorkbenchLayout(overlays, new Rect(x, 30, width - x - 8, 14), canvas, inspector, inspectorVisible,
                 new Rect(inspector.x() + 8, inspector.y() + 8, inspector.width() - 16, row - inspector.y() - 12),
                 new Rect(inspector.x() + 8, row, inspector.width() - 64, 20),
                 new Rect(inspector.right() - 48, row, 20, 20), new Rect(inspector.right() - 24, row, 20, 20),
@@ -40,7 +44,7 @@ public record ResearchTreeWorkbenchLayout(ResearchTreeFullscreenLayout.Layout ov
     }
     public ResearchTreeWorkbenchLayout {
 
-        if (canvas.overlaps(inspector) || canvas.overlaps(header) || inspector.overlaps(header)
+        if ((inspectorVisible && canvas.overlaps(inspector)) || canvas.overlaps(header) || inspector.overlaps(header)
                 || !inspector.contains(inspectorContent) || !inspector.contains(action)
                 || !inspector.contains(track) || !inspector.contains(target)) throw new IllegalArgumentException("conflicting workbench rectangles");
     }

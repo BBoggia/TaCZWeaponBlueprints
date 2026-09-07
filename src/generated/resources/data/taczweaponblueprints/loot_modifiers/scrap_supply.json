@@ -1,0 +1,91 @@
+{
+  "type": "taczweaponblueprints:scrap_supply",
+  "conditions": [],
+  "tables": {
+    "minecraft:chests/abandoned_mineshaft": {
+      "chance": 1.0,
+      "maximum": 16,
+      "minimum": 8
+    },
+    "minecraft:chests/ancient_city": {
+      "chance": 1.0,
+      "maximum": 32,
+      "minimum": 16
+    },
+    "minecraft:chests/bastion_treasure": {
+      "chance": 1.0,
+      "maximum": 32,
+      "minimum": 16
+    },
+    "minecraft:chests/end_city_treasure": {
+      "chance": 1.0,
+      "maximum": 32,
+      "minimum": 16
+    },
+    "minecraft:chests/pillager_outpost": {
+      "chance": 1.0,
+      "maximum": 16,
+      "minimum": 8
+    },
+    "minecraft:chests/shipwreck_supply": {
+      "chance": 1.0,
+      "maximum": 16,
+      "minimum": 8
+    },
+    "minecraft:chests/simple_dungeon": {
+      "chance": 1.0,
+      "maximum": 16,
+      "minimum": 8
+    },
+    "minecraft:chests/stronghold_library": {
+      "chance": 1.0,
+      "maximum": 32,
+      "minimum": 16
+    },
+    "minecraft:chests/village/village_toolsmith": {
+      "chance": 1.0,
+      "maximum": 16,
+      "minimum": 8
+    },
+    "minecraft:chests/village/village_weaponsmith": {
+      "chance": 1.0,
+      "maximum": 16,
+      "minimum": 8
+    },
+    "minecraft:chests/woodland_mansion": {
+      "chance": 1.0,
+      "maximum": 32,
+      "minimum": 16
+    },
+    "minecraft:entities/husk": {
+      "chance": 0.25,
+      "maximum": 2,
+      "minimum": 1,
+      "player_kill": true
+    },
+    "minecraft:entities/pillager": {
+      "chance": 0.25,
+      "maximum": 2,
+      "minimum": 1,
+      "player_kill": true
+    },
+    "minecraft:entities/skeleton": {
+      "chance": 0.25,
+      "maximum": 2,
+      "minimum": 1,
+      "player_kill": true
+    },
+    "minecraft:entities/stray": {
+      "chance": 0.25,
+      "maximum": 2,
+      "minimum": 1,
+      "player_kill": true
+    },
+    "minecraft:entities/zombie": {
+      "chance": 0.25,
+      "maximum": 2,
+      "minimum": 1,
+      "player_kill": true
+    }
+  }
+}

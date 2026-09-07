@@ -4,15 +4,19 @@ import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits
 import com.gamergaming.taczweaponblueprints.compat.fzzy_config.BlueprintConfig;
 
 import net.minecraft.resources.ResourceLocation;
+import com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy;
 
 /** Immutable coarse server policy for datapack-authored Research Point awards. */
 public record ResearchPointAwardConfigSnapshot(
         boolean awardsEnabled,
         boolean combatAwardsEnabled,
         int pointCap,
-        ResourceLocation activeProfileId) {
+        ResourceLocation activeProfileId, ResearchCurrencyPolicy currencyPolicy) {
+    public ResearchPointAwardConfigSnapshot(boolean awardsEnabled, boolean combatAwardsEnabled, int pointCap, ResourceLocation activeProfileId) {
+        this(awardsEnabled, combatAwardsEnabled, pointCap, activeProfileId, ResearchCurrencyPolicy.banked(pointCap, 1));
+    }
     public ResearchPointAwardConfigSnapshot {
-        if (pointCap < 0 || pointCap > PlayerProgressionLimits.MAX_RESEARCH_POINTS
+        if (currencyPolicy == null || pointCap < 0 || pointCap > PlayerProgressionLimits.MAX_RESEARCH_POINTS
                 || activeProfileId == null
                 || activeProfileId.toString().length() > PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH) {
             throw new IllegalArgumentException("invalid Research Point award configuration");
@@ -29,6 +33,6 @@ public record ResearchPointAwardConfigSnapshot(
                 config.enableResearchPointAwards.get(),
                 config.enableCombatResearchPointAwards.get(),
                 progression.pointCap(),
-                progression.activeProfileId());
+                progression.activeProfileId(), progression.currencyPolicy());
     }
 }

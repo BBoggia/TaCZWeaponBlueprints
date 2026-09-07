@@ -6,16 +6,23 @@ client only presents the server's bounded preview. When Research is pressed,
 the server first repairs legacy knowledge, prepares one fresh authoritative
 attempt, validates its fingerprint, and commits that same prepared route.
 
+Numeric costs use physical Scrap by default or optional banked RP. The
+[currency guide](research-currency-configuration.md) defines cost channels and
+inventory scope; this document defines route selection and purchase authority.
+
 ## Route semantics
 
 - Requirement groups remain ANDed.
-- An already learned or progression-exempt alternative satisfies its group
-  without adding cost. A progression-exempt selected target remains ineligible.
+- A learned alternative satisfies its group only when its own effective
+  prerequisites contain a complete learned route to a root. Missing ancestry
+  can be included in the purchase without charging the learned support again.
+  A progression-exempt alternative satisfies its group without adding cost;
+  a progression-exempt selected target remains ineligible.
 - Every nondominated alternative closure is retained while mandatory groups
   are combined. Shared prerequisites are deduplicated before the globally
   shortest closure size is selected.
-- Among globally shortest closures, remaining ties use payable RP, total
-  material units, and canonical blueprint IDs. Live RP and inventory affect
+- Among globally shortest closures, remaining ties use payable currency units, total
+  material units, and canonical blueprint IDs. Live currency and inventory affect
   readiness without changing the selected route.
 - The winning closure is ordered prerequisite-first and the selected target is
   appended last.
@@ -39,21 +46,23 @@ action results instead of silently falling back to a locally greedy route.
 
 ## Economic and transaction authority
 
-The payable RP and material predicates of every distinct planned node are
+The payable currency and material predicates of every distinct planned node are
 combined. Equivalent item-list or tag predicates are aggregated, then a sparse
-maximum-flow allocation resolves overlapping inventory choices exactly. A
-Creative bypass is evaluated per node; partially bypassed routes charge only
-the remaining nodes.
+maximum-flow allocation resolves overlapping inventory choices exactly.
+Physical currency joins those material demands in the same allocation, so an
+item cannot pay both requirements with the same unit. Only main inventory and
+hotbar slots pay. A Creative bypass is evaluated per node; partially bypassed
+routes charge only the remaining nodes.
 
-Before mutation, the server verifies the full RP balance, exact material
+Before mutation, the server verifies the full active-currency amount, exact material
 allocation, canonical learning targets, and learned/discovered/legacy-recipe
-collection capacity. It snapshots inventory, RP, learned blueprints,
+collection capacity. It snapshots inventory, saved RP, learned blueprints,
 discoveries, and recipe aliases. Payment and learning then occur on the server
 thread in prerequisite-first order. If consumption or any learning commit
 fails, every snapshot is restored and the transaction reports failure rather
 than exposing a partial route.
 
-Research Point awards are published as one ordered batch only after the full
+Gameplay currency awards are published as one ordered batch only after the full
 transaction commits. The batch reconstructs intermediate learned/discovered
 counts for milestone thresholds and synchronizes presentation help once. The
 synchronized result balance therefore describes the balance immediately after
@@ -61,10 +70,10 @@ paying the path and before any award callbacks.
 
 ## Preview and compatibility
 
-Protocol 42 carries the planned unlock count, complete material-type count,
+Protocol 62 retains the planned unlock count, complete material-type count,
 explicit oversized/complex/unavailable planning states, append-only matching
-action results, and an opaque server-authored route-and-quote fingerprint. RP is always the
-aggregate payable cost. At most
+action results, and an opaque server-authored route-and-quote fingerprint.
+The numeric currency field is always the aggregate payable cost. At most
 six material rows are transferred and rendered; when more exist, compact and
 fullscreen presentation report how many additional types belong to the full
 cost while readiness still reflects the exact complete allocation.
@@ -76,15 +85,16 @@ the full path economy.
 An automatic tree must also have a current, complete generated publication.
 The route planner accepts only prerequisite groups and roots authorized by that
 same publication revision. A stale or failed rebuild and a published graph with
-no complete authorized route fail separately, without consuming RP or items.
+no complete authorized route fail separately, without consuming currency or materials.
 
 The client returns the preview fingerprint when Research is pressed. The server
 repairs legacy knowledge and prepares a fresh route from one current catalog,
 research, automatic-publication, configuration, access-policy, and
 player-knowledge context. If that route, quote, or result mode differs, the
 server rejects the stale action, publishes a replacement preview, and consumes
-nothing. Otherwise the same prepared plan enters the atomic transaction;
-planning is not repeated between approval and commit. Current RP and inventory
+nothing. Currency identity and policy revision are part of that quote. Otherwise
+the same prepared plan enters the atomic transaction; planning is not repeated
+between approval and commit. Current currency and inventory
 are checked during that transaction rather than included in route identity, so
 ordinary affordability changes do not select a different path.
 

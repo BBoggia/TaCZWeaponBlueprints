@@ -54,6 +54,19 @@ class ResearchTreeWorkbenchSceneTest {
         assertFalse(l.branch().overlaps(filter)); assertFalse(l.branch().overlaps(l.overlays().searchField()));
         assertTrue(l.canvas().contains(l.targetClearance()));
     }
+    @ParameterizedTest @MethodSource("sizes") void unselectedTreeReclaimsInspectorSpace(int w, int h) {
+        var selected = ResearchTreeWorkbenchLayout.create(w, h, true);
+        var empty = ResearchTreeWorkbenchLayout.create(w, h, false);
+        assertFalse(empty.inspectorVisible());
+        assertTrue(selected.inspectorVisible());
+        assertTrue(empty.canvas().contains(selected.canvas()));
+        assertTrue(empty.canvas().contains(selected.inspector()));
+        assertEquals(w - 8, empty.canvas().right());
+        assertEquals(h - 8, empty.canvas().bottom());
+        assertFalse(empty.canvas().overlaps(empty.header()));
+        assertFalse(empty.canvas().overlaps(empty.overlays().rail()));
+        assertEquals(selected, ResearchTreeWorkbenchLayout.create(w, h, true));
+    }
     private static ResearchTreeScenePolicy policy() {
         return new ResearchTreeScenePolicy(new ResearchTechTreeLayoutPolicy(20,18,8,20,4,1000,6,6),1024,
                 new ResearchTreeScenePolicy.NodeMetrics(96,44,3), "test-tile", new ResearchTreeScenePolicy.RegionMetrics(44,12,16,80,16,10,2));

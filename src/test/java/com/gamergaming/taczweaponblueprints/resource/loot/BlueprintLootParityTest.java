@@ -67,7 +67,8 @@ class BlueprintLootParityTest {
         assertTrue(entries.contains("taczweaponblueprints:research_data/note_chests_simple_dungeon"));
         assertTrue(entries.contains("taczweaponblueprints:research_data/report_chests_stronghold_library"));
         assertTrue(entries.contains("taczweaponblueprints:research_data/dossier_chests_end_city_treasure"));
-        assertEquals(494, entries.size());
+        assertTrue(entries.contains("taczweaponblueprints:scrap_supply"));
+        assertEquals(495, entries.size());
     }
 
     private static List<BlueprintLootEntry> legacyPoolEntries(JsonArray legacyPool) {

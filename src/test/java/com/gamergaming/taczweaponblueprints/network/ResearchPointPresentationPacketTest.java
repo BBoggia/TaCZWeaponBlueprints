@@ -33,6 +33,8 @@ class ResearchPointPresentationPacketTest {
     void feedbackRejectsOverBoundNameCountsBeforeAllocating() {
         FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
         try {
+            ResearchCurrencyPolicyCodec.write(buffer,
+                    com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy.banked(100, 1));
             buffer.writeVarInt(1);
             buffer.writeVarInt(0);
             buffer.writeBoolean(false);

@@ -14,6 +14,36 @@ import org.junit.jupiter.api.Test;
 
 class CapabilityEventHandlerTest {
     @Test
+    void cloneCanReadSerializedProgressAfterProviderHandleWasInvalidated() throws Exception {
+        var provider = new com.gamergaming.taczweaponblueprints.capabilities.PlayerRecipeDataProvider();
+        // Plain JUnit does not run Forge's CapabilityToken bytecode transformer.
+        // Inspect the actual provider handle without initializing ModCapabilities.
+        var field = provider.getClass().getDeclaredField("optionalData"); field.setAccessible(true);
+        var handle = (net.minecraftforge.common.util.LazyOptional<?>)field.get(provider);
+        var original = (com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData)handle.resolve().orElseThrow();
+        original.setResearchPoints(137); original.addBlueprint("tacz:ak47");
+        original.applyArchivedFragmentMutation(PlayerProgressValueMutation.Request.commit("tacz:m4a1", 0, 4));
+        provider.invalidate();
+        assertFalse(handle.isPresent(), "invalidated references must stay invalid");
+        var caps = new net.minecraft.nbt.CompoundTag();
+        caps.put("taczweaponblueprints:player_recipe_data", provider.serializeNBT());
+        var player = new net.minecraft.nbt.CompoundTag(); player.put("ForgeCaps", caps);
+        var clone = new PlayerRecipeData();
+        CapabilityEventHandler.copySerializedRecipeData(player, clone);
+        assertEquals(original.serializeNBT(), clone.serializeNBT());
+        assertFalse(handle.isPresent(), "copying must not revive removed-player handles");
+        original.setResearchPoints(0);
+        assertEquals(137, clone.getResearchPoints());
+    }
+
+    @Test
+    void missingSerializedCapabilityDoesNotClearDestination() {
+        var clone = new PlayerRecipeData(); clone.setResearchPoints(137);
+        CapabilityEventHandler.copySerializedRecipeData(new net.minecraft.nbt.CompoundTag(), clone);
+        assertEquals(137, clone.getResearchPoints());
+    }
+
+    @Test
     void cloneCopiesAnIndependentLearnedRecipeSnapshot() {
         PlayerRecipeData original = new PlayerRecipeData();
         original.addRecipe("tacz:gun/ak47");
@@ -32,7 +62,10 @@ class CapabilityEventHandlerTest {
                 PlayerProgressValueMutation.Operation.COMMIT, "removed:analysis", com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisFragmentCounts.EMPTY, analysis));
         PlayerRecipeData clone = new PlayerRecipeData();
 
-        CapabilityEventHandler.copyRecipeData(original, clone);
+        var caps = new net.minecraft.nbt.CompoundTag();
+        caps.put("taczweaponblueprints:player_recipe_data", original.serializeNBT());
+        var saved = new net.minecraft.nbt.CompoundTag(); saved.put("ForgeCaps", caps);
+        CapabilityEventHandler.copySerializedRecipeData(saved, clone);
         original.addRecipe("tacz:gun/m4a1");
         original.clearResearchPointAwardLedger();
         original.clearArchivedBlueprintFragments();

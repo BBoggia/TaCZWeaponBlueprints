@@ -6,10 +6,49 @@ documentation.
 
 ## Unreleased
 
+## 1.3.1-beta.1 - 2026-09-06
+
 ### Added
 
-- Added Scrap, a stackable salvage material with custom pixel art, available in
-  Creative mode and through commands for use in datapack recipes and costs.
+- Reorganized settings into clearer currency, Research Data, tier, crafting, and
+  fragment sections. Percentage and hold-time inputs now use readable units;
+  large counts use number boxes. Updated descriptions explain Scrap rewards,
+  Analyzer odds, and the separate fragment systems. Saved config values remain
+  compatible. Restore Tree Appearance now also resets motion and the grid.
+
+- Weapon analysis now uses Analyzer and weapon tiers by default. Above-tier
+  attempts can yield nothing; same-tier and lower-tier attempts always yield a
+  blueprint or fragments. Pack authors can override every tier pair, cost, and
+  fragment quantity, or select the legacy guaranteed-analysis preset.
+
+- The Blueprint Analyzer automatically returns ammunition when analysis or weapon
+  recycling succeeds. Ammo fills inventory space and drops any overflow at your
+  feet; the preview shows what will be returned.
+
+- Added physical Scrap as the default research currency, with configurable chest
+  and player-kill supply. Research Bench purchases, Analyzer costs and returns,
+  and gameplay rewards use the selected currency; banked RP remains optional.
+  See [currency configuration](docs/research-currency-configuration.md).
+- Added one-item Research Data analysis at the Blueprint Analyzer. Notes target
+  Tier 1 weapons, Reports Tiers 1–2, and Dossiers Tiers 1–3. Higher Analyzers
+  improve fragment quantities and blueprint chances. Pack authors can change
+  pools, weights, costs, odds, and learned-target eligibility. Fixed currency
+  redemption remains available. See [Data policies](docs/research-data-policies.md).
+- Added shared reconstruction for fragments from Data and weapon analysis,
+  including when weapon analysis uses legacy mode. Saved analysis progress can
+  reconstruct matching protected blueprints after the target is learned.
+- Added Analyzer Data pool summaries, outcome odds, station comparisons, and
+  eligibility guidance. Research screens, item tooltips, and onboarding show the
+  active currency and carried balance. Data loot has its own enablement setting.
+- Added operator currency inspection and grants, an explicit banked/legacy
+  preset, and previewed one-way withdrawals of saved RP. See
+  [migration](docs/research-currency-migration.md).
+- Added an active-currency award API and events that identify delivered items
+  and units. Banked compatibility APIs explicitly reject physical mode. See
+  [currency integrations](docs/research-currency-integrations.md).
+- Added pack examples and economy reports for supply, research prices, Data
+  outcomes, and multiplayer fragment pooling. See
+  [economy balance](docs/research-economy-balance.md).
 
 - Added optional Blueprint Analyzer datapacks for tiered analysis, legacy
   behavior, and exact-target/tag overrides. Pack authors can report expected
@@ -39,22 +78,38 @@ documentation.
 
 ### Compatibility
 
-- Current builds require matching protocol-59 clients and servers, including
-  synchronization of analysis odds, separate action costs, committed outcomes,
-  and protected analysis-fragment progress. Player-data version 5
-  preserves existing saves and adds an empty analysis archive when upgrading.
-  Tree and placement formats 1 and 2 remain supported; new branch metadata uses
-  format 3. Analyzer policy extensions use profile/rule format 5, and research
-  catalog exports use format 22. Existing datapack formats remain readable.
+- Update clients and servers together: protocol 62 synchronizes active currency,
+  Data settings and previews, action costs, committed outcomes, and analysis
+  progress. Player-data version 5 preserves old saves with an empty analysis
+  archive when upgrading from older formats. Server config remains version 4.
+- Configurations missing the new economy selectors use Scrap and Data analysis.
+  Explicit banked/legacy choices take precedence; saved RP is preserved and
+  never automatically converted. Review the [migration guide](docs/research-currency-migration.md)
+  before updating an established server.
+- Existing datapack formats remain readable. Authored branch metadata uses
+  tree/placement format 3, Analyzer extensions use profile/rule format 5, and
+  Data/shared reconstruction use format 1. Catalog exports remain format 22
+  with an optional versioned Research Data economy section.
 
 ### Changed
+
+- Keep weapon artwork visible farther out in the Tech Tree, with an icon-focused
+  middle zoom level and enlarged weapon previews on hover.
+
+- Expand the Tech Tree into the inspect panel’s space when no research node is selected.
+
+- Redesigned the Blueprint Analyzer with a horizontal Input/results/Output
+  layout, dark metal panels, clearer outcome icons, and one main action button.
+  Costs follow the selected operation; longer rules live in Details. Repeated
+  ready messages are removed, and fragment deposits distinguish saved progress
+  from items retained in Input.
 
 - Replaced all three Blueprint Analyzer models with custom manual, microscope,
   and electronic inspection benches. Analyzers now require two blocks of space
   side by side; either half opens the menu and breaking either half removes the station.
 
 - The Blueprint Analyzer now shows station and weapon tiers, full/partial/no-result
-  odds, saved fragment progress, and separate costs for analysis and RP recovery.
+  odds, saved fragment progress, and separate costs for analysis and currency recovery.
   Scroll its details for materials and blueprint requirements. Reconstruction
   shows how many fragments stay in the input slot, and completed actions report
   their actual result. See the [screen guide](docs/analyzer-screen.md).
@@ -78,14 +133,31 @@ documentation.
 
 ### Fixed
 
+- Multiplayer settings now receive the server’s values when joining, instead of
+  displaying local defaults in the operator screen.
+
+- Invalid currency item settings now retain the previous valid value, or Scrap
+  on first load, without preventing configuration initialization.
+- Fragment previews in the Blueprint Analyzer now show carried currency in
+  physical mode and saved RP in banked mode, including unavailable actions.
+- Reduced repeated work when projecting large Tech Tree branches and choosing
+  prerequisites for automatically placed weapons, preserving their ordering.
+
+- Fixed research progress being lost on player respawn after its capability handle was invalidated.
+- Corrected Blueprint Analyzer result wording when analysis produces one fragment.
+
+- Fixed incomplete input and reward-claim restoration when another integration throws during rollback.
+- Fixed awards proceeding after a pre-award callback changes the currency policy, and reward feedback using a currency selected after the award.
+- Fixed rejected Research Bench and Research Data actions reporting dormant RP instead of carried currency in physical mode.
+
 - Turned Workbench, Research Bench, and Blueprint Analyzer inventory icons around
   to show their fronts. Placed models retain their existing orientation.
 
-- When weapon analysis is blocked but RP recovery is available, the Blueprint
+- When weapon analysis is blocked but currency recovery is available, the Blueprint
   Analyzer now shows the recovery cost and status while explaining the analysis
   restriction separately.
 
-- Blueprint Analyzer RP recovery now shows unmet requirements before its award
+- Blueprint Analyzer currency recovery now shows unmet requirements before its award
   can be calculated, and direct-only mode hides inactive analysis details.
   Blueprint outputs with disabled learning now state that restriction. Delayed
   action feedback no longer attaches to replacement inputs with the same target
@@ -93,7 +165,7 @@ documentation.
 
 - Analyzer requests now reject repeated request IDs and changes to inputs,
   inventory, research progress, or policy since the displayed preview. Failed
-  tiered transactions restore consumed items, RP, output, and discovery together.
+  tiered transactions restore consumed items, currency, output, and discovery together.
 
 - Blueprint Analyzer actions now reject removed or replaced stations, including
   immediate same-tier replacements. The original Analyzer can now be harvested

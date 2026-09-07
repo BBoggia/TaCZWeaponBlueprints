@@ -38,25 +38,30 @@ class ResearchWorkstationsPhaseThreeTest {
                         Player.class,
                         InteractionHand.class,
                         BlockHitResult.class).getDeclaringClass());
-        assertEquals("59", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("62", NetworkHandler.PROTOCOL_VERSION);
     }
 
     @Test
     void expandedConventionalLayoutKeepsEverySlotInsideTheScreen() {
         assertTrue(BlueprintRecyclerMenu.Layout.INPUT_X >= 0);
         assertTrue(BlueprintRecyclerMenu.Layout.INPUT_Y >= 0);
-        assertTrue(BlueprintRecyclerMenu.Layout.OUTPUT_X + 16
+        assertTrue(BlueprintRecyclerMenu.Layout.INPUT_X + 22
                 < BlueprintRecyclerMenu.Layout.DETAIL_X);
         assertTrue(BlueprintRecyclerMenu.Layout.DETAIL_X
                 + BlueprintRecyclerMenu.Layout.DETAIL_WIDTH
-                <= BlueprintRecyclerMenu.Layout.PANEL_WIDTH
-                        - BlueprintRecyclerMenu.Layout.SECTION_X * 2);
+                <= BlueprintRecyclerMenu.Layout.OUTPUT_X - 6);
+        assertTrue(BlueprintRecyclerMenu.Layout.OUTPUT_X + 22
+                <= BlueprintRecyclerMenu.Layout.PANEL_WIDTH - BlueprintRecyclerMenu.Layout.SECTION_X);
+        assertEquals(BlueprintRecyclerMenu.Layout.INPUT_Y, BlueprintRecyclerMenu.Layout.OUTPUT_Y);
+        assertTrue(BlueprintRecyclerMenu.Layout.INPUT_Y + 22 < BlueprintRecyclerMenu.Layout.ACTION_Y);
         assertTrue(BlueprintRecyclerMenu.Layout.ACTION_Y
                 + BlueprintRecyclerMenu.Layout.ACTION_HEIGHT
                 < BlueprintRecyclerMenu.Layout.PLAYER_LABEL_Y);
-        assertTrue(BlueprintRecyclerMenu.Layout.PLAYER_X + 8 * 18 + 16
+        assertTrue(BlueprintRecyclerMenu.Layout.PLAYER_X + 8 * BlueprintRecyclerMenu.Layout.PLAYER_SPACING + 19
                 <= BlueprintRecyclerMenu.Layout.PANEL_WIDTH);
-        assertTrue(BlueprintRecyclerMenu.Layout.HOTBAR_Y + 16
+        assertTrue(BlueprintRecyclerMenu.Layout.PLAYER_Y + 2 * BlueprintRecyclerMenu.Layout.PLAYER_SPACING + 19
+                < BlueprintRecyclerMenu.Layout.HOTBAR_Y - 3);
+        assertTrue(BlueprintRecyclerMenu.Layout.HOTBAR_Y + 19
                 <= BlueprintRecyclerMenu.Layout.PANEL_HEIGHT);
     }
 }

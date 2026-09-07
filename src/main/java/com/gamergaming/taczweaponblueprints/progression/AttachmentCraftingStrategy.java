@@ -6,7 +6,7 @@ import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbe
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintCraftingAccessPolicy;
 
 /** Approachable server-config strategy for attachment crafting access. */
-public enum AttachmentCraftingStrategy {
+public enum AttachmentCraftingStrategy implements me.fzzyhmstrs.fzzy_config.util.EnumTranslatable {
     PROFILE,
     TIER_1,
     TIER_2,
@@ -27,4 +27,5 @@ public enum AttachmentCraftingStrategy {
             case DISABLED -> Optional.of(BlueprintCraftingAccessPolicy.DISABLED);
         };
     }
+    @Override public String prefix() { return "config.taczweaponblueprints.blueprint.attachmentCraftingStrategy"; }
 }

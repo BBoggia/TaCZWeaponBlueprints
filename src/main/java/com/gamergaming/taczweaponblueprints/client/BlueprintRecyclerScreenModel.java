@@ -52,6 +52,11 @@ public record BlueprintRecyclerScreenModel(
                     safe.actionable() && !requestPending,
                     safe.actionable() ? StatusEmphasis.POSITIVE : StatusEmphasis.MUTED,
                     true);
+            case DATA_ANALYSIS -> new BlueprintRecyclerScreenModel(
+                    PREFIX + "research_data.analysis_title", PREFIX + "research_data.analysis_status." + enumKey(safe.researchDataStatus().orElseThrow()),
+                    safe.actionable() ? Optional.of(BlueprintRecyclerActionContract.Action.ANALYZE_DATA) : Optional.empty(),
+                    Optional.empty(), safe.actionable() && !requestPending,
+                    safe.actionable() ? StatusEmphasis.POSITIVE : StatusEmphasis.MUTED, true);
             case RESEARCH_DATA -> new BlueprintRecyclerScreenModel(
                     PREFIX + "research_data.title",
                     PREFIX + "research_data.status."

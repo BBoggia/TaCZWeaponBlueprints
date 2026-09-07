@@ -5,7 +5,7 @@ import java.util.Locale;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 
-public enum JournalVisibility {
+public enum JournalVisibility implements me.fzzyhmstrs.fzzy_config.util.EnumTranslatable {
     HIDDEN,
     SILHOUETTE,
     NAME,
@@ -70,4 +70,5 @@ public enum JournalVisibility {
         }
         return DataResult.error(() -> "unknown Journal visibility " + value);
     }
+    @Override public String prefix() { return "config.taczweaponblueprints.blueprint.maximumUndiscoveredVisibility"; }
 }

@@ -23,7 +23,7 @@ class ResearchTreeClientConfigTest {
         assertEquals(
                 ResearchTreeClientConfig.DEFAULT_HOLD_DURATION_MILLIS,
                 config.holdDurationMillis());
-        assertEquals(ResearchTreeDisplayPolicy.DEFAULT, config.displayPolicy());
+        assertEquals(com.gamergaming.taczweaponblueprints.client.ResearchTreeDisplayPolicy.DEFAULT, config.displayPolicy());
         assertEquals(ResearchTreeMinimapMode.AUTOMATIC, config.minimapMode());
         assertTrue(config.showResearchPointNotifications.get());
     }
@@ -141,7 +141,11 @@ class ResearchTreeClientConfigTest {
         config.minimap.validateAndSet(ResearchTreeMinimapMode.HIDDEN);
         config.nodeGap.validateAndSet(99);
 
+        config.reduceMotion.setAndUpdate(!com.gamergaming.taczweaponblueprints.client.ResearchTreeDisplayPolicy.DEFAULT.reduceMotion());
+        config.showBackgroundGrid.setAndUpdate(!com.gamergaming.taczweaponblueprints.client.ResearchTreeDisplayPolicy.DEFAULT.showBackgroundGrid());
         config.restoreTreeAppearanceDefaults();
+        assertEquals(com.gamergaming.taczweaponblueprints.client.ResearchTreeDisplayPolicy.DEFAULT.reduceMotion(), config.reduceMotion.get());
+        assertEquals(com.gamergaming.taczweaponblueprints.client.ResearchTreeDisplayPolicy.DEFAULT.showBackgroundGrid(), config.showBackgroundGrid.get());
 
         assertEquals(ResearchTreeLayoutPreset.BALANCED, config.layoutPreset.get());
         assertEquals(ResearchTreeLayoutPolicy.UNIFIED_OVERVIEW.nodeGap(),

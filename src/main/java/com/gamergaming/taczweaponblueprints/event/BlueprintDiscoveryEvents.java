@@ -28,6 +28,7 @@ public final class BlueprintDiscoveryEvents {
     @SubscribeEvent
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
         if (event.phase == TickEvent.Phase.END && event.player instanceof ServerPlayer serverPlayer) {
+            com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencySyncTracker.tick(serverPlayer);
             ResearchPointAwardReconciliationScheduler.process(serverPlayer);
             BlueprintProgressionSyncScheduler.flush(serverPlayer);
         }
@@ -36,7 +37,9 @@ public final class BlueprintDiscoveryEvents {
     @SubscribeEvent
     public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
+            com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencySyncTracker.clear(serverPlayer);
             BlueprintProgressionSyncScheduler.clear(serverPlayer);
+            com.gamergaming.taczweaponblueprints.command.sub.ResearchCurrencyMigrationCommand.PENDING.clear(serverPlayer.getUUID());
             ResearchPointAwardReconciliationScheduler.clear(serverPlayer);
             NetworkHandler.clearPlayerSyncState(serverPlayer);
         }

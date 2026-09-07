@@ -12,7 +12,10 @@ task also compares three scene engines without opening Minecraft.
 ## Research Bench consumer
 
 `ResearchTreeWorkbenchLayout` owns the persistent header, canvas, inspector,
-action row, and shared search/navigation overlay geometry. The inspector docks
+action row, and shared search/navigation overlay geometry. The inspector appears only while a valid research node is selected; clearing
+the selection returns its space to the canvas. Its hidden area does not block
+canvas clicks or scrolling. Resizing the canvas preserves the camera anchor.
+The inspector docks
 right at GUI widths of 420 or more and below the canvas at smaller supported
 sizes. Its requirement list scrolls independently; actions remain fixed. The
 minimap respects its existing setting and avoids the central target area. It
@@ -22,7 +25,8 @@ outlines.
 The production policy measures a 96-unit tile width and two native-font name
 lines before layout. Window dimensions do not enter this policy: resizing updates
 screen rectangles and camera bounds without packing the graph again. Overview
-uses compact state marks, with browse-detail hysteresis at 0.48/0.58 zoom.
+uses compact state marks only at very small tile sizes; an intermediate
+artwork view keeps weapon identities visible while labels are hidden.
 Zoom buttons and wheel input share the scene zoom limits; button availability
 uses the pending camera destination during animation.
 TaCZ slot art is cropped and fitted within the tile; missing or unsupported art
@@ -307,7 +311,7 @@ development comparisons. Window resize changes the viewport, not node placement.
 No renderer selector or profiling tool is included in the release JAR. The
 `Research-Tree-Scene-Layout` manifest attribute records `branches-v2`; artifact
 verification checks it against the runtime engine revision. This layout contract
-is independent of protocol 59 and does not change research authority.
+is independent of protocol 62 and does not change research authority.
 
 Run `./gradlew researchTreePerformance` with Java 17 for the frozen live catalog
 and structural limits. Override output with
@@ -327,3 +331,24 @@ resource packs, or every supported graph. Dense legal inputs may exceed them.
 Routing budgets may reject a valid graph; the screen then displays unavailable
 without dropping nodes or requirements. No worker is used: the measured live
 opening path fits the target, and layout already has explicit work limits.
+
+## Zoom detail and hover artwork
+
+Scene rendering uses three levels of detail based on the smallest displayed
+node body in logical GUI pixels. Close views include artwork, names, and status
+symbols. The middle level gives artwork the tile interior, uses a neutral
+background, and keeps state in the border and status strip. Very small nodes
+become colored overview markers. This changes presentation only; geometry,
+selection, prerequisites, and hit targets keep the same meaning.
+
+Labels disappear below 64×28 pixels and return at 68×30. Artwork disappears
+below 16×7 and returns at 18×8. Both dimensions must fit; the small transition
+buffers prevent flicker. For the usual 96×44 tile, artwork therefore remains
+visible at 20% scale. Thresholds apply to GUI pixels rather than raw framebuffer
+pixels, preserving behavior across Minecraft GUI scales.
+
+When labels are hidden, hovering a disclosed node shows its readable name,
+status, progression information, and enlarged artwork without selecting it or
+opening the inspector. The preview wraps text, stays within the screen, and
+uses the existing public artwork cache. Nodes whose visibility hides their
+identity retain the normal restricted tooltip and never request weapon art.

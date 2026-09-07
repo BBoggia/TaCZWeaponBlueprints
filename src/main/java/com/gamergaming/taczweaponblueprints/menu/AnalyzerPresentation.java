@@ -12,13 +12,18 @@ import com.gamergaming.taczweaponblueprints.resource.research.BlueprintReverseEn
 
 /** Bounded server facts for display. Contains policy weights, never an upcoming outcome. */
 public record AnalyzerPresentation(int stationTier, Optional<Weapon> weapon,
-        Optional<Fragments> fragments, Optional<RecoveryCost> recoveryCost) {
+        Optional<Fragments> fragments, Optional<RecoveryCost> recoveryCost, Optional<ResearchDataPresentation> data) {
     public static final AnalyzerPresentation EMPTY = new AnalyzerPresentation(0, Optional.empty(), Optional.empty(), Optional.empty());
+    public AnalyzerPresentation(int tier, Optional<Weapon> weapon, Optional<Fragments> fragments, Optional<RecoveryCost> cost) {
+        this(tier, weapon, fragments, cost, Optional.empty());
+    }
+    public AnalyzerPresentation withData(ResearchDataPresentation value) { return new AnalyzerPresentation(stationTier, weapon, fragments, recoveryCost, Optional.of(value)); }
     public AnalyzerPresentation {
         if (stationTier < 0 || stationTier > 3 || weapon == null || fragments == null || recoveryCost == null
+                || data == null || data.isPresent() && (weapon.isPresent() || fragments.isPresent() || recoveryCost.isPresent())
                 || weapon.isPresent() && fragments.isPresent()) throw new IllegalArgumentException("invalid Analyzer presentation");
     }
-    public AnalyzerPresentation withStation(int tier) { return new AnalyzerPresentation(tier, weapon, fragments, recoveryCost); }
+    public AnalyzerPresentation withStation(int tier) { return new AnalyzerPresentation(tier, weapon, fragments, recoveryCost, data); }
     public record Weapon(int tier, AnalyzerPolicyQuote.Status status, Optional<AnalyzerOutcomeTable> outcomes,
             Optional<AnalysisRewardClass> reward, int saved, int totalSaved, int threshold, int cap) {
         /** Configured attempts omit the fragment reward class only when learning is disabled. */

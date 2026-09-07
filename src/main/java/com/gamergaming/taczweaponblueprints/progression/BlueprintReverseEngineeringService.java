@@ -1,5 +1,8 @@
 package com.gamergaming.taczweaponblueprints.progression;
 
+import com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy;
+import com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPayments;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -70,7 +73,7 @@ public final class BlueprintReverseEngineeringService {
                 config.blueprintsEnabled(),
                 config.pointCap(),
                 null,
-                forceRecyclableOutput);
+                forceRecyclableOutput, null, transaction.currencyPolicy());
         evaluation = evaluation.withFoundBlueprintRecyclable(forceRecyclableOutput);
         if (verifiedFound
                 && !config.foundWeaponRecoveryMode().blueprintExtractionEnabled()
@@ -116,7 +119,7 @@ public final class BlueprintReverseEngineeringService {
                 config.blueprintsEnabled(),
                 config.pointCap(),
                 null,
-                true);
+                true, null, transaction.currencyPolicy());
     }
 
     /**
@@ -148,15 +151,23 @@ public final class BlueprintReverseEngineeringService {
         IPlayerRecipeData playerData = resolvedData.orElseThrow();
         var context = BlueprintWeaponAnalysisService.context();
         var config = ModConfigs.BLUEPRINT.progressionSnapshot();
-        var analysis = BlueprintWeaponAnalysisService.prepare(player, transaction);
-        var tiered = analysis.map(prepared -> BlueprintWeaponAnalysisService.commit(prepared, playerData, transaction,
-                bound -> java.util.concurrent.ThreadLocalRandom.current().nextLong(bound)));
-        Result result = tiered.map(BlueprintWeaponAnalysisService.AttemptResult::transaction)
-                .orElseGet(() -> commitLegacyCurrent(player, transaction, playerData, context, config));
-        var outcome = result.successful() ? tiered.flatMap(BlueprintWeaponAnalysisService.AttemptResult::outcome)
-                .or(() -> Optional.of(new com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable.Result(
-                        com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable.Kind.BLUEPRINT, 1)))
-                : Optional.<com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable.Result>empty();
+        Execution committed = AnalyzerAmmoRecovery.execute(player, transaction, playerData, () -> {
+            var analysis = BlueprintWeaponAnalysisService.prepare(player, transaction);
+            var tiered = analysis.map(prepared -> BlueprintWeaponAnalysisService.commit(prepared, playerData, transaction,
+                    bound -> java.util.concurrent.ThreadLocalRandom.current().nextLong(bound)));
+            Result result = tiered.map(BlueprintWeaponAnalysisService.AttemptResult::transaction)
+                    .orElseGet(() -> commitLegacyCurrent(player, transaction, playerData, context, config));
+            var outcome = result.successful() ? tiered.flatMap(BlueprintWeaponAnalysisService.AttemptResult::outcome)
+                    .or(() -> Optional.of(new com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable.Result(
+                            com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable.Kind.BLUEPRINT, 1)))
+                    : Optional.<com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable.Result>empty();
+            return new Execution(result, outcome);
+        }, execution -> execution.transaction().successful(), failure -> new Execution(
+                Result.failure(failure == AnalyzerAmmoRecovery.Failure.INVALID_AMMO ? Status.LOADED_GUN
+                        : failure == AnalyzerAmmoRecovery.Failure.ROLLBACK_FAILED ? Status.ROLLBACK_FAILED : Status.TRANSACTION_FAILED,
+                        Optional.empty(), playerData.getResearchPoints()), Optional.empty()));
+        Result result = committed.transaction();
+        var outcome = committed.outcome();
         if (!result.successful()) {
             return new Execution(result, Optional.empty());
         }
@@ -164,7 +175,7 @@ public final class BlueprintReverseEngineeringService {
         ResourceLocation blueprintId = result.blueprintId().orElseThrow();
         ResearchPointAwardDispatcher.blueprintTransitions(
                 player, playerData, blueprintId, result.discoveredChanged(), false);
-        Result finalResult = result.withBalance(playerData.getResearchPoints());
+        Result finalResult = result.withBalance(ResearchCurrencyPayments.balance(transaction.currencyPolicy(), transaction.inventoryStacks(), playerData));
         try {
             if (result.discoveredChanged()) {
                 NetworkHandler.syncPlayerRecipeData(player);
@@ -250,7 +261,19 @@ public final class BlueprintReverseEngineeringService {
             Predicate<ResourceLocation> progressionExemptPredicate, boolean blueprintsEnabled, int pointCap,
             PhysicalItemBlueprintResolver.IdentityAdapter identityAdapter, boolean nonLearningResultPermitted,
             BlueprintReverseEngineeringPolicy analysisAttempt) {
-        int balance = playerData == null ? 0 : playerData.getResearchPoints();
+        return evaluate(physicalInput, inventory, outputAvailable, snapshot, catalog, profileId, playerData,
+                blockedPredicate, progressionExemptPredicate, blueprintsEnabled, pointCap, identityAdapter,
+                nonLearningResultPermitted, analysisAttempt, ResearchCurrencyPolicy.banked(pointCap, 1));
+    }
+
+    static Evaluation evaluate(ItemStack physicalInput, List<ItemStack> inventory, boolean outputAvailable,
+            BlueprintResearchSnapshot snapshot, Map<ResourceLocation, BlueprintData> catalog,
+            ResourceLocation profileId, IPlayerRecipeData playerData, Predicate<String> blockedPredicate,
+            Predicate<ResourceLocation> progressionExemptPredicate, boolean blueprintsEnabled, int pointCap,
+            PhysicalItemBlueprintResolver.IdentityAdapter identityAdapter, boolean nonLearningResultPermitted,
+            BlueprintReverseEngineeringPolicy analysisAttempt, ResearchCurrencyPolicy currency) {
+        int balance = ResearchCurrencyPayments.balance(currency, inventory, playerData);
+        if (ResearchCurrencyPayments.physical(currency)) pointCap = PlayerProgressionLimits.MAX_RESEARCH_POINTS;
         BlueprintReverseEngineeringEvaluator.Evaluation base =
                 BlueprintReverseEngineeringEvaluator.evaluate(
                         physicalInput,
@@ -260,7 +283,7 @@ public final class BlueprintReverseEngineeringService {
                         playerData,
                         blockedPredicate,
                         progressionExemptPredicate,
-                        identityAdapter,
+                        identityAdapter == null ? PhysicalItemBlueprintResolver::inspectAnalyzerIdentity : identityAdapter,
                         nonLearningResultPermitted, analysisAttempt);
         Status baseStatus = map(base.status());
         BlueprintResearchCost cost = base.reversePolicy()
@@ -270,7 +293,9 @@ public final class BlueprintReverseEngineeringService {
                 ResearchIngredientPlanner.allocation(
                         copyStacks(inventory), cost);
         boolean ingredientsSatisfied = allocation.filter(
-                ResearchIngredientPlanner.Allocation::complete).isPresent();
+                ResearchIngredientPlanner.Allocation::complete).isPresent()
+                && (!ResearchCurrencyPayments.physical(currency)
+                        || ResearchCurrencyPayments.plan(currency, inventory, playerData, cost.points(), cost).isPresent());
 
         Status status = baseStatus;
         if (baseStatus == Status.READY) {
@@ -353,8 +378,8 @@ public final class BlueprintReverseEngineeringService {
         }
         Optional<ResearchIngredientPlanner.Plan> resolvedMaterialPlan;
         try {
-            resolvedMaterialPlan = ResearchIngredientPlanner.plan(
-                    originalInventory, evaluation.cost());
+            resolvedMaterialPlan = ResearchCurrencyPayments.plan(transaction.currencyPolicy(),
+                    originalInventory, playerData, evaluation.cost().points(), evaluation.cost());
         } catch (RuntimeException exception) {
             return Result.failure(Status.TRANSACTION_FAILED, target, balance);
         }
@@ -379,7 +404,7 @@ public final class BlueprintReverseEngineeringService {
         }
 
         int pointsSpent = evaluation.cost().points();
-        if (pointsSpent > 0 && !playerData.spendResearchPoints(pointsSpent)) {
+        if (!ResearchCurrencyPayments.debitBank(transaction.currencyPolicy(), playerData, pointsSpent)) {
             return Result.failure(Status.STALE_POLICY, target, playerData.getResearchPoints());
         }
 
@@ -426,7 +451,7 @@ public final class BlueprintReverseEngineeringService {
                 target,
                 evaluation.requiredInputCount(),
                 pointsSpent,
-                playerData.getResearchPoints(),
+                ResearchCurrencyPayments.balance(transaction.currencyPolicy(), transaction.inventoryStacks(), playerData),
                 discoveredChanged);
     }
 
@@ -702,6 +727,7 @@ public final class BlueprintReverseEngineeringService {
 
     /** Menu-owned physical input, player materials, and extract-only output. */
     public interface WorkstationTransaction {
+        default ResearchCurrencyPolicy currencyPolicy() { return ResearchCurrencyPolicy.banked(PlayerProgressionLimits.MAX_RESEARCH_POINTS, 1); }
         /** Tiered operations require a current, server-bound physical station. */
         default Optional<com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerTier> analyzerTier() {
             return Optional.empty();

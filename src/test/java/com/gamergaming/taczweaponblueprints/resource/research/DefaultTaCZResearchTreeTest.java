@@ -830,7 +830,7 @@ class DefaultTaCZResearchTreeTest {
     void packagedTechTreeDefinesDynamicBandsAndDormantOptInDomains() throws Exception {
         BlueprintResearchSnapshot snapshot = packagedSnapshot();
         BlueprintResearchProfile profile = snapshot.profiles().get(PROFILE_ID);
-        assertEquals(BlueprintResearchProfile.CRAFTING_FORMAT, profile.format());
+        assertEquals(BlueprintResearchProfile.ANALYZER_FORMAT, profile.format());
         assertEquals(
                 com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchTier.TIER_2,
                 profile.progression().fallbackTiers().researchTier());

@@ -1,6 +1,10 @@
 package com.gamergaming.taczweaponblueprints.progression;
 
 import java.util.Optional;
+import java.util.List;
+import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
+import com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy;
+import net.minecraft.world.item.ItemStack;
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.item.BlueprintFragmentItem;
@@ -20,19 +24,12 @@ public final class BlueprintAnalysisFragmentService {
         var identity = BlueprintFragmentItem.identity(station.physicalInput()).filter(id -> id.analysisClass().isPresent()).orElseThrow();
         var context = BlueprintWeaponAnalysisService.context();
         var config = ModConfigs.BLUEPRINT.progressionSnapshot();
-        // Origin and found-recovery actions are not part of fragment identity. Recorded
-        // recycling permission remains intact; current learning rules can restrict it.
-        var quote = BlueprintAnalyzerPolicyResolver.resolve(context, config.activeProfileId(), identity.target(), tier,
-                BlueprintAnalyzerPolicy.Origin.UNKNOWN, FoundWeaponRecoveryMode.PROTECTED_BLUEPRINT_ONLY);
-        boolean enabled = config.blueprintsEnabled() && context.catalog().containsKey(identity.target())
-                && quote.fragmentThreshold() > 0 && quote.status() != AnalyzerPolicyQuote.Status.STALE_PROGRESSION
+        var shared = AnalysisReconstructionResolver.resolve(context, config.activeProfileId(), identity.target(), tier).policy();
+        boolean enabled = config.blueprintsEnabled() && shared.enabled()
                 && !ModConfigs.BLUEPRINT.isItemBlacklisted(identity.target().toString())
                 && !BlueprintProgressionAccess.isProgressionExempt(identity.target());
-        return new AnalysisFragmentReconstructionService.Policy(identity.target(), enabled,
-                Math.max(1, quote.fragmentThreshold()), Math.max(1, quote.retainedProgressCap()), true,
-                quote.attempt().map(BlueprintReverseEngineeringPolicy::physicalBlueprintLearningMode)
-                        .orElse(PhysicalBlueprintLearningMode.DISABLED),
-                Math.max(1L, context.researchRevision()));
+        return new AnalysisFragmentReconstructionService.Policy(identity.target(), enabled, shared.threshold(),
+                shared.retainedCap(), shared.recyclable(), shared.learning(), shared.revision());
     }
 
     public static AnalysisFragmentReconstructionService.Evaluation evaluate(ServerPlayer player,
@@ -51,18 +48,25 @@ public final class BlueprintAnalysisFragmentService {
             return new BlueprintFragmentAnalysisService.Evaluation(BlueprintFragmentAnalysisService.Status.PLAYER_DATA_UNAVAILABLE,
                     Optional.of(identity.target()), BlueprintFragmentPolicy.CompletionMode.DISABLED,
                     count, 0, count, 0, 0, 0, 0, 0, 0, false, false, 0, 0,
-                    ModConfigs.BLUEPRINT.progressionSnapshot().pointCap(), false, 0);
+                    ModConfigs.BLUEPRINT.progressionSnapshot().pointCap(), false, 0)
+                    .withCurrencyBalance(ModConfigs.BLUEPRINT.currencyPolicy(), player.getInventory().items, null);
         }
-        var e = evaluate(player, station, tier);
+        return preview(evaluate(player, station, tier), playerData.orElseThrow(),
+                ModConfigs.BLUEPRINT.currencyPolicy(), player.getInventory().items,
+                ModConfigs.BLUEPRINT.progressionSnapshot().pointCap());
+    }
+
+    static BlueprintFragmentAnalysisService.Evaluation preview(AnalysisFragmentReconstructionService.Evaluation e,
+            IPlayerRecipeData data, ResearchCurrencyPolicy currency, List<ItemStack> inventory, int pointCap) {
         var reward = e.identity().analysisClass().orElseThrow();
         int before = e.before().get(reward), deposited = before + e.accepted();
         int threshold = e.policy().threshold();
-        var data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElseThrow();
         return new BlueprintFragmentAnalysisService.Evaluation(status(e.status()), Optional.of(e.policy().target()),
                 BlueprintFragmentPolicy.CompletionMode.RECONSTRUCT_BLUEPRINT, e.offered(), e.accepted(), e.offered() - e.accepted(),
                 before, deposited, e.after().get(reward), threshold, before / threshold, deposited / threshold,
-                e.createsBlueprint(), data.hasBlueprint(e.policy().target().toString()), 0, data.getResearchPoints(),
-                ModConfigs.BLUEPRINT.progressionSnapshot().pointCap(), e.createsBlueprint(), e.policy().revision());
+                e.createsBlueprint(), data.hasBlueprint(e.policy().target().toString()), 0, 0,
+                pointCap, e.createsBlueprint(), e.policy().revision())
+                .withCurrencyBalance(currency, inventory, data);
     }
 
     public static BlueprintFragmentAnalysisService.Status analyze(ServerPlayer player,

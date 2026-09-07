@@ -69,9 +69,15 @@ public final class AnalyzerReleaseClientProbe {
                 verify(screen.getMenu().preview().withStateToken(0).toString().equals(read("preview")), "network preview matches dedicated server: " + identity
                         + "\nExpected: " + read("preview") + "\nActual: " + screen.getMenu().preview().withStateToken(0));
                 verify(screen.width >= BlueprintRecyclerMenu.Layout.PANEL_WIDTH && screen.height >= BlueprintRecyclerMenu.Layout.PANEL_HEIGHT, "native layout fits");
+                if (Boolean.getBoolean("tacz.analyzerReleaseQA.loadedAmmo") && (step == 9 || step == 10 || step == 19)) {
+                    var method = BlueprintRecyclerScreen.class.getDeclaredMethod("ammunitionReturn", com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerPreview.class);
+                    method.setAccessible(true);
+                    verify(((Optional<?>) method.invoke(screen, screen.getMenu().preview())).isPresent(), "loaded weapon preview shows ammunition return");
+                }
                 if (request.get("action").getAsBoolean()) {
-                    var x = (screen.width - BlueprintRecyclerMenu.Layout.PANEL_WIDTH) / 2 + BlueprintRecyclerMenu.Layout.DETAIL_X + 12;
-                    var y = (screen.height - BlueprintRecyclerMenu.Layout.PANEL_HEIGHT) / 2 + BlueprintRecyclerMenu.Layout.ACTION_Y + 8;
+                    var actionButton = AnalyzerWorkbenchProbeSupport.button(screen, "primaryButton");
+                    var x = actionButton.getX() + 2;
+                    var y = actionButton.getY() + 2;
                     verify(screen.mouseClicked(x, y, 0), "native action button clicked"); clicked = true; ticks = 0; return;
                 }
             }
@@ -80,8 +86,9 @@ public final class AnalyzerReleaseClientProbe {
                     var confirmation = BlueprintRecyclerScreen.class.getDeclaredField("confirmationAction"); confirmation.setAccessible(true);
                     verify(((Optional<?>)confirmation.get(screen)).filter(a -> a == BlueprintRecyclerActionContract.Action.RECOVER_POINTS).isPresent(), "unknown-weapon recovery requires confirmation");
                     verify(screen.getMenu().preview().withStateToken(0).toString().equals(read("preview")), "first recovery click does not consume input or RP");
-                    int x = (screen.width - BlueprintRecyclerMenu.Layout.PANEL_WIDTH) / 2 + BlueprintRecyclerMenu.Layout.DETAIL_X + 12;
-                    int y = (screen.height - BlueprintRecyclerMenu.Layout.PANEL_HEIGHT) / 2 + BlueprintRecyclerMenu.Layout.ACTION_Y + 8;
+                    var actionButton = AnalyzerWorkbenchProbeSupport.button(screen, "primaryButton");
+                    int x = actionButton.getX() + 2;
+                    int y = actionButton.getY() + 2;
                     verify(screen.mouseClicked(x, y, 0), "confirm direct RP recovery"); confirmed = true; ticks = 0; return;
                 }
                 var field = BlueprintRecyclerScreen.class.getDeclaredField("feedback"); field.setAccessible(true);

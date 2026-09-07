@@ -64,7 +64,7 @@ class ResearchWorkstationsPhaseFiveTest {
                 .noneMatch(field -> SimpleContainer.class.isAssignableFrom(field.getType())));
         assertEquals(
                 Set.of("RECYCLE", "REDEEM", "REDEEM_STACK", "REVERSE_ENGINEER",
-                        "RECOVER_POINTS", "ARCHIVE_FRAGMENTS"),
+                        "RECOVER_POINTS", "ARCHIVE_FRAGMENTS", "ANALYZE_DATA"),
                 Arrays.stream(BlueprintRecyclerActionContract.Action.values())
                         .map(Enum::name)
                         .collect(Collectors.toSet()));
@@ -72,6 +72,6 @@ class ResearchWorkstationsPhaseFiveTest {
 
     @Test
     void destructiveWireCleanupUsesANewExactProtocol() {
-        assertEquals("59", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("62", NetworkHandler.PROTOCOL_VERSION);
     }
 }

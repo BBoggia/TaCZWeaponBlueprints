@@ -2,6 +2,7 @@ package com.gamergaming.taczweaponblueprints.progression;
 
 import static org.junit.jupiter.api.Assertions.*;
 import java.util.*;
+import com.gamergaming.taczweaponblueprints.progression.currency.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -35,7 +36,7 @@ class BlueprintWeaponAnalysisServiceTest {
     static BlueprintReverseEngineeringService.Evaluation evaluate(Tx tx, PlayerRecipeData data) {
         return BlueprintReverseEngineeringService.evaluate(tx.input, tx.inventory, tx.output.isEmpty(), snapshot(), Map.of(TARGET, weapon()),
                 PROFILE, data, id -> false, id -> false, true, 100,
-                stack -> new PhysicalItemBlueprintResolver.InspectedIdentity(TARGET, BlueprintKind.GUN, tx.loaded, tx.attached, false), false, policy());
+                stack -> new PhysicalItemBlueprintResolver.InspectedIdentity(TARGET, BlueprintKind.GUN, tx.loaded, tx.attached, false), false, policy(), tx.currency);
     }
     static BlueprintWeaponAnalysisService.Prepared prepare(Tx tx, PlayerRecipeData data, AnalyzerOutcomeTable table) {
         return prepare(tx, data, table, AnalyzerTier.TIER_1, AnalyzerTier.TIER_3);
@@ -145,6 +146,33 @@ class BlueprintWeaponAnalysisServiceTest {
                 BlueprintWeaponAnalysisService.commit(quote,data,tx,b->fail("reused failed quote")).transaction().status());
     }
 
+    @ParameterizedTest @ValueSource(strings={"", "materials_false", "physical_throw", "output_false", "lease_after_write"})
+    void physicalAttemptsPreserveOddsAndCompensateInputCurrencyAndDiscovery(String fault) {
+        var data = data(); data.setResearchPoints(137); var tx = new Tx();
+        tx.currency = ResearchCurrencyPolicy.physical(new ResourceLocation("minecraft:iron_ingot"), 1);
+        tx.inventory.get(0).setCount(8); while (tx.inventory.size() < 36) tx.inventory.add(ItemStack.EMPTY);
+        tx.fault = fault; var before = data.serializeNBT().copy();
+        var prepared = prepare(tx, data, new AnalyzerOutcomeTable(0, 1, 0, 2, 2));
+        var result = BlueprintWeaponAnalysisService.commit(prepared, data, tx, bound -> fail("fixed outcome must not draw"));
+        assertEquals(137, data.getResearchPoints());
+        if (fault.isEmpty()) {
+            assertTrue(result.transaction().successful()); assertEquals(3, tx.inventory.get(0).getCount());
+            assertEquals(2, result.outcome().orElseThrow().count()); assertTrue(data.hasDiscoveredBlueprint(TARGET.toString()));
+        } else {
+            assertFalse(result.transaction().successful()); assertTrue(result.outcome().isEmpty());
+            assertEquals(before, data.serializeNBT()); assertEquals(8, tx.inventory.get(0).getCount()); assertEquals(2, tx.input.getCount()); assertTrue(tx.output.isEmpty());
+        }
+    }
+
+    @Test void physicalQuoteIsInvalidatedByChangingCurrencyIdentityBeforeRandomness() {
+        var data = data(); var tx = new Tx(); tx.currency = ResearchCurrencyPolicy.physical(new ResourceLocation("minecraft:iron_ingot"), 1);
+        tx.inventory.get(0).setCount(8); while (tx.inventory.size() < 36) tx.inventory.add(ItemStack.EMPTY);
+        var prepared = prepare(tx, data, mixed());
+        tx.currency = ResearchCurrencyPolicy.physical(new ResourceLocation("minecraft:paper"), 2);
+        assertFalse(BlueprintWeaponAnalysisService.commit(prepared, data, tx, bound -> fail("stale quote rolled")).transaction().successful());
+        assertEquals(8, tx.inventory.get(0).getCount());
+    }
+
     static final class FaultData extends PlayerRecipeData {
         String fault="";
         @Override public boolean spendResearchPoints(int points) {
@@ -162,6 +190,8 @@ class BlueprintWeaponAnalysisServiceTest {
     static final class Tx implements BlueprintReverseEngineeringService.WorkstationTransaction {
         ItemStack input=new ItemStack(Items.STICK,2), output=ItemStack.EMPTY;
         List<ItemStack> inventory=new ArrayList<>(List.of(new ItemStack(Items.IRON_INGOT,4)));
+        ResearchCurrencyPolicy currency = ResearchCurrencyPolicy.banked(100, 1);
+        public ResearchCurrencyPolicy currencyPolicy() { return currency; }
         String fault=""; boolean current=true, loaded, attached;
         public ItemStack physicalInput(){return input;} public ItemStack outputStack(){return output;}
         public List<ItemStack> inventoryStacks(){return inventory;}

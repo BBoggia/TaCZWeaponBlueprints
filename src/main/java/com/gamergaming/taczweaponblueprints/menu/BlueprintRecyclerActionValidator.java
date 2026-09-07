@@ -45,6 +45,7 @@ public final class BlueprintRecyclerActionValidator {
         }
         return switch (inputKind) {
             case BLUEPRINT -> action == BlueprintRecyclerActionContract.Action.RECYCLE;
+            case DATA_ANALYSIS -> action == BlueprintRecyclerActionContract.Action.ANALYZE_DATA;
             case RESEARCH_DATA -> action == BlueprintRecyclerActionContract.Action.REDEEM
                     || action == BlueprintRecyclerActionContract.Action.REDEEM_STACK;
             case PHYSICAL_ITEM ->

@@ -10,7 +10,7 @@ public final class AnalyzerBalanceTool {
     public static void main(String[] args) throws Exception {
         var options = new HashMap<String, String>();
         for (int i = 0; i < args.length; i += 2) {
-            if (i + 1 == args.length || !Set.of("--catalog", "--output", "--target").contains(args[i])
+            if (i + 1 == args.length || !Set.of("--catalog", "--output", "--target", "--supply", "--supply-budget").contains(args[i])
                     || options.put(args[i], args[i + 1]) != null)
                 throw new IllegalArgumentException("Usage: --catalog export.json --output report.json [--target namespace:weapon]");
         }
@@ -23,7 +23,20 @@ public final class AnalyzerBalanceTool {
         if (Files.size(input) > 256L * 1024 * 1024) throw new IllegalArgumentException("catalog exceeds 256 MiB input limit");
         JsonObject report;
         try (var reader = Files.newBufferedReader(input)) {
-            report = AnalyzerBalanceReport.create(JsonParser.parseReader(reader).getAsJsonObject(), Optional.ofNullable(options.get("--target")));
+            var catalog = JsonParser.parseReader(reader).getAsJsonObject();
+            report = AnalyzerBalanceReport.create(catalog, Optional.ofNullable(options.get("--target")));
+            if (options.containsKey("--supply") || options.containsKey("--supply-budget")) {
+                var tables = new TreeMap<net.minecraft.resources.ResourceLocation,com.gamergaming.taczweaponblueprints.loot.ScrapSupplyLootModifier.Row>(com.gamergaming.taczweaponblueprints.loot.ScrapSupplyLootModifier.defaults());
+                if (options.containsKey("--supply")) {
+                    var path = Path.of(options.get("--supply")).toRealPath();
+                    if(path.equals(output) || Files.exists(output) && Files.isSameFile(path,output))throw new IllegalArgumentException("report must not overwrite supply input");
+                    if(Files.size(path)>1024*1024)throw new IllegalArgumentException("supply exceeds 1 MiB");
+                    var rows=JsonParser.parseString(Files.readString(path)).getAsJsonObject().getAsJsonObject("tables");
+                    if(rows.size()>1024)throw new IllegalArgumentException("too many supply tables");tables.clear();
+                    for(var entry:rows.entrySet())tables.put(new net.minecraft.resources.ResourceLocation(entry.getKey()),com.gamergaming.taczweaponblueprints.loot.ScrapSupplyLootModifier.Row.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE,entry.getValue()).getOrThrow(false,m->{}));
+                }
+                report.add("research_economy",ResearchEconomyReport.create(catalog,tables,Integer.parseInt(options.getOrDefault("--supply-budget","32"))));
+            }
         }
         Files.createDirectories(output.getParent());
         var temporary = Files.createTempFile(output.getParent(), ".analyzer-report-", ".json");

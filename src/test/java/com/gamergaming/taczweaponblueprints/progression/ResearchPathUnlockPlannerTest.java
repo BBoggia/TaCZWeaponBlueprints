@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.gamergaming.taczweaponblueprints.progression.currency.*;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -2446,7 +2447,43 @@ class ResearchPathUnlockPlannerTest {
             boolean blocked) {
     }
 
+    @Test
+    void physicalWholePathUsesSharedPaymentAndPreservesItsStructuralChoice() {
+        var data = data(137);
+        var policies = policies(data, spec(A, 2, ResearchRequirements.EMPTY, false, iron(2)),
+                spec(B, 20, ResearchRequirements.EMPTY), spec(TARGET, 3, anyOf(A, B), false, iron(1)));
+        var input = new TestInput(List.of(new ItemStack(Items.IRON_INGOT, 7)));
+        while (input.stacks.size() < 36) input.stacks.add(ItemStack.EMPTY);
+        input.currency = ResearchCurrencyPolicy.physical(id("minecraft:iron_ingot"), 1);
+        var chosen = plan(data, policies, TARGET);
+        assertEquals(List.of(A, TARGET), ids(chosen));
+        var failed = BlueprintResearchService.researchPath(TARGET, data, policies::get,
+                ResearchPathUnlockPlannerTest::learningTarget, input, false, true, ignored -> false);
+        assertEquals(BlueprintResearchService.Status.INGREDIENTS_REQUIRED, failed.status());
+        assertEquals(7, input.stacks.get(0).getCount()); assertFalse(data.hasBlueprint(A.toString()));
+        input.stacks.get(0).setCount(8);
+        var result = BlueprintResearchService.researchPath(TARGET, data, policies::get,
+                ResearchPathUnlockPlannerTest::learningTarget, input, false, true, ignored -> false);
+        assertTrue(result.successful()); assertEquals(5, result.spentPoints()); assertEquals(0, result.balanceAfterCost());
+        assertEquals(137, data.getResearchPoints()); assertTrue(data.hasBlueprint(A.toString())); assertTrue(data.hasBlueprint(TARGET.toString()));
+    }
+
+    @Test
+    void physicalPathFailureRestoresPriorLearningAndCompletePayment() {
+        var data = new RejectSecondCommitData(); data.setResearchPoints(137);
+        var policies = policies(data, spec(A, 2, ResearchRequirements.EMPTY), spec(TARGET, 3, legacy(A)));
+        var input = new TestInput(List.of(new ItemStack(Items.IRON_INGOT, 5)));
+        while (input.stacks.size() < 36) input.stacks.add(ItemStack.EMPTY);
+        input.currency = ResearchCurrencyPolicy.physical(id("minecraft:iron_ingot"), 1);
+        var before = data.serializeNBT().copy();
+        var result = BlueprintResearchService.researchPath(TARGET, data, policies::get,
+                ResearchPathUnlockPlannerTest::learningTarget, input, false, true, ignored -> false);
+        assertFalse(result.successful()); assertEquals(before, data.serializeNBT()); assertEquals(5, input.stacks.get(0).getCount());
+    }
+
     private static final class TestInput implements BlueprintResearchService.ResearchInput {
+        private ResearchCurrencyPolicy currency = ResearchCurrencyPolicy.banked(1_000_000_000, 1);
+        @Override public ResearchCurrencyPolicy currencyPolicy() { return currency; }
         private final List<ItemStack> stacks = new ArrayList<>();
 
         private TestInput(List<ItemStack> stacks) {

@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import com.gamergaming.taczweaponblueprints.resource.award.ResearchPointAwardDataManager;
 import com.gamergaming.taczweaponblueprints.resource.award.ResearchPointAwardDiagnostics;
 import com.gamergaming.taczweaponblueprints.api.ResearchPointAwards;
+import com.gamergaming.taczweaponblueprints.api.ResearchCurrencyAwards;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -82,11 +83,11 @@ public final class BlueprintResearchPointAwardCommand {
         java.util.Map<ResearchPointAwards.Status, Integer> outcomes =
                 new java.util.EnumMap<>(ResearchPointAwards.Status.class);
         for (var player : players) {
-            ResearchPointAwards.Result result = ResearchPointAwards.triggerFromCommand(
+            ResearchCurrencyAwards.Result result = ResearchCurrencyAwards.triggerFromCommand(
                     context.getSource(), player, sourceId);
             if (result.successful()) {
                 successful++;
-                awardedPoints += result.awardedPoints();
+                awardedPoints += result.awardedUnits();
             }
             outcomes.merge(result.status(), 1, Integer::sum);
         }

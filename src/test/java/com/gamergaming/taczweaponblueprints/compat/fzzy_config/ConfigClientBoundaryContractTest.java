@@ -21,6 +21,11 @@ class ConfigClientBoundaryContractTest {
             "Lnet/minecraftforge/api/distmarker/OnlyIn;";
 
     @Test
+    void displayUnitWidgetIsMarkedClientOnly() throws IOException {
+        assertWidgetEntryIsClientOnly(DisplayUnitNumber.class.getName());
+    }
+
+    @Test
     void autocompleteWidgetIsMarkedClientOnly() throws IOException {
         assertWidgetEntryIsClientOnly(BlueprintIdAutocompleteString.class.getName());
     }

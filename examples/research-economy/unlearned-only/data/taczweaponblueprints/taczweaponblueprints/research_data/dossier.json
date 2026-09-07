@@ -1,0 +1,46 @@
+{
+  "format": 1,
+  "input": {
+    "item": "taczweaponblueprints:research_dossier"
+  },
+  "behavior": "analysis",
+  "pool": {
+    "tier_weights": {
+      "tier_1": 1,
+      "tier_2": 1,
+      "tier_3": 1
+    }
+  },
+  "reconstruction": "taczweaponblueprints:research_data",
+  "reward_class": "protected_prerequisites",
+  "rows": {
+    "tier_1": {
+      "default": {
+        "blueprint_weight": 4,
+        "fragment_weight": 96,
+        "no_result_weight": 0,
+        "min_fragments": 1,
+        "max_fragments": 2
+      }
+    },
+    "tier_2": {
+      "default": {
+        "blueprint_weight": 8,
+        "fragment_weight": 92,
+        "no_result_weight": 0,
+        "min_fragments": 2,
+        "max_fragments": 3
+      }
+    },
+    "tier_3": {
+      "default": {
+        "blueprint_weight": 12,
+        "fragment_weight": 88,
+        "no_result_weight": 0,
+        "min_fragments": 3,
+        "max_fragments": 4
+      }
+    }
+  },
+  "allow_learned": false
+}

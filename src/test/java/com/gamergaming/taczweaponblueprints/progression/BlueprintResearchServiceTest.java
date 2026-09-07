@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.gamergaming.taczweaponblueprints.progression.currency.*;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -714,6 +716,43 @@ class BlueprintResearchServiceTest {
                 TreeResearchResultMode.DIRECT_LEARN);
     }
 
+    @Test
+    void physicalPurchaseAllocatesCurrencyAndOverlappingMaterialsTogetherAndLeavesStoredRpAlone() {
+        var data = data(137, true);
+        var input = input(new ItemStack(Items.IRON_INGOT, 64), new ItemStack(Items.IRON_INGOT, 15));
+        while (input.stacks.size() < 36) input.stacks.add(ItemStack.EMPTY);
+        input.currency = ResearchCurrencyPolicy.physical(id("minecraft:iron_ingot"), 1);
+        var cost = new BlueprintResearchCost(73, List.of(ingredient(5, "minecraft:iron_ingot")));
+        var result = research(data, input, policy(data, cost), false);
+        assertTrue(result.successful()); assertEquals(73, result.spentPoints()); assertEquals(1, result.balanceAfterCost());
+        assertEquals(137, data.getResearchPoints()); assertEquals(1, input.stacks.stream().mapToInt(ItemStack::getCount).sum());
+    }
+
+    @Test
+    void physicalPurchaseRejectsDoubleCountingAndRestoresFailedConsumption() {
+        var data = data(137, true);
+        var input = input(new ItemStack(Items.IRON_INGOT, 7));
+        while (input.stacks.size() < 36) input.stacks.add(ItemStack.EMPTY);
+        input.currency = ResearchCurrencyPolicy.physical(id("minecraft:iron_ingot"), 1);
+        var cost = new BlueprintResearchCost(6, List.of(ingredient(2, "minecraft:iron_ingot")));
+        var before = data.serializeNBT().copy();
+        assertEquals(BlueprintResearchService.Status.INGREDIENTS_REQUIRED, research(data, input, policy(data, cost), false).status());
+        assertEquals(7, input.stacks.get(0).getCount()); assertEquals(before, data.serializeNBT());
+        input.stacks.get(0).setCount(8); input.failConsumption = true;
+        assertEquals(BlueprintResearchService.Status.TRANSACTION_FAILED, research(data, input, policy(data, cost), false).status());
+        assertEquals(8, input.stacks.get(0).getCount()); assertEquals(before, data.serializeNBT());
+    }
+
+    @Test
+    void physicalCreativeBypassStillNeedsNoCurrencyOrMaterials() {
+        var data = data(0, true); var input = input();
+        while (input.stacks.size() < 36) input.stacks.add(ItemStack.EMPTY);
+        input.currency = ResearchCurrencyPolicy.physical(id("minecraft:iron_ingot"), 1);
+        var cost = new BlueprintResearchCost(80, List.of(ingredient(4, "minecraft:iron_ingot")));
+        assertTrue(research(data, input, policy(data, cost, true), true).successful());
+        assertEquals(0, data.getResearchPoints());
+    }
+
     private static PlayerRecipeData data(int points, boolean discovered) {
         PlayerRecipeData data = new PlayerRecipeData();
         data.setResearchPoints(points);
@@ -820,6 +859,8 @@ class BlueprintResearchServiceTest {
     private static final class TestInput implements ResearchInput {
         private final List<ItemStack> stacks;
         private final List<ResourceLocation> outputs = new ArrayList<>();
+        private ResearchCurrencyPolicy currency = ResearchCurrencyPolicy.banked(100, 1);
+        @Override public ResearchCurrencyPolicy currencyPolicy() { return currency; }
         private boolean acceptOutput = true;
         private boolean deliverOutput = true;
         private boolean failConsumption;

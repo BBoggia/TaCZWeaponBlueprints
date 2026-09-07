@@ -448,8 +448,8 @@ TaCZ recipe output count. A rule overlay changes only the fields it contains.
 The server resolves the logical TaCZ content ID stored in `IGun`, `IAmmo`, or
 `IAttachment` stack data. It never uses the shared Forge backing-item ID, so
 add-on namespaces work without code changes. Only canonical recipe-backed
-catalog entries can become eligible. Loaded guns and guns containing removable
-attachments are always rejected; `allow_modified` controls cosmetic/customized
+catalog entries can become eligible. Guns with ammunition that cannot be recovered safely and guns containing removable
+attachments are rejected; `allow_modified` controls cosmetic/customized
 equipment separately. Merely resolving or previewing an item changes no stack,
 inventory, RP, discovery, or learned state.
 

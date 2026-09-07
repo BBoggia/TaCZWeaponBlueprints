@@ -5,6 +5,11 @@ without a real Minecraft client. Complete it on the exact release candidate and
 record the game version, Forge version, TaCZ version, mod JAR hash, operating
 system, and display resolution with the results.
 
+Run general research checks in the intended active currency. RP-cap and legacy
+Data-redemption checks explicitly require `BANKED_RP` plus `LEGACY_CURRENCY`
+in a disposable configuration. The [economy handoff](research-economy-release-handoff.md)
+adds the default Scrap/Data-analysis and full mode matrix.
+
 ## Candidate record
 
 Fill this in before checking any runtime box. Do not combine results from
@@ -20,6 +25,7 @@ different artifacts or environments.
 | Client OS / Java | |
 | Dedicated-server OS / Java | |
 | Window sizes / GUI scales | |
+| Currency / Data mode / datapacks | |
 
 Automated research-guidance Phase 10 preflight is a JDK 17
 `./gradlew verifyResearchGuidanceCandidateHandoff`; the final versioned
@@ -96,13 +102,13 @@ scales 1, 2, 3, 4, and Auto where the display supports them. Include 320x240,
 - [ ] Typing a search query updates highlights and result count without panning, changing the focused node, or changing domains; Up/Down changes the active result and Enter or a result click navigates exactly once.
 - [ ] Closing and reopening search preserves a valid query and active result without changing the authoritative research selection.
 - [ ] Hovering an ordinary node shows only its published name and one concise status line; it never exposes selected-card cost, inventory, or readiness details.
-- [ ] Clicking a node shows one clear next step plus direct requirement and immediate unlock counts; the pinned card exposes exact RP and inventory materials.
+- [ ] Clicking a node shows one clear next step plus direct requirement and immediate unlock counts; the pinned card exposes exact currency and inventory materials.
 - [ ] Clicking a node pins the current selection and exposes the floating Research action only after its matching authoritative preview arrives.
 - [ ] Single and double clicks only select; the Research button performs the action exactly once and remains disabled while its server result is pending.
 - [ ] With Hold to Research enabled, holding an already-selected Ready node shows a smooth progress bar and submits exactly once at the configured duration.
-- [ ] Releasing a hold early, dragging far enough to pan, selecting another node, closing the Bench, or disabling the shortcut cancels it without spending RP or materials.
+- [ ] Releasing a hold early, dragging far enough to pan, selecting another node, closing the Bench, or disabling the shortcut cancels it without spending currency or materials.
 - [ ] A first click on an unselected Ready node only selects it; it never inherits enough held time to research it.
-- [ ] With a full inventory, successful research creates exactly one world-drop blueprint; if another mod cancels that drop, the transaction reports failure and restores every RP and material input.
+- [ ] With a full inventory, successful research creates exactly one world-drop blueprint; if another mod cancels that drop, the transaction reports failure and restores every currency and material input.
 - [ ] Up/Down while search is focused cycles matches; Enter selects the current match.
 - [ ] Arrow keys outside search traverse connected prerequisites/dependents and
   neighboring nodes without changing the authoritative selection; Enter
@@ -116,7 +122,7 @@ scales 1, 2, 3, 4, and Auto where the display supports them. Include 320x240,
 - [ ] Tab and Shift+Tab reach every visible button and search field.
 - [ ] `Next` focuses one published Available blueprint in the permanent tree,
   explains the recommendation on hover/narration, and never selects it
-  for research, spends RP or materials, or sends a transaction packet.
+  for research, spends currency or materials, or sends a transaction packet.
 - [ ] `Next` prefers an affordable choice, then the current tree, then a choice
   that opens more direct paths; repeating it without a state change focuses the
   same node, while learning/reloading content recomputes a valid recommendation.
@@ -141,7 +147,7 @@ scales 1, 2, 3, 4, and Auto where the display supports them. Include 320x240,
 - [ ] While a goal is active, `Next` only recommends an available step on that
   goal's selected AND-of-OR route. An unsatisfied any-of group contributes one
   alternative rather than every member. Untracking restores the global recommendation.
-- [ ] Plan tooltips show the exact total of published RP and material requirement
+- [ ] Plan tooltips show the exact total of published currency and material requirement
   entries, label totals as partial when Preview or anonymous steps withhold exact
   policy, and never reveal hidden item IDs, quantities, names, or availability.
 - [ ] A fresh client sees exactly three short tree-help instructions; `Got it` survives a restart, and the rail `?` button reopens help.
@@ -163,7 +169,7 @@ scales 1, 2, 3, 4, and Auto where the display supports them. Include 320x240,
 - [ ] Help shows recognizable Learned, Available, Locked, and Hidden badges with plain-text labels, and its narration names the same four families.
 - [ ] A node is never labeled Ready to research until its focused/pinned ID, authoritative selected ID, and exact server preview ID match and that preview is researchable; before the preview arrives it says Checking your inventory.
 - [ ] Every graph node shows a recognizable family badge, while focused and relationship context may replace it with the more specific status symbol and explanation.
-- [ ] Selected and relationship context still distinguishes insufficient-RP, undiscovered, prerequisite-locked, disabled, over-cap, unavailable, Preview, and anonymous states after the graph collapses them into four families.
+- [ ] Selected and relationship context still distinguishes insufficient-currency, undiscovered, prerequisite-locked, disabled, over-cap, unavailable, Preview, and anonymous states after the graph collapses them into four families.
 - [ ] Local focus, hover, search highlighting, and the chosen-for-research corner marker remain distinguishable when they overlap.
 - [ ] Focusing a Silhouette or Name node leaves the previous valid research-selection marker on the correct Preview/Full node.
 - [ ] With Minecraft narration enabled, search and buttons announce meaningful labels; selected-node text is readable through the normal screen narration pass.
@@ -180,7 +186,7 @@ scales 1, 2, 3, 4, and Auto where the display supports them. Include 320x240,
 - [ ] Requirement and unlock portals are distinct, name only disclosed destination groups, and open the expected branch without changing the server research selection.
 - [ ] Focusing a node distinguishes direct requirements, earlier requirements, direct unlocks, later unlocks, and unrelated branches.
 - [ ] Clicking a requirement or unlock card focuses the expected node; relationships remain available in the contextual tooltip and highlighted path.
-- [ ] The focused card shows a useful next action for learned, ready, insufficient-RP, discovery-locked, prerequisite-locked, disabled, over-cap, unavailable, Preview, and anonymous nodes.
+- [ ] The focused card shows a useful next action for learned, ready, insufficient-currency, discovery-locked, prerequisite-locked, disabled, over-cap, unavailable, Preview, and anonymous nodes.
 - [ ] Requirement cards show completion status, unlock cards are visually distinct, and their counts remain truthful when more relationships exist than compact slots.
 - [ ] Anonymous mystery requirement cards show no identity and do nothing when clicked.
 - [ ] Escape closes search, first-visit guidance, and a pinned node card in that order; the next Escape closes the Research Bench rather than revealing a compact screen.
@@ -201,7 +207,7 @@ scales 1, 2, 3, 4, and Auto where the display supports them. Include 320x240,
   blocks its dependent research.
 - [ ] A fresh and an existing player each receive every valid configured
   starting blueprint exactly once on login/config update/reload, with no item,
-  RP/material cost, or Research Point award.
+  currency/material cost, or Research Point award.
 - [ ] Repeated relog and `/reload` do not duplicate starter knowledge or awards;
   removing a starter from configuration does not revoke knowledge already
   granted.
@@ -211,12 +217,11 @@ scales 1, 2, 3, 4, and Auto where the display supports them. Include 320x240,
 
 ### Blueprint Analyzer lifecycle
 
-- [ ] The Blueprint Analyzer uses its worn-steel final model rather than an iron-block
-  placeholder in-world, in the inventory, as a dropped item, and in JEI/REI if
-  installed.
-- [ ] North/east/south/west placement keeps the paper intake on the interaction
-  side, does not mirror its controls, and uses an outline/collision shape that
-  follows the cabinet, deck, console, intake, drawer, and feet.
+- [ ] All three Blueprint Analyzers use their manual, microscope, and electronic
+  station models in-world, in inventory, as drops, and in JEI/EMI when installed.
+- [ ] North/east/south/west placement preserves the front-facing controls and
+  complete two-block outline/collision shape. Both halves open the same menu,
+  and breaking either removes the station with at most one normal item drop.
 - [ ] The shaped model does not hide adjacent block faces, produce opaque-cube
   lighting seams, or let the player target empty corner space as solid machine.
 - [ ] Shift-clicking the Analyzer input or output returns its complete stack to the player inventory; shift-clicking any player slot targets only the Analyzer input and never its output or another player slot.
@@ -224,23 +229,29 @@ scales 1, 2, 3, 4, and Auto where the display supports them. Include 320x240,
 - [ ] Closing the Analyzer with unconsumed input or unclaimed output returns both to inventory, or drops each exactly once when the inventory is full.
 - [ ] Walking out of range, breaking the Analyzer, disconnecting, and a server-forced menu replacement each return or drop both server-owned slots exactly once.
 - [ ] Replacing the input immediately after a result never leaves the old success or failure text attached to the new item.
-- [ ] A configured but capped Research Data item remains identified and untouched; an ordinary unsupported item remains Invalid even while player award data is unavailable.
-- [ ] Redeem All reports the next award without promising every remaining item will be accepted, stops at policy/cap boundaries, and leaves every rejected item intact.
+- [ ] In banked/legacy mode, a configured but capped Research Data item remains identified and untouched; an ordinary unsupported item remains Invalid even while player award data is unavailable.
+- [ ] In legacy Data mode, Redeem Stack reports the next award without promising every remaining item will be accepted, stops at policy/cap boundaries, and leaves every rejected item intact.
 - [ ] With narration enabled, empty, invalid, ready, blocked, processing, success, and failure states announce the item type, status, reward or balance, and available action.
 - [ ] At every supported GUI scale and with a deliberately long translation, hovering the detail area exposes the full text hidden by wrapping or visual clipping.
 - [ ] An eligible unloaded and attachment-free gun resolves its logical TaCZ ID,
-  shows the exact server RP/material cost, and creates one protected blueprint
+  shows the exact server currency/material cost, and creates one protected blueprint
   only after Analyze is pressed.
+- [ ] Loaded weapon analysis and direct recovery return exactly the magazine and
+  valid chambered rounds, including a chamber-only weapon. Matching ammo stacks
+  fill first; any remainder drops when the main inventory is full. Repeat with
+  Scrap and banked RP, and confirm a repeated request cannot return ammo twice.
+- [ ] A blocked loaded-weapon action preserves weapon NBT, payment, and inventory.
+  Open-bolt chamber flags and virtual/fuel ammunition produce no extra rounds.
 - [ ] An attachment consumes exactly one physical item; ammunition consumes the
   canonical output batch or its explicit rule override and leaves any remainder
   in the input.
-- [ ] Loaded guns, guns with removable attachments, insufficient physical count,
-  missing RP/materials, occupied output, known/blocked/exempt content, and stale
+- [ ] Guns with invalid ammunition metadata, guns with removable attachments, insufficient physical count,
+  missing currency/materials, occupied output, known/blocked/exempt content, and stale
   state-token requests consume nothing.
 - [ ] A permitted customized item warns that customization will be lost; a rule
   that rejects modified items leaves it intact.
 - [ ] A completed analysis marks discovery only, does not learn the recipe, and
-  cannot recycle the protected output for RP under the packaged policy. Using
+  cannot recycle the protected output for currency under the packaged policy. Using
   that physical blueprint later learns the recipe according to its provenance.
 
 - [ ] A fresh player sees all 53 recipe-backed default TaCZ weapons in one connected weakest-to-strongest Tech Tree without a legacy view selector.
@@ -272,24 +283,24 @@ scales 1, 2, 3, 4, and Auto where the display supports them. Include 320x240,
   recent activity.
 - [ ] Successful research provides visible card feedback and an audible cue; a rejected request leaves its reason visible near the selected weapon instead of relying only on the action bar.
 - [ ] The Research Bench contains no duplicate input; closing the dedicated Analyzer returns unused input and unclaimed output, dropping them only when inventory insertion is impossible.
-- [ ] Insufficient points, ingredients, or prerequisites consume nothing.
+- [ ] Insufficient currency, ingredients, or prerequisites consume nothing.
 - [ ] In packaged `DIRECT_LEARN` mode, successful research charges the exact
-  current RP and inventory cost, learns immediately, and produces no item even
+  current currency and inventory cost, learns immediately, and produces no item even
   when inventory is full. In temporary `CREATE_BLUEPRINT` compatibility mode,
   it produces one physical blueprint without learning until that item is used.
-- [ ] Successful recycling consumes one learned duplicate and awards the exact configured RP.
+- [ ] Successful recycling consumes one learned duplicate and delivers the exact configured active currency.
 - [ ] Creative bypass behaves exactly as the synchronized server setting specifies.
 - [ ] `/gg progression points give <targets> <amount>` updates every successful target immediately, skips over-cap targets without changing them, and cannot exceed the configured RP cap.
-- [ ] A fresh server shows a 10,000 RP cap, the settings control cannot exceed 100,000, and lowering the cap below a player's stored balance leaves that balance intact while blocking further gains.
+- [ ] In banked mode, a fresh server shows a 10,000 RP cap, the settings control cannot exceed 100,000, and lowering the cap below a player's stored balance leaves that balance intact while blocking further gains.
 - [ ] `/gg progression reset <targets> awards` clears only RP award history; `learned`, `discovered`, and `points` preserve it, while `all` clears it with the rest of progression.
-- [ ] On a fresh player, the first valid blueprint discovery grants exactly 1 RP; repeated inventory ticks, dropping and repicking the same blueprint, relogging, and restarting grant nothing more for that blueprint.
+- [ ] On a fresh player, the first valid blueprint discovery grants exactly 1 active-currency unit; repeated inventory ticks, dropping and repicking the same blueprint, relogging, and restarting grant nothing more for that blueprint.
 - [ ] An existing player receives each eligible retroactive advancement and 10/25-discovery or 5/15/30-learned milestone once, in bounded batches, without duplicate notifications after relog or `/reload`.
-- [ ] Acquire Hardware, Diamonds!, A Terrible Fortress, Into Fire, The End?, and Free the End grant 2/4/4/4/6/8 RP respectively, while ordinary combat grants no RP with the packaged defaults.
-- [ ] Near the RP cap, a finite discovery, milestone, or advancement reward remains unclaimed instead of partially paying; after enough RP is spent, reconciliation grants its complete value exactly once.
-- [ ] Research Notes, Reports, and Dossiers appear only through the eight documented exploration-chest modifiers and redeem for exactly 1/3/6 RP in the Blueprint Analyzer.
-- [ ] Near the RP cap, each Research Data item is rejected intact when its full 1/3/6-point value will not fit; bulk redemption stops without consuming the rejected stack.
+- [ ] Acquire Hardware, Diamonds!, A Terrible Fortress, Into Fire, The End?, and Free the End grant 2/4/4/4/6/8 active-currency units respectively. No built-in combat award definition pays, while player-kill Scrap loot remains independently enabled.
+- [ ] In banked mode near the RP cap, a finite discovery, milestone, or advancement reward remains unclaimed instead of partially paying; after enough RP is spent, reconciliation grants its complete value exactly once.
+- [ ] The eight bundled exploration-chest modifiers supply Notes, Reports, and Dossiers at their documented rates. In legacy Data mode, they redeem for exactly 1/3/6 active-currency units at the Analyzer; default analysis instead creates fragments or blueprints.
+- [ ] In banked/legacy mode near the RP cap, each Research Data item is rejected intact when its full 1/3/6-point value will not fit; bulk redemption stops without consuming the rejected stack.
 - [ ] Replacing or removing one packaged award or Research Data loot modifier with a higher-priority datapack changes only that definition after `/reload`; malformed award data preserves the previous award revision.
-- [ ] Disabling `enableResearchPointAwards` stops datapack awards and built-in Research Data loot injection without deleting balances or claim history; reenabling it does not replay already claimed finite awards.
+- [ ] Disabling `enableResearchPointAwards` stops gameplay datapack awards without deleting balances or claims. Data loot and Scrap loot follow their own switches. Reenabling awards does not replay already claimed finite rewards.
 
 ## Tech Tree follow-up
 
@@ -325,7 +336,7 @@ unchecked until that behavior has been confirmed in a real client/server run.
 - [ ] Mouse wheel and zoom-out controls reach 15% while preserving cursor anchoring and usable hit targets; Fit may still frame exceptionally large canvases below 15%, and zooming in returns cleanly to the interactive range.
 - [ ] An add-on gun with no usable TaCZ runtime evidence receives a deterministic conservative, review-marked placement; restart and catalog discovery order do not move it, and export identifies `unscored_fallback` plus the evidence failure.
 - [ ] `place_independent` publishes the same reviewed placement without a generated prerequisite; returning to `exclude` restores its legacy fallback position without changing learned or discovered state.
-- [ ] With the automatic-placement profile set to `distributed`, eligible add-on guns move to stable stat-sorted ranks after `/reload`, no generated rank exceeds the tree's `layout.max_nodes_per_layer`, and RP costs, materials, availability, and prerequisite connectors remain unchanged.
+- [ ] With the automatic-placement profile set to `distributed`, eligible add-on guns move to stable stat-sorted ranks after `/reload`, no generated rank exceeds the tree's `layout.max_nodes_per_layer`, and currency costs, materials, availability, and prerequisite connectors remain unchanged.
 - [ ] The packaged format-4 automatic profile reports `scoring model=capability_v3`; inspecting the M320 reports formula `tacz-gun-capability-v3`, reference `tacz-1.1.8-capability-v3`, and an Advanced suggestion matching its authored rank-5 placement behind the AUG and M870.
 - [ ] Override the same profile with `scoring_model: mechanical_v2`, reload, and confirm generated positions revert without changing learned blueprints, RP, authored placements, costs, or prerequisite authority. Restore `capability_v3` and confirm the prior v3 topology returns deterministically.
 - [ ] Returning the profile to `independent` restores the legacy fallback position after `/reload`; learned/discovered state and the current research graph remain unchanged.
@@ -340,7 +351,7 @@ unchecked until that behavior has been confirmed in a real client/server run.
 - [ ] A datapack-authored prerequisite remains the complete effective prerequisite list for that gun and is never replaced or extended by the connected-mode heuristic.
 - [ ] A legacy rule with `prerequisites: [A, B]` still requires both A and B. A format-2 rule with one `prerequisite_groups` entry containing `any_of: [A, B]` becomes researchable after learning either A or B, while a second singleton group remains independently mandatory.
 - [ ] A partially disclosed any-of group shows its visible alternatives and a bounded hidden-choice count without exposing hidden IDs. Preview/name/silhouette visibility must not reveal whether the group is satisfied; full visibility may show the current satisfaction count.
-- [ ] A client or server still using an older protocol is rejected cleanly. Matching protocol-59 peers reconstruct identical group ordinals, alternatives, hidden counts, disclosure state, aggregate path-purchase previews, typed route-authority failures, route fingerprints, correlated authoritative guidance, bounded Affordable Now batches, Recent unlock history, disclosure-filtered Blueprint Fragment, crafting-access, and Progression Gate state, and the exact native crafting allow-list with its policy identity even when updates arrive out of order.
+- [ ] A client or server still using an older protocol is rejected cleanly. Matching protocol-62 peers reconstruct identical group ordinals, alternatives, hidden counts, disclosure state, aggregate path-purchase previews, typed route-authority failures, route fingerprints, correlated authoritative guidance, bounded Affordable Now batches, Recent unlock history, disclosure-filtered Blueprint Fragment, crafting-access, and Progression Gate state, and the exact native crafting allow-list with its policy identity even when updates arrive out of order.
 - [ ] With a crafting Workbench open, simulate or pause an incomplete crafting-access response for at least five seconds. Confirm the client retries the original request once, accepts the replacement snapshot, and does not issue additional retries while the same menu remains open.
 - [ ] Open each Research Bench tier and confirm it exposes only the Tech Tree. Open each crafting Workbench level and confirm it exposes only TaCZ crafting. Neither screen should offer a mode-switch button.
 - [ ] Break or replace either half of a crafting Workbench while its menu is open. Moving away or changing dimension must also invalidate the old crafting session.
@@ -360,9 +371,9 @@ unchecked until that behavior has been confirmed in a real client/server run.
 - [ ] `/gg research export` writes format 22 deterministically, preserves canonical prerequisite-group boundaries plus the legacy prerequisite union, records the automatic strategy, explicit generated relationship shapes and hybrid aggregate counts, planned generated groups, and exact/bounded alternative-route review evidence, includes complete independent crafting-policy coverage, dispositions, Workbench levels, assignment sources, selected rules, reasons, and warnings, includes the complete `grouped_route_quality` distributions/warnings/terminal bounds plus `grouped_route_motif_assessment` signals/recommendations/visual-evidence boundary, includes revision-matched research-workstation, Blueprint Fragment, Progression Gate, external-workstation mapping, review-fallback, and omission diagnostics, and its tree-owned band policy, configured/effective layer width, topology population, branch-prerequisite and publication-completeness summaries, planned and published ranks, topology/economy sections, second-parent quotas, strategy-specific rejection evidence, and per-weapon decision/parent relationships agree with status/inspect for representative authored, automatic, excluded, and unplaced weapons.
 - [ ] For the Phase 10 default-rollout check, confirm the packaged profile reports `grouped_routes_v1`; a temporary format-3 profile with `prerequisite_strategy: legacy_and` restores mandatory generated pairs without changing authored prerequisites or learned blueprints, and restoring the packaged profile returns to grouped routes without revoking progress.
 - [ ] At normal zoom and maximum zoom-out, select targets behind singleton, grouped, and mixed requirements. Confirm route highlighting chooses one viable OR route, grouped junctions remain legible, learning an alternative updates satisfaction without resetting the camera, Fit still frames the full tree, and no new top-heavy or excessive-width regression is visible.
-- [ ] In `DIRECT_LEARN`, select a higher unlearned target. Confirm the action reads `Research Path (N)`, RP is the aggregate distinct-node cost, additional material types are disclosed when the six-row preview is truncated, and success learns the prerequisite-first shortest closure plus target. Missing RP/materials and an injected late learning rejection must leave all inventory, points, blueprint/discovery knowledge, and legacy recipe aliases unchanged. In `CREATE_BLUEPRINT`, the same locked target must retain ordinary unmet-prerequisite behavior.
+- [ ] In `DIRECT_LEARN`, select a higher unlearned target. Confirm the action reads `Research Path (N)`, RP is the aggregate distinct-node cost, additional material types are disclosed when the six-row preview is truncated, and success learns the prerequisite-first shortest closure plus target. Missing currency/materials and an injected late learning rejection must leave all inventory, points, blueprint/discovery knowledge, and legacy recipe aliases unchanged. In `CREATE_BLUEPRINT`, the same locked target must retain ordinary unmet-prerequisite behavior.
 - [ ] In `DIRECT_LEARN`, change the selected route, Tech Tree publication, relevant configuration, or player knowledge after receiving a preview but before submitting its Research action. Confirm the server rejects the stale fingerprint, consumes no RP or items, and returns a fresh preview. Repeated clicks while one selection is pending and rapid selection changes must not create duplicate purchases or unbounded planning work.
-- [ ] Track an unlearned goal behind at least one any-of requirement. The compact bottom-edge goal chip must show the exact enabled RP/material progress, the highlighted edge must match the server-selected alternative, and pressing the chip must focus and select the goal without resetting its domain camera unnecessarily.
+- [ ] Track an unlearned goal behind at least one any-of requirement. The compact bottom-edge goal chip must show the exact enabled currency/material progress, the highlighted edge must match the server-selected alternative, and pressing the chip must focus and select the goal without resetting its domain camera unnecessarily.
 - [ ] While that goal remains tracked, add, remove, split, and combine matching inventory stacks. The exact route and camera must remain stable, the goal chip must briefly report Checking, and its material totals must refresh after the short debounce without double-counting an item shared by two requirements.
 - [ ] Close the Research Bench while a tracked-goal request is pending, then reopen it without changing the target or inventory. The reopened Bench must issue a replacement request and must not remain in Checking indefinitely. A terminal route rejection must read as unavailable rather than Checking.
 - [ ] Repeat the tracked-goal check in `POINTS_ONLY`, `ITEMS_ONLY`, `POINTS_AND_ITEMS`, and Creative mode. Disabled channels must be absent, Creative must say costs are waived rather than inventing progress, a progression-capacity failure must remain distinct from missing resources, and a completed goal must remain visible until deliberately untracked.
@@ -376,9 +387,9 @@ unchecked until that behavior has been confirmed in a real client/server run.
 - [ ] Inspect a target with two or more drawable any-of groups. Its junction diamonds and outgoing approaches must occupy distinct small vertical lanes, remain associated with the correct alternatives, and neither overlap nor add extra height to unrelated ranks.
 - [ ] At the first mature branch split, confirm the branches have a small but noticeable seam that grows gradually toward the top. The seam must remain much smaller than a full empty branch corridor, and similarly scored terminal weapons may still end as a two- or three-node cohort on one layer.
 - [ ] Changing the undiscovered-visibility preset does not redact or change the operator export's weapon costs, parent sets, topology metrics, or economy totals; no real player progress changes while exporting.
-- [ ] The packaged weapon economy reports 418 RP total, 10–54 RP single-parent leaf paths, 10–88 RP AND-aware leaf closures, 218 finite configured RP, 16 AND merges, and `research_policy` cost authority with no automatic cost curve.
+- [ ] A fresh live export reports the installed catalog's resolved costs and current automatic cost authority. Historical authored-policy fixtures with 418 total currency units and 218 finite units remain reference data, not expected prices for the current automatic tree.
 - [ ] A format-2 tree with no `bands` renders a rank-only tree with no empty tier gutters; adding three custom bands labels only bands that contain nodes, and removing the middle band's members leaves no vertical gap.
-- [ ] Switching the same format-2 tree between `none`, `dynamic`, and `configured` leaves every prerequisite, RP/material cost, availability state, and research result unchanged.
+- [ ] Switching the same format-2 tree between `none`, `dynamic`, and `configured` leaves every prerequisite, currency/material cost, availability state, and research result unchanged.
 - [ ] A representative third-party pack produces the same automatic positions
   across two restarts and across different resource discovery orders; no
   weapon disappears when the active candidate count approaches the practical
@@ -425,7 +436,7 @@ unchecked until that behavior has been confirmed in a real client/server run.
 - [ ] Under the packaged profile, unmatched ammo and attachments retain their authored 4 RP Preview fallback rules but remain non-researchable and unpublished; enabling their domains makes the fallbacks selectable without fabricating prerequisites.
 - [ ] Large generated add-on weapon families wrap across Tech Tree rows instead of one ultra-wide strip, and repeated reloads produce the same placement.
 - [ ] Changing dormant legacy group metadata during `/reload` does not change the visible Tech Tree or reintroduce a hidden view selector.
-- [ ] Dedicated server rejects a client with any protocol other than `59`.
+- [ ] Dedicated server rejects a client with any protocol other than `62`.
 - [ ] With the Blueprint Journal disabled, identities still disclosed by the Tech Tree receive their Blueprint Fragment and public Progression Gate state. Silhouette, hidden, omitted, and unrelated identities receive no supplemental state.
 - [ ] Select a node with a Bench-tier requirement, a Progression Gate, and archived Blueprint Fragments. Its details and narration list the current/required tier first, the active blocker, then fragment progress; only the selected node receives the small progress/blocker marks.
 - [ ] Open the Blueprint Journal and confirm full-detail entries show their Workbench level, no-level access, or unavailable state. Disclosed fragment targets show progress in details and a compact row suffix only after at least one fragment is archived. Preview, name-only, and silhouette entries reveal no crafting policy, and name-only and silhouette entries reveal neither the target ID nor fragment metadata.
@@ -449,7 +460,7 @@ unchecked until that behavior has been confirmed in a real client/server run.
 Capture clean, HUD-appropriate PNGs at native resolution:
 
 1. Fullscreen Tech Tree with the Research Trees domain sidebar, one connected prerequisite tree, a selected node, visible arrowheads, and several available and locked nodes.
-2. Selected-node contextual tooltip showing prerequisites, unlocks, RP cost, inventory material counts, and readiness.
+2. Selected-node contextual tooltip showing prerequisites, unlocks, currency cost, inventory material counts, and readiness.
 3. Fullscreen overlay with the world visible behind the tree and the floating Research action enabled.
 4. Blueprint Analyzer screen showing a physical TaCZ item, its exact reverse-engineering cost, and the extract-only blueprint output.
 5. Research Bench model placed in a representative TaCZ workshop.
@@ -499,7 +510,7 @@ than the recorded release hash.
 - [ ] Load the [nested example](../examples/authored-branches-datapack/README.md)
   on a dedicated server and confirm five branches, eight visible nodes, and the
   shared M4A1 requirement in status/export output.
-- [ ] Connect with a matching protocol-59 client. Check nested containment,
+- [ ] Connect with a matching protocol-62 client. Check nested containment,
   sibling spacing, translated labels, and the cross-branch OR requirement.
 - [ ] Change only a branch title and reload; check that the label refreshes
   without moving nodes. Change membership and verify that geometry refreshes.

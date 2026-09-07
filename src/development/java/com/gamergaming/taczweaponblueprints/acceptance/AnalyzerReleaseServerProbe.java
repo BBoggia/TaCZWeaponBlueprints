@@ -12,6 +12,7 @@ import com.gamergaming.taczweaponblueprints.item.*;
 import com.gamergaming.taczweaponblueprints.menu.*;
 import com.gamergaming.taczweaponblueprints.progression.*;
 import com.gamergaming.taczweaponblueprints.progression.analyzer.*;
+import com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPayments;
 import com.gamergaming.taczweaponblueprints.resource.research.*;
 import com.tacz.guns.api.item.IGun;
 import net.minecraft.core.*;
@@ -37,6 +38,9 @@ public final class AnalyzerReleaseServerProbe {
     private static int step, age, warmup, assertions, attempts, reconnect;
     private static boolean ready, finished;
     private static BlueprintRecyclerPreview before;
+    private static ItemStack loadedInput = ItemStack.EMPTY, returnedAmmo = ItemStack.EMPTY;
+    private static int expectedAmmo, ammoBefore;
+    private static final boolean LOADED_AMMO = Boolean.getBoolean("tacz.analyzerReleaseQA.loadedAmmo");
     private static final List<ResourceLocation> targets = new ArrayList<>();
     private static final JsonArray cases = new JsonArray();
     private static me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedCondition<FoundWeaponRecoveryMode> originalRecovery;
@@ -93,6 +97,11 @@ public final class AnalyzerReleaseServerProbe {
             verifyResult(player);
             var row = new JsonObject(); row.addProperty("case", name(step)); row.addProperty("attempt", attempts);
             row.addProperty("preview", before.toString());
+            if (LOADED_AMMO && !loadedInput.isEmpty()) {
+                row.addProperty("loadedInput", loadedInput.save(new CompoundTag()).toString());
+                row.addProperty("expectedReturnedRounds", action(step) ? expectedAmmo : 0);
+                row.addProperty("physicalCurrency", physicalCurrency());
+            }
             var menu = (BlueprintRecyclerMenu)player.containerMenu;
             row.addProperty("output", menu.outputStack().save(new CompoundTag()).toString());
             cases.add(row);
@@ -126,6 +135,10 @@ public final class AnalyzerReleaseServerProbe {
         data.replaceProgression(n == 12 || n == 18 ? Set.of(target.toString()) : Set.of(), Set.of(target.toString()), n == 14 ? 0 : 100);
         data.clearArchivedBlueprintFragments(); data.clearArchivedAnalysisFragments();
         p.getInventory().setItem(0, new ItemStack(Items.IRON_INGOT, n == 15 ? 1 : 8));
+        if (physicalCurrency() && n != 14) {
+            p.getInventory().setItem(1, new ItemStack(ModItems.SCRAP.get(), 50));
+            p.getInventory().setItem(2, new ItemStack(ModItems.SCRAP.get(), 50));
+        }
         int tier = n < 9 ? n / 3 + 1 : n == 9 ? 2 : 1;
         var block = switch (tier) { case 1 -> (BlueprintRecyclerBlock)ModBlocks.BLUEPRINT_RECYCLER.get(); case 2 -> ModBlocks.ADVANCED_BLUEPRINT_ANALYZER.get(); default -> ModBlocks.EXPERIMENTAL_BLUEPRINT_ANALYZER.get(); };
         var pos = p.blockPosition().offset(2, 0, 0); p.serverLevel().setBlockAndUpdate(pos.below(), Blocks.STONE.defaultBlockState());
@@ -153,6 +166,17 @@ public final class AnalyzerReleaseServerProbe {
                     new me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedEnum<>(FoundWeaponRecoveryMode.DIRECT_RP_ONLY), () -> FoundWeaponRecoveryMode.DIRECT_RP_ONLY);
             republish();
         }
+        loadedInput = ItemStack.EMPTY; returnedAmmo = ItemStack.EMPTY; expectedAmmo = 0;
+        if (LOADED_AMMO && (n == 9 || n == 10 || n >= 12 && n <= 15 || n == 19)) {
+            var gun = IGun.getIGunOrNull(input);
+            gun.setCurrentAmmoCount(input, n == 10 ? 0 : 5); gun.setBulletInBarrel(input, true);
+            var refund = AnalyzerAmmoRecovery.plan(input).orElseThrow();
+            expectedAmmo = refund.count();
+            if (expectedAmmo > 0) returnedAmmo = refund.stacks().get(0).copy();
+            loadedInput = input.copy();
+            if (n == 9) for (int slot=physicalCurrency()?3:1;slot<36;slot++) p.getInventory().setItem(slot,new ItemStack(Items.STONE,64));
+            ammoBefore = ammunitionCount(p, returnedAmmo);
+        }
         menu.getSlot(0).set(input); menu.broadcastChanges(); menu.refreshAuthoritativePreview(p);
         var preview = menu.preview();
         if (n < 9) {
@@ -160,7 +184,9 @@ public final class AnalyzerReleaseServerProbe {
             int[][] percentages = {{70, 30, 10}, {100, 70, 30}, {100, 100, 80}};
             verify(odds.blueprintWeight() * 100 == percentages[n / 3][n % 3] * (odds.blueprintWeight() + odds.fragmentWeight() + odds.noResultWeight()), "shipped probability matrix");
             int partialQuantity = odds.fragmentWeight() > 0 ? 1 : 0;
-            verify(odds.noResultWeight() == 0 && odds.minimumFragments() == partialQuantity && odds.maximumFragments() == partialQuantity, "shipped partial amount and no failure");
+            int stationTier=n/3+1, weaponTier=n%3+1;
+            int empty=weaponTier>stationTier ? (weaponTier-stationTier==2?50:20) : 0;
+            verify(odds.noResultWeight() == empty && odds.minimumFragments() == partialQuantity && odds.maximumFragments() == partialQuantity, "shipped fragment quantity and mismatch risk");
             verify(preview.pointCost() == 3 && preview.ingredients().get(0).required() == 2, "shipped cost");
             verify(preview.presentation().stationTier() == tier && preview.presentation().weapon().orElseThrow().tier() == n % 3 + 1, "station and weapon tier presentation");
         }
@@ -169,12 +195,26 @@ public final class AnalyzerReleaseServerProbe {
     }
     private static void verifyResult(ServerPlayer p) {
         var menu = (BlueprintRecyclerMenu)p.containerMenu; var data = data(p);
+        if (LOADED_AMMO && !loadedInput.isEmpty()) {
+            verify(ammunitionCount(p, returnedAmmo) == ammoBefore + (action(step) ? expectedAmmo : 0),
+                    "loaded ammo conserved for " + name(step) + ": " + expectedAmmo + " returned on success");
+            if (!action(step)) verify(ItemStack.matches(loadedInput, menu.inputStack()), "blocked action preserves complete loaded gun NBT");
+            if (step == 9 && expectedAmmo > 0) verify(p.getInventory().items.stream().noneMatch(stack -> ItemStack.isSameItemSameTags(stack, returnedAmmo)), "full inventory sends ammo to world");
+        }
+        if (LOADED_AMMO && step == 9) {
+            int rounds = ammunitionCount(p, returnedAmmo);
+            var replay = menu.handleRecyclerAction(p, BlueprintRecyclerActionContract.Action.REVERSE_ENGINEER,
+                    before.inputId().orElseThrow(), before.inputCount(), before.stateToken());
+            verify(!replay.successful(), "loaded weapon action cannot be replayed");
+            verify(ammunitionCount(p, returnedAmmo) == rounds, "replay cannot duplicate recovered ammo");
+        }
+        if (physicalCurrency()) verify(data.getResearchPoints() == (step == 14 ? 0 : 100), "physical operations preserve dormant banked RP");
         if (!action(step)) { verify(menu.inputStack().getCount() == before.inputCount(), "viewing does not consume input"); return; }
         if (step == 9 || step == 10) {
-            verify(menu.inputStack().isEmpty() && data.getResearchPoints() == 97 && p.getInventory().countItem(Items.IRON_INGOT) == 6, "exact analysis payment");
-            verify(!menu.outputStack().isEmpty(), "shipped preset always returns a result");
+            verify(menu.inputStack().isEmpty() && currencyBalance(p) == 97 && p.getInventory().countItem(Items.IRON_INGOT) == 6, "exact analysis payment");
+            verify(step != 9 || !menu.outputStack().isEmpty(), "lower-tier weapon always returns blueprint");
             if (step == 9) verify(menu.outputStack().getItem() instanceof BlueprintItem, "guaranteed full blueprint");
-            else verify(menu.outputStack().getCount() == 1, "partial or full result count");
+            else verify(menu.outputStack().isEmpty() || menu.outputStack().getCount() == 1, "partial, full or no-result output count");
         } else if (step == 11) {
             verify(menu.outputStack().getItem() instanceof BlueprintItem && menu.inputStack().isEmpty(), "reconstructed blueprint output");
             verify(data.getArchivedAnalysisFragments().isEmpty() && data.getResearchPoints() == 100, "reconstruction spends set without RP");
@@ -184,9 +224,20 @@ public final class AnalyzerReleaseServerProbe {
             verify(menu.outputStack().isEmpty(), "ordinary discount does not reconstruct: " + menu.outputStack());
             verify(data.getLearnedBlueprints().isEmpty(), "ordinary discount does not unlock targets: " + data.getLearnedBlueprints());
         } else {
-            verify(data.getResearchPoints() > 100, "legacy RP award: " + name(step));
+            int outputCurrency = physicalCurrency() && menu.outputStack().is(ModItems.SCRAP.get()) ? menu.outputStack().getCount() : 0;
+            verify(currencyBalance(p) + outputCurrency > 100, "active currency award: " + name(step));
             verify(menu.inputStack().getCount() < before.inputCount(), "legacy input consumed");
         }
+    }
+    private static boolean physicalCurrency() { return ResearchCurrencyPayments.physical(ModConfigs.BLUEPRINT.currencyPolicy()); }
+    private static int currencyBalance(ServerPlayer p) {
+        return ResearchCurrencyPayments.balance(ModConfigs.BLUEPRINT.currencyPolicy(), p.getInventory().items, data(p));
+    }
+    private static int ammunitionCount(ServerPlayer player, ItemStack ammo) {
+        if (ammo.isEmpty()) return 0;
+        int count=player.getInventory().items.stream().filter(stack->ItemStack.isSameItemSameTags(stack,ammo)).mapToInt(ItemStack::getCount).sum();
+        for(var entity:player.serverLevel().getAllEntities()) if(entity instanceof net.minecraft.world.entity.item.ItemEntity item && ItemStack.isSameItemSameTags(item.getItem(),ammo)) count+=item.getItem().getCount();
+        return count;
     }
     private static IPlayerRecipeData data(ServerPlayer p) { return p.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElseThrow(); }
     private static void seedPersistence(ServerPlayer p) throws Exception {
@@ -198,6 +249,9 @@ public final class AnalyzerReleaseServerProbe {
         StartingBlueprintGrantService.applyConfiguredGrants(p);
         // Save canonical knowledge, including the recipe corresponding to the learned blueprint.
         BlueprintLearningService.migrateLegacyUnlocks(com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager.SERVER, d);
+        for (var id : targets) ResearchPointAwardDispatcher.blueprintTransitions(p, d, id, true, d.getLearnedBlueprints().contains(id.toString()));
+        p.getInventory().clearContent();
+        for (var kind : AnalysisRewardClass.values()) p.getInventory().add(BlueprintFragmentItem.createAnalysis(targets.get(2), kind));
         Files.writeString(ROOT.resolve("player-uuid.txt"), p.getUUID().toString());
         Files.writeString(ROOT.resolve("expected-player.snbt"), d.serializeNBT().toString());
         var inv = new CompoundTag(); inv.put("Inventory", p.getInventory().save(new ListTag()));

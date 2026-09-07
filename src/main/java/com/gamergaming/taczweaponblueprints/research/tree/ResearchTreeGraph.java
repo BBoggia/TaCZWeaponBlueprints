@@ -169,6 +169,17 @@ public final class ResearchTreeGraph {
      */
     public ResearchTreeGraph orderedInducedSubgraph(
             List<ResourceLocation> orderedNodeIds) {
+        return orderedInducedSubgraph(orderedNodeIds, null);
+    }
+
+    /** Optional diagnostics for checking projection work independently of wall-clock speed. */
+    static final class SubgraphWork {
+        long edgesVisited;
+        long requirementGroupsVisited;
+    }
+
+    ResearchTreeGraph orderedInducedSubgraph(
+            List<ResourceLocation> orderedNodeIds, SubgraphWork work) {
         if (orderedNodeIds == null || orderedNodeIds.stream().anyMatch(Objects::isNull)
                 || new LinkedHashSet<>(orderedNodeIds).size() != orderedNodeIds.size()) {
             throw new IllegalArgumentException(
@@ -188,42 +199,36 @@ public final class ResearchTreeGraph {
         includedNodeIds.forEach(id -> prerequisiteCounts.put(id, 0));
         includedNodeIds.forEach(id -> hiddenPrerequisiteCounts.put(id, 0));
         List<Edge> retainedEdges = new ArrayList<>();
-        for (Edge edge : edges) {
-            if (includedNodeIds.contains(edge.prerequisiteId())
-                    && includedNodeIds.contains(edge.dependentId())) {
-                retainedEdges.add(edge);
-                prerequisiteCounts.compute(
-                        edge.dependentId(),
-                        (ignored, count) -> count == null ? 1 : count + 1);
-            }
-        }
-
-        Map<ResourceLocation, Integer> nextGroupOrdinal = new LinkedHashMap<>();
         List<RequirementGroup> retainedGroups = new ArrayList<>();
-        for (RequirementGroup group : requirementGroups) {
-            if (!includedNodeIds.contains(group.dependentId())) {
-                continue;
+        // The indexes already contain every canonical group and incoming edge of each dependent.
+        // Inspecting only included dependents avoids a full-graph scan for every small branch.
+        for (ResourceLocation dependent : orderedNodeIds) {
+            for (ResourceLocation prerequisite : prerequisitesById.get(dependent)) {
+                if (work != null) work.edgesVisited++;
+                if (includedNodeIds.contains(prerequisite)) {
+                    retainedEdges.add(new Edge(prerequisite, dependent));
+                    prerequisiteCounts.compute(dependent, (ignored, count) -> count + 1);
+                }
             }
-            List<ResourceLocation> alternatives = group.visibleAlternativeIds().stream()
-                    .filter(includedNodeIds::contains)
-                    .toList();
-            int externalAlternatives = Math.addExact(
-                    group.externalAlternativeCount(),
-                    group.visibleAlternativeIds().size() - alternatives.size());
-            int ordinal = nextGroupOrdinal.getOrDefault(group.dependentId(), 0);
-            nextGroupOrdinal.put(group.dependentId(), ordinal + 1);
-            retainedGroups.add(new RequirementGroup(
-                    group.dependentId(),
-                    ordinal,
-                    alternatives,
-                    group.hiddenAlternativeCount(),
-                    externalAlternatives,
-                    group.satisfactionDisclosed(),
-                    group.satisfied()));
-            hiddenPrerequisiteCounts.compute(
-                    group.dependentId(),
-                    (ignored, count) -> (count == null ? 0 : count)
-                            + group.hiddenAlternativeCount());
+            for (RequirementGroup group : requirementGroupsById.get(dependent)) {
+                if (work != null) work.requirementGroupsVisited++;
+                List<ResourceLocation> alternatives = group.visibleAlternativeIds().stream()
+                        .filter(includedNodeIds::contains)
+                        .toList();
+                int externalAlternatives = Math.addExact(
+                        group.externalAlternativeCount(),
+                        group.visibleAlternativeIds().size() - alternatives.size());
+                retainedGroups.add(new RequirementGroup(
+                        dependent,
+                        group.ordinal(),
+                        alternatives,
+                        group.hiddenAlternativeCount(),
+                        externalAlternatives,
+                        group.satisfactionDisclosed(),
+                        group.satisfied()));
+                hiddenPrerequisiteCounts.compute(dependent,
+                        (ignored, count) -> count + group.hiddenAlternativeCount());
+            }
         }
 
         List<Node> retainedNodes = new ArrayList<>(includedNodeIds.size());

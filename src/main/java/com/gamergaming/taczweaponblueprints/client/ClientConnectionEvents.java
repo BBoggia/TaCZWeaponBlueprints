@@ -29,6 +29,19 @@ public final class ClientConnectionEvents {
     }
 
     @SubscribeEvent
+    public static void onItemTooltip(net.minecraftforge.event.entity.player.ItemTooltipEvent event) {
+        var stack=event.getItemStack();
+        if(stack.is(com.gamergaming.taczweaponblueprints.init.ModItems.RESEARCH_NOTE.get())
+                ||stack.is(com.gamergaming.taczweaponblueprints.init.ModItems.RESEARCH_REPORT.get())
+                ||stack.is(com.gamergaming.taczweaponblueprints.init.ModItems.RESEARCH_DOSSIER.get())) {
+            event.getToolTip().add(ClientResearchCurrency.text("tooltip.taczweaponblueprints.data."+ClientResearchCurrency.dataMode())
+                    .withStyle(net.minecraft.ChatFormatting.GRAY));
+        }
+        if(ClientResearchCurrency.policy().item().filter(id->id.equals(net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(stack.getItem()))).isPresent())
+            event.getToolTip().add(net.minecraft.network.chat.Component.translatable("tooltip.taczweaponblueprints.currency").withStyle(net.minecraft.ChatFormatting.GRAY));
+    }
+
+    @SubscribeEvent
     public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
         ClientBlueprintJournal.clear();
         ClientResearchTree.clear();
@@ -36,6 +49,7 @@ public final class ClientConnectionEvents {
         ClientResearchGuidanceState.clear();
         ClientResearchAffordabilityState.clear();
         ClientResearchPointPresentationState.clear();
+        ClientResearchCurrency.clear();
         SyncBlueprintDataPacket.clearClientState();
         SyncPlayerRecipeDataPacket.clearClientState();
         SyncPlayerProgressionPacket.clearClientState();

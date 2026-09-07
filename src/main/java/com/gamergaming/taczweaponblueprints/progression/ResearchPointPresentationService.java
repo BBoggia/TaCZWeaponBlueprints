@@ -77,6 +77,15 @@ public final class ResearchPointPresentationService {
             ResearchPointAwardResolver.Resolution resolution,
             ResearchPointAwardService.BatchResult result,
             ResearchPointAwardContext context) {
+        sendFeedback(player, resolution, result, context, ModConfigs.BLUEPRINT.currencyPolicy());
+    }
+
+    public static void sendFeedback(
+            ServerPlayer player,
+            ResearchPointAwardResolver.Resolution resolution,
+            ResearchPointAwardService.BatchResult result,
+            ResearchPointAwardContext context,
+            com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy currency) {
         if (player == null) {
             return;
         }
@@ -85,7 +94,7 @@ public final class ResearchPointPresentationService {
                 result,
                 ignored -> conditionalFeedbackVisible(player, context));
         if (feedback.present()) {
-            NetworkHandler.sendResearchPointFeedback(player, feedback);
+            NetworkHandler.sendResearchPointFeedback(player, feedback, currency);
         }
     }
 
@@ -139,12 +148,21 @@ public final class ResearchPointPresentationService {
             ResolvedAward resolved,
             ResearchPointAwardService.AwardResult result,
             ResearchPointAwardContext context) {
+        sendFeedback(player, resolved, result, context, ModConfigs.BLUEPRINT.currencyPolicy());
+    }
+
+    public static void sendFeedback(
+            ServerPlayer player,
+            ResolvedAward resolved,
+            ResearchPointAwardService.AwardResult result,
+            ResearchPointAwardContext context,
+            com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy currency) {
         if (player == null) {
             return;
         }
         Feedback feedback = feedback(player, resolved, result, context);
         if (feedback.present()) {
-            NetworkHandler.sendResearchPointFeedback(player, feedback);
+            NetworkHandler.sendResearchPointFeedback(player, feedback, currency);
         }
     }
 
@@ -183,6 +201,8 @@ public final class ResearchPointPresentationService {
                             && !config.combatAwardsEnabled()) {
                 continue;
             }
+            if (definition.trigger().type() == ResearchPointAwardTrigger.Type.INVENTORY_TURN_IN
+                    && ModConfigs.BLUEPRINT.dataSettings().behavior() != com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPolicy.Behavior.LEGACY_CURRENCY) continue;
             if (finiteAwardExhausted(data, definitionId, definition)) {
                 continue;
             }

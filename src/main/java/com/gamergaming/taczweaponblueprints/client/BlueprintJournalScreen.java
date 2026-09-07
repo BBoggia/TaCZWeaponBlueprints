@@ -1,5 +1,7 @@
 package com.gamergaming.taczweaponblueprints.client;
 
+import com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyText;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -267,7 +269,7 @@ public final class BlueprintJournalScreen extends Screen {
 
     private void addHistoryRow(BlueprintJournalSnapshot.HistoryEntry entry) {
         int y = listTop + rows.size() * ROW_HEIGHT;
-        Component status = Component.translatable(entry.learned()
+        Component status = ClientResearchCurrency.text(entry.learned()
                 ? "gui.taczweaponblueprints.journal.status.learned"
                 : "gui.taczweaponblueprints.journal.status.discovered");
         Component message = Component.literal("[").append(status).append("] ")
@@ -373,16 +375,18 @@ public final class BlueprintJournalScreen extends Screen {
         if (onboardingView) {
             return;
         }
-        Component points = Component.translatable(
+        Component points = ClientResearchCurrency.text(
                 "gui.taczweaponblueprints.journal.points",
                 snapshot.researchPoints(), snapshot.pointCap());
         int pointsRight = guideButton == null ? left + listWidth : guideButton.getX() - 4;
         if (left + font.width(title) + 6 > pointsRight - font.width(points)) {
-            points = Component.translatable(
+            points = ClientResearchCurrency.text(
                     "gui.taczweaponblueprints.journal.points.compact",
                     snapshot.researchPoints(), snapshot.pointCap());
         }
         graphics.drawString(font, points, pointsRight - font.width(points), panelY + 10, 0xFFE4C56A);
+        var currencyIcon=ClientResearchCurrency.icon();
+        if(!currencyIcon.isEmpty() && pointsRight-font.width(points)-18>left+font.width(title)) graphics.renderItem(currencyIcon,pointsRight-font.width(points)-18,panelY+6);
 
         int total = snapshot.completionTotal();
         int learned = snapshot.learnedCount();
@@ -416,9 +420,10 @@ public final class BlueprintJournalScreen extends Screen {
         line += Math.max(1, font.split(intro, textWidth).size()) * font.lineHeight + 5;
 
         BlueprintOnboardingPlan plan = BlueprintOnboardingPlan.from(
-                snapshot, ClientResearchPointPresentationState.help());
+                snapshot, ClientResearchPointPresentationState.help(), ClientResearchCurrency.current().map(p -> p.dataSettings().behavior())
+                        .orElse(com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPolicy.Behavior.LEGACY_CURRENCY));
         for (BlueprintOnboardingPlan.Step step : plan.steps()) {
-            Component label = Component.translatable(
+            Component label = ClientResearchCurrency.text(
                     "gui.taczweaponblueprints.journal.onboarding.step." + step.key());
             Component rendered = Component.literal(onboardingPrefix(step.state()) + " ").append(label);
             int color = onboardingColor(step.state());
@@ -428,14 +433,14 @@ public final class BlueprintJournalScreen extends Screen {
 
         if (!plan.earningHelp().isEmpty() && line + font.lineHeight * 2 < contentBottom) {
             line += 3;
-            graphics.drawString(font, Component.translatable(
+            graphics.drawString(font, ClientResearchCurrency.text(
                     "gui.taczweaponblueprints.journal.onboarding.earning_title"),
                     textX, line, 0xFFE4C56A);
             line += font.lineHeight + 3;
             for (var help : plan.earningHelp()) {
-                Component earning = Component.translatable(
+                Component earning = ClientResearchCurrency.text(
                         "gui.taczweaponblueprints.journal.onboarding.earning",
-                        Component.translatable(help.nameKey()), help.points());
+                        ClientResearchCurrency.text(help.nameKey()), help.points());
                 graphics.drawWordWrap(font, earning, textX + 6, line, textWidth - 6, 0xFFCCCCCC);
                 line += Math.max(1, font.split(earning, textWidth - 6).size()) * font.lineHeight + 3;
                 if (line >= contentBottom) {
@@ -481,7 +486,7 @@ public final class BlueprintJournalScreen extends Screen {
             } else {
                 emptyKey = "gui.taczweaponblueprints.journal.empty";
             }
-            Component empty = Component.translatable(emptyKey);
+            Component empty = ClientResearchCurrency.text(emptyKey);
             graphics.drawCenteredString(
                     font, empty,
                     panelX + PANEL_PADDING + listWidth / 2,
@@ -591,7 +596,7 @@ public final class BlueprintJournalScreen extends Screen {
                     detailWidth,
                     Component.translatable(
                             "gui.taczweaponblueprints.journal.detail.fragments"),
-                    Component.translatable(
+                    ClientResearchCurrency.text(
                             progress.complete()
                                     ? "gui.taczweaponblueprints.journal.detail.fragments_complete"
                                     : "gui.taczweaponblueprints.journal.detail.fragments_progress",
@@ -641,7 +646,7 @@ public final class BlueprintJournalScreen extends Screen {
                 Component.literal(entry.blueprintId().toString()));
         detailLine(graphics, x, line, detailWidth,
                 Component.translatable("gui.taczweaponblueprints.journal.detail.status"),
-                Component.translatable(entry.learned()
+                ClientResearchCurrency.text(entry.learned()
                         ? "gui.taczweaponblueprints.journal.status.learned"
                         : "gui.taczweaponblueprints.journal.status.discovered"));
     }
@@ -719,7 +724,7 @@ public final class BlueprintJournalScreen extends Screen {
     }
 
     private String resolvedName(BlueprintJournalEntry entry) {
-        String resolved = entry.nameKey().map(key -> Component.translatable(key).getString()).orElse("");
+        String resolved = entry.nameKey().map(key -> ClientResearchCurrency.text(key).getString()).orElse("");
         if (entry.itemType().isEmpty()) {
             return resolved;
         }
@@ -832,7 +837,7 @@ public final class BlueprintJournalScreen extends Screen {
     }
 
     private Component yesNo(boolean value) {
-        return Component.translatable(value ? "gui.yes" : "gui.no");
+        return ClientResearchCurrency.text(value ? "gui.yes" : "gui.no");
     }
 
     @Override
@@ -882,7 +887,7 @@ public final class BlueprintJournalScreen extends Screen {
             return Component.translatable(
                     "gui.taczweaponblueprints.journal.history.narration",
                     selectedHistory.blueprintId().toString(),
-                    Component.translatable(selectedHistory.learned()
+                    ClientResearchCurrency.text(selectedHistory.learned()
                             ? "gui.taczweaponblueprints.journal.status.learned"
                             : "gui.taczweaponblueprints.journal.status.discovered"));
         }
@@ -911,7 +916,8 @@ public final class BlueprintJournalScreen extends Screen {
 
     private Component onboardingNarration() {
         BlueprintOnboardingPlan plan = BlueprintOnboardingPlan.from(
-                snapshot, ClientResearchPointPresentationState.help());
+                snapshot, ClientResearchPointPresentationState.help(), ClientResearchCurrency.current().map(p -> p.dataSettings().behavior())
+                        .orElse(com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPolicy.Behavior.LEGACY_CURRENCY));
         var narration = Component.translatable(
                 "gui.taczweaponblueprints.journal.onboarding.narration");
         for (BlueprintOnboardingPlan.Step step : plan.steps()) {
@@ -919,7 +925,7 @@ public final class BlueprintJournalScreen extends Screen {
                     "gui.taczweaponblueprints.journal.onboarding.step.narration",
                     Component.translatable("gui.taczweaponblueprints.journal.onboarding.state."
                             + step.state().name().toLowerCase(Locale.ROOT)),
-                    Component.translatable("gui.taczweaponblueprints.journal.onboarding.step."
+                    ClientResearchCurrency.text("gui.taczweaponblueprints.journal.onboarding.step."
                             + step.key())));
         }
         return narration;

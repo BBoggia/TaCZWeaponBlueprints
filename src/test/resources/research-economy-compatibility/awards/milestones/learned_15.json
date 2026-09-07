@@ -1,0 +1,23 @@
+{
+  "format": 1,
+  "award_group": "taczweaponblueprints:learning_milestones",
+  "trigger": {
+    "type": "blueprint_milestone",
+    "retroactive": true,
+    "milestone": {
+      "state": "learned",
+      "threshold": 15
+    }
+  },
+  "reward": {
+    "points": 4,
+    "overflow": "require_full"
+  },
+  "repeat": {
+    "type": "once"
+  },
+  "presentation": {
+    "visibility": "public",
+    "name": "research_points.taczweaponblueprints.learned_15"
+  }
+}

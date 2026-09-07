@@ -1,0 +1,23 @@
+{
+  "format": 1,
+  "award_group": "taczweaponblueprints:discovery_milestones",
+  "trigger": {
+    "type": "blueprint_milestone",
+    "retroactive": true,
+    "milestone": {
+      "state": "discovered",
+      "threshold": 10
+    }
+  },
+  "reward": {
+    "points": 2,
+    "overflow": "require_full"
+  },
+  "repeat": {
+    "type": "once"
+  },
+  "presentation": {
+    "visibility": "public",
+    "name": "research_points.taczweaponblueprints.discovered_10"
+  }
+}

@@ -1,5 +1,7 @@
 package com.gamergaming.taczweaponblueprints.progression;
 
+import com.gamergaming.taczweaponblueprints.progression.currency.*;
+
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
@@ -41,6 +43,18 @@ public final class FoundWeaponRecoveryService {
         BlueprintReverseEngineeringService.Evaluation reverse =
                 BlueprintReverseEngineeringService.evaluateForDirectRecovery(
                         player, transaction);
+        if (ResearchCurrencyPayments.physical(transaction.currencyPolicy())) {
+            var view = ResearchCurrencyManual.eligibility(data.orElseThrow());
+            view.setResearchPoints(ResearchCurrencyPayments.balance(transaction.currencyPolicy(), transaction.inventoryStacks(), data.orElseThrow()));
+            var evaluation = evaluate(transaction.physicalInput(), view, reverse,
+                    ModConfigs.BLUEPRINT.progressionSnapshot().foundWeaponRecoveryMode(),
+                    id -> com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchDataManager.INSTANCE.policyFor(id, view));
+            if (!evaluation.ready()) return evaluation;
+            var plan = ResearchCurrencyManual.prepareInput(ResearchCurrencyManual.context(player, data.orElseThrow()), player, transaction.physicalInput(), reverse.requiredInputCount(), reverse.cost().points(),
+                    ResearchCurrencyPayments.materials(reverse.cost()), evaluation.pointValue());
+            return plan.quote().ready() ? evaluation : Evaluation.failure(Status.DELIVERY_FULL, reverse,
+                    evaluation.pointValue(), evaluation.pointBalance(), evaluation.pointCap());
+        }
         return evaluate(
                 transaction.physicalInput(),
                 data.orElseThrow(),
@@ -140,8 +154,13 @@ public final class FoundWeaponRecoveryService {
             return Result.failure(Status.PLAYER_DATA_UNAVAILABLE, Optional.empty(), 0);
         }
         IPlayerRecipeData playerData = resolved.orElseThrow();
+        var currency = transaction.currencyPolicy();
         Evaluation evaluation = evaluate(player, transaction);
-        Result result = commit(evaluation, playerData, transaction);
+        Result result = AnalyzerAmmoRecovery.execute(player, transaction, playerData,
+                () -> ResearchCurrencyPayments.physical(transaction.currencyPolicy())
+                        ? commitPhysical(player, evaluation, playerData, transaction) : commit(evaluation, playerData, transaction),
+                Result::successful, failure -> Result.failure(failure == AnalyzerAmmoRecovery.Failure.ROLLBACK_FAILED
+                        ? Status.ROLLBACK_FAILED : Status.TRANSACTION_FAILED, Optional.empty(), playerData.getResearchPoints()));
         if (!result.successful()) {
             return result;
         }
@@ -149,7 +168,7 @@ public final class FoundWeaponRecoveryService {
         ResourceLocation blueprintId = result.blueprintId().orElseThrow();
         ResearchPointAwardDispatcher.blueprintTransitions(
                 player, playerData, blueprintId, result.discoveredChanged(), false);
-        Result finalResult = result.withBalance(playerData.getResearchPoints());
+        Result finalResult = result.withBalance(ResearchCurrencyPayments.balance(transaction.currencyPolicy(), transaction.inventoryStacks(), playerData));
         try {
             if (result.discoveredChanged()) {
                 NetworkHandler.syncPlayerRecipeData(player);
@@ -170,8 +189,26 @@ public final class FoundWeaponRecoveryService {
         NetworkHandler.sendResearchPointFeedback(
                 player,
                 new ResearchPointPresentationService.Feedback(
-                        result.awardedPoints(), 1, false, List.of()));
+                        result.awardedPoints(), 1, false, List.of()), currency);
         return finalResult;
+    }
+
+    private static Result commitPhysical(ServerPlayer player, Evaluation evaluation, IPlayerRecipeData data,
+            BlueprintReverseEngineeringService.WorkstationTransaction station) {
+        var target = evaluation.reverse() == null ? Optional.<ResourceLocation>empty() : evaluation.reverse().blueprintId();
+        if (!evaluation.ready()) return Result.failure(evaluation.status(), target, evaluation.pointBalance());
+        var reverse = evaluation.reverse();
+        var context = ResearchCurrencyManual.context(player, data);
+        var plan = ResearchCurrencyManual.prepareInput(context, player, station.physicalInput(), reverse.requiredInputCount(), reverse.cost().points(), ResearchCurrencyPayments.materials(reverse.cost()), evaluation.pointValue());
+        boolean discovery = !data.hasDiscoveredBlueprint(target.orElseThrow().toString());
+        var input = ResearchCurrencyManual.input(player, station.physicalInput(), reverse.requiredInputCount());
+        var progression = ResearchCurrencyManual.progression(data,
+                () -> !discovery || data.discoverBlueprint(target.orElseThrow().toString()));
+        var result = ResearchCurrencyTransaction.commit(plan, context, ResearchCurrencyInput.combine(input, progression));
+        if (!result.successful()) return Result.failure(result.status() == ResearchCurrencyTransaction.Status.ROLLBACK_FAILED
+                ? Status.ROLLBACK_FAILED : Status.TRANSACTION_FAILED, target, evaluation.pointBalance());
+        return new Result(Status.SUCCESS, target, reverse.requiredInputCount(), reverse.cost().points(), evaluation.pointValue(),
+                ResearchCurrencyPayments.balance(context.policy(), context.read().inventory(), data), discovery);
     }
 
     static Result commit(
@@ -320,7 +357,8 @@ public final class FoundWeaponRecoveryService {
         SUCCESS,
         STALE_INPUT,
         TRANSACTION_FAILED,
-        ROLLBACK_FAILED
+        ROLLBACK_FAILED,
+        DELIVERY_FULL
     }
 
     public record Evaluation(

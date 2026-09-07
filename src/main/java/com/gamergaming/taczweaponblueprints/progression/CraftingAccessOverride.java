@@ -4,7 +4,7 @@ import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbe
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintCraftingAccessPolicy;
 
 /** Exact server-config override for one canonical blueprint recipe. */
-public enum CraftingAccessOverride {
+public enum CraftingAccessOverride implements me.fzzyhmstrs.fzzy_config.util.EnumTranslatable {
     TIER_1,
     TIER_2,
     TIER_3,
@@ -23,4 +23,5 @@ public enum CraftingAccessOverride {
             case DISABLED -> BlueprintCraftingAccessPolicy.DISABLED;
         };
     }
+    @Override public String prefix() { return "config.taczweaponblueprints.blueprint.exactCraftingOverrides"; }
 }

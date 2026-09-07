@@ -49,7 +49,7 @@ class ResearchWorkstationsPhaseEightTest {
         assertEquals(RECYCLER, ModItems.BLUEPRINT_RECYCLER_ITEM.getId());
         assertEquals(RECYCLER, ModMenus.BLUEPRINT_RECYCLER.getId());
         assertTrue(ResearchBenchPresentationPolicy.permanentFullscreen());
-        assertEquals("59", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("62", NetworkHandler.PROTOCOL_VERSION);
     }
 
     @Test
@@ -59,7 +59,7 @@ class ResearchWorkstationsPhaseEightTest {
                 Arrays.stream(ResearchBenchResearchAction.values()).map(Enum::name).toList());
         assertEquals(
                 Set.of("RECYCLE", "REDEEM", "REDEEM_STACK", "REVERSE_ENGINEER",
-                        "RECOVER_POINTS", "ARCHIVE_FRAGMENTS"),
+                        "RECOVER_POINTS", "ARCHIVE_FRAGMENTS", "ANALYZE_DATA"),
                 Arrays.stream(BlueprintRecyclerActionContract.Action.values())
                         .map(Enum::name)
                         .collect(Collectors.toSet()));
@@ -136,7 +136,7 @@ class ResearchWorkstationsPhaseEightTest {
         String changelog = Files.readString(PROJECT.resolve("CHANGELOG.md"));
         String release = Files.readString(PROJECT.resolve("docs/releases/1.3.0.md"));
 
-        assertTrue(manual.contains("protocol other than `59`"));
+        assertTrue(manual.contains("protocol other than `" + NetworkHandler.PROTOCOL_VERSION + "`"));
         assertFalse(manual.contains("protocol other than `20`"));
         assertTrue(manual.contains("does not certify any"));
         assertTrue(manual.contains("unchecked hands-on behavior below"));

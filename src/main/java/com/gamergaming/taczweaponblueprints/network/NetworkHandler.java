@@ -29,7 +29,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public class NetworkHandler {
-    public static final String PROTOCOL_VERSION = "59";
+    public static final String PROTOCOL_VERSION = "62";
     // A random per-server seed prevents a partial chunk set from an earlier
     // connection being mistaken for a new sync after reconnecting.
     private static final AtomicLong SYNC_SEQUENCE =
@@ -168,6 +168,10 @@ public class NetworkHandler {
                 CraftingAccessRequestPacket::handle,
                 Optional.of(NetworkDirection.PLAY_TO_SERVER));
 
+        INSTANCE.registerMessage(id++, SyncResearchCurrencyPacket.class,
+                SyncResearchCurrencyPacket::toBytes, SyncResearchCurrencyPacket::new, SyncResearchCurrencyPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+
         INSTANCE.registerMessage(id++, SyncCraftingAccessPacket.class,
                 SyncCraftingAccessPacket::toBytes,
                 SyncCraftingAccessPacket::new,
@@ -224,6 +228,14 @@ public class NetworkHandler {
      * unchanged tree or supplemental state. Callers that changed fragments or
      * criteria must use {@link #syncPlayerProgressionData(ServerPlayer)}.
      */
+    public static void syncResearchCurrency(ServerPlayer player) {
+        player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).ifPresent(data -> {
+            var policy = com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.currencyPolicy();
+            int amount = com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPayments.balance(policy, player.getInventory().items, data);
+            INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new SyncResearchCurrencyPacket(policy, amount, com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.dataSettings()));
+        });
+    }
+
     public static void syncPlayerPointBalance(ServerPlayer player) {
         // A queued complete publication already contains the current balance.
         // Let it win so this narrow path cannot publish around an older tree.
@@ -315,10 +327,15 @@ public class NetworkHandler {
     }
 
     public static void sendResearchPointFeedback(ServerPlayer player, Feedback feedback) {
+        sendResearchPointFeedback(player, feedback, com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.currencyPolicy());
+    }
+
+    public static void sendResearchPointFeedback(ServerPlayer player, Feedback feedback,
+            com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy currency) {
         if (player != null && feedback != null && feedback.present()) {
             INSTANCE.send(
                     PacketDistributor.PLAYER.with(() -> player),
-                    new ResearchPointFeedbackPacket(feedback));
+                    new ResearchPointFeedbackPacket(feedback, currency));
         }
     }
 
@@ -399,6 +416,7 @@ public class NetworkHandler {
             boolean forceTree,
             boolean treeKnownUnchanged,
             boolean includeSupplementalProgression) {
+        syncResearchCurrency(player);
         if (!treeKnownUnchanged) {
             BlueprintProgressionSyncScheduler.clear(player);
         }
@@ -429,8 +447,14 @@ public class NetworkHandler {
             boolean forceTree,
             boolean treeKnownUnchanged,
             boolean includeSupplementalProgression) {
+        IPlayerRecipeData presentationData = recipeData;
+        var currency = com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.currencyPolicy();
+        if (com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPayments.physical(currency)) {
+            presentationData = com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyManual.eligibility(recipeData);
+            presentationData.setResearchPoints(com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPayments.balance(currency, player.getInventory().items, recipeData));
+        }
         var playerPublication =
-                BlueprintResearchDataManager.INSTANCE.playerPublicationFor(recipeData);
+                BlueprintResearchDataManager.INSTANCE.playerPublicationFor(presentationData);
         var snapshot = playerPublication.journal();
         if (includeSupplementalProgression) {
             sendSupplementalProgressionData(player, recipeData, playerPublication);

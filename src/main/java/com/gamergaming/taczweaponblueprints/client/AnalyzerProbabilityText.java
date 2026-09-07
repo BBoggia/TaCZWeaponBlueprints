@@ -6,6 +6,15 @@ import java.math.RoundingMode;
 /** Exact weights stay on the wire; presentation never turns a possible outcome into 0% or 100%. */
 public final class AnalyzerProbabilityText {
     private AnalyzerProbabilityText() { }
+    public static String format(double probability, boolean possible, boolean certain) {
+        if (!Double.isFinite(probability) || probability<0 || probability>1 || certain&&!possible) throw new IllegalArgumentException("invalid probability");
+        if (!possible) return "0%";
+        if (certain) return "100%";
+        double percent=probability*100;
+        if(percent<0.01) return "<0.01%";
+        if(percent>99.99) return ">99.99%";
+        return "≈" + BigDecimal.valueOf(percent).setScale(2,RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + "%";
+    }
     public static String format(int weight, long total) {
         if (total <= 0 || weight < 0 || weight > total) throw new IllegalArgumentException("invalid probability");
         if (weight == 0) return "0%";

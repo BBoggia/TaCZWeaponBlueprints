@@ -111,6 +111,7 @@ public final class ResearchPointAwardReconciliationScheduler {
         }
 
         session.wakeRetryable(data.getResearchPoints());
+        session.wakeDeliveryRetries(player.server.overworld().getGameTime());
         int operations = 0;
         boolean pointsChanged = false;
         boolean helpChanged = false;
@@ -153,7 +154,7 @@ public final class ResearchPointAwardReconciliationScheduler {
         ResearchPointPresentationService.Feedback combined =
                 ResearchPointPresentationService.combine(feedback);
         if (combined.present()) {
-            NetworkHandler.sendResearchPointFeedback(player, combined);
+            NetworkHandler.sendResearchPointFeedback(player, combined, session.config().currencyPolicy());
         }
     }
 
@@ -326,6 +327,8 @@ public final class ResearchPointAwardReconciliationScheduler {
         private final List<ResourceLocation> learned;
         private final Deque<WorkItem> ready = new ArrayDeque<>();
         private final RetryableWorkQueue<ClaimKey, WorkItem> deferred = new RetryableWorkQueue<>();
+        private final Deque<WorkItem> deliveryRetries = new ArrayDeque<>();
+        private long nextDeliveryRetry;
         private final Set<ClaimKey> reservedClaims = new LinkedHashSet<>();
         private PlanningStage stage = PlanningStage.ADVANCEMENT_SCAN;
         private int discoveredIndex;
@@ -395,11 +398,20 @@ public final class ResearchPointAwardReconciliationScheduler {
                 WorkItem work,
                 ResearchPointAwardService.AwardResult result,
                 int currentBalance) {
+            if (result.status() == ResearchPointAwardService.Status.DELIVERY_FAILED) {
+                deliveryRetries.addLast(work);
+                return;
+            }
             if (result.status() == ResearchPointAwardService.Status.POINT_CAP_REACHED) {
                 deferred.defer(work.claim(), work, currentBalance);
                 return;
             }
             complete(work);
+        }
+
+        private void wakeDeliveryRetries(long gameTime) {
+            if (gameTime < nextDeliveryRetry) return;
+            ready.addAll(deliveryRetries); deliveryRetries.clear(); nextDeliveryRetry = gameTime + 100;
         }
 
         private void wakeRetryable(int currentBalance) {
@@ -561,11 +573,11 @@ public final class ResearchPointAwardReconciliationScheduler {
         private boolean finished(IPlayerRecipeData data) {
             return data.getResearchPointAwardLedger().claimCount()
                             >= PlayerProgressionLimits.MAX_RESEARCH_POINT_AWARD_CLAIMS
-                    || stage == PlanningStage.COMPLETE && ready.isEmpty() && deferred.isEmpty();
+                    || stage == PlanningStage.COMPLETE && ready.isEmpty() && deferred.isEmpty() && deliveryRetries.isEmpty();
         }
 
         private int pendingWork() {
-            return ready.size() + deferred.size();
+            return ready.size() + deferred.size() + deliveryRetries.size();
         }
     }
 

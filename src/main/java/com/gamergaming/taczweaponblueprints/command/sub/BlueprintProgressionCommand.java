@@ -75,6 +75,11 @@ public final class BlueprintProgressionCommand {
                                                         1,
                                                         PlayerProgressionLimits.MAX_RESEARCH_POINTS))
                                                 .executes(BlueprintProgressionCommand::givePoints)))))
+                .then(ResearchCurrencyMigrationCommand.addTo(Commands.literal("currency")
+                        .then(Commands.literal("give")
+                                .then(Commands.argument("targets", EntityArgument.players())
+                                        .then(Commands.argument("amount", IntegerArgumentType.integer(1, 1_000_000_000))
+                                                .executes(BlueprintProgressionCommand::giveCurrency))))))
                 .then(criteriaCommands());
     }
 
@@ -295,6 +300,28 @@ public final class BlueprintProgressionCommand {
                 state.serializedName(),
                 result), true);
         return changed;
+    }
+
+    private static int giveCurrency(CommandContext<CommandSourceStack> command) throws CommandSyntaxException {
+        var players = EntityArgument.getPlayers(command, "targets");
+        int amount = IntegerArgumentType.getInteger(command, "amount");
+        int successful = 0;
+        for (var player : players) {
+            var data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElse(null);
+            if (data == null) continue;
+            var live = com.gamergaming.taczweaponblueprints.progression.currency.PlayerResearchCurrencyContext.inventory(player, data);
+            var plan = com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPlanner.prepare(live.policy(), live.read(),
+                    new com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPlanner.Request(0, java.util.List.of(), amount,
+                            com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPlanner.Destination.EVENT,
+                            com.gamergaming.taczweaponblueprints.progression.ResearchPointTransactionService.OverflowPolicy.REQUIRE_FULL));
+            var result = com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyTransaction.commit(plan, live,
+                    com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyTransaction.NONE);
+            if (result.successful()) { successful++; NetworkHandler.syncPlayerPointBalance(player); }
+        }
+        int count = successful;
+        command.getSource().sendSuccess(() -> Component.translatable("commands.taczweaponblueprints.progression.currency.give",
+                amount, com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyText.name(ModConfigs.BLUEPRINT.currencyPolicy()), count, players.size()), true);
+        return successful;
     }
 
     private static int givePoints(

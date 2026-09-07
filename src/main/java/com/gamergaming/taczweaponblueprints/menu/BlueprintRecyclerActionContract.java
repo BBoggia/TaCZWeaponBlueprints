@@ -22,7 +22,8 @@ public final class BlueprintRecyclerActionContract {
         REDEEM_STACK,
         REVERSE_ENGINEER,
         RECOVER_POINTS,
-        ARCHIVE_FRAGMENTS
+        ARCHIVE_FRAGMENTS,
+        ANALYZE_DATA
     }
 
     public enum ResultCode {
@@ -62,7 +63,9 @@ public final class BlueprintRecyclerActionContract {
         NOT_A_WEAPON,
         VERIFIED_LOOT_REQUIRED,
         RECOVERY_DISABLED,
-        ROLLBACK_FAILED;
+        ROLLBACK_FAILED,
+        DELIVERY_FULL,
+        STATION_REQUIRED, STATION_TIER_REQUIRED, DATA_DISABLED, ALL_LEARNED, EMPTY_POOL;
 
         public static ResultCode from(BlueprintFragmentAnalysisService.Status status) {
             if (status == null) {
@@ -90,6 +93,9 @@ public final class BlueprintRecyclerActionContract {
                 return TRANSACTION_FAILED;
             }
             return switch (status) {
+                case DELIVERY_FULL -> DELIVERY_FULL;
+                case TRANSACTION_FAILED -> TRANSACTION_FAILED;
+                case ROLLBACK_FAILED -> ROLLBACK_FAILED;
                 case SUCCESS -> SUCCESS;
                 case INVALID_INPUT -> INVALID_INPUT;
                 case PLAYER_DATA_UNAVAILABLE -> PLAYER_DATA_UNAVAILABLE;
@@ -111,6 +117,18 @@ public final class BlueprintRecyclerActionContract {
                 return TRANSACTION_FAILED;
             }
             return switch (status) {
+                case STATION_REQUIRED -> STATION_REQUIRED;
+                case STATION_TIER_REQUIRED -> STATION_TIER_REQUIRED;
+                case DATA_DISABLED -> DATA_DISABLED;
+                case ALL_LEARNED -> ALL_LEARNED;
+                case EMPTY_POOL -> EMPTY_POOL;
+                case OUTPUT_OCCUPIED -> OUTPUT_OCCUPIED;
+                case POINTS_REQUIRED -> POINTS_REQUIRED;
+                case INGREDIENTS_REQUIRED -> INGREDIENTS_REQUIRED;
+                case PROGRESSION_CAPACITY_EXHAUSTED -> PROGRESSION_CAPACITY_EXHAUSTED;
+                case TRANSACTION_FAILED -> TRANSACTION_FAILED;
+                case ROLLBACK_FAILED -> ROLLBACK_FAILED;
+                case DELIVERY_FULL -> DELIVERY_FULL;
                 case SUCCESS -> SUCCESS;
                 case INVALID_PLAYER -> INVALID_PLAYER;
                 case PLAYER_DATA_UNAVAILABLE -> PLAYER_DATA_UNAVAILABLE;
@@ -160,6 +178,7 @@ public final class BlueprintRecyclerActionContract {
                 return TRANSACTION_FAILED;
             }
             return switch (status) {
+                case DELIVERY_FULL -> DELIVERY_FULL;
                 case SUCCESS -> SUCCESS;
                 case INVALID_INPUT -> INVALID_INPUT;
                 case INVALID_PLAYER -> INVALID_PLAYER;
@@ -215,7 +234,7 @@ public final class BlueprintRecyclerActionContract {
             if (stateToken < 0) throw new IllegalArgumentException("invalid result state token");
             if (fragments == null || fragments.isPresent() && (code != ResultCode.SUCCESS || action != Action.ARCHIVE_FRAGMENTS))
                 throw new IllegalArgumentException("invalid fragment feedback");
-            if (outcome == null || outcome.isPresent() && (code != ResultCode.SUCCESS || action != Action.REVERSE_ENGINEER))
+            if (outcome == null || outcome.isPresent() && (code != ResultCode.SUCCESS || action != Action.REVERSE_ENGINEER && action != Action.ANALYZE_DATA))
                 throw new IllegalArgumentException("invalid analysis outcome feedback");
             inputId = inputId == null ? Optional.empty() : inputId;
             if (action == null || code == null || inputId.isEmpty()

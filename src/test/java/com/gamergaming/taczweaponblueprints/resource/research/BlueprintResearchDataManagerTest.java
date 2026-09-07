@@ -29,6 +29,32 @@ import net.minecraft.util.profiling.InactiveProfiler;
 
 class BlueprintResearchDataManagerTest {
     @Test
+    void dataAndReconstructionPublishTogetherAndInvalidReloadRetainsBoth() {
+        net.minecraft.SharedConstants.tryDetectVersion(); net.minecraft.server.Bootstrap.bootStrap();
+        var manager = BlueprintResearchDataManager.INSTANCE; manager.clear();
+        try {
+            var data = ResearchDataPolicyTest.json("report");
+            data.add("input", com.google.gson.JsonParser.parseString("{\"item\":\"minecraft:paper\"}"));
+            var definitions = new java.util.HashMap<ResourceLocation, Resource>();
+            definitions.put(new ResourceLocation("test:taczweaponblueprints/research_profiles/analyzer.json"), resource(BlueprintAnalyzerPolicyTest.profileJson().toString()));
+            definitions.put(new ResourceLocation("test:taczweaponblueprints/research_data/data.json"), resource(data.toString()));
+            definitions.put(new ResourceLocation("test:taczweaponblueprints/analysis_reconstruction/shared.json"), resource(ResearchDataPolicyTest.json("shared").toString()));
+            var prepared = manager.prepare(resourceManager(definitions), InactiveProfiler.INSTANCE);
+            manager.applySnapshot(prepared, com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager.SERVER.catalogPublication(), BlueprintAnalyzerPolicyTest.PROFILE, ignored -> true);
+            var published = manager.publication();
+            assertEquals(1, published.snapshot().researchData().policies().size());
+            assertEquals(1, published.snapshot().researchData().reconstruction().size());
+            definitions.remove(new ResourceLocation("test:taczweaponblueprints/analysis_reconstruction/shared.json"));
+            assertThrows(RuntimeException.class, () -> manager.prepare(resourceManager(definitions), InactiveProfiler.INSTANCE));
+            assertSame(published, manager.publication());
+            var disabled = ResearchDataPolicyTest.json("shared"); disabled.addProperty("enabled", false);
+            definitions.put(new ResourceLocation("test:taczweaponblueprints/analysis_reconstruction/shared.json"), resource(disabled.toString()));
+            assertThrows(RuntimeException.class, () -> manager.prepare(resourceManager(definitions), InactiveProfiler.INSTANCE));
+            assertSame(published, manager.publication());
+        } finally { manager.clear(); }
+    }
+
+    @Test
     void analyzerReloadPublishesWholeSnapshotAndRetainsPriorOnInvalidPolicy() {
         net.minecraft.SharedConstants.tryDetectVersion();
         net.minecraft.server.Bootstrap.bootStrap();

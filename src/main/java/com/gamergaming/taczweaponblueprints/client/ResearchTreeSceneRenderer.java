@@ -1,6 +1,7 @@
 package com.gamergaming.taczweaponblueprints.client;
 
 import java.util.*;
+import com.gamergaming.taczweaponblueprints.client.ResearchTreeDetailPolicy.Detail;
 import java.util.function.*;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
 import net.minecraft.client.gui.Font;
@@ -10,9 +11,10 @@ import net.minecraft.network.chat.Component;
 /** Native compact-tile paint layer. It consumes current public presentation and validated geometry. */
 final class ResearchTreeSceneRenderer {
     private static final int PANEL = 0xff18232e, BORDER = 0xff354653, TEXT = 0xffe3e9e8, MUTED = 0xff99a9b4, ACCENT = 0xffecc76e;
-    private enum Detail { OVERVIEW, BROWSE }
     private record SegmentKey(int connection, int segment) { }
     private Detail detail = Detail.BROWSE;
+    private final double minimumNodeWidth, minimumNodeHeight;
+    boolean labelsVisible() { return detail == Detail.BROWSE; }
     java.util.function.LongConsumer timingObserver;
     private final ResearchTreeSceneView geometry;
     private final ResearchTreeScene scene;
@@ -27,6 +29,8 @@ final class ResearchTreeSceneRenderer {
     private long artGeneration = -1;
     ResearchTreeSceneRenderer(ResearchTreeSceneView geometry) {
         this.geometry = geometry; scene = geometry.scene;
+        minimumNodeWidth = scene.nodes().stream().mapToDouble(n -> n.body().width()).min().orElse(0);
+        minimumNodeHeight = scene.nodes().stream().mapToDouble(n -> n.body().height()).min().orElse(0);
         routes = new ResearchTreeRoutingIndex(scene.routing().orElseThrow());
         for (var group : scene.key().topology().groups()) groupEdges.put(group.id(), group.alternatives().stream()
                 .map(id -> new ResearchTreeGraph.Edge(id,group.id().dependentId())).toList());
@@ -82,8 +86,8 @@ final class ResearchTreeSceneRenderer {
         long cpuStart = timingObserver == null ? 0 : System.nanoTime();
         prepareArt();
         var camera = canvas.viewport();
-        boolean browse = detail == Detail.BROWSE ? camera.scale() >= .48 : camera.scale() > .58;
-        detail = browse ? Detail.BROWSE : Detail.OVERVIEW;
+        detail = ResearchTreeDetailPolicy.resolve(detail,
+                minimumNodeWidth * camera.scale(), minimumNodeHeight * camera.scale());
         var view = canvas.bounds();
         var cb = camera.visibleCanvasBounds();
         var visible = new ResearchTreeScene.Bounds(cb.x() - geometry.offsetX, cb.y() - geometry.offsetY, cb.width(), cb.height());
@@ -159,7 +163,11 @@ final class ResearchTreeSceneRenderer {
                 var publicNode = projection.graph().node(node.id()).orElseThrow();
                 var b = node.body(); var decoration = canvas.sceneDecoration(node.id()); boolean chosen = decoration.focused();
                 fill(g, b, detail == Detail.OVERVIEW ? colors.applyAsInt(publicNode)
-                        : publicNode.learned() ? 0xff1b3733 : PANEL);
+                        : detail == Detail.BROWSE && publicNode.learned() ? 0xff1b3733 : PANEL);
+                if (detail == Detail.ICONS) {
+                    art.render(g, publicNode, new ResearchTreeScene.Bounds(
+                            b.x() + 5, b.y() + 5, b.width() - 10, b.height() - 10));
+                }
                 border(g, b, chosen ? ACCENT : canvas.searchMatches().contains(node.id()) ? 0xff62c7d9 : BORDER, chosen ? 2 : 1);
                 if (decoration.hovered()) border(g, b, TEXT, 1);
                 if (decoration.pinned()) {

@@ -1,0 +1,9 @@
+version = 4
+researchCostMode = "POINTS_AND_ITEMS"
+researchPointCap = 2676
+enableResearchPointAwards = true
+enableCombatResearchPointAwards = false
+progressionPreset = "TIERED_RESEARCH_AND_CRAFTING"
+fragmentPreset = "TARGETED_RESEARCH_BOOST"
+foundWeaponRecoveryMode = "PLAYER_CHOICE"
+activeResearchProfile = "taczweaponblueprints:duplicate_recovery"

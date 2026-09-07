@@ -36,7 +36,7 @@ def removeStaleModArchives = tasks.register('removeStaleModArchives') {
 // Deliberate changes must update runtime constants, release gates, and
 // migration documentation together.
 def certifiedAutomaticPlacementVersion = 'tacz-gun-placement-v13'
-def certifiedResearchTreeProtocol = '59'
+def certifiedResearchTreeProtocol = '62'
 def certifiedResearchTreeSceneLayout = 'branches-v2'
 def certifiedResearchTreeProtocolNumber = certifiedResearchTreeProtocol as int
 def certifiedResearchCatalogExportFormat = 22
@@ -208,6 +208,10 @@ if (providers.gradleProperty('analyzerStationsQA').isPresent() || providers.grad
             property 'tacz.analyzerScreenQA.enabled', 'true'
             property 'tacz.analyzerScreenQA.world', providers.gradleProperty('analyzerScreenQAWorld').orElse('Analyzer A5 QA').get()
         }
+        if (providers.gradleProperty('researchDataScreenQA').isPresent()) { property 'tacz.researchDataScreenQA.enabled', 'true' }
+        if (providers.gradleProperty('researchCurrencyQA').isPresent()) {
+            property 'tacz.researchCurrencyQA.enabled', 'true'
+        }
         if (providers.gradleProperty('analyzerTransactionsQA').isPresent()) {
             property 'tacz.analyzerTransactionsQA.enabled', 'true'
         }
@@ -239,6 +243,51 @@ if (providers.gradleProperty('analyzerStationsQA').isPresent() || providers.grad
 }
 
 // Dedicated acceptance uses a marked disposable server directory and a real client.
+if (providers.gradleProperty('researchEconomyQA').isPresent()) {
+    def qaRoot = file(providers.gradleProperty('researchEconomyQA').get())
+    def qaRole = providers.gradleProperty('researchEconomyRole').orElse('Alice').get()
+    if (!(qaRole in ['Alice', 'Bob'])) throw new GradleException('Unknown economy acceptance client')
+    def artifactDir = file(providers.gradleProperty('researchEconomyArtifact').get())
+    if (!new File(artifactDir, 'META-INF/mods.toml').isFile())
+        throw new GradleException('Economy acceptance requires an extracted, remapped candidate artifact')
+    sourceSets.create('economyAcceptance') {
+        output.classesDirs.setFrom(artifactDir)
+        output.resourcesDir = artifactDir
+    }
+    tasks.named('compileEconomyAcceptanceJava') { enabled = false }
+    tasks.named('processEconomyAcceptanceResources') { enabled = false }
+    sourceSets.development.runtimeClasspath = sourceSets.development.output +
+            configurations.developmentRuntimeClasspath + files(artifactDir)
+    ['client', 'server'].each { runName ->
+        minecraft.runs.named(runName) {
+            mods { "${mod_id}" { setSources([sourceSets.economyAcceptance, sourceSets.development]) } }
+            property 'tacz.economyQA.root', qaRoot.absolutePath
+            property 'tacz.economyQA.role', qaRole
+            property 'tacz.economyQA.phase', providers.gradleProperty('researchEconomyPhase').orElse('gameplay').get()
+            property 'tacz.economyQA.artifact', artifactDir.absolutePath
+            property 'tacz.economyQA.workbenches', providers.gradleProperty('researchEconomyWorkbenches').orElse('false').get()
+            workingDirectory new File(qaRoot, runName == 'server' ? 'server' : qaRole)
+        }
+    }
+    minecraft.runs.client { args '--username', qaRole }
+    minecraft.runs.server { args '--nogui' }
+    if (providers.gradleProperty('researchEconomyExportLaunch').isPresent()) {
+        tasks.withType(JavaExec).configureEach {
+            if (name in ['runClient', 'runServer']) jvmArgumentProviders.add({
+                def output = file(providers.gradleProperty('researchEconomyExportLaunch').get())
+                output.parentFile.mkdirs()
+                output.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson([
+                        command: [javaLauncher.get().executablePath.asFile.absolutePath] + jvmArgs +
+                                systemProperties.collect { k, v -> "-D${k}=${v}" } +
+                                ['-cp', classpath.asPath, mainClass.get()] + args,
+                        environment: environment.findAll { k, v -> k == 'MOD_CLASSES' },
+                        directory: workingDir.absolutePath]))
+                throw new StopExecutionException('Exported isolated acceptance launch')
+            } as CommandLineArgumentProvider)
+        }
+    }
+}
+
 if (providers.gradleProperty('analyzerReleaseQA').isPresent()) {
     def qaRoot = file(providers.gradleProperty('analyzerReleaseQA').get())
     ['client', 'server'].each { runName ->
@@ -537,11 +586,15 @@ tasks.register('generateAnalyzerBalanceReport', JavaExec) {
     def target = providers.gradleProperty('analyzerTarget')
     inputs.files(catalog).optional()
     inputs.property('target', target.orElse(''))
+    inputs.files(providers.gradleProperty('economySupply')).optional()
+    inputs.property('economySupplyBudget', providers.gradleProperty('economySupplyBudget').orElse('32'))
     outputs.file(report)
     doFirst {
         if (!catalog.isPresent()) throw new GradleException('Supply -PanalyzerCatalog=/path/to/research-export.json (catalog format 22).')
         args = ['--catalog', file(catalog.get()).absolutePath, '--output', file(report.get()).absolutePath]
         if (target.isPresent()) args += ['--target', target.get()]
+        if (providers.gradleProperty('economySupply').isPresent()) args += ['--supply', file(providers.gradleProperty('economySupply').get()).absolutePath]
+        if (providers.gradleProperty('economySupplyBudget').isPresent()) args += ['--supply-budget', providers.gradleProperty('economySupplyBudget').get()]
     }
 }
 
@@ -556,6 +609,22 @@ def analyzerDatapackTasks = ['legacy', 'tiered', 'overrides'].collect { preset -
         reproducibleFileOrder = true
     }
 }
+def researchEconomyDatapackTasks = ['unlearned-only', 'weighted-pool', 'recyclable-data'].collect { preset ->
+    tasks.register("packageResearchEconomy${preset.replace('-', '_')}Datapack", Zip) {
+        group = 'authoring'
+        from("examples/research-economy/${preset}")
+        archiveFileName = "research-economy-${preset}.zip"
+        destinationDirectory = layout.buildDirectory.dir('distributions/research-economy')
+        preserveFileTimestamps = false
+        reproducibleFileOrder = true
+    }
+}
+tasks.register('packageResearchEconomyDatapacks') {
+    group = 'authoring'
+    description = 'Packages optional Research Data policies; does not activate them.'
+    dependsOn researchEconomyDatapackTasks
+}
+
 tasks.register('packageAnalyzerDatapacks') {
     group = 'authoring'
     description = 'Packages opt-in Analyzer presets and rule examples; does not activate them.'
@@ -2979,9 +3048,9 @@ tasks.register('verifyTieredProgressionReleaseContract') {
                 'tierOneUpperPercent = new ValidatedInt(35, 98, 1)',
                 'tierTwoUpperPercent = new ValidatedInt(75, 99, 2)',
                 'tierOneFragmentThreshold = customFragments(',
-                'new ValidatedInt(5, MAX_CONFIGURED_FRAGMENT_THRESHOLD, 1)',
-                'new ValidatedInt(10, MAX_CONFIGURED_FRAGMENT_THRESHOLD, 1)',
-                'new ValidatedInt(15, MAX_CONFIGURED_FRAGMENT_THRESHOLD, 1)',
+                'new ValidatedInt(5, MAX_CONFIGURED_FRAGMENT_THRESHOLD, 1, ValidatedNumber.WidgetType.TEXTBOX)',
+                'new ValidatedInt(10, MAX_CONFIGURED_FRAGMENT_THRESHOLD, 1, ValidatedNumber.WidgetType.TEXTBOX)',
+                'new ValidatedInt(15, MAX_CONFIGURED_FRAGMENT_THRESHOLD, 1, ValidatedNumber.WidgetType.TEXTBOX)',
                 'fragmentLootReplacementPercent = new ValidatedInt(20, 100, 0)',
                 'if (deserializedVersion < 3)',
                 'progressionPreset.validateAndSet(ResearchProgressionPreset.CLASSIC)',
@@ -3445,8 +3514,8 @@ tasks.register('verifyReleaseArtifact') {
             def modifierFiles = names.findAll {
                 it.startsWith('data/taczweaponblueprints/loot_modifiers/') && it.endsWith('.json')
             }
-            if (modifierFiles.size() != 494) {
-                throw new GradleException("Expected 494 packaged loot modifiers, found ${modifierFiles.size()}")
+            if (modifierFiles.size() != 495) {
+                throw new GradleException("Expected 495 packaged loot modifiers, found ${modifierFiles.size()}")
             }
             def schemaFiles = names.findAll {
                 (it.startsWith('data/taczweaponblueprints/taczweaponblueprints/loot_pools/')
@@ -3859,7 +3928,8 @@ tasks.register('verifyReleaseArtifact') {
             def profile = parsePackagedJson(researchProfileFiles.first())
             def progression = profile['progression']
             def crafting = profile['crafting']
-            if (profile['format'] != 4
+            if (profile['format'] != 5
+                    || profile['analyzer']?.get('mode') != 'tiered'
                     || profile['tree_enabled'] != false
                     || profile['domain_policies'] != [
                             weapons: [tree_enabled: true, research_enabled: true],
@@ -4524,8 +4594,8 @@ tasks.register('verifyReleaseArtifact') {
             def globalIndex = zip.getInputStream(globalEntry).withCloseable { stream ->
                 jsonParser.parse(stream, 'UTF-8')
             }
-            if (!(globalIndex.entries instanceof List) || globalIndex.entries.size() != 494) {
-                throw new GradleException('Packaged global loot-modifier index must contain exactly 494 entries')
+            if (!(globalIndex.entries instanceof List) || globalIndex.entries.size() != 495) {
+                throw new GradleException('Packaged global loot-modifier index must contain exactly 495 entries')
             }
             if (globalIndex.entries.toSet().size() != globalIndex.entries.size()) {
                 throw new GradleException('Packaged global loot-modifier index contains duplicate entries')
@@ -4859,6 +4929,20 @@ tasks.register('certifyReleaseCandidate') {
         def sumAttribute = { String name ->
             testSuites.sum { suite -> (suite.attributes()[name]?.toString() ?: '0') as int } ?: 0
         }
+        // Keep current Data/supply evidence tied to the actual candidate, not copied tables.
+        def packagedEconomyPolicies = new java.util.zip.ZipFile(artifact).withCloseable { zip ->
+            def json = new groovy.json.JsonSlurper()
+            def readPolicy = { String path ->
+                def entry = zip.getEntry(path)
+                if (entry == null) throw new GradleException("Candidate lacks economy policy ${path}")
+                zip.getInputStream(entry).withCloseable { json.parse(it, 'UTF-8') }
+            }
+            [data: ['note', 'report', 'dossier'].collectEntries { name ->
+                [(name): readPolicy("data/taczweaponblueprints/taczweaponblueprints/research_data/${name}.json")]
+            }, reconstruction: readPolicy('data/taczweaponblueprints/taczweaponblueprints/analysis_reconstruction/research_data.json'),
+             supply: readPolicy('data/taczweaponblueprints/loot_modifiers/scrap_supply.json')]
+        }
+
         def report = [
                 schema         : 1,
                 project        : project.name,
@@ -4913,7 +4997,12 @@ tasks.register('certifyReleaseCandidate') {
                                 registryId  : 'taczweaponblueprints:blueprint_recycler',
                                 displayName : 'Blueprint Analyzer',
                                 presentation: 'two_slot_contextual_analyzer',
-                                actions     : ['recycle', 'redeem', 'redeem_stack', 'reverse_engineer', 'recover_points'],
+                                actions     : ['recycle', 'redeem', 'redeem_stack', 'reverse_engineer', 'recover_points', 'archive_fragments', 'analyze_data'],
+                                workstationTiers: [
+                                        'taczweaponblueprints:blueprint_recycler': 1,
+                                        'taczweaponblueprints:advanced_blueprint_analyzer': 2,
+                                        'taczweaponblueprints:experimental_blueprint_analyzer': 3
+                                ],
                                 foundWeaponRecoveryModes: [
                                         'protected_blueprint_only',
                                         'recyclable_blueprint',
@@ -4923,8 +5012,9 @@ tasks.register('certifyReleaseCandidate') {
                                 weaponOriginEvidence: 'versioned_positive_crafted_or_loot_marker',
                                 localInputs : 1,
                                 localOutputs: 1,
-                                modelElements: 8,
-                                texture     : '256x256'
+                                footprint   : 'two_blocks_side_by_side',
+                                models      : 'forge_obj_and_composite',
+                                persistentInventory: false
                         ],
                         recipeDiscovery: 'blueprint_or_bench_or_research_data',
                         artifactGate   : 'verifyReleaseArtifact',
@@ -5096,7 +5186,22 @@ tasks.register('certifyReleaseCandidate') {
                         recoveryGate   : 'verifyAutomaticPublicationRecoveryContract',
                         artifactGate    : 'verifyReleaseArtifact'
                 ],
+                researchEconomy: [
+                        defaults: [currency: 'physical_item', item: 'taczweaponblueprints:scrap',
+                                   data: 'analysis', allowLearned: true, allowUndiscovered: true],
+                        dataModes: ['analysis', 'legacy_currency', 'disabled'],
+                        weaponAnalysisDefault: 'legacy',
+                        currencyUnits: 'integer',
+                        paymentSlots: 'main_inventory_and_hotbar_36',
+                        savedRpConversion: 'explicit_previewed_one_way_withdrawal',
+                        independentSupplyControls: ['enableScrapLoot', 'enableResearchDataLoot', 'enableResearchPointAwards'],
+                        packagedPolicies: packagedEconomyPolicies,
+                        publicationState: 'requires_runtime_matrix',
+                        manualQa: 'docs/research-economy-release-handoff.md'
+                ],
                 researchPointEconomy: [
+                        scope: 'historical_pinned_authored_policy_reference_not_live_economy',
+                        researchDataScope: 'legacy_currency_redemption_only',
                         definitions          : 15,
                         fixedProgressionPoints: 46,
                         firstDiscoveryPoints : 1,

@@ -84,10 +84,11 @@ public record BlueprintFragmentPolicy(
         return new ArchiveResult(current, offered, accepted, offered - accepted, current + accepted);
     }
 
-    public enum CompletionMode {
+    public enum CompletionMode implements me.fzzyhmstrs.fzzy_config.util.EnumTranslatable {
         DISABLED,
         TARGETED_RESEARCH_BOOST,
-        RECONSTRUCT_BLUEPRINT
+        RECONSTRUCT_BLUEPRINT;
+        @Override public String prefix() { return "config.taczweaponblueprints.blueprint.customFragmentMode"; }
     }
 
     public record ArchiveResult(

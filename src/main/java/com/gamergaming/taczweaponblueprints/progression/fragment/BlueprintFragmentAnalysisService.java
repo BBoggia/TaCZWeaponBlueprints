@@ -1,5 +1,7 @@
 package com.gamergaming.taczweaponblueprints.progression.fragment;
 
+import com.gamergaming.taczweaponblueprints.progression.currency.*;
+
 import java.util.Map;
 import java.util.Optional;
 
@@ -29,6 +31,13 @@ public final class BlueprintFragmentAnalysisService {
     }
 
     public static Evaluation evaluate(ServerPlayer player, WorkstationTransaction transaction) {
+        var evaluation = evaluateState(player, transaction);
+        return player == null ? evaluation : evaluation.withCurrencyBalance(
+                ModConfigs.BLUEPRINT.currencyPolicy(), player.getInventory().items,
+                player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElse(null));
+    }
+
+    private static Evaluation evaluateState(ServerPlayer player, WorkstationTransaction transaction) {
         if (player == null || transaction == null) {
             return Evaluation.failure(Status.INVALID_INPUT);
         }
@@ -62,6 +71,15 @@ public final class BlueprintFragmentAnalysisService {
                     input.getCount(),
                     data.getResearchPoints(),
                     ModConfigs.BLUEPRINT.progressionSnapshot().pointCap());
+        }
+        if (ResearchCurrencyPayments.physical(ModConfigs.BLUEPRINT.currencyPolicy())) {
+            var evaluated = evaluate(target.orElseThrow(), input.getCount(), output, ResearchCurrencyManual.eligibility(data),
+                    context.policy(), PlayerProgressionLimits.MAX_RESEARCH_POINTS, context.publicationRevision());
+            if (evaluated.ready() && evaluated.awardedPoints() > 0) {
+                var delivery = ResearchCurrencyManual.prepareInput(ResearchCurrencyManual.context(player, data), player, input, evaluated.accepted(), 0, java.util.List.of(), evaluated.awardedPoints());
+                if (!delivery.quote().ready()) return Evaluation.failure(Status.OUTPUT_OCCUPIED, target);
+            }
+            return evaluated;
         }
         return evaluate(
                 target.orElseThrow(),
@@ -177,7 +195,12 @@ public final class BlueprintFragmentAnalysisService {
             return Result.failure(Status.STALE_POLICY, evaluation.target());
         }
 
-        Result result = commit(evaluation, data, transaction);
+        boolean physicalCurrency = ResearchCurrencyPayments.physical(ModConfigs.BLUEPRINT.currencyPolicy());
+        Result result = physicalCurrency && evaluation.awardedPoints() > 0
+                ? commitPhysical(player, evaluation, data, transaction)
+                : commit(physicalCurrency ? evaluation.withPointBalance(data.getResearchPoints()) : evaluation, data, transaction);
+        if (physicalCurrency && result.successful()) result = new Result(result.status(), result.target(), result.consumed(), result.awardedPoints(),
+                ResearchCurrencyPayments.balance(ModConfigs.BLUEPRINT.currencyPolicy(), player.getInventory().items, data), result.archivedAfter(), result.createdBlueprint());
         if (!result.successful()) {
             return result;
         }
@@ -195,6 +218,20 @@ public final class BlueprintFragmentAnalysisService {
             BlueprintProgressionSyncScheduler.markKnowledgeDirty(player);
         }
         return result;
+    }
+
+    private static Result commitPhysical(ServerPlayer player, Evaluation evaluation, IPlayerRecipeData data, WorkstationTransaction station) {
+        var context = ResearchCurrencyManual.context(player, data);
+        var plan = ResearchCurrencyManual.prepareInput(context, player, station.physicalInput(), evaluation.accepted(), 0, java.util.List.of(), evaluation.awardedPoints());
+        var input = ResearchCurrencyManual.input(player, station.physicalInput(), evaluation.accepted());
+        var archive = ResearchCurrencyManual.progression(data, () -> data.applyArchivedFragmentMutation(
+                PlayerProgressValueMutation.Request.commit(evaluation.target().orElseThrow().toString(),
+                        evaluation.archivedBefore(), evaluation.archivedAfterAction())).successful());
+        var result = ResearchCurrencyTransaction.commit(plan, context, ResearchCurrencyInput.combine(input, archive));
+        if (!result.successful()) return Result.failure(result.status() == ResearchCurrencyTransaction.Status.ROLLBACK_FAILED
+                ? Status.ROLLBACK_FAILED : Status.TRANSACTION_FAILED, evaluation.target());
+        return new Result(Status.SUCCESS, evaluation.target(), evaluation.accepted(), evaluation.awardedPoints(),
+                ResearchCurrencyPayments.balance(context.policy(), context.read().inventory(), data), evaluation.archivedAfterAction(), false);
     }
 
     /** Commits an already server-authored evaluation without consulting mutable globals. */
@@ -411,6 +448,17 @@ public final class BlueprintFragmentAnalysisService {
             int pointCap,
             boolean createsBlueprint,
             long publicationRevision) {
+        /** Presentation balance only; saved RP comparisons at commit keep their original meaning. */
+        public Evaluation withCurrencyBalance(ResearchCurrencyPolicy currency,
+                java.util.List<ItemStack> inventory, IPlayerRecipeData data) {
+            return withPointBalance(ResearchCurrencyPayments.balance(currency, inventory, data));
+        }
+
+        Evaluation withPointBalance(int balance) {
+            return new Evaluation(status, target, completionMode, offered, accepted, rejected, archivedBefore, archivedAfterDeposit,
+                    archivedAfterAction, threshold, completedSetsBefore, completedSetsAfterDeposit, consumesSet, learnedTarget,
+                    awardedPoints, balance, pointCap, createsBlueprint, publicationRevision);
+        }
         public Evaluation {
             target = target == null ? Optional.empty() : target;
             if (status == null || completionMode == null || offered < 0 || accepted < 0

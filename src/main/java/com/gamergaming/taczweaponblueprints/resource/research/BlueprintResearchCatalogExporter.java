@@ -441,6 +441,7 @@ public final class BlueprintResearchCatalogExporter {
         root.add("groups", exportedGroups);
         var analyzerContext = new BlueprintAnalyzerPolicyResolver.Context(stableSnapshot, stableCatalog,
                 stableProgressionPolicy.researchRevision(), stableProgressionPolicy.catalogRevision(), stableProgressionPolicy);
+        if (!stableSnapshot.researchData().policies().isEmpty()) root.add("research_data_economy", ResearchDataEconomyExport.create(analyzerContext, profileId));
         JsonArray exportedEntries = new JsonArray();
         for (Map.Entry<ResourceLocation, BlueprintData> entry : entries) {
             ResourceLocation blueprintId = entry.getKey();

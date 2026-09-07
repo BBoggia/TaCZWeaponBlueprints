@@ -16,6 +16,12 @@ final class BlueprintResearchIngredientValidator {
         if (snapshot == null || itemExists == null) {
             throw new IllegalArgumentException("snapshot and item registry predicate cannot be null");
         }
+        snapshot.researchData().policies().forEach((id, policy) -> {
+            policy.input().item().ifPresent(item -> {
+                if (!itemExists.test(item)) throw new IllegalArgumentException("Research Data " + id + " references missing input " + item);
+            });
+            validateCost("Research Data " + id, policy.cost(), itemExists);
+        });
         for (var entry : snapshot.profiles().entrySet()) {
             entry.getValue().analyzer().stream().flatMap(BlueprintAnalyzerPolicy::costs).forEach(cost ->
                     validateCost("Analyzer profile " + entry.getKey(), cost, itemExists));
@@ -62,6 +68,10 @@ final class BlueprintResearchIngredientValidator {
                 .forEach(cost -> collectUnresolvedTags(cost, tagExists, unresolved));
         snapshot.rules().values().stream().flatMap(r -> r.analyzer().stream()).flatMap(BlueprintAnalyzerOverride::costs)
                 .forEach(cost -> collectUnresolvedTags(cost, tagExists, unresolved));
+        snapshot.researchData().policies().values().forEach(policy -> {
+            collectUnresolvedTags(policy.cost(), tagExists, unresolved);
+            policy.input().tag().filter(id -> !tagExists.test(id)).ifPresent(unresolved::add);
+        });
         return Set.copyOf(unresolved);
     }
 

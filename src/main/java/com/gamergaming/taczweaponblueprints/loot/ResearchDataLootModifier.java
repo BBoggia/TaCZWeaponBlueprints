@@ -61,7 +61,7 @@ public final class ResearchDataLootModifier extends LootModifier {
     protected @NotNull ObjectArrayList<ItemStack> doApply(
             ObjectArrayList<ItemStack> generatedLoot,
             LootContext context) {
-        if (ModConfigs.BLUEPRINT.enableResearchPointAwards.get()
+        if (ModConfigs.BLUEPRINT.enableResearchDataLoot.get()
                 && context.getRandom().nextFloat() < chance) {
             generatedLoot.add(item.copy());
         }

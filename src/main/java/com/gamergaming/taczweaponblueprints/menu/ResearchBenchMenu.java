@@ -533,6 +533,7 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
         authoritativePreviewRefreshPending = false;
         previewInventory = ResearchInventorySnapshot.capture(playerInventory.items);
         super.broadcastChanges();
+        NetworkHandler.syncResearchCurrency(player);
         NetworkHandler.sendResearchBenchPreview(player, containerId, next);
     }
 

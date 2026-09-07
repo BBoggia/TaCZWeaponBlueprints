@@ -41,10 +41,10 @@ public final class ResearchTreeClientConfig extends Config {
     public ConfigGroup interaction = new ConfigGroup("interaction");
     public ValidatedBoolean holdToResearch = new ValidatedBoolean(true);
     public ValidatedCondition<Integer> holdDurationMillis = uiCondition(
-            new ValidatedInt(
+            DisplayUnitNumber.integer(
                     DEFAULT_HOLD_DURATION_MILLIS,
                     MAX_HOLD_DURATION_MILLIS,
-                    MIN_HOLD_DURATION_MILLIS),
+                    MIN_HOLD_DURATION_MILLIS, () -> 1000),
             holdToResearch::get,
             TRANSLATION_PREFIX + "condition.holdToResearch");
     @ConfigGroup.Pop
@@ -55,20 +55,20 @@ public final class ResearchTreeClientConfig extends Config {
             ResearchTreeDisplayPolicy.DEFAULT.reduceMotion());
     public ValidatedBoolean showBackgroundGrid = new ValidatedBoolean(
             ResearchTreeDisplayPolicy.DEFAULT.showBackgroundGrid());
-    // Compatibility-only value; keep its persisted field path for older configurations.
-    public ValidatedEnum<ResearchTreeLayoutPreset> layoutPreset = new ValidatedEnum<>(
-            ResearchTreeLayoutPreset.BALANCED,
-            ValidatedEnum.WidgetType.CYCLING);
     public ValidatedEnum<ResearchTreeMinimapMode> minimap = new ValidatedEnum<>(
             ResearchTreeMinimapMode.AUTOMATIC,
             ValidatedEnum.WidgetType.CYCLING);
     @ConfigGroup.Pop
     public ConfigAction resetTreeAppearance = new ConfigAction.Builder()
-            .title(Component.translatable(TRANSLATION_PREFIX + "resetTreeAppearance"))
+            .title(Component.translatable(TRANSLATION_PREFIX + "resetTreeAppearance.button"))
             .desc(Component.translatable(TRANSLATION_PREFIX + "resetTreeAppearance.desc"))
             .build(this::restoreTreeAppearanceDefaults);
 
     public ConfigGroup advancedLayout = new ConfigGroup("advancedLayout", true);
+    // Compatibility-only value; keep its persisted field path for older configurations.
+    public ValidatedEnum<ResearchTreeLayoutPreset> layoutPreset = new ValidatedEnum<>(
+            ResearchTreeLayoutPreset.BALANCED,
+            ValidatedEnum.WidgetType.CYCLING);
     // Compatibility-only value; keep its persisted field path for older configurations.
     public ValidatedCondition<Integer> canvasPadding = customSpacing(DEFAULTS.canvasPadding());
     // Compatibility-only value; keep its persisted field path for older configurations.
@@ -193,6 +193,8 @@ public final class ResearchTreeClientConfig extends Config {
         compactionSweeps.setAndUpdate(DEFAULTS.compactionSweeps());
         layoutPreset.setAndUpdate(ResearchTreeLayoutPreset.BALANCED);
         minimap.setAndUpdate(ResearchTreeMinimapMode.AUTOMATIC);
+        reduceMotion.setAndUpdate(ResearchTreeDisplayPolicy.DEFAULT.reduceMotion());
+        showBackgroundGrid.setAndUpdate(ResearchTreeDisplayPolicy.DEFAULT.showBackgroundGrid());
         publishPolicies();
     }
 

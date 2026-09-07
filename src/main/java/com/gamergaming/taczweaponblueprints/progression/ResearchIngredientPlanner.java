@@ -291,7 +291,10 @@ public final class ResearchIngredientPlanner {
     public static final class Plan {
         private final int[] decrements;
 
-        Plan(int[] decrements) {
+        public Plan(int[] decrements) {
+            if (decrements == null || Arrays.stream(decrements).anyMatch(value -> value < 0)
+                    || Arrays.stream(decrements).asLongStream().sum() > MAX_TOTAL_REQUIREMENT_COUNT)
+                throw new IllegalArgumentException("invalid ingredient decrements");
             this.decrements = decrements.clone();
         }
 

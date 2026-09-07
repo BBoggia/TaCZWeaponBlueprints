@@ -3,13 +3,16 @@
 The Blueprint Analyzer, Advanced Blueprint Analyzer, and Experimental Blueprint
 Analyzer provide Analyzer tiers 1, 2, and 3. Each station has one input slot and
 one output slot. Closing the screen returns both slots' contents to the player,
-using Minecraft's normal container-close behavior.
+using Minecraft's normal container-close behavior, with drops if inventory space
+is unavailable. Items do not stay inside the block.
 
 Profiles without an Analyzer extension keep the existing deterministic weapon
 operations. Tiered profiles select full blueprints, matching analysis fragments,
 or an explicitly configured no-result outcome using the station and weapon
 tiers. Marked fragments reconstruct independently of the ordinary fragment
-preset. Analyzer tiers do not change Research Bench or crafting requirements.
+preset. All three tiers also support Research Data analysis by default, with
+higher tiers improving its quantities and blueprint chances. Analyzer tiers do
+not change Research Bench or crafting requirements.
 
 ## Blocks and recipes
 
@@ -48,7 +51,7 @@ by this conversion.
 All three blocks use `BlueprintRecyclerBlock`, the existing `blueprint_recycler`
 menu type, and the same controller. They have no block entity, persistent machine
 inventory, or processing timer. The opening packet remains a block position;
-station identity does not add another player-data format. Analyzer previews and results use protocol 59.
+station identity does not add another player-data format. Analyzer previews and results use protocol 62.
 
 The server captures the actual Analyzer block at the opening position. Validity
 requires the same player, level, loaded chunk, block identity, and the usual
@@ -69,6 +72,6 @@ create tier 1. The tier-aware constructor accepts `AnalyzerTier` directly.
 `BlueprintAnalyzerItem` reads its tooltip tier from its block, avoiding a second
 independent tier assignment.
 
-Policy definitions and future outcome behavior are documented in the
+Policy definitions and outcome behavior are documented in the
 [Analyzer behavior contract](analyzer-behavior-contract.md) and
 [policy authoring guide](analyzer-policy-authoring.md).

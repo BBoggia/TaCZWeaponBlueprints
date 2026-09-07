@@ -1,6 +1,6 @@
 # Blueprint Analyzer policy authoring
 
-Research profiles and rules accept an optional `analyzer` extension in format 5. It describes weapon analysis odds, costs, station requirements, and blueprint reconstruction thresholds. **Tiered policies now control weapon outcomes at the Blueprint Analyzer.** Legacy profiles remain deterministic. The screen displays resolved odds and separate analysis/direct-RP costs from the server; see the [screen guide](analyzer-screen.md).
+Research profiles and rules accept an optional `analyzer` extension in format 5. It describes weapon analysis odds, costs, station requirements, and blueprint reconstruction thresholds. **Tiered policies now control weapon outcomes at the Blueprint Analyzer.** Legacy profiles remain deterministic. The screen displays resolved odds and separate analysis/direct-recovery costs from the server; see the [screen guide](analyzer-screen.md).
 
 The [behavior contract](analyzer-behavior-contract.md) defines the gameplay, item protection, and save compatibility. This guide defines the implemented data format. Existing format 1–4 resources and profiles without the extension retain their meaning. The bundled `duplicate_recovery` profile remains format 4.
 
@@ -39,13 +39,13 @@ The following is a complete `analyzer` object, to insert into an otherwise valid
   "tiers": {
     "tier_1": {
       "tier_1": {"outcomes": {"blueprint_weight": 70, "fragment_weight": 30, "no_result_weight": 0, "min_fragments": 1, "max_fragments": 1}},
-      "tier_2": {"outcomes": {"blueprint_weight": 30, "fragment_weight": 70, "no_result_weight": 0, "min_fragments": 1, "max_fragments": 1}},
-      "tier_3": {"outcomes": {"blueprint_weight": 10, "fragment_weight": 90, "no_result_weight": 0, "min_fragments": 1, "max_fragments": 1}}
+      "tier_2": {"outcomes": {"blueprint_weight": 30, "fragment_weight": 50, "no_result_weight": 20, "min_fragments": 1, "max_fragments": 1}},
+      "tier_3": {"outcomes": {"blueprint_weight": 10, "fragment_weight": 40, "no_result_weight": 50, "min_fragments": 1, "max_fragments": 1}}
     },
     "tier_2": {
       "tier_1": {"outcomes": {"blueprint_weight": 100, "fragment_weight": 0, "no_result_weight": 0, "min_fragments": 0, "max_fragments": 0}},
       "tier_2": {"outcomes": {"blueprint_weight": 70, "fragment_weight": 30, "no_result_weight": 0, "min_fragments": 1, "max_fragments": 1}},
-      "tier_3": {"outcomes": {"blueprint_weight": 30, "fragment_weight": 70, "no_result_weight": 0, "min_fragments": 1, "max_fragments": 1}}
+      "tier_3": {"outcomes": {"blueprint_weight": 30, "fragment_weight": 50, "no_result_weight": 20, "min_fragments": 1, "max_fragments": 1}}
     },
     "tier_3": {
       "tier_1": {"outcomes": {"blueprint_weight": 100, "fragment_weight": 0, "no_result_weight": 0, "min_fragments": 0, "max_fragments": 0}},
@@ -58,11 +58,15 @@ The following is a complete `analyzer` object, to insert into an otherwise valid
 
 Each row accepts `enabled` (default true), required `outcomes`, and optional `attempt`. Replacing a row replaces all its fields, including omitted defaults.
 
-All five outcome fields are required integers. Each weight is between 0 and 1,000,000,000, and their total must be positive. The probability is its weight divided by the total: weights 1 and 7 produce 12.5% and 87.5%. This permits fractional percentages while Research Points (RP) remain integers. The total uses a 64-bit integer, so three maximum weights are valid.
+All five outcome fields are required integers. Each weight is between 0 and 1,000,000,000, and their total must be positive. The probability is its weight divided by the total: weights 1 and 7 produce 12.5% and 87.5%. This permits fractional percentages while currency payments remain integer
+units: Scrap by default or optional Research Points (RP). The total uses a 64-bit integer, so three maximum weights are valid.
 
 A positive fragment weight requires `1 <= min_fragments <= max_fragments <= 64`. The quantity is uniformly selected from that inclusive range. If fragment weight is zero, both quantity fields must be zero. A blueprint result always has quantity one. A positive no-result weight explicitly permits consumption without an item reward; it is never inferred. A no-result-only row is valid. Deterministic outcome kinds require no outcome-selection draw; a variable fragment quantity still requires its own draw.
 
-Reconstruction thresholds are integers from 1 to 1,000,000 for each weapon tier. The retention cap is from 1 to 1,000,000,000 and must cover every threshold. Thresholds depend on the weapon, not the station, so changing stations does not change an existing set's completion requirement. The [analysis fragment storage and reconstruction API](analysis-fragment-storage.md) uses these fields for Analyzer menu actions.
+Reconstruction thresholds are integers from 1 to 1,000,000 for each weapon tier. The retention cap is from 1 to 1,000,000,000 and must cover every threshold. Thresholds depend on the weapon, not the station, so changing stations does not change an existing set's completion requirement. The [analysis fragment storage and reconstruction API](analysis-fragment-storage.md)
+uses these fields unless an explicit shared target/profile definition takes
+precedence. Shared reconstruction can also operate when weapon analysis is
+legacy or disabled; see [shared settings](research-data-policies.md#shared-reconstruction-definition).
 
 ## Costs and result permissions
 
@@ -78,7 +82,7 @@ An attempt accepts `enabled`, `input_count`, `cost`, `allow_known`, `allow_modif
 
 Learning modes are `require_tree_prerequisites`, `bypass_tree_prerequisites`, and `disabled`. Positive fragment outcomes forbid disabled learning. Crafted or unknown inputs producing recyclable rewards require `expert_allow_economy_loop: true`. A found-only policy can permit recyclable output without that opt-in. Verified-found recovery modes can grant recycling permission to full and partial results; those permissions never transfer to crafted or unknown inputs.
 
-New Analyzer attempt overrides do not change the deterministic direct-RP action's cost. See the [found-weapon recovery matrix](analyzer-behavior-contract.md#found-weapon-recovery-matrix) for the separate action behavior.
+New Analyzer attempt overrides do not change the deterministic direct-recovery action's cost. See the [found-weapon recovery matrix](analyzer-behavior-contract.md#found-weapon-recovery-matrix) for the separate action behavior.
 
 ## Rule selection and weapon tiers
 

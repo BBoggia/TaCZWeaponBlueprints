@@ -18,6 +18,7 @@ public class ModEventHandler {
     @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
+            com.gamergaming.taczweaponblueprints.compat.fzzy_config.BlueprintSettingsSync.sendTo(serverPlayer);
             StartingBlueprintGrantService.applyConfiguredGrants(serverPlayer);
             NetworkHandler.syncAllPlayerData(serverPlayer);
             ResearchPointPresentationService.syncHelp(serverPlayer);

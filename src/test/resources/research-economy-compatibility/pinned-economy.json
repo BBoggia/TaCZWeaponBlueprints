@@ -1,0 +1,386 @@
+{
+  "source": "current production builder with pinned TaCZ 1.1.8 capability and recipe fixtures; not a new native capture",
+  "catalog_size": 172,
+  "enabled_weapon_count": 53,
+  "enabled_weapon_cost": 398,
+  "weapons": [
+    {
+      "target": "tacz:aa12",
+      "points": 8,
+      "prerequisites": [
+        "tacz:vector45"
+      ]
+    },
+    {
+      "target": "tacz:ai_awp",
+      "points": 10,
+      "prerequisites": [
+        "tacz:scar_l"
+      ]
+    },
+    {
+      "target": "tacz:ak47",
+      "points": 8,
+      "prerequisites": [
+        "tacz:m700"
+      ]
+    },
+    {
+      "target": "tacz:aug",
+      "points": 6,
+      "prerequisites": [
+        "tacz:db_short",
+        "tacz:springfield1873"
+      ]
+    },
+    {
+      "target": "tacz:b93r",
+      "points": 8,
+      "prerequisites": [
+        "tacz:aa12"
+      ]
+    },
+    {
+      "target": "tacz:cz75",
+      "points": 4,
+      "prerequisites": [
+        "tacz:m9a4"
+      ]
+    },
+    {
+      "target": "tacz:db_long",
+      "points": 6,
+      "prerequisites": [
+        "tacz:m1911",
+        "tacz:rhino357"
+      ]
+    },
+    {
+      "target": "tacz:db_short",
+      "points": 6,
+      "prerequisites": [
+        "tacz:m9a4"
+      ]
+    },
+    {
+      "target": "tacz:deagle",
+      "points": 8,
+      "prerequisites": [
+        "tacz:p90"
+      ]
+    },
+    {
+      "target": "tacz:deagle_golden",
+      "points": 8,
+      "prerequisites": [
+        "tacz:glock_17",
+        "tacz:springfield1873"
+      ]
+    },
+    {
+      "target": "tacz:fn_evolys",
+      "points": 10,
+      "prerequisites": [
+        "tacz:kar98"
+      ]
+    },
+    {
+      "target": "tacz:fn_fal",
+      "points": 8,
+      "prerequisites": [
+        "tacz:ump45"
+      ]
+    },
+    {
+      "target": "tacz:g36k",
+      "points": 8,
+      "prerequisites": [
+        "tacz:m249"
+      ]
+    },
+    {
+      "target": "tacz:glock_17",
+      "points": 4,
+      "prerequisites": [
+        "tacz:m9a4"
+      ]
+    },
+    {
+      "target": "tacz:hk416d",
+      "points": 8,
+      "prerequisites": [
+        "tacz:deagle"
+      ]
+    },
+    {
+      "target": "tacz:hk_g3",
+      "points": 8,
+      "prerequisites": [
+        "tacz:spas_12"
+      ]
+    },
+    {
+      "target": "tacz:hk_mk23",
+      "points": 8,
+      "prerequisites": [
+        "tacz:m16a1"
+      ]
+    },
+    {
+      "target": "tacz:hk_mp5a5",
+      "points": 6,
+      "prerequisites": [
+        "tacz:cz75",
+        "tacz:glock_17"
+      ]
+    },
+    {
+      "target": "tacz:kar98",
+      "points": 8,
+      "prerequisites": [
+        "tacz:aa12"
+      ]
+    },
+    {
+      "target": "tacz:lonetrail",
+      "points": 8,
+      "prerequisites": [
+        "tacz:aug"
+      ]
+    },
+    {
+      "target": "tacz:m1014",
+      "points": 6,
+      "prerequisites": [
+        "tacz:vector45"
+      ]
+    },
+    {
+      "target": "tacz:m107",
+      "points": 10,
+      "prerequisites": [
+        "tacz:taurus500"
+      ]
+    },
+    {
+      "target": "tacz:m16a1",
+      "points": 8,
+      "prerequisites": [
+        "tacz:rpg7"
+      ]
+    },
+    {
+      "target": "tacz:m16a4",
+      "points": 8,
+      "prerequisites": [
+        "tacz:timeless50"
+      ]
+    },
+    {
+      "target": "tacz:m1911",
+      "points": 4,
+      "prerequisites": [
+        "tacz:m9a4"
+      ]
+    },
+    {
+      "target": "tacz:m249",
+      "points": 6,
+      "prerequisites": [
+        "tacz:p320",
+        "tacz:uzi"
+      ]
+    },
+    {
+      "target": "tacz:m320",
+      "points": 6,
+      "prerequisites": [
+        "tacz:m9a4"
+      ]
+    },
+    {
+      "target": "tacz:m4a1",
+      "points": 10,
+      "prerequisites": [
+        "tacz:lonetrail"
+      ]
+    },
+    {
+      "target": "tacz:m700",
+      "points": 8,
+      "prerequisites": [
+        "tacz:m16a4"
+      ]
+    },
+    {
+      "target": "tacz:m870",
+      "points": 6,
+      "prerequisites": [
+        "tacz:cz75",
+        "tacz:uzi"
+      ]
+    },
+    {
+      "target": "tacz:m95",
+      "points": 10,
+      "prerequisites": [
+        "tacz:mk14"
+      ]
+    },
+    {
+      "target": "tacz:m9a4",
+      "points": 4,
+      "prerequisites": []
+    },
+    {
+      "target": "tacz:minigun",
+      "points": 10,
+      "prerequisites": [
+        "tacz:fn_fal"
+      ]
+    },
+    {
+      "target": "tacz:mk14",
+      "points": 10,
+      "prerequisites": [
+        "tacz:spr15hb"
+      ]
+    },
+    {
+      "target": "tacz:p320",
+      "points": 4,
+      "prerequisites": [
+        "tacz:m9a4"
+      ]
+    },
+    {
+      "target": "tacz:p90",
+      "points": 6,
+      "prerequisites": [
+        "tacz:db_long"
+      ]
+    },
+    {
+      "target": "tacz:qbz_191",
+      "points": 10,
+      "prerequisites": [
+        "tacz:m4a1"
+      ]
+    },
+    {
+      "target": "tacz:qbz_95",
+      "points": 8,
+      "prerequisites": [
+        "tacz:g36k"
+      ]
+    },
+    {
+      "target": "tacz:rhino357",
+      "points": 6,
+      "prerequisites": [
+        "tacz:m9a4"
+      ]
+    },
+    {
+      "target": "tacz:rpg7",
+      "points": 6,
+      "prerequisites": [
+        "tacz:m320",
+        "tacz:rhino357"
+      ]
+    },
+    {
+      "target": "tacz:rpk",
+      "points": 10,
+      "prerequisites": [
+        "tacz:b93r"
+      ]
+    },
+    {
+      "target": "tacz:scar_h",
+      "points": 10,
+      "prerequisites": [
+        "tacz:m107"
+      ]
+    },
+    {
+      "target": "tacz:scar_l",
+      "points": 10,
+      "prerequisites": [
+        "tacz:hk_mk23"
+      ]
+    },
+    {
+      "target": "tacz:sks_tactical",
+      "points": 8,
+      "prerequisites": [
+        "tacz:hk_mp5a5"
+      ]
+    },
+    {
+      "target": "tacz:spas_12",
+      "points": 6,
+      "prerequisites": [
+        "tacz:db_short",
+        "tacz:m320"
+      ]
+    },
+    {
+      "target": "tacz:spr15hb",
+      "points": 10,
+      "prerequisites": [
+        "tacz:hk_g3"
+      ]
+    },
+    {
+      "target": "tacz:springfield1873",
+      "points": 6,
+      "prerequisites": [
+        "tacz:m9a4"
+      ]
+    },
+    {
+      "target": "tacz:taurus500",
+      "points": 8,
+      "prerequisites": [
+        "tacz:qbz_95"
+      ]
+    },
+    {
+      "target": "tacz:timeless50",
+      "points": 8,
+      "prerequisites": [
+        "tacz:m870"
+      ]
+    },
+    {
+      "target": "tacz:type_81",
+      "points": 10,
+      "prerequisites": [
+        "tacz:fn_evolys"
+      ]
+    },
+    {
+      "target": "tacz:ump45",
+      "points": 8,
+      "prerequisites": [
+        "tacz:m1014"
+      ]
+    },
+    {
+      "target": "tacz:uzi",
+      "points": 4,
+      "prerequisites": [
+        "tacz:m9a4"
+      ]
+    },
+    {
+      "target": "tacz:vector45",
+      "points": 6,
+      "prerequisites": [
+        "tacz:m1911",
+        "tacz:p320"
+      ]
+    }
+  ]
+}

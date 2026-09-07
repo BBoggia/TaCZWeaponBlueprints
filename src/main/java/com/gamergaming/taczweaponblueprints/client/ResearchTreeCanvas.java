@@ -183,6 +183,10 @@ public final class ResearchTreeCanvas {
         setFocusedNode(first.nodeId());
         viewport().fitReadable(opening.x(), opening.y(), opening.width(), opening.height(), .6);
     }
+    public boolean sceneLabelsVisible() {
+        return sceneRenderer == null || sceneRenderer.labelsVisible();
+    }
+
     public void renderNodeArt(GuiGraphics graphics, ResearchTreeGraph.Node node, ResearchTreeScene.Bounds box) {
         if (sceneRenderer != null) sceneRenderer.renderArt(graphics, node, box);
         else graphics.renderItem(icon(node.blueprintId()), (int) box.x(), (int) box.y());

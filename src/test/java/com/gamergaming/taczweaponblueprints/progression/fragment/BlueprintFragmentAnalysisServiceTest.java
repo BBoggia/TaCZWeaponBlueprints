@@ -26,6 +26,27 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 class BlueprintFragmentAnalysisServiceTest {
+    @Test void unavailableAndRejectedPreviewsStillReportTheActiveCurrency() {
+        var data = new PlayerRecipeData(); data.setResearchPoints(137);
+        var inventory = new java.util.ArrayList<ItemStack>(java.util.Collections.nCopies(36, ItemStack.EMPTY));
+        inventory.set(0, new ItemStack(Items.IRON_INGOT, 12));
+        var physical = com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy.physical(
+                new ResourceLocation("minecraft:iron_ingot"), 1);
+        for (var status : java.util.List.of(BlueprintFragmentAnalysisService.Status.POLICY_UNAVAILABLE,
+                BlueprintFragmentAnalysisService.Status.FRAGMENTS_DISABLED,
+                BlueprintFragmentAnalysisService.Status.PLAYER_DATA_UNAVAILABLE,
+                BlueprintFragmentAnalysisService.Status.OUTPUT_OCCUPIED)) {
+            var old = BlueprintFragmentAnalysisService.Evaluation.unavailable(status, TARGET, 3, 137, 10000);
+            var shown = old.withCurrencyBalance(physical, inventory, data);
+            assertEquals(12, shown.pointBalance()); assertEquals(status, shown.status());
+            assertEquals(3, shown.rejected()); assertEquals(0, shown.accepted());
+            assertEquals(137, shown.withCurrencyBalance(
+                    com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy.banked(10000, 2), inventory, data).pointBalance());
+            assertEquals(12, old.withCurrencyBalance(physical, inventory, null).pointBalance());
+        }
+        assertEquals(137, data.getResearchPoints());
+    }
+
     private static final ResourceLocation TARGET = new ResourceLocation("test:rifle");
     private static final ResourceLocation PROFILE = new ResourceLocation("test:profile");
 

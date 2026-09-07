@@ -63,6 +63,8 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
     static final String TECH_TREE_ENTRY_DIRECTORY = "taczweaponblueprints/research_tech_tree_entries";
     static final String AUTOMATIC_PLACEMENT_PROFILE_DIRECTORY =
             "taczweaponblueprints/research_automatic_placement_profiles";
+    static final String RESEARCH_DATA_DIRECTORY = "taczweaponblueprints/research_data";
+    static final String RECONSTRUCTION_DIRECTORY = "taczweaponblueprints/analysis_reconstruction";
     static final int MAX_DEFINITION_JSON_CHARACTERS = 2_000_000;
 
     private volatile Publication publication = new Publication(BlueprintResearchSnapshot.EMPTY, 0L);
@@ -108,6 +110,9 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
                 ResearchAutomaticPlacementProfile.CODEC,
                 "Research Tech Tree automatic-placement profile");
 
+        ResearchDataSnapshot data = new ResearchDataSnapshot(
+                loadDefinitions(resourceManager, RESEARCH_DATA_DIRECTORY, ResearchDataPolicy.CODEC, "Research Data policy"),
+                loadDefinitions(resourceManager, RECONSTRUCTION_DIRECTORY, AnalysisReconstructionDefinition.CODEC, "shared reconstruction"));
         try {
             BlueprintResearchSnapshot snapshot = BlueprintResearchSnapshot.create(
                     tags,
@@ -116,7 +121,7 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
                     groups,
                     techTrees,
                     techTreeEntryBundles,
-                    automaticPlacementProfiles);
+                    automaticPlacementProfiles).withResearchData(data);
             BlueprintResearchIngredientValidator.validateExactItems(
                     snapshot,
                     id -> ForgeRegistries.ITEMS.containsKey(id)
@@ -147,6 +152,8 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
         AutomaticWeaponPlacementCandidateManager.INSTANCE.invalidateForRevisions(
                 catalog.revision(), publication.revision());
         BlueprintResearchPolicyResolver.clearCache();
+        TaCZWeaponBlueprints.LOGGER.info("Applied Research Data policies: {} inputs and {} shared reconstruction scopes at research revision {}",
+                prepared.researchData().policies().size(), prepared.researchData().reconstruction().size(), publication.revision());
         BlueprintResearchDiagnostics.Summary summary = BlueprintResearchDiagnostics.summarize(prepared);
         TaCZWeaponBlueprints.LOGGER.info(
                 "Applied blueprint research snapshot revision {}: {} tags, {} profiles, {} rules, {} groups, "
@@ -813,7 +820,7 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
             Codec<T> codec,
             String typeName) {
         try (Reader reader = resource.openAsReader()) {
-            JsonElement json = parseBoundedJson(reader);
+            JsonElement json = parseBoundedJson(reader, codec == ResearchDataPolicy.CODEC || codec == AnalysisReconstructionDefinition.CODEC);
             DataResult<T> result = codec.parse(JsonOps.INSTANCE, json);
             return result.result().orElseThrow(() -> new IllegalStateException(
                     "Invalid blueprint " + typeName + " " + resourceId + " from pack "
@@ -831,6 +838,10 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
     }
 
     static JsonElement parseBoundedJson(Reader reader) throws IOException {
+        return parseBoundedJson(reader, false);
+    }
+
+    static JsonElement parseBoundedJson(Reader reader, boolean strictData) throws IOException {
         if (reader == null) {
             throw new IllegalArgumentException("blueprint definition reader cannot be null");
         }
@@ -840,7 +851,7 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
             int remaining = MAX_DEFINITION_JSON_CHARACTERS - json.length();
             int read = reader.read(buffer, 0, Math.min(buffer.length, remaining + 1));
             if (read < 0) {
-                return JsonParser.parseString(json.toString());
+                return strictData ? ResearchDataJson.parse(json.toString()) : JsonParser.parseString(json.toString());
             }
             if (read > remaining) {
                 throw new IllegalStateException(

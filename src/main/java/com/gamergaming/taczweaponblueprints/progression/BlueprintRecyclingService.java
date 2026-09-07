@@ -1,5 +1,9 @@
 package com.gamergaming.taczweaponblueprints.progression;
 
+import com.gamergaming.taczweaponblueprints.progression.currency.*;
+
+import com.gamergaming.taczweaponblueprints.init.ModConfigs;
+
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -43,7 +47,9 @@ public final class BlueprintRecyclingService {
         BlueprintLearningService.MigrationResult migration =
                 BlueprintLearningService.migrateLegacyUnlocksDetailed(
                         BlueprintDataManager.SERVER, playerData);
-        Result result = recycle(
+        var currency = ModConfigs.BLUEPRINT.currencyPolicy();
+        Result result = ResearchCurrencyPayments.physical(currency)
+                ? recyclePhysical(player, input, playerData) : recycle(
                 input,
                 playerData,
                 id -> BlueprintResearchDataManager.INSTANCE.policyFor(id, playerData));
@@ -52,7 +58,7 @@ public final class BlueprintRecyclingService {
             NetworkHandler.sendResearchPointFeedback(
                     player,
                     new ResearchPointPresentationService.Feedback(
-                            result.awardedPoints(), 1, false, java.util.List.of()));
+                            result.awardedPoints(), 1, false, java.util.List.of()), currency);
         }
         return result;
     }
@@ -109,10 +115,33 @@ public final class BlueprintRecyclingService {
             return Evaluation.failure(Status.PLAYER_DATA_UNAVAILABLE, inputId, 0, 0, 0);
         }
         IPlayerRecipeData playerData = resolvedData.orElseThrow();
+        if (ResearchCurrencyPayments.physical(ModConfigs.BLUEPRINT.currencyPolicy())) return evaluatePhysical(player, input, playerData);
         return evaluate(
                 stackInput(input),
                 playerData,
                 id -> BlueprintResearchDataManager.INSTANCE.policyFor(id, playerData));
+    }
+
+    private static Evaluation evaluatePhysical(ServerPlayer player, ItemStack input, IPlayerRecipeData data) {
+        var view = ResearchCurrencyManual.eligibility(data);
+        var eligible = evaluate(stackInput(input), view, id -> BlueprintResearchDataManager.INSTANCE.policyFor(id, view));
+        var context = ResearchCurrencyManual.context(player, data);
+        int balance = ResearchCurrencyPayments.balance(context.policy(), context.read().inventory(), data);
+        if (!eligible.successful()) return Evaluation.failure(eligible.status(), eligible.blueprintId(), eligible.pointValue(), balance, PlayerProgressionLimits.MAX_RESEARCH_POINTS);
+        var plan = ResearchCurrencyManual.prepareInput(context, player, input, 1, 0, java.util.List.of(), eligible.pointValue());
+        return new Evaluation(plan.quote().ready() ? Status.SUCCESS : Status.DELIVERY_FULL, eligible.blueprintId(), eligible.pointValue(), balance, PlayerProgressionLimits.MAX_RESEARCH_POINTS);
+    }
+
+    private static Result recyclePhysical(ServerPlayer player, ItemStack input, IPlayerRecipeData data) {
+        var evaluation = evaluatePhysical(player, input, data);
+        if (!evaluation.successful()) return Result.failure(evaluation.status(), evaluation.blueprintId(), evaluation.currentBalance());
+        var context = ResearchCurrencyManual.context(player, data);
+        var plan = ResearchCurrencyManual.prepareInput(context, player, input, 1, 0, java.util.List.of(), evaluation.pointValue());
+        var result = ResearchCurrencyTransaction.commit(plan, context, ResearchCurrencyManual.input(player, input, 1));
+        if (!result.successful()) return Result.failure(result.status() == ResearchCurrencyTransaction.Status.ROLLBACK_FAILED
+                ? Status.ROLLBACK_FAILED : Status.TRANSACTION_FAILED, evaluation.blueprintId(), evaluation.currentBalance());
+        return new Result(Status.SUCCESS, evaluation.blueprintId(), (int) result.deliveredUnits(),
+                ResearchCurrencyPayments.balance(context.policy(), context.read().inventory(), data));
     }
 
     static Result recycle(
@@ -142,7 +171,18 @@ public final class BlueprintRecyclingService {
                     evaluation.blueprintId(),
                     playerData.getResearchPoints());
         }
-        input.consumeOne();
+        int beforeCount = input.count();
+        try {
+            input.consumeOne();
+            if (input.count() != beforeCount - 1) throw new IllegalStateException("blueprint recycling input not consumed");
+        } catch (RuntimeException exception) {
+            boolean restored = false;
+            try { restored = playerData.setResearchPoints(evaluation.currentBalance()); }
+            catch (RuntimeException ignored) { }
+            try { restored &= input.count() == beforeCount || input.restoreCount(beforeCount); }
+            catch (RuntimeException ignored) { restored = false; }
+            return Result.failure(restored ? Status.TRANSACTION_FAILED : Status.ROLLBACK_FAILED, evaluation.blueprintId(), playerData.getResearchPoints());
+        }
         return new Result(
                 Status.SUCCESS,
                 evaluation.blueprintId(),
@@ -241,7 +281,6 @@ public final class BlueprintRecyclingService {
 
     private static RecyclingInput stackInput(ItemStack stack) {
         Optional<ResourceLocation> id = BlueprintItem.getBlueprintId(stack);
-        int count = stack == null ? 0 : stack.getCount();
         return new RecyclingInput() {
             @Override
             public Optional<ResourceLocation> blueprintId() {
@@ -249,14 +288,11 @@ public final class BlueprintRecyclingService {
             }
 
             @Override
-            public int count() {
-                return count;
-            }
+            public int count() { return stack == null ? 0 : stack.getCount(); }
 
             @Override
-            public void consumeOne() {
-                stack.shrink(1);
-            }
+            public void consumeOne() { stack.shrink(1); }
+            @Override public boolean restoreCount(int count) { stack.setCount(count); return stack.getCount() == count; }
 
             @Override
             public boolean provenanceAllowsRecycling() {
@@ -271,6 +307,7 @@ public final class BlueprintRecyclingService {
         int count();
 
         void consumeOne();
+        default boolean restoreCount(int count) { return false; }
 
         default boolean provenanceAllowsRecycling() {
             return true;
@@ -296,7 +333,10 @@ public final class BlueprintRecyclingService {
         NO_VALUE,
         DUPLICATE_REQUIRED,
         POINT_CAP_REACHED,
-        POLICY_INELIGIBLE
+        POLICY_INELIGIBLE,
+        DELIVERY_FULL,
+        ROLLBACK_FAILED,
+        TRANSACTION_FAILED
     }
 
     public record Result(
@@ -318,7 +358,7 @@ public final class BlueprintRecyclingService {
                 throw new IllegalArgumentException("recycling result blueprint ID is oversized");
             }
             if (status == Status.SUCCESS) {
-                if (blueprintId.isEmpty() || awardedPoints <= 0 || awardedPoints > newBalance) {
+                if (blueprintId.isEmpty() || awardedPoints <= 0) {
                     throw new IllegalArgumentException("successful recycling must identify a positive award");
                 }
             } else if (awardedPoints != 0) {
