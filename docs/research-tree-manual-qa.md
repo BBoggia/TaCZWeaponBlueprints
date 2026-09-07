@@ -351,7 +351,7 @@ unchecked until that behavior has been confirmed in a real client/server run.
 - [ ] A datapack-authored prerequisite remains the complete effective prerequisite list for that gun and is never replaced or extended by the connected-mode heuristic.
 - [ ] A legacy rule with `prerequisites: [A, B]` still requires both A and B. A format-2 rule with one `prerequisite_groups` entry containing `any_of: [A, B]` becomes researchable after learning either A or B, while a second singleton group remains independently mandatory.
 - [ ] A partially disclosed any-of group shows its visible alternatives and a bounded hidden-choice count without exposing hidden IDs. Preview/name/silhouette visibility must not reveal whether the group is satisfied; full visibility may show the current satisfaction count.
-- [ ] A client or server still using an older protocol is rejected cleanly. Matching protocol-62 peers reconstruct identical group ordinals, alternatives, hidden counts, disclosure state, aggregate path-purchase previews, typed route-authority failures, route fingerprints, correlated authoritative guidance, bounded Affordable Now batches, Recent unlock history, disclosure-filtered Blueprint Fragment, crafting-access, and Progression Gate state, and the exact native crafting allow-list with its policy identity even when updates arrive out of order.
+- [ ] A client or server still using an older protocol is rejected cleanly. Matching protocol-63 peers reconstruct identical group ordinals, alternatives, hidden counts, disclosure state, aggregate path-purchase previews, typed route-authority failures, route fingerprints, correlated authoritative guidance, bounded Affordable Now batches, Recent unlock history, disclosure-filtered Blueprint Fragment, crafting-access, and Progression Gate state, and the exact native crafting allow-list with its policy identity even when updates arrive out of order.
 - [ ] With a crafting Workbench open, simulate or pause an incomplete crafting-access response for at least five seconds. Confirm the client retries the original request once, accepts the replacement snapshot, and does not issue additional retries while the same menu remains open.
 - [ ] Open each Research Bench tier and confirm it exposes only the Tech Tree. Open each crafting Workbench level and confirm it exposes only TaCZ crafting. Neither screen should offer a mode-switch button.
 - [ ] Break or replace either half of a crafting Workbench while its menu is open. Moving away or changing dimension must also invalidate the old crafting session.
@@ -436,7 +436,7 @@ unchecked until that behavior has been confirmed in a real client/server run.
 - [ ] Under the packaged profile, unmatched ammo and attachments retain their authored 4 RP Preview fallback rules but remain non-researchable and unpublished; enabling their domains makes the fallbacks selectable without fabricating prerequisites.
 - [ ] Large generated add-on weapon families wrap across Tech Tree rows instead of one ultra-wide strip, and repeated reloads produce the same placement.
 - [ ] Changing dormant legacy group metadata during `/reload` does not change the visible Tech Tree or reintroduce a hidden view selector.
-- [ ] Dedicated server rejects a client with any protocol other than `62`.
+- [ ] Dedicated server rejects a client with any protocol other than `63`.
 - [ ] With the Blueprint Journal disabled, identities still disclosed by the Tech Tree receive their Blueprint Fragment and public Progression Gate state. Silhouette, hidden, omitted, and unrelated identities receive no supplemental state.
 - [ ] Select a node with a Bench-tier requirement, a Progression Gate, and archived Blueprint Fragments. Its details and narration list the current/required tier first, the active blocker, then fragment progress; only the selected node receives the small progress/blocker marks.
 - [ ] Open the Blueprint Journal and confirm full-detail entries show their Workbench level, no-level access, or unavailable state. Disclosed fragment targets show progress in details and a compact row suffix only after at least one fragment is archived. Preview, name-only, and silhouette entries reveal no crafting policy, and name-only and silhouette entries reveal neither the target ID nor fragment metadata.
@@ -510,7 +510,7 @@ than the recorded release hash.
 - [ ] Load the [nested example](../examples/authored-branches-datapack/README.md)
   on a dedicated server and confirm five branches, eight visible nodes, and the
   shared M4A1 requirement in status/export output.
-- [ ] Connect with a matching protocol-62 client. Check nested containment,
+- [ ] Connect with a matching protocol-63 client. Check nested containment,
   sibling spacing, translated labels, and the cross-branch OR requirement.
 - [ ] Change only a branch title and reload; check that the label refreshes
   without moving nodes. Change membership and verify that geometry refreshes.

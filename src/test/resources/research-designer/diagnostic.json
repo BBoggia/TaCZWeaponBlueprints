@@ -1,0 +1,21 @@
+{
+  "format": 1,
+  "code": "missing_blueprint",
+  "severity": "error",
+  "stage": "context",
+  "project_revision": 7,
+  "object_id": "756d93cc-10d4-59e2-8820-96dc55fd5f10",
+  "pointer": "/draft/nodes/1/blueprint_id",
+  "message_key": "designer.diagnostic.missing_blueprint",
+  "arguments": [
+    "designer_fixture:missing"
+  ],
+  "blocks": [
+    "simulation",
+    "export"
+  ],
+  "actions": [
+    "assign_blueprint",
+    "remove_node"
+  ]
+}

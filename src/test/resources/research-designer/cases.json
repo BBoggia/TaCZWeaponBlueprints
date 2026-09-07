@@ -1,0 +1,2325 @@
+{
+  "format": 1,
+  "cases": [
+    {
+      "id": "blank",
+      "project": "blank.project.json",
+      "catalog": [],
+      "expected": {
+        "exportable": false,
+        "diagnostics": [
+          "empty_tree"
+        ],
+        "catalog_count": 0,
+        "public_nodes": 0,
+        "public_edges": 0,
+        "total_points": 0,
+        "hidden_ids": []
+      }
+    },
+    {
+      "id": "unassigned",
+      "project": "unassigned.project.json",
+      "catalog": [],
+      "expected": {
+        "exportable": false,
+        "diagnostics": [
+          "missing_blueprint"
+        ],
+        "catalog_count": 0,
+        "public_nodes": 0,
+        "public_edges": 0,
+        "total_points": 0,
+        "hidden_ids": []
+      }
+    },
+    {
+      "id": "single",
+      "project": "single.project.json",
+      "catalog": [
+        {
+          "blueprint_id": "designer_fixture:root",
+          "kind": "gun"
+        }
+      ],
+      "expected": {
+        "exportable": true,
+        "diagnostics": [],
+        "catalog_count": 1,
+        "public_nodes": 1,
+        "public_edges": 0,
+        "total_points": 2,
+        "hidden_ids": []
+      }
+    },
+    {
+      "id": "split_merge",
+      "project": "split_merge.project.json",
+      "catalog": [
+        {
+          "blueprint_id": "designer_fixture:root",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "designer_fixture:left",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "designer_fixture:right",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "designer_fixture:end",
+          "kind": "gun"
+        }
+      ],
+      "expected": {
+        "exportable": true,
+        "diagnostics": [],
+        "catalog_count": 4,
+        "public_nodes": 4,
+        "public_edges": 4,
+        "total_points": 14,
+        "hidden_ids": []
+      }
+    },
+    {
+      "id": "inclusive_or",
+      "project": "inclusive_or.project.json",
+      "catalog": [
+        {
+          "blueprint_id": "designer_fixture:root",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "designer_fixture:left",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "designer_fixture:right",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "designer_fixture:support",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "designer_fixture:end",
+          "kind": "gun"
+        }
+      ],
+      "expected": {
+        "exportable": true,
+        "diagnostics": [],
+        "catalog_count": 5,
+        "public_nodes": 5,
+        "public_edges": 6,
+        "total_points": 16,
+        "hidden_ids": []
+      }
+    },
+    {
+      "id": "nested",
+      "project": "nested.project.json",
+      "catalog": [
+        {
+          "blueprint_id": "designer_fixture:root",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "designer_fixture:left",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "designer_fixture:right",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "designer_fixture:end",
+          "kind": "gun"
+        }
+      ],
+      "expected": {
+        "exportable": true,
+        "diagnostics": [],
+        "catalog_count": 4,
+        "public_nodes": 4,
+        "public_edges": 4,
+        "total_points": 14,
+        "hidden_ids": []
+      }
+    },
+    {
+      "id": "cross_domain",
+      "project": "cross_domain.project.json",
+      "catalog": [
+        {
+          "blueprint_id": "designer_fixture:root",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "designer_fixture:ammo",
+          "kind": "ammo"
+        },
+        {
+          "blueprint_id": "designer_fixture:attachment",
+          "kind": "attachment"
+        }
+      ],
+      "expected": {
+        "exportable": true,
+        "diagnostics": [],
+        "catalog_count": 3,
+        "public_nodes": 3,
+        "public_edges": 2,
+        "total_points": 6,
+        "hidden_ids": []
+      }
+    },
+    {
+      "id": "hidden",
+      "project": "hidden.project.json",
+      "catalog": [
+        {
+          "blueprint_id": "designer_fixture:root",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "designer_fixture:secret",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "designer_fixture:end",
+          "kind": "gun"
+        }
+      ],
+      "expected": {
+        "exportable": true,
+        "diagnostics": [],
+        "catalog_count": 3,
+        "public_nodes": 2,
+        "public_edges": 0,
+        "total_points": 10,
+        "hidden_ids": [
+          "designer_fixture:secret"
+        ]
+      }
+    },
+    {
+      "id": "missing",
+      "project": "missing.project.json",
+      "catalog": [
+        {
+          "blueprint_id": "designer_fixture:root",
+          "kind": "gun"
+        }
+      ],
+      "expected": {
+        "exportable": false,
+        "diagnostics": [
+          "missing_blueprint"
+        ],
+        "catalog_count": 1,
+        "public_nodes": 2,
+        "public_edges": 1,
+        "total_points": 4,
+        "hidden_ids": []
+      }
+    },
+    {
+      "id": "automatic_conversion",
+      "project": "automatic_conversion.project.json",
+      "catalog": [
+        {
+          "blueprint_id": "designer_fixture:root",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "designer_fixture:left",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "designer_fixture:right",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "designer_fixture:end",
+          "kind": "gun"
+        }
+      ],
+      "expected": {
+        "exportable": true,
+        "diagnostics": [],
+        "catalog_count": 4,
+        "public_nodes": 4,
+        "public_edges": 4,
+        "total_points": 18,
+        "hidden_ids": []
+      },
+      "source": "synthetic-resolved-capture.json"
+    },
+    {
+      "id": "large_addon",
+      "project": "large_addon.project.json",
+      "catalog": [
+        {
+          "blueprint_id": "addon_a:weapon_0",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_1",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_2",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_3",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_4",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_5",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_6",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_7",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_8",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_9",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_10",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_11",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_12",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_13",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_14",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_15",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_16",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_17",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_18",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_19",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_20",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_21",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_22",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_23",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_24",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_25",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_26",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_27",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_28",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_29",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_30",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_31",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_32",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_33",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_34",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_35",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_36",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_37",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_38",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_39",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_40",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_41",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_42",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_43",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_44",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_45",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_46",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_47",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_48",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_49",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_50",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_51",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_52",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_53",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_54",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_55",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_56",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_57",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_58",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_59",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_60",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_61",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_62",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_63",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_64",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_65",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_66",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_67",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_68",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_69",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_70",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_71",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_72",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_73",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_74",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_75",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_76",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_77",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_78",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_79",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_80",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_81",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_82",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_83",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_84",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_85",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_86",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_87",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_88",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_89",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_90",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_91",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_92",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_93",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_94",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_95",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_96",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_97",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_98",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_99",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_100",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_101",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_102",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_103",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_104",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_105",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_106",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_107",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_108",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_109",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_110",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_111",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_112",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_113",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_114",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_115",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_116",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_117",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_118",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_119",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_120",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_121",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_122",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_123",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_124",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_125",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_126",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_127",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_128",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_129",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_130",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_131",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_132",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_133",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_134",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_135",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_136",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_137",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_138",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_139",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_140",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_141",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_142",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_143",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_144",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_145",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_146",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_147",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_148",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_149",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_150",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_151",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_152",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_153",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_154",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_155",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_156",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_157",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_158",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_159",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_160",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_161",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_162",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_163",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_164",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_165",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_166",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_167",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_168",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_169",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_170",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_171",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_172",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_173",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_174",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_175",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_176",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_177",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_178",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_179",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_180",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_181",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_182",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_183",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_184",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_185",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_186",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_187",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_188",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_189",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_190",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_191",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_192",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_193",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_194",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_195",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_196",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_197",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_198",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_199",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_200",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_201",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_202",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_203",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_204",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_205",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_206",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_207",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_208",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_209",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_210",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_211",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_212",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_213",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_214",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_215",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_216",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_217",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_218",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_219",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_220",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_221",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_222",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_223",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_224",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_225",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_226",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_227",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_228",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_229",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_230",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_231",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_232",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_233",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_234",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_235",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_236",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_237",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_238",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_239",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_240",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_241",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_242",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_243",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_244",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_245",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_246",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_247",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_248",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_249",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_250",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_251",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_252",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_253",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_254",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_255",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_256",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_257",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_258",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_259",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_260",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_261",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_262",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_263",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_264",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_265",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_266",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_267",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_268",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_269",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_270",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_271",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_272",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_273",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_274",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_275",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_276",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_277",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_278",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_279",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_280",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_281",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_282",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_283",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_284",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_285",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_286",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_287",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_288",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_289",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_290",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_291",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_292",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_293",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_294",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_295",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_296",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_297",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_298",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_299",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_300",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_301",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_302",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_303",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_304",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_305",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_306",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_307",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_308",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_309",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_310",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_311",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_312",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_313",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_314",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_315",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_316",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_317",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_318",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_319",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_320",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_321",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_322",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_323",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_324",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_325",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_326",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_327",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_328",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_329",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_330",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_331",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_332",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_333",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_334",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_335",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_336",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_337",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_338",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_339",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_340",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_341",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_342",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_343",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_344",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_345",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_346",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_347",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_348",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_349",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_350",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_351",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_352",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_353",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_354",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_355",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_356",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_357",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_358",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_359",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_360",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_361",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_362",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_363",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_364",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_365",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_366",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_367",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_368",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_369",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_370",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_371",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_372",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_373",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_374",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_375",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_376",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_377",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_378",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_379",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_380",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_381",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_382",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_383",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_384",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_385",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_386",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_387",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_388",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_389",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_390",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_391",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_392",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_393",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_394",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_395",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_396",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_397",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_398",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_399",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_400",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_401",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_402",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_403",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_404",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_405",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_406",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_407",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_408",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_409",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_410",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_411",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_412",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_413",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_414",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_415",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_416",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_417",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_418",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_419",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_420",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_421",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_422",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_423",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_424",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_425",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_426",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_427",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_428",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_429",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_430",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_431",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_432",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_433",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_434",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_435",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_436",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_437",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_438",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_439",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_440",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_441",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_442",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_443",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_444",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_445",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_446",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_447",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_448",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_449",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_450",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_451",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_452",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_453",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_454",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_455",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_456",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_457",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_458",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_459",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_460",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_461",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_462",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_463",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_464",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_465",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_466",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_467",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_468",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_469",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_470",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_471",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_472",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_473",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_474",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_475",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_476",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_477",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_478",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_479",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_480",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_481",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_482",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_483",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_484",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_485",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_486",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_487",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_488",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_489",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_490",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_491",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_492",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_493",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_494",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_495",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_496",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_497",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_498",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_499",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_500",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_501",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_502",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_503",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_504",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_505",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_506",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_507",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_508",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_509",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_a:weapon_510",
+          "kind": "gun"
+        },
+        {
+          "blueprint_id": "addon_b:weapon_511",
+          "kind": "gun"
+        }
+      ],
+      "expected": {
+        "exportable": true,
+        "diagnostics": [],
+        "catalog_count": 512,
+        "public_nodes": 512,
+        "public_edges": 511,
+        "total_points": 1024,
+        "hidden_ids": []
+      }
+    }
+  ]
+}

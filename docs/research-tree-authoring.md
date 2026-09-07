@@ -23,9 +23,9 @@ Run these operator commands after the server has loaded TaCZ recipes:
 ```
 
 `export` writes `taczweaponblueprints/research-catalog.json` inside the current
-world folder. Format 21 is stable and sorted. It includes every live blueprint
-ID, selected rule, visibility, cost, legacy prerequisite union, canonical
-prerequisite groups, authored group placement,
+world folder. The current format is 22 and its output is stable and sorted. It
+includes every live blueprint ID, selected rule, visibility, cost, legacy
+prerequisite union, canonical prerequisite groups, authored group placement,
 fallback status, missing authored members, the selected tree's presentation-band
 policy, revision-matched automatic placement decisions, topology/economy audits,
 and a decision explanation for every weapon. The audit is built from a detached
@@ -33,7 +33,7 @@ fully disclosed view, independent of any player's progress and the configured
 undiscovered-visibility ceiling. Use these exact IDs in rules and groups; do not
 infer them from display names.
 
-Format 21 additionally includes the revision-matched research and crafting
+The current export also includes the revision-matched research and crafting
 policy projections. Its top-level summaries record research-tier and fragment
 distributions, research omissions, complete crafting dispositions and
 Workbench levels, review fallbacks, and external workstation mappings from the

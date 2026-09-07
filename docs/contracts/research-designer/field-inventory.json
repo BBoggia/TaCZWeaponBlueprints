@@ -1,0 +1,761 @@
+{
+  "format": 1,
+  "records": [
+    {
+      "class": "com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchProfile",
+      "fields": {
+        "format": {
+          "project_area": "profile",
+          "treatment": "structural",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "journalEnabled": {
+          "project_area": "profile",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "visibility": {
+          "project_area": "profile",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "researchEnabled": {
+          "project_area": "profile",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "recyclingEnabled": {
+          "project_area": "profile",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "allowUnlearnedRecycling": {
+          "project_area": "profile",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "recyclingValue": {
+          "project_area": "profile",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "researchCost": {
+          "project_area": "profile",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "requiresDiscovery": {
+          "project_area": "profile",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "creativeBypassesCost": {
+          "project_area": "profile",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "treeEnabled": {
+          "project_area": "profile",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "domainPolicies": {
+          "project_area": "profile",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "entryPointCandidates": {
+          "project_area": "profile",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "techEntryPointCandidates": {
+          "project_area": "profile",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "techTree": {
+          "project_area": "profile",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "reverseEngineering": {
+          "project_area": "profile",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "progression": {
+          "project_area": "profile",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "crafting": {
+          "project_area": "profile",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "analyzer": {
+          "project_area": "profile",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        }
+      }
+    },
+    {
+      "class": "com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchRule",
+      "fields": {
+        "format": {
+          "project_area": "node.policy",
+          "treatment": "structural",
+          "rule": "Whole winning rule; absent overrides inherit profile. Preserve remaining fields and nested source definitions."
+        },
+        "profile": {
+          "project_area": "node.policy",
+          "treatment": "structural",
+          "rule": "Whole winning rule; absent overrides inherit profile. Preserve remaining fields and nested source definitions."
+        },
+        "priority": {
+          "project_area": "node.policy",
+          "treatment": "structural",
+          "rule": "Whole winning rule; absent overrides inherit profile. Preserve remaining fields and nested source definitions."
+        },
+        "target": {
+          "project_area": "node.policy",
+          "treatment": "structural",
+          "rule": "Whole winning rule; absent overrides inherit profile. Preserve remaining fields and nested source definitions."
+        },
+        "visibility": {
+          "project_area": "node.policy",
+          "treatment": "edit",
+          "rule": "Whole winning rule; absent overrides inherit profile. Preserve remaining fields and nested source definitions."
+        },
+        "treeEnabled": {
+          "project_area": "node.policy",
+          "treatment": "edit",
+          "rule": "Whole winning rule; absent overrides inherit profile. Preserve remaining fields and nested source definitions."
+        },
+        "researchEnabled": {
+          "project_area": "node.policy",
+          "treatment": "edit",
+          "rule": "Whole winning rule; absent overrides inherit profile. Preserve remaining fields and nested source definitions."
+        },
+        "recyclingEnabled": {
+          "project_area": "node.policy",
+          "treatment": "preserve",
+          "rule": "Whole winning rule; absent overrides inherit profile. Preserve remaining fields and nested source definitions."
+        },
+        "allowUnlearnedRecycling": {
+          "project_area": "node.policy",
+          "treatment": "preserve",
+          "rule": "Whole winning rule; absent overrides inherit profile. Preserve remaining fields and nested source definitions."
+        },
+        "recyclingValue": {
+          "project_area": "node.policy",
+          "treatment": "preserve",
+          "rule": "Whole winning rule; absent overrides inherit profile. Preserve remaining fields and nested source definitions."
+        },
+        "researchCost": {
+          "project_area": "node.policy",
+          "treatment": "edit",
+          "rule": "Whole winning rule; absent overrides inherit profile. Preserve remaining fields and nested source definitions."
+        },
+        "requiresDiscovery": {
+          "project_area": "node.policy",
+          "treatment": "edit",
+          "rule": "Whole winning rule; absent overrides inherit profile. Preserve remaining fields and nested source definitions."
+        },
+        "prerequisites": {
+          "project_area": "node.policy",
+          "treatment": "edit",
+          "rule": "Whole winning rule; absent overrides inherit profile. Preserve remaining fields and nested source definitions."
+        },
+        "prerequisiteGroups": {
+          "project_area": "node.policy",
+          "treatment": "edit",
+          "rule": "Whole winning rule; absent overrides inherit profile. Preserve remaining fields and nested source definitions."
+        },
+        "creativeBypassesCost": {
+          "project_area": "node.policy",
+          "treatment": "edit",
+          "rule": "Whole winning rule; absent overrides inherit profile. Preserve remaining fields and nested source definitions."
+        },
+        "reverseEngineering": {
+          "project_area": "node.policy",
+          "treatment": "preserve",
+          "rule": "Whole winning rule; absent overrides inherit profile. Preserve remaining fields and nested source definitions."
+        },
+        "progression": {
+          "project_area": "node.policy",
+          "treatment": "edit",
+          "rule": "Whole winning rule; absent overrides inherit profile. Preserve remaining fields and nested source definitions."
+        },
+        "crafting": {
+          "project_area": "node.policy",
+          "treatment": "preserve",
+          "rule": "Whole winning rule; absent overrides inherit profile. Preserve remaining fields and nested source definitions."
+        },
+        "analyzer": {
+          "project_area": "node.policy",
+          "treatment": "preserve",
+          "rule": "Whole winning rule; absent overrides inherit profile. Preserve remaining fields and nested source definitions."
+        }
+      }
+    },
+    {
+      "class": "com.gamergaming.taczweaponblueprints.resource.research.ResearchTechTreeDefinition",
+      "fields": {
+        "format": {
+          "project_area": "tree",
+          "treatment": "structural",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "title": {
+          "project_area": "tree",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "translationKey": {
+          "project_area": "tree",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "icon": {
+          "project_area": "tree",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "weaponPlacementMode": {
+          "project_area": "tree",
+          "treatment": "structural",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "layout": {
+          "project_area": "tree",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "bandPolicy": {
+          "project_area": "tree",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "tiers": {
+          "project_area": "tree",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "domains": {
+          "project_area": "tree",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "branches": {
+          "project_area": "tree",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        }
+      }
+    },
+    {
+      "class": "com.gamergaming.taczweaponblueprints.resource.research.ResearchTechTreeEntryBundle",
+      "fields": {
+        "format": {
+          "project_area": "nodes",
+          "treatment": "structural",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "tree": {
+          "project_area": "nodes",
+          "treatment": "structural",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "priority": {
+          "project_area": "nodes",
+          "treatment": "structural",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "entries": {
+          "project_area": "nodes",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "branchMemberships": {
+          "project_area": "nodes",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        }
+      }
+    },
+    {
+      "class": "com.gamergaming.taczweaponblueprints.resource.research.ResearchAutomaticPlacementProfile",
+      "fields": {
+        "format": {
+          "project_area": "automatic_source",
+          "treatment": "structural",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "tree": {
+          "project_area": "automatic_source",
+          "treatment": "structural",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "mode": {
+          "project_area": "automatic_source",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "levelsPerTier": {
+          "project_area": "automatic_source",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "reviewConfidenceThreshold": {
+          "project_area": "automatic_source",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "reviewHandling": {
+          "project_area": "automatic_source",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "maxGeneratedPrerequisites": {
+          "project_area": "automatic_source",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "mergeInterval": {
+          "project_area": "automatic_source",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "maxNodesPerRank": {
+          "project_area": "automatic_source",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "progressionBands": {
+          "project_area": "automatic_source",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "foundationCount": {
+          "project_area": "automatic_source",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "prerequisiteStrategy": {
+          "project_area": "automatic_source",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "scoringModel": {
+          "project_area": "automatic_source",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        }
+      }
+    },
+    {
+      "class": "com.gamergaming.taczweaponblueprints.resource.research.ResearchTreeGroupDefinition",
+      "fields": {
+        "format": {
+          "project_area": "legacy_group",
+          "treatment": "structural",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "profile": {
+          "project_area": "legacy_group",
+          "treatment": "structural",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "title": {
+          "project_area": "legacy_group",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "translationKey": {
+          "project_area": "legacy_group",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "icon": {
+          "project_area": "legacy_group",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "order": {
+          "project_area": "legacy_group",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "includeInOverview": {
+          "project_area": "legacy_group",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "ranks": {
+          "project_area": "legacy_group",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        }
+      }
+    },
+    {
+      "class": "com.gamergaming.taczweaponblueprints.resource.research.BlueprintProgressionProfilePolicy",
+      "fields": {
+        "fallbackTiers": {
+          "project_area": "profile.progression",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "authoredTierBands": {
+          "project_area": "profile.progression",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "fragments": {
+          "project_area": "profile.progression",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "gates": {
+          "project_area": "profile.progression",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        }
+      }
+    },
+    {
+      "class": "com.gamergaming.taczweaponblueprints.resource.research.BlueprintProgressionRuleOverride",
+      "fields": {
+        "researchTier": {
+          "project_area": "node.policy.progression",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "craftingTier": {
+          "project_area": "node.policy.progression",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "fragmentThreshold": {
+          "project_area": "node.policy.progression",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "gates": {
+          "project_area": "node.policy.progression",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        }
+      }
+    },
+    {
+      "class": "com.gamergaming.taczweaponblueprints.resource.research.ResearchTechTreeBranchDefinition",
+      "fields": {
+        "id": {
+          "project_area": "tree.branches",
+          "treatment": "preserve",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "domain": {
+          "project_area": "tree.branches",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "parent": {
+          "project_area": "tree.branches",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "title": {
+          "project_area": "tree.branches",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "translationKey": {
+          "project_area": "tree.branches",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "order": {
+          "project_area": "tree.branches",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "anchor": {
+          "project_area": "tree.branches",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        },
+        "labelVisibility": {
+          "project_area": "tree.branches",
+          "treatment": "edit",
+          "rule": "Keep source meaning and explicit dependencies; presentation does not grant access."
+        }
+      }
+    },
+    {
+      "class": "com.gamergaming.taczweaponblueprints.resource.research.ResearchTechTreeEntryBundle$Entry",
+      "fields": {
+        "target": {
+          "project_area": "node.placement",
+          "treatment": "structural",
+          "rule": "Generate an exact target from node.blueprint_id; never infer an item or display name."
+        },
+        "domain": {
+          "project_area": "node.placement",
+          "treatment": "edit",
+          "rule": "Choose an existing enabled domain; preserve cross-domain prerequisite identities."
+        },
+        "lane": {
+          "project_area": "node.placement",
+          "treatment": "edit",
+          "rule": "Choose a declared lane; lane assignment does not create branch ownership."
+        },
+        "tier": {
+          "project_area": "node.placement",
+          "treatment": "preserve",
+          "rule": "Retain the legacy tier enum; rank and scoped progression policy retain authority."
+        },
+        "level": {
+          "project_area": "node.placement",
+          "treatment": "preserve",
+          "rule": "Retain the legacy integer level 0 through 4; do not use as a workstation tier."
+        },
+        "rank": {
+          "project_area": "node.placement",
+          "treatment": "edit",
+          "rule": "Integer 0 through 1000000; all prerequisites precede the node."
+        },
+        "order": {
+          "project_area": "node.placement",
+          "treatment": "edit",
+          "rule": "Integer 0 through 1000000; controls placement order, not progression."
+        },
+        "rating": {
+          "project_area": "node.placement",
+          "treatment": "preserve",
+          "rule": "Retain combat, utility, and appeal integer scores 0 through 100."
+        },
+        "tierOverrideReason": {
+          "project_area": "node.placement",
+          "treatment": "preserve",
+          "rule": "Retain trimmed metadata text up to 512 characters."
+        },
+        "fallback": {
+          "project_area": "node.placement",
+          "treatment": "preserve",
+          "rule": "Retain fallback provenance; it does not grant research access."
+        }
+      }
+    },
+    {
+      "class": "com.gamergaming.taczweaponblueprints.resource.research.ResearchTechTreeBranchMembership",
+      "fields": {
+        "branch": {
+          "project_area": "node.branch_id",
+          "treatment": "structural",
+          "rule": "Generate from the single direct branch owner."
+        },
+        "members": {
+          "project_area": "node.branch_id",
+          "treatment": "structural",
+          "rule": "Generate exact blueprint members; never maintain a second editable membership list."
+        }
+      }
+    },
+    {
+      "class": "com.gamergaming.taczweaponblueprints.resource.research.ResearchTechTreeDefinition$LayoutDefinition",
+      "fields": {
+        "widthMode": {
+          "project_area": "tree.layout",
+          "treatment": "edit",
+          "rule": "Fixed or dynamic width; preserve the selected runtime enum."
+        },
+        "minNodesPerLayer": {
+          "project_area": "tree.layout",
+          "treatment": "edit",
+          "rule": "Integer 8 through 28, no greater than maximum; fixed width requires equality."
+        },
+        "maxNodesPerLayer": {
+          "project_area": "tree.layout",
+          "treatment": "edit",
+          "rule": "Integer 8 through 28; a width constraint, not a node or progression limit."
+        }
+      }
+    },
+    {
+      "class": "com.gamergaming.taczweaponblueprints.resource.research.ResearchTechTreeDefinition$BandPolicyDefinition",
+      "fields": {
+        "mode": {
+          "project_area": "tree.bands",
+          "treatment": "edit",
+          "rule": "Choose none, dynamic, or configured. Legacy is derived from format-1 trees, never a literal serialized mode."
+        },
+        "ranksPerBand": {
+          "project_area": "tree.bands",
+          "treatment": "edit",
+          "rule": "Integer 1 through 64 for dynamic bands; other modes use the default."
+        },
+        "basis": {
+          "project_area": "tree.bands",
+          "treatment": "edit",
+          "rule": "Configured rank or score boundary basis; other modes retain rank."
+        },
+        "definitions": {
+          "project_area": "tree.bands",
+          "treatment": "edit",
+          "rule": "At most 32 ordered configured definitions; empty outside configured mode."
+        }
+      }
+    },
+    {
+      "class": "com.gamergaming.taczweaponblueprints.resource.research.ResearchTechTreeDefinition$BandDefinition",
+      "fields": {
+        "id": {
+          "project_area": "tree.bands.definitions",
+          "treatment": "structural",
+          "rule": "Stable resource ID independent of the displayed label."
+        },
+        "title": {
+          "project_area": "tree.bands.definitions",
+          "treatment": "edit",
+          "rule": "Trimmed nonempty title up to 80 characters."
+        },
+        "translationKey": {
+          "project_area": "tree.bands.definitions",
+          "treatment": "edit",
+          "rule": "Optional translation resource key; external translations remain a dependency."
+        },
+        "color": {
+          "project_area": "tree.bands.definitions",
+          "treatment": "edit",
+          "rule": "Optional RGB integer 0 through 16777215, presented with a color control."
+        },
+        "icon": {
+          "project_area": "tree.bands.definitions",
+          "treatment": "edit",
+          "rule": "Optional resource ID; the project does not create missing assets."
+        },
+        "maximum": {
+          "project_area": "tree.bands.definitions",
+          "treatment": "edit",
+          "rule": "Optional ordered inclusive boundary in the chosen rank/score basis; retain the final open band."
+        }
+      }
+    },
+    {
+      "class": "com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCost",
+      "fields": {
+        "points": {
+          "project_area": "node.policy.research_cost",
+          "treatment": "edit",
+          "rule": "Whole units of active currency, 0 through 1000000000; inherit the whole cost when absent."
+        },
+        "ingredients": {
+          "project_area": "node.policy.research_cost",
+          "treatment": "edit",
+          "rule": "At most six predicates; preserve combined allocation and item/tag meaning."
+        }
+      }
+    },
+    {
+      "class": "com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchIngredient",
+      "fields": {
+        "items": {
+          "project_area": "node.policy.research_cost.ingredients",
+          "treatment": "edit",
+          "rule": "At most 64 exact item alternatives; mutually exclusive with tag."
+        },
+        "tag": {
+          "project_area": "node.policy.research_cost.ingredients",
+          "treatment": "edit",
+          "rule": "One item tag, mutually exclusive with items; resolved membership is a context dependency."
+        },
+        "count": {
+          "project_area": "node.policy.research_cost.ingredients",
+          "treatment": "edit",
+          "rule": "Whole item count 1 through 64, allocated jointly with every other cost."
+        }
+      }
+    },
+    {
+      "class": "com.gamergaming.taczweaponblueprints.resource.research.ResearchPrerequisiteGroup",
+      "fields": {
+        "anyOf": {
+          "project_area": "node.requirements",
+          "treatment": "edit",
+          "rule": "One through 64 distinct blueprint alternatives in a compiled group; groups combine with AND."
+        }
+      }
+    }
+  ],
+  "external_config_fields": [
+    "activeResearchProfile",
+    "allowUnlearnedRecycling",
+    "ammoBlacklist",
+    "ammoCraftingStrategy",
+    "attachmentBlacklist",
+    "attachmentCraftingStrategy",
+    "balancePreset",
+    "blueprintSpawnChance",
+    "craftingDisabledItemTypes",
+    "craftingDisabledKinds",
+    "craftingUnrestrictedItemTypes",
+    "craftingUnrestrictedKinds",
+    "creativeBypassesProgressionGates",
+    "creativeBypassesResearchCost",
+    "creativeBypassesWorkbenchTiers",
+    "customEnforceCraftingTiers",
+    "customEnforceResearchTiers",
+    "customFragmentMode",
+    "duplicateBlueprintPolicy",
+    "enableBlueprints",
+    "enableCombatResearchPointAwards",
+    "enableDiscoveryTracking",
+    "enableJournal",
+    "enableResearch",
+    "enableResearchDataLoot",
+    "enableResearchPointAwards",
+    "enableScrapLoot",
+    "exactCraftingOverrides",
+    "exactFragmentThresholds",
+    "externalWorkstationTiers",
+    "foundWeaponRecoveryMode",
+    "fragmentDiscountType",
+    "fragmentDiscountValue",
+    "fragmentLootReplacementPercent",
+    "fragmentPreset",
+    "fragmentRetainedProgressCap",
+    "gunBlacklist",
+    "learnedTargetFragmentResearchPoints",
+    "linkedAmmoFallbackTier",
+    "maxBlueprints",
+    "maximumUndiscoveredVisibility",
+    "minBlueprints",
+    "progressionExemptBlueprints",
+    "progressionExemptItemTypes",
+    "progressionExemptKinds",
+    "progressionPreset",
+    "researchCostMode",
+    "researchCurrencyItem",
+    "researchCurrencyKind",
+    "researchDataAllowLearned",
+    "researchDataAllowUndiscovered",
+    "researchDataBehavior",
+    "researchPointCap",
+    "scrapLootBudget",
+    "startingBlueprints",
+    "tierOneFragmentThreshold",
+    "tierOneUpperPercent",
+    "tierThreeFragmentThreshold",
+    "tierTwoFragmentThreshold",
+    "tierTwoUpperPercent",
+    "treeResearchResultMode",
+    "unknownExternalWorkstationsUnrestricted",
+    "unknownWorkstationFallbackTier"
+  ],
+  "config_treatment": "Capture raw and effective values plus preset selectors. Read-only assumptions in the tree editor; activation must resolve mismatches explicitly."
+}

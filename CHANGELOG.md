@@ -6,6 +6,57 @@ documentation.
 
 ## Unreleased
 
+## 1.3.1 - 2026-09-07
+
+- Released the 1.3.1 progression update, including physical Scrap, tiered stations,
+  Research Data analysis, Blueprint Fragments, and the redesigned Tech Tree from
+  1.3.1-beta.1. Added the in-game Research Designer described below.
+
+- Gave Research Designer more room for the tree and weapon catalog with one
+  compact toolbar, a scrolling weapon list, single-line entries, and controls
+  inside the canvas. Project actions and help are grouped in the Project menu.
+
+- Simplified Research Designer with a persistent Build canvas, searchable weapon
+  catalog, Add next and Connect actions, direct drag placement, named branch
+  regions, and nearby research controls. Incomplete nodes stay visible for repair.
+  Added quick player-test presets and clearer Build, Test and Export entry points.
+
+- Fixed Research Designer save retries after a partial disk-write failure and
+  preserved unchanged quantities when applying ingredient or simulation slots.
+  Import requires another review if any part of the selected bundle changes.
+
+- Improved Research Designer responsiveness by cancelling replaced previews and
+  adding Cancel/Retry controls under Issues. Fixed the fallback research cost in blank projects.
+
+- Added reviewed Research Designer datapack export and editable project sharing.
+  Export includes dependencies, required settings, and activation instructions;
+  importing creates a separate local project.
+
+- Added Research Designer property forms with inherited/effective values and
+  synthetic player scenarios. Preview research routes, total payments, Research
+  Bench requirements, hidden content, and direct or physical-blueprint results
+  without changing a real player or server.
+
+- Added reviewed Tech Tree editing in Research Designer: catalog insertion,
+  multiple-node selection, nested branches, prerequisite groups, drag moves,
+  reversible arrangement, and empty branch templates. Structural edits preserve
+  research costs and require explicit repair of deleted prerequisites.
+
+- Added the Research Designer workspace with a local project chooser, searchable
+  node and branch library, compact Tech Tree preview, responsive inspector,
+  validation drawer, and save/recovery controls. Open it from the title or pause
+  menu, `/researchdesigner`, or an assigned Controls key.
+
+- Added detached Research Designer compilation and explicit scenario comparisons,
+  with dependency diagnostics and offline research, crafting, Analyzer and
+  Research Data evaluation. Draft validation does not activate server changes.
+
+- Added a permission-checked Research Designer capture API and explicit conversion
+  into local custom-tree projects, with retained dependency context for offline
+  work.
+- Updated the network protocol to 63 for bounded operator capture requests.
+  Clients and servers must use matching builds.
+
 ## 1.3.1-beta.1 - 2026-09-06
 
 ### Added

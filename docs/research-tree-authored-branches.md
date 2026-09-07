@@ -131,7 +131,8 @@ reassembly. Malformed indices, duplicate ownership, and invalid containment
 are rejected before the client accepts a publication.
 
 `/gg research status` reports authored branch and direct-member counts for the
-active tree. Export format **21** adds `authored_branches`, sorted by ID, with
+active tree. The current export format **22** retains the `authored_branches`
+field introduced in format 21, sorted by ID, with
 the tree declarations and sorted direct `members`. The existing catalog,
 prerequisite, cost, automatic-placement, and crafting-policy fields retain their
 meaning. Export summaries for automatic prerequisite branches describe gameplay

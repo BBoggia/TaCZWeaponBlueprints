@@ -1,0 +1,123 @@
+{
+  "format": 1,
+  "observed_at_utc": "2026-09-07T02:17:59.176381+00:00",
+  "git_head": "68d6a71c4e9fca1604f4e824194c0963f84fb669",
+  "clean_before_changes": true,
+  "environment": {
+    "recorded_at": "2026-09-07T02:05:56.681924Z",
+    "java_version": "17.0.12",
+    "java_vendor": "Oracle Corporation",
+    "os": "Mac OS X",
+    "os_version": "26.6.2",
+    "architecture": "aarch64",
+    "available_processors": 16,
+    "max_heap_bytes": 2147483648,
+    "scope": "CPU and current-thread allocation; full scene includes routing and validation; isolated routing rebuild uses fixed measured geometry; no GPU/native rendering"
+  },
+  "baseline_tests": 2440,
+  "scope": "Existing CPU scene/routing/navigation only; no Designer implementation or native rendering measurements.",
+  "budget_rule": "Proposed same-machine p95 * 1.25, rounded upward to 5ms for scene and 0.5ms for 200 queries; not CI pass/fail assertions.",
+  "cases": [
+    {
+      "name": "live_client_projection",
+      "input_sha256": "378c48b56b5cd1843cd64addb0bf837f112d7ec32f7ebab4733f1e9082edf074",
+      "nodes": 287,
+      "edges": 454,
+      "status": "valid",
+      "scene_cpu": {
+        "samples": 12,
+        "median_ms": 11.647917,
+        "p95_ms": 14.259125,
+        "max_ms": 14.259125
+      },
+      "camera_200_queries_cpu": {
+        "samples": 12,
+        "median_ms": 1.5677085,
+        "p95_ms": 1.792875,
+        "max_ms": 1.792875
+      },
+      "proposed_scene_p95_budget_ms": 20,
+      "proposed_camera_200_queries_p95_budget_ms": 2.5
+    },
+    {
+      "name": "connected_512",
+      "input_sha256": "c85a057196e0222ff44835c6b114685228fd71a41bb8e5f39978ceafb8192819",
+      "nodes": 512,
+      "edges": 992,
+      "status": "valid",
+      "scene_cpu": {
+        "samples": 12,
+        "median_ms": 20.091167,
+        "p95_ms": 20.767459,
+        "max_ms": 20.767459
+      },
+      "camera_200_queries_cpu": {
+        "samples": 12,
+        "median_ms": 2.8698335,
+        "p95_ms": 3.037167,
+        "max_ms": 3.037167
+      },
+      "proposed_scene_p95_budget_ms": 30,
+      "proposed_camera_200_queries_p95_budget_ms": 4.0
+    },
+    {
+      "name": "dense_256",
+      "input_sha256": "178b2d905311ad26f32f1b775fa51b05a4ed18ff17af6794890694125e12dd08",
+      "nodes": 256,
+      "edges": 3840,
+      "status": "valid",
+      "scene_cpu": {
+        "samples": 12,
+        "median_ms": 89.5777085,
+        "p95_ms": 105.59,
+        "max_ms": 105.59
+      },
+      "camera_200_queries_cpu": {
+        "samples": 12,
+        "median_ms": 3.966063,
+        "p95_ms": 4.067208,
+        "max_ms": 4.067208
+      },
+      "proposed_scene_p95_budget_ms": 135,
+      "proposed_camera_200_queries_p95_budget_ms": 5.5
+    },
+    {
+      "name": "maximum_nodes_edgeless",
+      "input_sha256": "80a993e5c2df6dcb4bb7ca77b38fc93435706f3102a976c6db441eaf6b87b915",
+      "nodes": 4096,
+      "edges": 0,
+      "status": "valid",
+      "scene_cpu": {
+        "samples": 12,
+        "median_ms": 19.1171665,
+        "p95_ms": 22.136458,
+        "max_ms": 22.136458
+      },
+      "camera_200_queries_cpu": {
+        "samples": 12,
+        "median_ms": 0.053083,
+        "p95_ms": 0.054125,
+        "max_ms": 0.054125
+      },
+      "proposed_scene_p95_budget_ms": 30,
+      "proposed_camera_200_queries_p95_budget_ms": 0.5
+    },
+    {
+      "name": "maximum_edges",
+      "input_sha256": "3576dd7968d50af776f0b23831f847ff7684b75031dbba1644fd96c7f74cbf0a",
+      "nodes": 1088,
+      "edges": 65536,
+      "status": "unavailable",
+      "scene_cpu": {
+        "samples": 3,
+        "median_ms": 3.163208,
+        "p95_ms": 3.204334,
+        "max_ms": 3.204334
+      },
+      "camera_200_queries_cpu": null,
+      "proposed_scene_p95_budget_ms": null,
+      "proposed_camera_200_queries_p95_budget_ms": null,
+      "unavailable_reason": "java.lang.IllegalArgumentException: group routing connection budget exceeded"
+    }
+  ]
+}

@@ -63,6 +63,27 @@ public final class ResearchIngredientPlanner {
     public static Optional<Allocation> allocation(
             List<ItemStack> stacks,
             List<Requirement> requirements) {
+        return allocation(stacks, requirements, stack -> stack.isEmpty() ? 0 : stack.getCount(),
+                ResearchIngredientPlanner::matches);
+    }
+
+    /** Read-only inventory facts for offline previews. Tags must come from the explicit captured context. */
+    public record SlotFact(ResourceLocation item, int count, java.util.Set<ResourceLocation> tags) {
+        public SlotFact {
+            java.util.Objects.requireNonNull(item); tags = java.util.Set.copyOf(tags);
+            if (count < 0 || count > 64) throw new IllegalArgumentException("Invalid simulated slot count");
+        }
+    }
+
+    public static Optional<Allocation> allocationFromFacts(List<SlotFact> stacks, List<Requirement> requirements) {
+        if (stacks == null || requirements == null || stacks.size() > 256 || requirements.size() > 4096) return Optional.empty();
+        return allocation(stacks, requirements, SlotFact::count, (stack, ingredient) -> stack.count() > 0
+                && (ingredient.items().contains(stack.item()) || ingredient.tag().filter(stack.tags()::contains).isPresent()));
+    }
+
+    private static <T> Optional<Allocation> allocation(List<T> stacks, List<Requirement> requirements,
+            java.util.function.ToIntFunction<T> count,
+            java.util.function.BiPredicate<T, Requirement> matcher) {
         if (stacks == null || requirements == null
                 || stacks.stream().anyMatch(java.util.Objects::isNull)
                 || requirements.stream().anyMatch(java.util.Objects::isNull)) {
@@ -96,7 +117,7 @@ public final class ResearchIngredientPlanner {
             }
             flow.addEdge(source, ingredientStart + ingredientIndex, ingredient.count());
             for (int slotIndex = 0; slotIndex < slotCount; slotIndex++) {
-                if (matches(stacks.get(slotIndex), ingredient)) {
+                if (matcher.test(stacks.get(slotIndex), ingredient)) {
                     SparseFlow.Edge edge = flow.addEdge(
                             ingredientStart + ingredientIndex,
                             slotStart + slotIndex,
@@ -106,11 +127,11 @@ public final class ResearchIngredientPlanner {
             }
         }
         for (int slotIndex = 0; slotIndex < slotCount; slotIndex++) {
-            ItemStack stack = stacks.get(slotIndex);
+            T stack = stacks.get(slotIndex);
             slotEdges[slotIndex] = flow.addEdge(
                     slotStart + slotIndex,
                     sink,
-                    stack.isEmpty() ? 0 : stack.getCount());
+                    count.applyAsInt(stack));
         }
 
         int allocated = flow.maximumFlow(source, sink);

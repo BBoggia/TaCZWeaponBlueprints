@@ -1,0 +1,251 @@
+{
+  "format": 1,
+  "status": "capture_conversion_and_local_context_implemented_ui_pending",
+  "project_format": 1,
+  "capture_format": 1,
+  "diagnostic_format": 1,
+  "project_required": [
+    "format",
+    "project_id",
+    "namespace",
+    "title",
+    "origin",
+    "dependencies",
+    "settings_assumptions",
+    "draft",
+    "supporting_resources",
+    "extensions"
+  ],
+  "draft_required": [
+    "profile",
+    "tree",
+    "nodes"
+  ],
+  "node_required": [
+    "id",
+    "placement",
+    "policy",
+    "requirements"
+  ],
+  "origin_kinds": [
+    "blank",
+    "captured",
+    "opened"
+  ],
+  "permissions": {
+    "local_project": "local_user",
+    "full_server_capture": 2,
+    "server_draft_evaluation": 2,
+    "publish": "unavailable"
+  },
+  "paths": {
+    "projects": "taczweaponblueprints/designer/projects",
+    "exports": "taczweaponblueprints/designer/exports",
+    "live_world_write": false
+  },
+  "limits": {
+    "project_bytes": 16777216,
+    "capture_bytes": 33554432,
+    "json_depth": 64,
+    "editor_id_characters": 64,
+    "draft_nodes": 4096,
+    "draft_branches": 128,
+    "branch_depth": 16,
+    "requirement_groups": 65536,
+    "alternative_references": 65536,
+    "supporting_resources": 4096,
+    "diagnostics": 1000,
+    "project_title_characters": 80
+  },
+  "diagnostic_severities": [
+    "error",
+    "warning",
+    "info"
+  ],
+  "validation_stages": [
+    "document",
+    "structure",
+    "context",
+    "simulation",
+    "export"
+  ],
+  "runtime_formats": {
+    "profile": {
+      "class": "BlueprintResearchProfile",
+      "constant": "CURRENT_FORMAT",
+      "current": 5,
+      "read": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    "rule": {
+      "class": "BlueprintResearchRule",
+      "constant": "CURRENT_FORMAT",
+      "current": 5,
+      "read": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    "tree": {
+      "class": "ResearchTechTreeDefinition",
+      "constant": "CURRENT_FORMAT",
+      "current": 3,
+      "read": [
+        1,
+        2,
+        3
+      ]
+    },
+    "placements": {
+      "class": "ResearchTechTreeEntryBundle",
+      "constant": "CURRENT_FORMAT",
+      "current": 3,
+      "read": [
+        1,
+        2,
+        3
+      ]
+    },
+    "automatic": {
+      "class": "ResearchAutomaticPlacementProfile",
+      "constant": "CURRENT_FORMAT",
+      "current": 4,
+      "read": [
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "legacy_groups": {
+      "class": "ResearchTreeGroupDefinition",
+      "constant": "CURRENT_FORMAT",
+      "current": 1,
+      "read": [
+        1
+      ]
+    },
+    "catalog_export": {
+      "class": "BlueprintResearchCatalogExporter",
+      "constant": "CURRENT_FORMAT",
+      "current": 22,
+      "read": [
+        22
+      ]
+    }
+  },
+  "not_project_formats": [
+    "catalog_export",
+    "datapack"
+  ],
+  "diagnostic_codes": [
+    "branch_cycle",
+    "branch_ownership",
+    "catalog_context_mismatch",
+    "content_dependency",
+    "diagnostic_limit",
+    "domain_disabled",
+    "duplicate_blueprint",
+    "duplicate_editor_id",
+    "empty_item_tag",
+    "empty_requirement",
+    "empty_tree",
+    "external_gate_unassessed",
+    "incomplete_placement",
+    "invalid_context",
+    "invalid_currency",
+    "invalid_number",
+    "invalid_policy",
+    "limit_exceeded",
+    "missing_advancement",
+    "missing_blueprint",
+    "missing_context",
+    "missing_dependency",
+    "missing_item",
+    "missing_item_tag",
+    "missing_prerequisite",
+    "missing_requirement",
+    "mod_dependency",
+    "ownership",
+    "pending_input",
+    "prerequisite_cycle",
+    "rank_conflict",
+    "resource_collision",
+    "resource_dependency",
+    "route_complexity",
+    "runtime_validation",
+    "scenario_validation_required",
+    "settings_mismatch",
+    "source_conversion_required",
+    "stale_capture",
+    "stale_context",
+    "survival_supply_unassessed",
+    "unassigned_blueprint",
+    "unplaced_node",
+    "unsupported_extension",
+    "unsupported_version"
+  ],
+  "capture_required": [
+    "format",
+    "capture_id",
+    "source_kind",
+    "disclosure",
+    "session_token",
+    "revisions",
+    "profile_id",
+    "catalog_export_format",
+    "definitions",
+    "settings",
+    "catalog",
+    "resolved_nodes",
+    "dependency_fingerprint",
+    "context_completeness",
+    "registry_facts",
+    "dependencies",
+    "conversion_notes"
+  ],
+  "diagnostic_required": [
+    "format",
+    "code",
+    "severity",
+    "stage",
+    "project_revision",
+    "object_id",
+    "pointer",
+    "message_key",
+    "arguments",
+    "blocks",
+    "actions"
+  ],
+  "local_storage": {
+    "recovery_format": 1,
+    "view_format": 1,
+    "recovery_bytes": 33554432,
+    "view_bytes": 16384,
+    "history_entries": 100,
+    "history_accounted_bytes": 67108864,
+    "pending_fields": 1024,
+    "pending_field_characters": 4096,
+    "pending_text_bytes": 1048576,
+    "autosave_interval_seconds": 5
+  },
+  "capture_transport": {
+    "protocol": 63,
+    "permission_level": 2,
+    "chunk_bytes": 24576,
+    "maximum_concurrent": 2,
+    "start_cooldown_ms": 5000,
+    "idle_timeout_ms": 30000,
+    "total_timeout_ms": 180000,
+    "compression": "none",
+    "final_authorization_required": true
+  }
+}

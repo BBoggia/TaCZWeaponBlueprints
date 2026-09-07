@@ -1,0 +1,17 @@
+[
+  {
+    "source": "{\"é\":\"🔧\",\"b\":2.00,\"a\":-0.0}",
+    "canonical": "{\"a\":0,\"b\":2,\"é\":\"🔧\"}",
+    "sha256": "c97a0d90aeb2bafdff5fa6190e7fbcc999647deb6dd86141bcd54daa2648efae"
+  },
+  {
+    "source": "{\"big\":1000.00,\"small\":0.00000001}",
+    "canonical": "{\"big\":1E+3,\"small\":1E-8}",
+    "sha256": "f88b627c7dfe7ab37fcda26ac714cf6f87c9f42c624abe0dc664cf51827fed17"
+  },
+  {
+    "source": "{\"mods\":{\"z\":\"1\",\"a\":\"2\"},\"choices\":[\"pack:b\",\"pack:a\"]}",
+    "canonical": "{\"choices\":[\"pack:b\",\"pack:a\"],\"mods\":{\"a\":\"2\",\"z\":\"1\"}}",
+    "sha256": "ded0f6e1983cc3b0381adc21fd353bacf935f0c71160a73fdc08ffc7812824f8"
+  }
+]

@@ -311,7 +311,7 @@ development comparisons. Window resize changes the viewport, not node placement.
 No renderer selector or profiling tool is included in the release JAR. The
 `Research-Tree-Scene-Layout` manifest attribute records `branches-v2`; artifact
 verification checks it against the runtime engine revision. This layout contract
-is independent of protocol 62 and does not change research authority.
+is independent of protocol 63 and does not change research authority.
 
 Run `./gradlew researchTreePerformance` with Java 17 for the frozen live catalog
 and structural limits. Override output with

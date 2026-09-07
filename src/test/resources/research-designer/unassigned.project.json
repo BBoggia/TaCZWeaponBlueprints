@@ -1,0 +1,73 @@
+{
+  "format": 1,
+  "project_id": "84e830e1-1722-5ada-b3df-d7412d6b4963",
+  "namespace": "designer_fixture",
+  "title": "Unassigned blueprint",
+  "origin": {
+    "kind": "blank"
+  },
+  "dependencies": {
+    "mods": [],
+    "content": [],
+    "resources": []
+  },
+  "settings_assumptions": {},
+  "draft": {
+    "profile": {
+      "id": "designer_fixture:profile",
+      "definition": {
+        "format": 1,
+        "journal_enabled": true,
+        "visibility": "full",
+        "tree_enabled": true,
+        "research_enabled": true,
+        "recycling_enabled": true,
+        "allow_unlearned_recycling": false,
+        "recycling_value": 1,
+        "research_cost": {
+          "points": 2
+        },
+        "requires_discovery": false,
+        "creative_bypasses_cost": false,
+        "tech_tree": "designer_fixture:tree"
+      }
+    },
+    "tree": {
+      "id": "designer_fixture:tree",
+      "definition": {
+        "format": 3,
+        "title": "Fixture tree",
+        "weapon_placement_mode": "authored_only",
+        "layout": {
+          "max_nodes_per_layer": 20
+        },
+        "domains": [
+          {
+            "id": "weapons",
+            "title": "Weapons",
+            "fallback_lane": "designer_fixture:weapons",
+            "fallback_tier": "starter",
+            "lanes": [
+              {
+                "id": "designer_fixture:weapons",
+                "title": "Weapons",
+                "order": 0
+              }
+            ]
+          }
+        ],
+        "branches": []
+      }
+    },
+    "nodes": [
+      {
+        "id": "4c68b427-c011-5eda-893f-bab662a657b2",
+        "placement": {},
+        "policy": {},
+        "requirements": []
+      }
+    ]
+  },
+  "supporting_resources": [],
+  "extensions": {}
+}

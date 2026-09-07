@@ -47,6 +47,13 @@ an optional server setting.
 Weapons are the only Tech Tree category enabled by default. Pack authors can
 add ammo and attachments to research using the included datapack data.
 
+Research Designer lets operators copy the installed server tree or start an empty
+tree with its weapons, then build branches, edit requirements, test simulated
+players and export a custom datapack. The catalog scrolls beside the canvas;
+Add next connects new weapons in one action. Open it from the title or pause menu,
+`/researchdesigner`, or an assigned Controls key. See the
+[workspace guide](docs/research-designer-workspace.md) for the workflow.
+
 ## Getting Started
 
 1. Install the mod and its required dependencies on both the client and server.
@@ -191,9 +198,12 @@ last working data active.
 - [Research economy supply and balance](docs/research-economy-balance.md)
 - [Research currency integration API](docs/research-currency-integrations.md)
 - [Economy release handoff and playtest checklist](docs/research-economy-release-handoff.md)
-- [Current beta release notes](docs/releases/1.3.1-beta.1.md)
+- [Current release notes](docs/releases/1.3.1.md)
 - [CurseForge description](docs/curseforge-description.md)
 - [Operations and migration](docs/operations-and-migration.md)
+- [Research Designer workspace](docs/research-designer-workspace.md)
+- [Share and install custom Tech Trees](docs/research-designer-export.md)
+- [Research Designer help](docs/research-designer-troubleshooting.md)
 - [Research-tree authoring](docs/research-tree-authoring.md)
 - [Research Bench and crafting Workbench tiers](docs/research-bench-tiers-and-crafting.md)
 - [Progression Gate criterion API](docs/progression-gate-api.md)

@@ -110,7 +110,7 @@ The screen retains both slots and presents Input, Output, station/weapon tier, f
 
 ## Compatibility and validation
 
-Missing Analyzer policy extensions preserve legacy deterministic behavior. Do not reinterpret existing blueprints, ordinary fragment items, player archives, or the active loot-fragment preset. The bundled Research Data analysis and shared reconstruction policies operate independently of weapon-analysis mode. Analyzer authoring uses profile/rule format 5 and catalog export format 22; existing formats remain readable. Analysis archives add player-data version 5; the current preview/result packets use protocol 62; versions 0–4 load with no analysis progress, and clients and servers must update together.
+Missing Analyzer policy extensions preserve legacy deterministic behavior. Do not reinterpret existing blueprints, ordinary fragment items, player archives, or the active loot-fragment preset. The bundled Research Data analysis and shared reconstruction policies operate independently of weapon-analysis mode. Analyzer authoring uses profile/rule format 5 and catalog export format 22; existing formats remain readable. Analysis archives add player-data version 5; the current preview/result packets use protocol 63; versions 0–4 load with no analysis progress, and clients and servers must update together.
 
 Frozen compatibility inputs live under `src/test/resources/analyzer-compatibility/`. Tests must decode these old inputs through current readers and assert player-visible meaning. Do not regenerate old inputs from a future serializer or change them merely to make a migration test pass. Current transaction, screen-model, request, fragment, recovery, and packet tests provide the deterministic behavior baseline.
 

@@ -8,7 +8,7 @@ Shared payment, delivery, and rollback primitives support both banked RP and phy
 
 `ResearchCurrencyPolicy` represents either banked RP with a cap or a physical item ID with no RP cap. `physicalUnit()` resolves the exact registered item and rejects missing IDs, air, and unsupported stack sizes. The current physical primitive supports currency stack sizes 1–64. It never substitutes air for a missing item or treats an item tag as an exchange-rate registry.
 
-`ResearchCurrencyPolicyCodec` provides a strict format-1 JSON descriptor and a bounded format-1 binary payload. Kinds use explicit encodings, canonical item IDs, and positive revisions. The current protocol 62 includes an active-currency publication, reward denominations, and the appended Research Data analysis action. Clients and servers must match. Existing Analyzer preview/result layouts retain their old field and enum positions; frozen protocol-59 payload fixtures remain readable. The currency selector is available to server operators, with physical Scrap as the default.
+`ResearchCurrencyPolicyCodec` provides a strict format-1 JSON descriptor and a bounded format-1 binary payload. Kinds use explicit encodings, canonical item IDs, and positive revisions. The current protocol 63 includes an active-currency publication, reward denominations, and the appended Research Data analysis action. Clients and servers must match. Existing Analyzer preview/result layouts retain their old field and enum positions; frozen protocol-59 payload fixtures remain readable. The currency selector is available to server operators, with physical Scrap as the default.
 
 ## Preparing payment and delivery
 

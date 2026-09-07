@@ -1,0 +1,161 @@
+{
+  "format": 1,
+  "project_id": "906c7685-43fc-55e2-a558-cd3c2b198fd4",
+  "namespace": "designer_fixture",
+  "title": "cross_domain",
+  "origin": {
+    "kind": "blank"
+  },
+  "dependencies": {
+    "mods": [],
+    "content": [],
+    "resources": []
+  },
+  "settings_assumptions": {},
+  "draft": {
+    "profile": {
+      "id": "designer_fixture:profile",
+      "definition": {
+        "format": 1,
+        "journal_enabled": true,
+        "visibility": "full",
+        "tree_enabled": true,
+        "research_enabled": true,
+        "recycling_enabled": true,
+        "allow_unlearned_recycling": false,
+        "recycling_value": 1,
+        "research_cost": {
+          "points": 2
+        },
+        "requires_discovery": false,
+        "creative_bypasses_cost": false,
+        "tech_tree": "designer_fixture:tree"
+      }
+    },
+    "tree": {
+      "id": "designer_fixture:tree",
+      "definition": {
+        "format": 3,
+        "title": "Fixture tree",
+        "weapon_placement_mode": "authored_only",
+        "layout": {
+          "max_nodes_per_layer": 20
+        },
+        "domains": [
+          {
+            "id": "weapons",
+            "title": "Weapons",
+            "fallback_lane": "designer_fixture:weapons",
+            "fallback_tier": "starter",
+            "lanes": [
+              {
+                "id": "designer_fixture:weapons",
+                "title": "Weapons",
+                "order": 0
+              }
+            ]
+          },
+          {
+            "id": "ammo",
+            "title": "Ammo",
+            "fallback_lane": "designer_fixture:ammo",
+            "fallback_tier": "starter",
+            "lanes": [
+              {
+                "id": "designer_fixture:ammo",
+                "title": "Ammo",
+                "order": 0
+              }
+            ]
+          },
+          {
+            "id": "attachments",
+            "title": "Attachments",
+            "fallback_lane": "designer_fixture:attachments",
+            "fallback_tier": "starter",
+            "lanes": [
+              {
+                "id": "designer_fixture:attachments",
+                "title": "Attachments",
+                "order": 0
+              }
+            ]
+          }
+        ],
+        "branches": []
+      }
+    },
+    "nodes": [
+      {
+        "id": "9f2b034b-dec1-5402-950c-9c5f06b017fd",
+        "blueprint_id": "designer_fixture:root",
+        "placement": {
+          "domain": "weapons",
+          "lane": "designer_fixture:weapons",
+          "tier": "starter",
+          "rank": 0,
+          "order": 0
+        },
+        "policy": {
+          "visibility": "full",
+          "research_cost": {
+            "points": 2
+          }
+        },
+        "requirements": []
+      },
+      {
+        "id": "a260b10b-2b7f-5297-9334-70f082a34990",
+        "blueprint_id": "designer_fixture:ammo",
+        "placement": {
+          "domain": "ammo",
+          "lane": "designer_fixture:ammo",
+          "tier": "starter",
+          "rank": 1,
+          "order": 0
+        },
+        "policy": {
+          "visibility": "full",
+          "research_cost": {
+            "points": 2
+          }
+        },
+        "requirements": [
+          {
+            "id": "2ba9adc4-6fd5-5ffb-bf63-8ac31c52ae13",
+            "any_of": [
+              "designer_fixture:root"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "7c5ca4e6-3e5e-5bc6-953a-1c11ad98bbbf",
+        "blueprint_id": "designer_fixture:attachment",
+        "placement": {
+          "domain": "attachments",
+          "lane": "designer_fixture:attachments",
+          "tier": "starter",
+          "rank": 2,
+          "order": 0
+        },
+        "policy": {
+          "visibility": "full",
+          "research_cost": {
+            "points": 2
+          }
+        },
+        "requirements": [
+          {
+            "id": "bb488b7c-9138-55b3-b0d2-9c4fcd2a7c4f",
+            "any_of": [
+              "designer_fixture:ammo"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "supporting_resources": [],
+  "extensions": {}
+}

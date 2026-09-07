@@ -200,6 +200,6 @@ and restrictions take precedence. There is no
 automatic conversion into ordinary fragment discounts or currency.
 
 These datapacks and the report tool add no network or player-data format change.
-Matching protocol-62 client/server builds are still required; player-data version
+Matching protocol-63 client/server builds are still required; player-data version
 5 and catalog export format 22 remain current. Wider dedicated-server and
 reconnect testing is separate from validating these authoring examples.

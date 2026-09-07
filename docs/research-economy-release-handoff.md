@@ -13,7 +13,7 @@ when preparing a release.
 | Version | `1.3.1-dev` |
 | Artifact | `build/libs/taczweaponblueprints-1.3.1-dev.jar` |
 | SHA-256 | `54e3d4144f108b0587a979b6fc7ed23754709de79baf2c0e830068bf8df2b5cc` |
-| Network protocol | 62; matching client and server builds required |
+| Network protocol | 63; matching client and server builds required |
 | Player data / server config | 5 / 4 |
 | Research catalog export | 22, with optional `research_data_economy` format 1 |
 | Data / shared reconstruction resources | Format 1 |

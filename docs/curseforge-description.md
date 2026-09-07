@@ -95,6 +95,14 @@ server milestones. Pack authors can use the automatic weapon tree or provide
 an authored-only tree containing only their selected weapons. If a reload
 contains invalid data, the server keeps the last working settings.
 
+**Create a custom Tech Tree in game with Research Designer.** Operators can copy
+the server's installed weapons into a local project, build connected paths,
+arrange named branches, and edit costs and prerequisites. A scrolling weapon
+catalog, direct placement, and Undo/Redo keep everyday edits close to the tree.
+Test simulated players, then export a datapack and a separate editable project
+bundle. Server installation and profile activation remain explicit steps.
+Open Research Designer from the title or pause menu or with `/researchdesigner`.
+
 The mod supports TaCZ content packs without requiring a separate blueprint
 definition for every added gun. The available blueprint catalog is rebuilt
 from the recipes currently available on the server.

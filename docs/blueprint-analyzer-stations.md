@@ -51,7 +51,7 @@ by this conversion.
 All three blocks use `BlueprintRecyclerBlock`, the existing `blueprint_recycler`
 menu type, and the same controller. They have no block entity, persistent machine
 inventory, or processing timer. The opening packet remains a block position;
-station identity does not add another player-data format. Analyzer previews and results use protocol 62.
+station identity does not add another player-data format. Analyzer previews and results use protocol 63.
 
 The server captures the actual Analyzer block at the opening position. Validity
 requires the same player, level, loaded chunk, block identity, and the usual

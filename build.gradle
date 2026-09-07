@@ -36,7 +36,7 @@ def removeStaleModArchives = tasks.register('removeStaleModArchives') {
 // Deliberate changes must update runtime constants, release gates, and
 // migration documentation together.
 def certifiedAutomaticPlacementVersion = 'tacz-gun-placement-v13'
-def certifiedResearchTreeProtocol = '62'
+def certifiedResearchTreeProtocol = '63'
 def certifiedResearchTreeSceneLayout = 'branches-v2'
 def certifiedResearchTreeProtocolNumber = certifiedResearchTreeProtocol as int
 def certifiedResearchCatalogExportFormat = 22
@@ -3186,6 +3186,8 @@ tasks.register('verifyReleaseArtifact') {
                         || it.startsWith('com/gamergaming/taczweaponblueprints/client/ResearchTreeBranchFixtures')
                         || it.startsWith('com/gamergaming/taczweaponblueprints/client/ResearchTreePrototype')
                         || it.startsWith('com/gamergaming/taczweaponblueprints/client/ResearchTreeWorkbenchProbe')
+                        || it.startsWith('com/gamergaming/taczweaponblueprints/acceptance/')
+                        || it.startsWith('com/gamergaming/taczweaponblueprints/client/designer/DesignerWorkspaceClientProbe')
                         || it.startsWith(
                                 'com/gamergaming/taczweaponblueprints/research/tree/authoring/')
             }
@@ -5277,4 +5279,30 @@ publishing {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
+}
+
+// Opt-in isolated Designer capture probe; never uses the normal development world.
+if (providers.gradleProperty('designerCaptureQA').isPresent()) {
+    def designerQaRoot = file(providers.gradleProperty('designerCaptureQA').get())
+    if (!new File(designerQaRoot, '.designer-disposable').isFile())
+        throw new GradleException('Designer QA requires a marked disposable directory')
+    minecraft.runs.server {
+        workingDirectory designerQaRoot
+        mods { "${mod_id}" { source sourceSets.development } }
+        property 'tacz.designerCaptureQA.output', new File(designerQaRoot, 'capture-report.json').absolutePath
+        args '--nogui'
+    }
+}
+
+// Opt-in native Designer workspace checks use an isolated client directory.
+if (providers.gradleProperty('designerWorkspaceQA').isPresent()) {
+    def designerUiRoot = file(providers.gradleProperty('designerWorkspaceQA').get())
+    if (!new File(designerUiRoot, '.designer-disposable').isFile())
+        throw new GradleException('Designer UI QA requires a marked disposable directory')
+    minecraft.runs.client {
+        workingDirectory designerUiRoot
+        mods { "${mod_id}" { source sourceSets.development } }
+        property 'tacz.designerWorkspaceQA.root', designerUiRoot.absolutePath
+        property 'tacz.designerWorkspaceQA.capture', file(providers.gradleProperty('designerWorkspaceCapture').get()).absolutePath
+    }
 }

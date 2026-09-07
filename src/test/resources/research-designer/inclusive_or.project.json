@@ -1,0 +1,192 @@
+{
+  "format": 1,
+  "project_id": "91e89eb3-74bd-5081-a408-17026d50e28e",
+  "namespace": "designer_fixture",
+  "title": "inclusive_or",
+  "origin": {
+    "kind": "blank"
+  },
+  "dependencies": {
+    "mods": [],
+    "content": [],
+    "resources": []
+  },
+  "settings_assumptions": {},
+  "draft": {
+    "profile": {
+      "id": "designer_fixture:profile",
+      "definition": {
+        "format": 1,
+        "journal_enabled": true,
+        "visibility": "full",
+        "tree_enabled": true,
+        "research_enabled": true,
+        "recycling_enabled": true,
+        "allow_unlearned_recycling": false,
+        "recycling_value": 1,
+        "research_cost": {
+          "points": 2
+        },
+        "requires_discovery": false,
+        "creative_bypasses_cost": false,
+        "tech_tree": "designer_fixture:tree"
+      }
+    },
+    "tree": {
+      "id": "designer_fixture:tree",
+      "definition": {
+        "format": 3,
+        "title": "Fixture tree",
+        "weapon_placement_mode": "authored_only",
+        "layout": {
+          "max_nodes_per_layer": 20
+        },
+        "domains": [
+          {
+            "id": "weapons",
+            "title": "Weapons",
+            "fallback_lane": "designer_fixture:weapons",
+            "fallback_tier": "starter",
+            "lanes": [
+              {
+                "id": "designer_fixture:weapons",
+                "title": "Weapons",
+                "order": 0
+              }
+            ]
+          }
+        ],
+        "branches": []
+      }
+    },
+    "nodes": [
+      {
+        "id": "9f2b034b-dec1-5402-950c-9c5f06b017fd",
+        "blueprint_id": "designer_fixture:root",
+        "placement": {
+          "domain": "weapons",
+          "lane": "designer_fixture:weapons",
+          "tier": "starter",
+          "rank": 0,
+          "order": 0
+        },
+        "policy": {
+          "visibility": "full",
+          "research_cost": {
+            "points": 2
+          }
+        },
+        "requirements": []
+      },
+      {
+        "id": "fab99dd0-e7c6-5711-888b-e8c7477f36af",
+        "blueprint_id": "designer_fixture:left",
+        "placement": {
+          "domain": "weapons",
+          "lane": "designer_fixture:weapons",
+          "tier": "starter",
+          "rank": 1,
+          "order": 0
+        },
+        "policy": {
+          "visibility": "full",
+          "research_cost": {
+            "points": 2
+          }
+        },
+        "requirements": [
+          {
+            "id": "7e78ad66-35fb-5fd1-8b78-2336c94d113e",
+            "any_of": [
+              "designer_fixture:root"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "1a2e73cc-4cf8-5bd5-b2eb-bf19588a81ef",
+        "blueprint_id": "designer_fixture:right",
+        "placement": {
+          "domain": "weapons",
+          "lane": "designer_fixture:weapons",
+          "tier": "starter",
+          "rank": 1,
+          "order": 0
+        },
+        "policy": {
+          "visibility": "full",
+          "research_cost": {
+            "points": 2
+          }
+        },
+        "requirements": [
+          {
+            "id": "562ad0e3-d381-5ebf-8bdf-e8a7cd558dd8",
+            "any_of": [
+              "designer_fixture:root"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "2812ad11-1ed7-5ad0-a533-9d4a839c67d5",
+        "blueprint_id": "designer_fixture:support",
+        "placement": {
+          "domain": "weapons",
+          "lane": "designer_fixture:weapons",
+          "tier": "starter",
+          "rank": 1,
+          "order": 0
+        },
+        "policy": {
+          "visibility": "full",
+          "research_cost": {
+            "points": 2
+          }
+        },
+        "requirements": [
+          {
+            "id": "8a73a12a-ed4b-5c59-bb7d-e7153f9b51a3",
+            "any_of": [
+              "designer_fixture:root"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "9522526c-994b-5ed5-9c27-bfa5fcb7263e",
+        "blueprint_id": "designer_fixture:end",
+        "placement": {
+          "domain": "weapons",
+          "lane": "designer_fixture:weapons",
+          "tier": "starter",
+          "rank": 2,
+          "order": 0
+        },
+        "policy": {
+          "visibility": "full",
+          "research_cost": {
+            "points": 8
+          }
+        },
+        "requirements": [
+          {
+            "id": "9ca40c3f-a720-5383-970e-2c5729f32e61",
+            "any_of": [
+              "designer_fixture:left",
+              "designer_fixture:right"
+            ]
+          },
+          {
+            "id": "00172902-8c59-5ee5-b215-e86186dff4d0",
+            "any_of": [
+              "designer_fixture:support"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "supporting_resources": [],
+  "extensions": {}
+}
