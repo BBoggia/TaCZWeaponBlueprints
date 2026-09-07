@@ -28,6 +28,7 @@ import com.gamergaming.taczweaponblueprints.resource.research.ResearchTreeGroupD
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeBranch;
 import net.minecraftforge.network.NetworkEvent;
 
 /**
@@ -585,9 +586,8 @@ public final class SyncResearchTreePacket {
                     int nodeOrdinal = buf.readVarInt();
                     int rank = buf.readVarInt();
                     long siblingOrder = buf.readVarLong();
-                    Optional<ResourceLocation> bandId = buf.readBoolean()
-                            ? Optional.of(readId(buf))
-                            : Optional.empty();
+                    int bandOrdinal = readBoundedCount(buf, bands.size(), "member band");
+                    Optional<ResourceLocation> bandId = bandOrdinal == 0 ? Optional.empty() : Optional.of(bands.get(bandOrdinal - 1).id());
                     PlacementOrigin origin = readPlacementOrigin(buf);
                     Optional<WeaponRating> rating = buf.readBoolean()
                             ? Optional.of(new WeaponRating(
@@ -622,12 +622,25 @@ public final class SyncResearchTreePacket {
                         order,
                         members));
             }
+            int branchCount = readBoundedCount(buf, ResearchTechTreeBranch.MAX_BRANCHES, "branch");
+            List<WireTechBranch> branches = new ArrayList<>();
+            int remainingBranchMembers = maximumMembers;
+            for (int i = 0; i < branchCount; i++) {
+                var id = readId(buf); int parent = readBoundedCount(buf, branchCount, "branch parent") - 1;
+                String branchTitle = buf.readUtf(80); var key = readOptionalTranslationKey(buf);
+                int order = buf.readVarInt(); int anchor = readBoundedCount(buf, maximumMembers, "branch anchor") - 1;
+                int count = readBoundedCount(buf, remainingBranchMembers, "branch member");
+                remainingBranchMembers -= count;
+                List<Integer> memberOrdinals = new ArrayList<>();
+                for (int j = 0; j < count; j++) memberOrdinals.add(readBoundedCount(buf, maximumMembers - 1, "branch node"));
+                branches.add(new WireTechBranch(id,parent,branchTitle,key,order,anchor,memberOrdinals));
+            }
             domains.add(new WireTechDomain(
                     domain,
                     domainTitle,
                     domainTranslationKey,
                     domainIconOrdinal,
-                    lanes));
+                    lanes, branches));
         }
         return new WireTechTree(
                 treeId,
@@ -680,8 +693,11 @@ public final class SyncResearchTreePacket {
                     buf.writeVarInt(member.nodeOrdinal());
                     buf.writeVarInt(member.rank());
                     buf.writeVarLong(member.siblingOrder());
-                    buf.writeBoolean(member.bandId().isPresent());
-                    member.bandId().ifPresent(value -> writeId(buf, value));
+                    buf.writeVarInt(member.bandId().map(id -> {
+                        int ordinal = tree.bands().stream().map(WireTechBand::id).toList().indexOf(id);
+                        if (ordinal < 0) throw new IllegalArgumentException("Member references unpublished band " + id);
+                        return ordinal + 1;
+                    }).orElse(0));
                     buf.writeByte(member.origin().ordinal());
                     buf.writeBoolean(member.rating().isPresent());
                     member.rating().ifPresent(rating -> {
@@ -697,6 +713,13 @@ public final class SyncResearchTreePacket {
                         buf.writeVarInt(branch.transitionEndIndex());
                     });
                 });
+            });
+            buf.writeVarInt(domain.branches().size());
+            domain.branches().forEach(branch -> {
+                writeId(buf,branch.id()); buf.writeVarInt(branch.parentOrdinal()+1);
+                buf.writeUtf(branch.title(),80); writeOptionalTranslationKey(buf,branch.translationKey());
+                buf.writeVarInt(branch.order()); buf.writeVarInt(branch.anchorOrdinal()+1);
+                buf.writeVarInt(branch.members().size()); branch.members().forEach(buf::writeVarInt);
             });
         });
     }
@@ -792,12 +815,14 @@ public final class SyncResearchTreePacket {
                         + BlueprintSyncLimits.encodedUtfBytes(lane.id().toString())
                         + BlueprintSyncLimits.encodedUtfBytes(lane.title())
                         + lane.translationKey().map(BlueprintSyncLimits::encodedUtfBytes).orElse(0)
-                        + lane.members().stream().mapToInt(member -> TECH_MEMBER_RESERVE
-                                + member.bandId()
-                                        .map(value -> BlueprintSyncLimits.encodedUtfBytes(
-                                                value.toString()))
-                                        .orElse(0)).sum();
+                        + lane.members().size() * (TECH_MEMBER_RESERVE + 5);
             }
+        }
+        for (var domain : tree.domains()) for (var branch : domain.branches()) {
+            bytes += 40 + BlueprintSyncLimits.encodedUtfBytes(branch.id().toString())
+                    + BlueprintSyncLimits.encodedUtfBytes(branch.title())
+                    + branch.translationKey().map(BlueprintSyncLimits::encodedUtfBytes).orElse(0)
+                    + branch.members().size() * 5;
         }
         return bytes;
     }
@@ -1231,13 +1256,31 @@ public final class SyncResearchTreePacket {
         }
     }
 
+    private record WireTechBranch(ResourceLocation id, int parentOrdinal, String title,
+            Optional<String> translationKey, int order, int anchorOrdinal, List<Integer> members) {
+        private WireTechBranch {
+            members = List.copyOf(members);
+            if (parentOrdinal < -1 || parentOrdinal >= ResearchTechTreeBranch.MAX_BRANCHES
+                    || anchorOrdinal < -1 || anchorOrdinal >= ResearchTreeGraph.MAX_NODES
+                    || members.stream().anyMatch(i -> i < 0 || i >= ResearchTreeGraph.MAX_NODES))
+                throw new IllegalArgumentException("Invalid branch ordinal " + id);
+        }
+        ResearchTechTreeBranch resolve(List<WireTechBranch> branches, java.util.function.IntFunction<ResourceLocation> node) {
+            if (parentOrdinal >= branches.size()) throw new IllegalArgumentException("Invalid branch parent " + id);
+            return new ResearchTechTreeBranch(id, parentOrdinal < 0 ? Optional.empty() : Optional.of(branches.get(parentOrdinal).id()),
+                    title,translationKey,order,anchorOrdinal < 0 ? Optional.empty() : Optional.of(node.apply(anchorOrdinal)),
+                    members.stream().map(node::apply).toList());
+        }
+    }
+
     private record WireTechDomain(
             Domain domain,
             String title,
             Optional<String> translationKey,
             int iconOrdinal,
-            List<WireTechLane> lanes) {
+            List<WireTechLane> lanes, List<WireTechBranch> branches) {
         private WireTechDomain {
+            branches = List.copyOf(branches);
             if (domain == null || title == null || translationKey == null || lanes == null
                     || lanes.stream().anyMatch(java.util.Objects::isNull)) {
                 throw new IllegalArgumentException("Synchronized Research Tech Tree domain fields cannot be null");
@@ -1274,9 +1317,12 @@ public final class SyncResearchTreePacket {
                 }
             }
             if (iconOrdinal >= 0 && !memberOrdinals.contains(iconOrdinal)) {
-                throw new IllegalArgumentException(
-                        "Synchronized Research Tech Tree domain icon is not a domain member");
+                throw new IllegalArgumentException("Synchronized Research Tech Tree domain icon is not a domain member");
             }
+            var branchRecords = branches;
+            ResearchTechTreeBranch.validate(branches.stream().map(branch -> branch.resolve(branchRecords,
+                    ordinal -> new ResourceLocation("wire",Integer.toString(ordinal)))).toList(),
+                    memberOrdinals.stream().map(ordinal -> new ResourceLocation("wire",Integer.toString(ordinal))).collect(java.util.stream.Collectors.toSet()));
         }
 
         private static WireTechDomain from(
@@ -1287,7 +1333,11 @@ public final class SyncResearchTreePacket {
                     domain.title(),
                     domain.translationKey(),
                     domain.iconNodeId().map(id -> ordinalFor(ordinals, id)).orElse(-1),
-                    domain.lanes().stream().map(lane -> WireTechLane.from(lane, ordinals)).toList());
+                    domain.lanes().stream().map(lane -> WireTechLane.from(lane, ordinals)).toList(),
+                    domain.branches().stream().map(branch -> new WireTechBranch(branch.id(),
+                            branch.parent().map(id -> domain.branches().stream().map(ResearchTechTreeBranch::id).toList().indexOf(id)).orElse(-1),
+                            branch.title(),branch.translationKey(),branch.order(),branch.anchor().map(id -> ordinalFor(ordinals,id)).orElse(-1),
+                            branch.members().stream().map(id -> ordinalFor(ordinals,id)).toList())).toList());
         }
 
         private ResearchTechTreePresentation.DomainView resolve(
@@ -1299,7 +1349,8 @@ public final class SyncResearchTreePacket {
                     iconOrdinal < 0
                             ? Optional.empty()
                             : Optional.of(nodes.get(iconOrdinal).blueprintId()),
-                    lanes.stream().map(lane -> lane.resolve(nodes)).toList());
+                    lanes.stream().map(lane -> lane.resolve(nodes)).toList(),
+                    branches.stream().map(branch -> branch.resolve(branches, ordinal -> nodes.get(ordinal).blueprintId())).toList());
         }
     }
 
@@ -1342,6 +1393,9 @@ public final class SyncResearchTreePacket {
                             .toList())) {
                 throw new IllegalArgumentException("Invalid synchronized Research Tech Tree");
             }
+            var branchIds = domains.stream().flatMap(d -> d.branches().stream()).map(WireTechBranch::id).toList();
+            if (branchIds.size() > ResearchTechTreeBranch.MAX_BRANCHES || branchIds.stream().distinct().count() != branchIds.size())
+                throw new IllegalArgumentException("Invalid global branch identities");
             Set<Domain> domainIds = new LinkedHashSet<>();
             Set<Integer> memberOrdinals = new LinkedHashSet<>();
             for (WireTechDomain domain : domains) {

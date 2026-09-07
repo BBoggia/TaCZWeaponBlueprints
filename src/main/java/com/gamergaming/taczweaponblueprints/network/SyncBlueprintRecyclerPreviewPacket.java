@@ -95,6 +95,7 @@ public final class SyncBlueprintRecyclerPreviewPacket {
             buffer.writeBoolean(fragment.createsBlueprint());
             buffer.writeVarLong(fragment.publicationRevision());
         }
+        AnalyzerPresentationCodec.write(buffer, preview.presentation());
     }
 
     public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
@@ -225,7 +226,7 @@ public final class SyncBlueprintRecyclerPreviewPacket {
                 weaponOrigin,
                 recoveryPointValue,
                 recoveryStatus,
-                fragmentEvaluation);
+                fragmentEvaluation, AnalyzerPresentationCodec.read(buffer));
     }
 
     private static int readContainerId(FriendlyByteBuf buffer) {

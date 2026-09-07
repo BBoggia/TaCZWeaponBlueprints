@@ -43,7 +43,7 @@ public final class BlueprintRecyclerActionResultPacket {
                         readEnum(
                                 buffer,
                                 BlueprintRecyclerActionContract.ResultCode.values(),
-                                "result code")));
+                                "result code"), AnalyzerPresentationCodec.outcome(buffer), AnalyzerPresentationCodec.fragments(buffer), buffer.readVarLong()));
     }
 
     public void toBytes(FriendlyByteBuf buffer) {
@@ -54,6 +54,9 @@ public final class BlueprintRecyclerActionResultPacket {
                 result.inputId().orElseThrow().toString(),
                 PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH);
         buffer.writeVarInt(result.code().ordinal());
+        AnalyzerPresentationCodec.outcome(buffer, result.outcome());
+        AnalyzerPresentationCodec.fragments(buffer, result.fragments());
+        buffer.writeVarLong(result.stateToken());
     }
 
     public void handle(Supplier<NetworkEvent.Context> contextSupplier) {

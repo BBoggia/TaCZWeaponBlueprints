@@ -186,6 +186,59 @@ class BlueprintRecyclerScreenModelTest {
     }
 
     @Test
+    void directRecoveryExplainsUnmetRequirementsBeforeItsAwardCanBeComputed() {
+        for (var status : List.of(BlueprintReverseEngineeringService.Status.INGREDIENTS_REQUIRED,
+                BlueprintReverseEngineeringService.Status.POINTS_REQUIRED,
+                BlueprintReverseEngineeringService.Status.ALREADY_KNOWN)) {
+            var preview = physicalRecovery(BlueprintReverseEngineeringService.Status.RECOVERY_MODE_DISABLED,
+                    FoundWeaponRecoveryService.Status.REVERSE_ENGINEERING_INELIGIBLE, 0)
+                    .withPresentation(new com.gamergaming.taczweaponblueprints.menu.AnalyzerPresentation(1,
+                            Optional.empty(), Optional.empty(), Optional.of(
+                            new com.gamergaming.taczweaponblueprints.menu.AnalyzerPresentation.RecoveryCost(
+                                    1, 7, List.of(), status))));
+            var model = BlueprintRecyclerScreenModel.from(preview, false);
+            assertTrue(model.statusKey().endsWith("reverse.status." + status.name().toLowerCase(java.util.Locale.ROOT)));
+            assertTrue(model.primaryAction().isEmpty());
+            assertTrue(model.secondaryAction().isEmpty());
+        }
+    }
+
+    @Test
+    void readyRecoveryOwnsTheDecisionEvenWhenTieredAnalysisPolicyIsBlocked() {
+        for (var status : List.of(
+                com.gamergaming.taczweaponblueprints.resource.research.AnalyzerPolicyQuote.Status.STATION_TIER_REQUIRED,
+                com.gamergaming.taczweaponblueprints.resource.research.AnalyzerPolicyQuote.Status.DISABLED,
+                com.gamergaming.taczweaponblueprints.resource.research.AnalyzerPolicyQuote.Status.ORIGIN_DISABLED)) {
+            var presentation = new com.gamergaming.taczweaponblueprints.menu.AnalyzerPresentation(1,
+                    Optional.of(new com.gamergaming.taczweaponblueprints.menu.AnalyzerPresentation.Weapon(3, status,
+                            Optional.empty(), Optional.empty(), 0, 0, 0, 0)), Optional.empty(), Optional.empty());
+            var ready = physicalRecovery(BlueprintReverseEngineeringService.Status.POLICY_INELIGIBLE,
+                    FoundWeaponRecoveryService.Status.READY).withPresentation(presentation);
+            var model = BlueprintRecyclerScreenModel.from(ready, false);
+            assertTrue(model.statusKey().endsWith("reverse.status.direct_ready"));
+            assertEquals(Optional.of(BlueprintRecyclerActionContract.Action.RECOVER_POINTS), model.primaryAction());
+            assertTrue(BlueprintRecyclerScreenModel.focusesRecovery(ready));
+            assertTrue(BlueprintRecyclerScreenModel.analysisStatusKey(ready).endsWith("analyzer.status." + status.name().toLowerCase(Locale.ROOT)));
+            var blocked = physicalRecovery(BlueprintReverseEngineeringService.Status.POLICY_INELIGIBLE,
+                    FoundWeaponRecoveryService.Status.RECOVERY_DISABLED).withPresentation(presentation);
+            assertFalse(BlueprintRecyclerScreenModel.focusesRecovery(blocked));
+            assertEquals(BlueprintRecyclerScreenModel.analysisStatusKey(blocked), BlueprintRecyclerScreenModel.from(blocked, false).statusKey());
+        }
+    }
+
+    @Test
+    void recoverySummaryFollowsTheOnlyAvailableActionWithoutHidingAValidChoice() {
+        for (var status : List.of(BlueprintReverseEngineeringService.Status.ALREADY_KNOWN,
+                BlueprintReverseEngineeringService.Status.INGREDIENTS_REQUIRED, BlueprintReverseEngineeringService.Status.OUTPUT_OCCUPIED)) {
+            assertTrue(BlueprintRecyclerScreenModel.focusesRecovery(physicalRecovery(status, FoundWeaponRecoveryService.Status.READY)));
+        }
+        assertFalse(BlueprintRecyclerScreenModel.focusesRecovery(physicalRecovery(
+                BlueprintReverseEngineeringService.Status.READY, FoundWeaponRecoveryService.Status.READY)));
+        assertTrue(BlueprintRecyclerScreenModel.focusesRecovery(physicalRecovery(
+                BlueprintReverseEngineeringService.Status.RECOVERY_MODE_DISABLED, FoundWeaponRecoveryService.Status.RECOVERY_DISABLED)));
+    }
+
+    @Test
     void everyGeneratedStatusActionAndResultKeyIsLocalized() throws IOException {
         JsonObject language;
         try (InputStreamReader reader = new InputStreamReader(
@@ -310,6 +363,12 @@ class BlueprintRecyclerScreenModelTest {
     private static BlueprintRecyclerPreview physicalRecovery(
             BlueprintReverseEngineeringService.Status reverseStatus,
             FoundWeaponRecoveryService.Status recoveryStatus) {
+        return physicalRecovery(reverseStatus, recoveryStatus, 3);
+    }
+
+    private static BlueprintRecyclerPreview physicalRecovery(
+            BlueprintReverseEngineeringService.Status reverseStatus,
+            FoundWeaponRecoveryService.Status recoveryStatus, int recoveryPoints) {
         return new BlueprintRecyclerPreview(
                 BlueprintRecyclerPreview.InputKind.PHYSICAL_ITEM,
                 Optional.of(BLUEPRINT),
@@ -326,11 +385,11 @@ class BlueprintRecyclerScreenModelTest {
                 true,
                 true,
                 false,
-                false,
+                reverseStatus == BlueprintReverseEngineeringService.Status.ALREADY_KNOWN,
                 Optional.of(reverseStatus),
                 List.of(),
                 BlueprintRecyclerPreview.WeaponOrigin.LOOT_GENERATED,
-                3,
+                recoveryPoints,
                 Optional.of(recoveryStatus));
     }
 

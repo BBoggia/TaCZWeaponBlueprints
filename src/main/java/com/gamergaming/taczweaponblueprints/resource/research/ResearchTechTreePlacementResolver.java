@@ -92,7 +92,7 @@ public final class ResearchTechTreePlacementResolver {
                         entry.initialProgressionCoordinate(
                                 selected.binding().bundle().format()),
                         selected.binding().bundle().format()
-                                == ResearchTechTreeEntryBundle.CURRENT_FORMAT)),
+                                >= ResearchTechTreeEntryBundle.RANKED_FORMAT)),
                 ties.size() > 1 ? ties : List.of());
     }
 

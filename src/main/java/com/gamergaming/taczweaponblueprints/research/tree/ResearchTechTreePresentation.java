@@ -213,8 +213,13 @@ public record ResearchTechTreePresentation(
             String title,
             Optional<String> translationKey,
             Optional<ResourceLocation> iconNodeId,
-            List<LaneView> lanes) {
+            List<LaneView> lanes, List<ResearchTechTreeBranch> branches) {
+        public DomainView(Domain domain, String title, Optional<String> translationKey,
+                Optional<ResourceLocation> iconNodeId, List<LaneView> lanes) {
+            this(domain,title,translationKey,iconNodeId,lanes,List.of());
+        }
         public DomainView {
+            branches = branches == null ? List.of() : List.copyOf(branches);
             translationKey = translationKey == null ? Optional.empty() : translationKey;
             iconNodeId = iconNodeId == null ? Optional.empty() : iconNodeId;
             lanes = lanes == null ? List.of() : List.copyOf(lanes);
@@ -247,6 +252,7 @@ public record ResearchTechTreePresentation(
                     }
                 }
             }
+            ResearchTechTreeBranch.validate(branches, memberIds);
             iconNodeId.ifPresent(icon -> {
                 if (!memberIds.contains(icon)) {
                     throw new IllegalArgumentException(
@@ -458,6 +464,10 @@ public record ResearchTechTreePresentation(
             throw new IllegalArgumentException(
                     "Research Tech Tree progression-band labels are invalid");
         }
+        var allBranches = domains.stream().flatMap(d -> d.branches().stream()).toList();
+        if (allBranches.size() > ResearchTechTreeBranch.MAX_BRANCHES
+                || allBranches.stream().map(ResearchTechTreeBranch::id).distinct().count() != allBranches.size())
+            throw new IllegalArgumentException("Duplicate or excessive Tech Tree branch identities");
         Set<Domain> domainIds = new LinkedHashSet<>();
         Set<ResourceLocation> memberIds = new LinkedHashSet<>();
         int automaticMemberCount = 0;

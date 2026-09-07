@@ -29,10 +29,11 @@ import net.minecraft.resources.ResourceLocation;
 /** Creates a deterministic, author-friendly view of the live research catalog. */
 public final class BlueprintResearchCatalogExporter {
     /**
-     * Format 20 separates complete crafting assignments from research-tree policy.
+     * Format 21 adds authored branch declarations and direct membership.
+     * Complete crafting assignments remain separate from research-tree policy.
      * The legacy prerequisite union remains for older tools.
      */
-    public static final int CURRENT_FORMAT = 20;
+    public static final int CURRENT_FORMAT = 22;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private BlueprintResearchCatalogExporter() {
@@ -267,6 +268,15 @@ public final class BlueprintResearchCatalogExporter {
             ResearchTechTreeDefinition tree = stableSnapshot.techTrees().get(treeId);
             if (tree != null) {
                 root.add("tech_tree_presentation", exportPresentationPolicy(treeId, tree));
+                JsonArray authoredBranches = new JsonArray();
+                for (var branch : stableSnapshot.authoredBranches(treeId)) {
+                    var declaration = tree.branches().stream().filter(value -> value.id().equals(branch.id())).findFirst().orElseThrow();
+                    JsonObject record = ResearchTechTreeBranchDefinition.CODEC.encodeStart(com.mojang.serialization.JsonOps.INSTANCE,declaration)
+                            .getOrThrow(false, message -> {}).getAsJsonObject();
+                    JsonArray members = new JsonArray(); branch.members().forEach(id -> members.add(id.toString()));
+                    record.add("members",members); authoredBranches.add(record);
+                }
+                root.add("authored_branches",authoredBranches);
             }
         }
         root.add("topology_audit", exportTopology(stableTopology));
@@ -376,7 +386,7 @@ public final class BlueprintResearchCatalogExporter {
                     automaticDiagnostics.treeId());
             if (automaticTree != null) {
                 boolean treeOwned = automaticTree.format()
-                        >= ResearchTechTreeDefinition.CURRENT_FORMAT;
+                        >= ResearchTechTreeDefinition.RANKED_FORMAT;
                 int capacity = treeOwned
                         ? automaticDiagnostics.resolvedNodesPerLayer()
                         : stableSnapshot.automaticPlacementProfileForTree(
@@ -429,6 +439,8 @@ public final class BlueprintResearchCatalogExporter {
             exportedGroups.add(exportedGroup);
         }
         root.add("groups", exportedGroups);
+        var analyzerContext = new BlueprintAnalyzerPolicyResolver.Context(stableSnapshot, stableCatalog,
+                stableProgressionPolicy.researchRevision(), stableProgressionPolicy.catalogRevision(), stableProgressionPolicy);
         JsonArray exportedEntries = new JsonArray();
         for (Map.Entry<ResourceLocation, BlueprintData> entry : entries) {
             ResourceLocation blueprintId = entry.getKey();
@@ -441,6 +453,12 @@ public final class BlueprintResearchCatalogExporter {
             JsonObject exported = new JsonObject();
             exported.addProperty("blueprint", blueprintId.toString());
             exported.addProperty("blueprint_kind", data.getKind().serializedName());
+            if (data.getKind() == BlueprintKind.GUN) {
+                var analyzer = BlueprintAnalyzerDiagnostics.export(analyzerContext, profileId, blueprintId,
+                        com.gamergaming.taczweaponblueprints.progression.FoundWeaponRecoveryMode.PROTECTED_BLUEPRINT_ONLY);
+                analyzer.addProperty("recovery_mode_scope", "protected_mode_baseline");
+                exported.add("analyzer_policy", analyzer);
+            }
             exported.addProperty("item_type", data.getItemType());
             if (data.getRecipeId() != null) {
                 exported.addProperty("recipe", data.getRecipeId().toString());

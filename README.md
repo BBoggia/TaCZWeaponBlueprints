@@ -133,6 +133,9 @@ explains fragment identity, loot replacement, weighting, and diagnostics.
 The [Research Bench and crafting Workbench guide](docs/research-bench-tiers-and-crafting.md)
 defines tier assignment, direct station recipes, native crafting,
 compatibility tables, and reload behavior.
+The [Blueprint Analyzer presets and balance guide](docs/analyzer-presets-and-balancing.md)
+provides optional tiered datapacks, weapon-specific overrides, migration steps,
+and an offline report of expected weapon, RP, and material costs.
 
 ## Operator Commands
 

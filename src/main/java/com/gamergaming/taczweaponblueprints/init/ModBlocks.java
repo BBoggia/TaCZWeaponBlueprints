@@ -5,6 +5,7 @@ import com.gamergaming.taczweaponblueprints.block.BlueprintRecyclerBlock;
 import com.gamergaming.taczweaponblueprints.block.CraftingWorkbenchBlock;
 import com.gamergaming.taczweaponblueprints.block.ResearchBenchBlock;
 import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchTier;
+import com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerTier;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.Block;
@@ -37,11 +38,11 @@ public final class ModBlocks {
 
     public static final RegistryObject<CraftingWorkbenchBlock> WORKBENCH_LVL2 = BLOCKS.register(
             "workbench_lvl2",
-            () -> craftingWorkbench(ResearchWorkbenchTier.TIER_2, 28.25D));
+            () -> craftingWorkbench(ResearchWorkbenchTier.TIER_2, 31.25D));
 
     public static final RegistryObject<CraftingWorkbenchBlock> WORKBENCH_LVL3 = BLOCKS.register(
             "workbench_lvl3",
-            () -> craftingWorkbench(ResearchWorkbenchTier.TIER_3, 28.0D));
+            () -> craftingWorkbench(ResearchWorkbenchTier.TIER_3, 31.25D));
 
     private static ResearchBenchBlock researchBench(ResearchWorkbenchTier tier) {
         return new ResearchBenchBlock(tier, BlockBehaviour.Properties.of()
@@ -64,12 +65,22 @@ public final class ModBlocks {
 
     public static final RegistryObject<Block> BLUEPRINT_RECYCLER = BLOCKS.register(
             "blueprint_recycler",
-            () -> new BlueprintRecyclerBlock(BlockBehaviour.Properties.of()
+            () -> analyzer(AnalyzerTier.TIER_1));
+
+    public static final RegistryObject<BlueprintRecyclerBlock> ADVANCED_BLUEPRINT_ANALYZER = BLOCKS.register(
+            "advanced_blueprint_analyzer", () -> analyzer(AnalyzerTier.TIER_2));
+
+    public static final RegistryObject<BlueprintRecyclerBlock> EXPERIMENTAL_BLUEPRINT_ANALYZER = BLOCKS.register(
+            "experimental_blueprint_analyzer", () -> analyzer(AnalyzerTier.TIER_3));
+
+    private static BlueprintRecyclerBlock analyzer(AnalyzerTier tier) {
+        return new BlueprintRecyclerBlock(tier, BlockBehaviour.Properties.of()
                     .mapColor(MapColor.METAL)
                     .strength(3.5F)
                     .requiresCorrectToolForDrops()
                     .noOcclusion()
-                    .sound(SoundType.METAL)));
+                    .sound(SoundType.METAL));
+    }
 
     private ModBlocks() {
     }

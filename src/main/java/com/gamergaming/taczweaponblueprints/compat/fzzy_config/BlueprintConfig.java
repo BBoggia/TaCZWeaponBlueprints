@@ -552,6 +552,11 @@ public class BlueprintConfig extends Config {
         publishProgressionSnapshot();
     }
 
+    /** Called after initial deserialization, including files that need no version migration. */
+    public void initializeLoadedSnapshots() {
+        normalizeAndPublish();
+    }
+
     private void normalizeAndPublish() {
         int minValue = minBlueprints.get();
         int maxValue = maxBlueprints.get();

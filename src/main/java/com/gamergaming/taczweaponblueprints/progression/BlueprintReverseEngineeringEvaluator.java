@@ -70,6 +70,15 @@ public final class BlueprintReverseEngineeringEvaluator {
             Predicate<ResourceLocation> progressionExemptPredicate,
             PhysicalItemBlueprintResolver.IdentityAdapter identityAdapter,
             boolean nonLearningResultPermitted) {
+        return evaluate(stack, snapshot, catalog, profileId, playerData, blockedPredicate,
+                progressionExemptPredicate, identityAdapter, nonLearningResultPermitted, null);
+    }
+
+    static Evaluation evaluate(ItemStack stack, BlueprintResearchSnapshot snapshot,
+            Map<ResourceLocation, BlueprintData> catalog, ResourceLocation profileId, IPlayerRecipeData playerData,
+            Predicate<String> blockedPredicate, Predicate<ResourceLocation> progressionExemptPredicate,
+            PhysicalItemBlueprintResolver.IdentityAdapter identityAdapter, boolean nonLearningResultPermitted,
+            BlueprintReverseEngineeringPolicy analysisAttempt) {
         Map<ResourceLocation, BlueprintData> stableCatalog = catalog == null ? Map.of() : catalog;
         PhysicalItemBlueprintResolver.Resolution physical =
                 identityAdapter == null
@@ -90,7 +99,7 @@ public final class BlueprintReverseEngineeringEvaluator {
                 blueprintId,
                 playerData,
                 stableBlocked);
-        BlueprintReverseEngineeringPolicy reversePolicy =
+        BlueprintReverseEngineeringPolicy reversePolicy = analysisAttempt != null ? analysisAttempt :
                 BlueprintResearchPolicyResolver.reverseEngineeringPolicyFor(
                         snapshot,
                         stableCatalog,

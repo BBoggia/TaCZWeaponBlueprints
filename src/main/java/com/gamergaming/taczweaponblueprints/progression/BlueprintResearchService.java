@@ -1150,7 +1150,7 @@ public final class BlueprintResearchService {
         try {
             supplementalRestored = playerData.replaceSupplementalProgression(
                     knowledgeSnapshot.archivedFragments(),
-                    knowledgeSnapshot.progressionCriteria());
+                    knowledgeSnapshot.progressionCriteria(), knowledgeSnapshot.analysisFragments());
         } catch (RuntimeException exception) {
             supplementalRestored = false;
             TaCZWeaponBlueprints.LOGGER.error(
@@ -1460,7 +1460,8 @@ public final class BlueprintResearchService {
             Set<String> learnedRecipes,
             int researchPoints,
             Map<String, Integer> archivedFragments,
-            Map<String, Integer> progressionCriteria) {
+            Map<String, Integer> progressionCriteria,
+            Map<String, com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisFragmentCounts> analysisFragments) {
         private static KnowledgeSnapshot capture(IPlayerRecipeData playerData) {
             return new KnowledgeSnapshot(
                     Set.copyOf(playerData.getLearnedBlueprints()),
@@ -1468,7 +1469,7 @@ public final class BlueprintResearchService {
                     Set.copyOf(playerData.getLearnedRecipes()),
                     playerData.getResearchPoints(),
                     Map.copyOf(playerData.getArchivedBlueprintFragments()),
-                    Map.copyOf(playerData.getProgressionCriteria()));
+                    Map.copyOf(playerData.getProgressionCriteria()), Map.copyOf(playerData.getArchivedAnalysisFragments()));
         }
     }
 }

@@ -28,6 +28,70 @@ import net.minecraft.resources.ResourceLocation;
 
 class SyncResearchTreePacketTest {
     @Test
+    void authoredBranchesRoundTripThroughTheServerPublicationAndClientAccumulator() {
+        var expected = com.gamergaming.taczweaponblueprints.research.tree.AuthoredBranchFixture.publication(true);
+        var accumulator = new SyncResearchTreePacket.ClientAccumulator();
+        Optional<ResearchTreePublication> completed = Optional.empty();
+        for (var packet : SyncResearchTreePacket.split(expected, 701L)) {
+            var buffer = new FriendlyByteBuf(Unpooled.buffer());
+            try { packet.toBytes(buffer); completed = accumulator.accept(new SyncResearchTreePacket(buffer)); }
+            finally { buffer.release(); }
+        }
+        assertEquals(expected, completed.orElseThrow());
+    }
+
+    @Test
+    void maximumBranchAndBandMetadataFitsTheSingleTechTreeRecordEnvelope() {
+        String title = "界".repeat(80), key = "界".repeat(256);
+        java.util.function.IntFunction<ResourceLocation> longId = i -> id("test:" + String.format("%05d",i)
+                + "x".repeat(BlueprintSyncLimits.MAX_RESOURCE_ID_LENGTH - 10));
+        List<ResearchTreeGraph.Node> nodes = new ArrayList<>();
+        for(int i=0;i<4096;i++) nodes.add(node(i,"test:n"+i,"name.n",0));
+        var graph = new ResearchTreeGraph(nodes,List.of());
+        var bands = new ArrayList<ResearchTechTreePresentation.BandLabel>();
+        for(int i=0;i<32;i++) bands.add(new ResearchTechTreePresentation.BandLabel(longId.apply(i),title,Optional.of(key),Optional.of(0xffffff),Optional.of(nodes.get(i).blueprintId())));
+        var domains = new ArrayList<ResearchTechTreePresentation.DomainView>();
+        for(int d=0;d<3;d++) {
+            var domainNodes = nodes.subList(d*4096/3,(d+1)*4096/3);
+            var lanes = new ArrayList<ResearchTechTreePresentation.LaneView>();
+            for(int l=0;l<64;l++) {
+                var members = new ArrayList<ResearchTechTreePresentation.Member>();
+                for(int n=l;n<domainNodes.size();n+=64) {
+                    var node=domainNodes.get(n);boolean automatic=d==0;
+                    members.add(new ResearchTechTreePresentation.Member(node.blueprintId(),node.ordinal(),automatic?Long.MAX_VALUE:1_000_000,
+                            Optional.of(bands.get(n%32).id()),automatic?PlacementOrigin.AUTOMATIC:PlacementOrigin.EXACT,
+                            automatic?Optional.of(new WeaponRating(100,100,100)):Optional.empty(),
+                            automatic?Optional.of(new ResearchTechTreePresentation.AutomaticBranchPlacement(0,node.ordinal(),0,0)):Optional.empty()));
+                }
+                lanes.add(new ResearchTechTreePresentation.LaneView(longId.apply(100+d*64+l),title,Optional.of(key),Optional.of(members.get(0).nodeId()),l,members));
+            }
+            var branches = new ArrayList<com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeBranch>();
+            int count=d==2?44:42;
+            for(int j=0;j<count;j++) {
+                var members = new ArrayList<ResourceLocation>();
+                for(int n=j;n<domainNodes.size();n+=count)members.add(domainNodes.get(n).blueprintId());
+                branches.add(new com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeBranch(longId.apply(400+d*44+j),Optional.empty(),title,Optional.of(key),1_000_000,Optional.of(members.get(0)),members));
+            }
+            domains.add(new ResearchTechTreePresentation.DomainView(Domain.values()[d],title,Optional.of(key),Optional.of(domainNodes.get(0).blueprintId()),lanes,branches));
+        }
+        var tree = new ResearchTechTreePresentation(Optional.of(longId.apply(999)),title,Optional.of(key),Optional.of(nodes.get(0).blueprintId()),
+                List.of(Tier.values()).stream().map(t -> new ResearchTechTreePresentation.TierLabel(t,title,Optional.of(key))).toList(),bands,28,domains);
+        var expected = new ResearchTreePublication(graph,ResearchTreePresentation.EMPTY,tree);
+        var accumulator = new SyncResearchTreePacket.ClientAccumulator();Optional<ResearchTreePublication> completed=Optional.empty();int largest=0;
+        for(var packet:SyncResearchTreePacket.split(expected,702L)) {
+            var buffer=new FriendlyByteBuf(Unpooled.buffer());
+            try {
+                packet.toBytes(buffer);largest=Math.max(largest,buffer.readableBytes());
+                assertTrue(buffer.readableBytes()<=packet.estimatedPayloadBytes());
+                assertTrue(buffer.readableBytes()<=BlueprintSyncLimits.MAX_CHUNK_BYTES);
+                completed=accumulator.accept(new SyncResearchTreePacket(buffer));
+            } finally {buffer.release();}
+        }
+        assertEquals(expected,completed.orElseThrow());
+        System.out.println("Maximum authored-branch fixture largest encoded chunk: " + largest);
+    }
+
+    @Test
     void chunksRoundTripAndAccumulateAtomicallyOutOfOrder() {
         ResearchTreeGraph graph = largeGraph();
         ResearchTreePublication base = publication(graph);

@@ -94,6 +94,9 @@ public class ModCreativeTabs {
 
     @SubscribeEvent
     public static void buildCreativeModeTabs(BuildCreativeModeTabContentsEvent event) {
+        if (event.getTabKey() == net.minecraft.world.item.CreativeModeTabs.INGREDIENTS) {
+            event.accept(ModItems.SCRAP.get());
+        }
         if (event.getTabKey() == net.minecraft.world.item.CreativeModeTabs.FUNCTIONAL_BLOCKS) {
             event.accept(ModItems.RESEARCH_BENCH_ITEM.get());
             event.accept(ModItems.ADVANCED_RESEARCH_BENCH_ITEM.get());
@@ -102,6 +105,8 @@ public class ModCreativeTabs {
             event.accept(ModItems.WORKBENCH_LVL2_ITEM.get());
             event.accept(ModItems.WORKBENCH_LVL3_ITEM.get());
             event.accept(ModItems.BLUEPRINT_RECYCLER_ITEM.get());
+            event.accept(ModItems.ADVANCED_BLUEPRINT_ANALYZER_ITEM.get());
+            event.accept(ModItems.EXPERIMENTAL_BLUEPRINT_ANALYZER_ITEM.get());
             event.accept(ModItems.RESEARCH_NOTE.get());
             event.accept(ModItems.RESEARCH_REPORT.get());
             event.accept(ModItems.RESEARCH_DOSSIER.get());

@@ -1,7 +1,7 @@
 package com.gamergaming.taczweaponblueprints.init;
 
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.BlockItem;
+import com.gamergaming.taczweaponblueprints.item.BlueprintAnalyzerItem;
 
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
@@ -29,6 +29,9 @@ public class ModItems {
                         new Item.Properties()
                         .stacksTo(1)
                 ));
+
+        public static final RegistryObject<Item> SCRAP =
+                ITEMS.register("scrap", () -> new Item(new Item.Properties().stacksTo(64)));
 
         public static final RegistryObject<BlueprintFragmentItem> BLUEPRINT_FRAGMENT =
                 ITEMS.register("blueprint_fragment", () -> new BlueprintFragmentItem(
@@ -71,11 +74,19 @@ public class ModItems {
                         new Item.Properties()));
 
         public static final RegistryObject<Item> BLUEPRINT_RECYCLER_ITEM =
-                ITEMS.register("blueprint_recycler", () -> new BlockItem(
+                ITEMS.register("blueprint_recycler", () -> new BlueprintAnalyzerItem(
                         ModBlocks.BLUEPRINT_RECYCLER.get(),
                         new Item.Properties()));
 
-        /** Physical datapack-addressable inputs for explicit Blueprint Recycler turn-ins. */
+        public static final RegistryObject<Item> ADVANCED_BLUEPRINT_ANALYZER_ITEM =
+                ITEMS.register("advanced_blueprint_analyzer", () -> new BlueprintAnalyzerItem(
+                        ModBlocks.ADVANCED_BLUEPRINT_ANALYZER.get(), new Item.Properties()));
+
+        public static final RegistryObject<Item> EXPERIMENTAL_BLUEPRINT_ANALYZER_ITEM =
+                ITEMS.register("experimental_blueprint_analyzer", () -> new BlueprintAnalyzerItem(
+                        ModBlocks.EXPERIMENTAL_BLUEPRINT_ANALYZER.get(), new Item.Properties()));
+
+        /** Physical datapack-addressable inputs for explicit Blueprint Analyzer turn-ins. */
         public static final RegistryObject<Item> RESEARCH_NOTE =
                 ITEMS.register("research_note", () -> new Item(new Item.Properties()));
         public static final RegistryObject<Item> RESEARCH_REPORT =

@@ -4,7 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import com.gamergaming.taczweaponblueprints.init.ModBlocks;
+import com.gamergaming.taczweaponblueprints.block.BlueprintRecyclerBlock;
+import com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerTier;
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
 import com.gamergaming.taczweaponblueprints.init.ModMenus;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
@@ -12,6 +13,7 @@ import com.gamergaming.taczweaponblueprints.item.BlueprintFragmentItem;
 import com.gamergaming.taczweaponblueprints.item.BlueprintProvenance;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintRecyclingService;
+import com.gamergaming.taczweaponblueprints.progression.BlueprintAnalysisFragmentService;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintReverseEngineeringService;
 import com.gamergaming.taczweaponblueprints.progression.FoundWeaponRecoveryService;
 import com.gamergaming.taczweaponblueprints.progression.ResearchIngredientPlanner;
@@ -35,6 +37,7 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.tags.TagKey;
 import net.minecraftforge.registries.ForgeRegistries;
 
@@ -74,12 +77,15 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
 
     private final SimpleContainer workstation = new SimpleContainer(2);
     private final ContainerLevelAccess access;
+    private final BlueprintRecyclerBlock openingStation;
+    private boolean stationInvalidated;
     private final Player owner;
     private final Inventory playerInventory;
     private BlueprintRecyclerPreview preview = BlueprintRecyclerPreview.EMPTY;
     private boolean previewInitialized;
     private boolean closed;
     private long stateToken;
+    private final AnalyzerRequestSequence requestSequence = new AnalyzerRequestSequence();
     private WorkstationState observedState;
     private boolean mutationInProgress;
 
@@ -96,7 +102,7 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
             Level level,
             BlockPos pos) {
         return new BlueprintRecyclerMenu(
-                containerId, inventory, ContainerLevelAccess.create(level, pos));
+                containerId, inventory, ContainerLevelAccess.create(level, pos.immutable()));
     }
 
     private BlueprintRecyclerMenu(
@@ -105,6 +111,9 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
             ContainerLevelAccess access) {
         super(ModMenus.BLUEPRINT_RECYCLER.get(), containerId);
         this.access = access;
+        var station = access.evaluate((level, pos) ->
+                level.hasChunkAt(pos) ? level.getBlockState(pos).getBlock() : Blocks.AIR, Blocks.AIR);
+        this.openingStation = station instanceof BlueprintRecyclerBlock block ? block : null;
         this.owner = inventory.player;
         this.playerInventory = inventory;
         addSlot(new Slot(workstation, INPUT_SLOT, Layout.INPUT_X, Layout.INPUT_Y));
@@ -154,6 +163,15 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
     }
 
     @Override
+    public BlueprintRecyclerActionContract.ActionResult handleRecyclerRequest(ServerPlayer player, int requestId,
+            BlueprintRecyclerActionContract.Action action, ResourceLocation input, int count, long token) {
+        if (!isRecyclerMenuValid(player) || !requestSequence.accept(requestId)) {
+            return failure(action, input, BlueprintRecyclerActionContract.ResultCode.STALE_INPUT).withStateToken(preview.stateToken());
+        }
+        return handleRecyclerAction(player, action, input, count, token).withStateToken(preview.stateToken());
+    }
+
+    @Override
     public BlueprintRecyclerActionContract.ActionResult handleRecyclerAction(
             ServerPlayer player,
             BlueprintRecyclerActionContract.Action action,
@@ -165,7 +183,14 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
                     BlueprintRecyclerActionContract.ResultCode.INVALID_INPUT);
         }
 
+        // Include changes since the last menu tick, even when the visible preview is identical.
+        refreshPreview(player);
         ItemStack physicalInput = workstation.getItem(INPUT_SLOT);
+        if (physicalInput.getItem() instanceof BlueprintFragmentItem
+                && (BlueprintFragmentItem.identity(physicalInput).isEmpty()
+                    || physicalInput.getCount() > physicalInput.getMaxStackSize())) {
+            return failure(action, expectedInputId, BlueprintRecyclerActionContract.ResultCode.INVALID_ITEM_DATA);
+        }
         Optional<ResourceLocation> blueprintId = BlueprintItem.getBlueprintId(physicalInput);
         Optional<ResourceLocation> fragmentId = BlueprintFragmentItem.getTarget(physicalInput);
         BlueprintReverseEngineeringService.Evaluation reverse = blueprintId.isEmpty()
@@ -203,24 +228,33 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
                     BlueprintRecyclerActionContract.ResultCode.INVALID_INPUT);
         }
 
+        boolean outputWasEmpty = workstation.getItem(OUTPUT_SLOT).isEmpty();
+        var fragmentIdentity = BlueprintFragmentItem.identity(physicalInput);
+        // Reserve this token before any transaction, including a failed random attempt.
+        stateToken = stateToken == Long.MAX_VALUE ? 1L : stateToken + 1L;
         BlueprintRecyclerActionContract.ResultCode resultCode;
+        Optional<com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable.Result> outcome = Optional.empty();
         if (action == BlueprintRecyclerActionContract.Action.ARCHIVE_FRAGMENTS) {
             mutationInProgress = true;
             try {
-                BlueprintFragmentAnalysisService.Result result =
-                        BlueprintFragmentAnalysisService.analyze(
-                                player, fragmentTransaction());
-                resultCode = BlueprintRecyclerActionContract.ResultCode.from(result.status());
+                if (BlueprintFragmentItem.identity(physicalInput).flatMap(BlueprintFragmentItem.Identity::analysisClass).isPresent()) {
+                    resultCode = BlueprintRecyclerActionContract.ResultCode.from(BlueprintAnalysisFragmentService.analyze(
+                            player, fragmentTransaction(), analyzerTier().orElseThrow()));
+                } else {
+                    BlueprintFragmentAnalysisService.Result result = BlueprintFragmentAnalysisService.analyze(player, fragmentTransaction());
+                    resultCode = BlueprintRecyclerActionContract.ResultCode.from(result.status());
+                }
             } finally {
                 mutationInProgress = false;
             }
         } else if (action == BlueprintRecyclerActionContract.Action.REVERSE_ENGINEER) {
             mutationInProgress = true;
             try {
-                BlueprintReverseEngineeringService.Result result =
-                        BlueprintReverseEngineeringService.reverseEngineer(
+                BlueprintReverseEngineeringService.Execution execution =
+                        BlueprintReverseEngineeringService.reverseEngineerDetailed(
                                 player, workstationTransaction());
-                resultCode = BlueprintRecyclerActionContract.ResultCode.from(result.status());
+                outcome = execution.outcome();
+                resultCode = BlueprintRecyclerActionContract.ResultCode.from(execution.transaction().status());
             } finally {
                 mutationInProgress = false;
             }
@@ -249,10 +283,21 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
             resultCode = BlueprintRecyclerActionContract.ResultCode.from(result.status());
         }
 
+        Optional<BlueprintRecyclerActionContract.FragmentResult> fragmentResult = Optional.empty();
+        if (action == BlueprintRecyclerActionContract.Action.ARCHIVE_FRAGMENTS && resultCode == BlueprintRecyclerActionContract.ResultCode.SUCCESS) {
+            int retained = workstation.getItem(INPUT_SLOT).getCount();
+            var data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElseThrow();
+            int saved = fragmentIdentity.flatMap(BlueprintFragmentItem.Identity::analysisClass)
+                    .map(reward -> data.getArchivedAnalysisFragments().getOrDefault(expectedInputId.toString(),
+                            com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisFragmentCounts.EMPTY).get(reward))
+                    .orElseGet(() -> data.getArchivedBlueprintFragments().getOrDefault(expectedInputId.toString(), 0));
+            fragmentResult = Optional.of(new BlueprintRecyclerActionContract.FragmentResult(expectedInputCount - retained, retained, saved,
+                    outputWasEmpty && BlueprintItem.getBlueprintId(workstation.getItem(OUTPUT_SLOT)).filter(expectedInputId::equals).isPresent()));
+        }
         workstation.setChanged();
         refreshPreview(player);
         return new BlueprintRecyclerActionContract.ActionResult(
-                action, Optional.of(expectedInputId), resultCode);
+                action, Optional.of(expectedInputId), resultCode, outcome, fragmentResult);
     }
 
     @Override
@@ -272,7 +317,35 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
 
     @Override
     public boolean stillValid(Player player) {
-        return stillValid(access, player, ModBlocks.BLUEPRINT_RECYCLER.get());
+        if (closed || stationInvalidated || player != owner) return false;
+        return access.evaluate((level, pos) -> level == player.level()
+                && level.hasChunkAt(pos)
+                && (level.isClientSide
+                        ? level.getBlockState(pos).getBlock() instanceof BlueprintRecyclerBlock
+                        : openingStation != null && level.getBlockState(pos).is(openingStation)
+                                && BlueprintRecyclerBlock.isComplete(level, pos))
+                && player.distanceToSqr(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D) <= 64.0D,
+                false);
+    }
+
+    /** Available only while the bound physical station remains valid. */
+    public Optional<AnalyzerTier> analyzerTier() {
+        if (!stillValid(owner)) return Optional.empty();
+        if (owner.level().isClientSide) {
+            // Block updates may arrive after the open-menu packet. Client display
+            // can resolve later; the server must never rebind an existing session.
+            return access.evaluate((level, pos) ->
+                    level.getBlockState(pos).getBlock() instanceof BlueprintRecyclerBlock block
+                            ? Optional.of(block.tier()) : Optional.<AnalyzerTier>empty(), Optional.empty());
+        }
+        return Optional.of(openingStation.tier());
+    }
+
+    /** Called on the server by the removed block, independent of the menu tick. */
+    public void invalidateStation(Level removedLevel, BlockPos removedPos) {
+        if (access.evaluate((level, pos) -> level == removedLevel && pos.equals(removedPos), false)) {
+            stationInvalidated = true;
+        }
     }
 
     @Override
@@ -337,9 +410,12 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
     }
 
     private void refreshPreview(ServerPlayer player) {
+        if (!isRecyclerMenuValid(player)) return;
         BlueprintRecyclerPreview next = buildPreview(player);
+        next = next.withPresentation(next.presentation().withStation(analyzerTier().orElseThrow().level()));
         boolean changed = !previewInitialized
-                || !next.equals(preview.withStateToken(0L));
+                || !WorkstationState.capture(workstation, playerInventory, owner).matches(observedState)
+                || !next.equals(preview.withStateToken(0L)) || preview.stateToken() != stateToken;
         if (changed) {
             stateToken = stateToken == Long.MAX_VALUE ? 1L : stateToken + 1L;
         }
@@ -361,6 +437,12 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
                     researchData.pointBalance(), researchData.pointCap());
         }
 
+        // Malformed counts must not escape the bounded preview packet contract.
+        if (physicalInput.getCount() > com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits.MAX_RESEARCH_DATA_REDEMPTIONS_PER_ACTION) {
+            return BlueprintRecyclerPreview.invalid(itemId(physicalInput),
+                    com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits.MAX_RESEARCH_DATA_REDEMPTIONS_PER_ACTION,
+                    researchData.pointBalance(), researchData.pointCap());
+        }
         Optional<ResourceLocation> blueprintId = BlueprintItem.getBlueprintId(physicalInput);
         if (blueprintId.isPresent()) {
             BlueprintRecyclingService.Evaluation recycling =
@@ -376,10 +458,31 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
                     Optional.empty());
         }
         Optional<ResourceLocation> fragmentId = BlueprintFragmentItem.getTarget(physicalInput);
+        if (physicalInput.getItem() instanceof BlueprintFragmentItem && physicalInput.getCount() > physicalInput.getMaxStackSize()) {
+            return BlueprintRecyclerPreview.invalid(itemId(physicalInput), physicalInput.getCount(),
+                    researchData.pointBalance(), researchData.pointCap());
+        }
         if (fragmentId.isPresent()) {
+            if (BlueprintFragmentItem.identity(physicalInput).flatMap(BlueprintFragmentItem.Identity::analysisClass).isPresent()) {
+                var fragment = BlueprintAnalysisFragmentService.preview(player, fragmentTransaction(), analyzerTier().orElseThrow());
+                var identity = BlueprintFragmentItem.identity(physicalInput).orElseThrow();
+                var reward = identity.analysisClass().orElseThrow();
+                var policy = BlueprintAnalysisFragmentService.policy(player, fragmentTransaction(), analyzerTier().orElseThrow());
+                int total = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve()
+                        .map(data -> data.getArchivedAnalysisFragments().getOrDefault(identity.target().toString(),
+                                com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisFragmentCounts.EMPTY).total()).orElse(0);
+                var outputReward = policy.learning().learningPermitted()
+                        ? Optional.of(reward.restrict(policy.recyclable(), policy.learning())) : Optional.<com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisRewardClass>empty();
+                return BlueprintRecyclerPreview.fragment(fragment).withPresentation(new AnalyzerPresentation(0, Optional.empty(),
+                        Optional.of(new AnalyzerPresentation.Fragments(reward, outputReward, total, policy.retainedCap())), Optional.empty()));
+            }
             return BlueprintRecyclerPreview.fragment(
                     BlueprintFragmentAnalysisService.evaluate(
                             player, fragmentTransaction()));
+        }
+        if (physicalInput.getItem() instanceof BlueprintFragmentItem) {
+            return BlueprintRecyclerPreview.invalid(itemId(physicalInput), physicalInput.getCount(),
+                    researchData.pointBalance(), researchData.pointCap());
         }
         BlueprintReverseEngineeringService.Evaluation reverse =
                 BlueprintReverseEngineeringService.evaluate(player, workstationTransaction());
@@ -410,7 +513,7 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
                     BlueprintRecyclerPreview.WeaponOrigin.from(physicalInput),
                     recovery.pointValue(),
                     Optional.of(recovery.status()),
-                    Optional.empty());
+                    Optional.empty()).withPresentation(physicalPresentation(player, recovery));
         }
         if (researchData.matchedInput()) {
             return new BlueprintRecyclerPreview(
@@ -488,6 +591,28 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
         return BlueprintRecyclerPreview.InputKind.INVALID;
     }
 
+    private AnalyzerPresentation physicalPresentation(ServerPlayer player, FoundWeaponRecoveryService.Evaluation recovery) {
+        var prepared = com.gamergaming.taczweaponblueprints.progression.BlueprintWeaponAnalysisService.prepare(player, workstationTransaction());
+        var weapon = prepared.map(p -> {
+            var q = p.quote();
+            var reward = q.attempt().filter(a -> a.physicalBlueprintLearningMode().learningPermitted())
+                    .map(a -> com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisRewardClass.of(a.outputRecyclable(), a.physicalBlueprintLearningMode()));
+            var counts = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve()
+                    .map(data -> data.getArchivedAnalysisFragments().getOrDefault(q.blueprintId().toString(),
+                            com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisFragmentCounts.EMPTY))
+                    .orElse(com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisFragmentCounts.EMPTY);
+            return new AnalyzerPresentation.Weapon(q.weaponTier().map(AnalyzerTier::level).orElse(0), q.status(), q.outcomes(), reward,
+                    reward.map(counts::get).orElse(0), counts.total(), q.fragmentThreshold(), q.retainedProgressCap());
+        });
+        var r = recovery.reverse();
+        boolean directRecovery = com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.progressionSnapshot().foundWeaponRecoveryMode().directPointsEnabled()
+                && r != null && r.base().physical().kind() == com.gamergaming.taczweaponblueprints.item.BlueprintKind.GUN
+                && BlueprintRecyclerPreview.WeaponOrigin.from(workstation.getItem(INPUT_SLOT)) == BlueprintRecyclerPreview.WeaponOrigin.LOOT_GENERATED;
+        var costs = !directRecovery ? Optional.<AnalyzerPresentation.RecoveryCost>empty() : Optional.of(
+                new AnalyzerPresentation.RecoveryCost(r.requiredInputCount(), r.cost().points(), reverseIngredients(r), r.status()));
+        return new AnalyzerPresentation(0, weapon, Optional.empty(), costs);
+    }
+
     private List<BlueprintRecyclerPreview.IngredientPreview> reverseIngredients(
             BlueprintReverseEngineeringService.Evaluation reverse) {
         List<BlueprintRecyclerPreview.IngredientPreview> ingredients = new ArrayList<>();
@@ -519,6 +644,9 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
 
     private BlueprintReverseEngineeringService.WorkstationTransaction workstationTransaction() {
         return new BlueprintReverseEngineeringService.WorkstationTransaction() {
+            @Override public Optional<AnalyzerTier> analyzerTier() { return BlueprintRecyclerMenu.this.analyzerTier(); }
+            @Override public boolean stationValid() { return isRecyclerMenuValid(owner); }
+
             @Override
             public ItemStack physicalInput() {
                 return workstation.getItem(INPUT_SLOT);
@@ -580,7 +708,9 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
             @Override
             public boolean placeOutput(ItemStack output, ItemStack expectedOutput) {
                 ItemStack current = workstation.getItem(OUTPUT_SLOT);
-                if (output == null || output.isEmpty() || output.getCount() != 1
+                if (output == null || output.isEmpty() || output.getCount() > output.getMaxStackSize()
+                        || !(BlueprintItem.getBlueprintId(output).isPresent() && output.getCount() == 1
+                            || BlueprintFragmentItem.identity(output).flatMap(BlueprintFragmentItem.Identity::analysisClass).isPresent())
                         || expectedOutput == null
                         || !ItemStack.matches(expectedOutput, current)
                         || !current.isEmpty()) {
@@ -704,7 +834,9 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
             long progressionPolicyRevision,
             Optional<ResourceLocation> fragmentTarget,
             int targetArchivedFragments,
-            boolean targetLearned) {
+            boolean targetLearned,
+            net.minecraft.nbt.CompoundTag playerState,
+            Object configState) {
         private WorkstationState {
             stacks = stacks.stream().map(ItemStack::copy).toList();
             fragmentTarget = fragmentTarget == null ? Optional.empty() : fragmentTarget;
@@ -740,7 +872,11 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
                     BlueprintProgressionPolicyManager.INSTANCE.publication().revision(),
                     fragmentTarget,
                     progression.archivedFragments(),
-                    progression.learned());
+                    progression.learned(),
+                    owner.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).map(data -> data.serializeNBT().copy())
+                            .orElseGet(net.minecraft.nbt.CompoundTag::new),
+                    List.of(com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.progressionSnapshot(),
+                            com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.accessSnapshot()));
         }
 
         boolean matches(WorkstationState other) {
@@ -752,6 +888,7 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
                     || !fragmentTarget.equals(other.fragmentTarget)
                     || targetArchivedFragments != other.targetArchivedFragments
                     || targetLearned != other.targetLearned
+                    || !playerState.equals(other.playerState) || !configState.equals(other.configState)
                     || stacks.size() != other.stacks.size()) {
                 return false;
             }

@@ -36,10 +36,11 @@ def removeStaleModArchives = tasks.register('removeStaleModArchives') {
 // Deliberate changes must update runtime constants, release gates, and
 // migration documentation together.
 def certifiedAutomaticPlacementVersion = 'tacz-gun-placement-v13'
-def certifiedResearchTreeProtocol = '55'
+def certifiedResearchTreeProtocol = '59'
+def certifiedResearchTreeSceneLayout = 'branches-v2'
 def certifiedResearchTreeProtocolNumber = certifiedResearchTreeProtocol as int
-def certifiedResearchCatalogExportFormat = 20
-def certifiedPlayerDataVersion = 4
+def certifiedResearchCatalogExportFormat = 22
+def certifiedPlayerDataVersion = 5
 def certifiedClientSettingsVersion = 3
 def certifiedAutomaticPrerequisiteStrategy = 'grouped_routes_v1'
 def certifiedAutomaticScoringModel = 'capability_v3'
@@ -176,15 +177,128 @@ sourceSets {
         compileClasspath += sourceSets.main.output
         runtimeClasspath += output + compileClasspath
     }
+    development {
+        java.srcDir 'src/development/java'
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += output + compileClasspath
+    }
     test {
         compileClasspath += sourceSets.authoring.output
         runtimeClasspath += sourceSets.authoring.output
+        compileClasspath += sourceSets.development.output
+        runtimeClasspath += sourceSets.development.output
     }
 }
 
 configurations {
     authoringImplementation.extendsFrom implementation
     authoringRuntimeOnly.extendsFrom runtimeOnly
+    developmentImplementation.extendsFrom implementation
+    developmentRuntimeOnly.extendsFrom runtimeOnly
+}
+
+// Baseline tooling is deliberately absent from release jars and ordinary runs.
+// Analyzer integration captures additionally require a marked disposable world copy.
+if (providers.gradleProperty('analyzerStationsQA').isPresent() || providers.gradleProperty('researchTreeBaseline').isPresent() || providers.gradleProperty('researchTreePrototype').isPresent() || providers.gradleProperty('researchTreeWorkbenchQA').isPresent() || providers.gradleProperty('analyzerBaseline').isPresent()) {
+    minecraft.runs.client {
+        mods {
+            "${mod_id}" { source sourceSets.development }
+        }
+        if (providers.gradleProperty('analyzerScreenQA').isPresent()) {
+            property 'tacz.analyzerScreenQA.enabled', 'true'
+            property 'tacz.analyzerScreenQA.world', providers.gradleProperty('analyzerScreenQAWorld').orElse('Analyzer A5 QA').get()
+        }
+        if (providers.gradleProperty('analyzerTransactionsQA').isPresent()) {
+            property 'tacz.analyzerTransactionsQA.enabled', 'true'
+        }
+        if (providers.gradleProperty('analyzerStationsQA').isPresent()) {
+            property 'tacz.analyzerStationsQA.output', file(providers.gradleProperty('analyzerStationsQA').get()).absolutePath
+        }
+        if (providers.gradleProperty('analyzerBaseline').isPresent()) {
+            property 'tacz.analyzerBaseline.output', file(providers.gradleProperty('analyzerBaseline').get()).absolutePath
+        }
+        if (providers.gradleProperty('researchTreeBaseline').isPresent()) {
+            property 'tacz.treeBaseline.output', file(
+                    providers.gradleProperty('researchTreeBaseline').get()).absolutePath
+            property 'tacz.treeBaseline.motion', providers.gradleProperty(
+                    'researchTreeBaselineMotion').orElse('false').get()
+        }
+        if (providers.gradleProperty('researchTreeWorkbenchQA').isPresent()) {
+            property 'tacz.treeWorkbenchQA.output', file(providers.gradleProperty('researchTreeWorkbenchQA').get()).absolutePath
+            property 'tacz.treeWorkbenchQA.world', providers.gradleProperty('researchTreeWorkbenchQAWorld').orElse('M5 UI QA').get()
+        }
+        if (providers.gradleProperty('researchTreePrototype').isPresent()) {
+            property 'tacz.treePrototype.enabled', 'true'
+            property 'tacz.treePrototype.output', file(providers.gradleProperty('researchTreePrototype').get()).absolutePath
+            property 'tacz.treePrototype.captureBench', 'true'
+            if (providers.gradleProperty('researchTreePrototypeInput').isPresent()) {
+                property 'tacz.treePrototype.input', file(providers.gradleProperty('researchTreePrototypeInput').get()).absolutePath
+            }
+        }
+    }
+}
+
+// Dedicated acceptance uses a marked disposable server directory and a real client.
+if (providers.gradleProperty('analyzerReleaseQA').isPresent()) {
+    def qaRoot = file(providers.gradleProperty('analyzerReleaseQA').get())
+    ['client', 'server'].each { runName ->
+        minecraft.runs.named(runName) {
+            mods { "${mod_id}" { source sourceSets.development } }
+            property 'tacz.analyzerReleaseQA.output', qaRoot.absolutePath
+            property 'tacz.analyzerReleaseQA.phase', providers.gradleProperty('analyzerReleasePhase').orElse('gameplay').get()
+        }
+    }
+    minecraft.runs.server {
+        workingDirectory new File(qaRoot, 'server')
+        args '--nogui'
+    }
+}
+
+tasks.register('researchTreeBaseline', JavaExec) {
+    group = 'verification'
+    description = 'Replays public Tech Tree fixtures and measures current layout, routing, and queries.'
+    dependsOn tasks.named('developmentClasses')
+    classpath = sourceSets.development.runtimeClasspath
+    mainClass = 'com.gamergaming.taczweaponblueprints.client.ResearchTreeBaselineTool'
+    doFirst {
+        args = ['--output', file(providers.gradleProperty('researchTreeBaselineReport')
+                .orElse('build/reports/research-tree/baseline.json').get()).absolutePath]
+        if (providers.gradleProperty('researchTreeBaselineInput').isPresent()) {
+            args += ['--input', file(providers.gradleProperty(
+                    'researchTreeBaselineInput').get()).absolutePath]
+        }
+    }
+}
+
+tasks.register('researchTreePerformance', JavaExec) {
+    group = 'verification'
+    description = 'Measures production scene geometry, routing, indexes, queries and allocations on frozen public inputs.'
+    dependsOn tasks.named('developmentClasses')
+    classpath = sourceSets.development.runtimeClasspath
+    mainClass = 'com.gamergaming.taczweaponblueprints.client.ResearchTreePerformanceTool'
+    maxHeapSize = '2g'
+    args file(providers.gradleProperty('researchTreePerformanceReport')
+            .orElse('build/reports/research-tree/performance.json').get()).absolutePath
+}
+
+tasks.register('researchTreeSceneComparison', JavaExec) {
+    group = 'verification'
+    description = 'Compares validated compatibility and simple scenes from identical public Tech Tree inputs.'
+    dependsOn tasks.named('developmentClasses')
+    classpath = sourceSets.development.runtimeClasspath
+    mainClass = 'com.gamergaming.taczweaponblueprints.client.ResearchTreeSceneComparisonTool'
+    doFirst {
+        args = ['--output', file(providers.gradleProperty('researchTreeSceneReport')
+                .orElse('build/reports/research-tree/scenes.json').get()).absolutePath,
+                '--engine', providers.gradleProperty('researchTreeSceneEngine').orElse('compare').get()]
+        if (providers.gradleProperty('researchTreeBaselineInput').isPresent()) {
+            args += ['--input', file(providers.gradleProperty('researchTreeBaselineInput').get()).absolutePath]
+        }
+        if (providers.gradleProperty('researchTreeSceneStress').isPresent()) args += ['--stress']
+        if (providers.gradleProperty('researchTreeSceneSvgDirectory').isPresent()) {
+            args += ['--svg-directory', file(providers.gradleProperty('researchTreeSceneSvgDirectory').get()).absolutePath]
+        }
+    }
 }
 
 // Include generated data, but never package the data generator's cache metadata.
@@ -411,6 +525,43 @@ dependencies {
     }
 }
 
+tasks.register('generateAnalyzerBalanceReport', JavaExec) {
+    group = 'authoring'
+    description = 'Estimates first-blueprint attempts and consumed resources from a resolved research catalog export.'
+    dependsOn tasks.named('authoringClasses')
+    classpath = sourceSets.authoring.runtimeClasspath
+    mainClass = 'com.gamergaming.taczweaponblueprints.analyzer.authoring.AnalyzerBalanceTool'
+    def catalog = providers.gradleProperty('analyzerCatalog')
+    def report = providers.gradleProperty('analyzerBalanceReport').orElse(
+            layout.buildDirectory.file('reports/analyzer/balance.json').map { it.asFile.absolutePath })
+    def target = providers.gradleProperty('analyzerTarget')
+    inputs.files(catalog).optional()
+    inputs.property('target', target.orElse(''))
+    outputs.file(report)
+    doFirst {
+        if (!catalog.isPresent()) throw new GradleException('Supply -PanalyzerCatalog=/path/to/research-export.json (catalog format 22).')
+        args = ['--catalog', file(catalog.get()).absolutePath, '--output', file(report.get()).absolutePath]
+        if (target.isPresent()) args += ['--target', target.get()]
+    }
+}
+
+def analyzerDatapackTasks = ['legacy', 'tiered', 'overrides'].collect { preset ->
+    tasks.register("packageAnalyzer${preset.capitalize()}Datapack", Zip) {
+        group = 'authoring'
+        description = "Packages the optional ${preset} Blueprint Analyzer datapack."
+        from("examples/blueprint-analyzer/${preset}")
+        archiveFileName = "blueprint-analyzer-${preset}.zip"
+        destinationDirectory = layout.buildDirectory.dir('distributions/analyzer')
+        preserveFileTimestamps = false
+        reproducibleFileOrder = true
+    }
+}
+tasks.register('packageAnalyzerDatapacks') {
+    group = 'authoring'
+    description = 'Packages opt-in Analyzer presets and rule examples; does not activate them.'
+    dependsOn analyzerDatapackTasks
+}
+
 tasks.register('generateResearchTechTreeRatings', JavaExec) {
     group = 'authoring'
     description = 'Extracts TaCZ gun-pack evidence and writes non-authoritative Tech Tree rating suggestions.'
@@ -596,6 +747,7 @@ tasks.named('jar', Jar).configure {
                 'Implementation-Vendor'   : mod_authors,
                 'Automatic-Placement-Version': certifiedAutomaticPlacementVersion,
                 'Research-Tree-Protocol'  : certifiedResearchTreeProtocol,
+                'Research-Tree-Scene-Layout': certifiedResearchTreeSceneLayout,
                 'Research-Catalog-Export-Format':
                         certifiedResearchCatalogExportFormat.toString(),
                 'Automatic-Prerequisite-Strategy':
@@ -2958,6 +3110,13 @@ tasks.register('verifyReleaseArtifact') {
                         || it == 'com/gamergaming/taczweaponblueprints/mixin/IScreenAccessor.class'
                         || it == 'com/gamergaming/taczweaponblueprints/menu/ResearchBenchActionValidator.class'
                         || it == 'com/gamergaming/taczweaponblueprints/menu/ResearchBenchPreview.class'
+                        || it.startsWith('com/gamergaming/taczweaponblueprints/client/ResearchTreeBaseline')
+                        || it.startsWith('com/gamergaming/taczweaponblueprints/client/ResearchTreePerformanceTool')
+                        || it.startsWith('com/gamergaming/taczweaponblueprints/client/ResearchTreeSceneComparisonTool')
+                        || it.startsWith('com/gamergaming/taczweaponblueprints/client/ResearchTreeSceneSvgWriter')
+                        || it.startsWith('com/gamergaming/taczweaponblueprints/client/ResearchTreeBranchFixtures')
+                        || it.startsWith('com/gamergaming/taczweaponblueprints/client/ResearchTreePrototype')
+                        || it.startsWith('com/gamergaming/taczweaponblueprints/client/ResearchTreeWorkbenchProbe')
                         || it.startsWith(
                                 'com/gamergaming/taczweaponblueprints/research/tree/authoring/')
             }
@@ -3008,6 +3167,29 @@ tasks.register('verifyReleaseArtifact') {
                     'com/gamergaming/taczweaponblueprints/network/ResearchBenchActionResultPacket.class',
                     'com/gamergaming/taczweaponblueprints/client/ResearchTreeCameraStore.class',
                     'com/gamergaming/taczweaponblueprints/client/ResearchTreeCanvas.class',
+                'com/gamergaming/taczweaponblueprints/research/tree/ResearchTechTreeBranch.class',
+                'com/gamergaming/taczweaponblueprints/resource/research/ResearchTechTreeBranchDefinition.class',
+                'com/gamergaming/taczweaponblueprints/resource/research/ResearchTechTreeBranchMembership.class',
+                'com/gamergaming/taczweaponblueprints/resource/research/ResearchTechTreeBranches.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeScene.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeSceneInput.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeScenePolicy.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeSceneCache.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeBranchSceneEngine.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeBranchSceneValidator.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeBranchStructure.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeSceneValidator.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeSceneRouter.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeRouting.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeRoutingIndex.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeRoutingValidator.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeRoutingPlan.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeSceneRenderer.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeSceneView.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeWorkbenchLayout.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreePreviewBinding.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeNodeArt.class',
+                    'com/gamergaming/taczweaponblueprints/client/ResearchTreeResources.class',
                     'com/gamergaming/taczweaponblueprints/client/ResearchTreeCategoryFilter.class',
                     'com/gamergaming/taczweaponblueprints/client/ResearchTreeContextCardLayout.class',
                     'com/gamergaming/taczweaponblueprints/client/ResearchTreeContextCardPolicy.class',
@@ -3245,6 +3427,16 @@ tasks.register('verifyReleaseArtifact') {
                     'META-INF/MANIFEST.MF',
                     'LICENSE.txt'
             ]
+            ['advanced_blueprint_analyzer', 'experimental_blueprint_analyzer'].each { id ->
+                required.addAll([
+                        "assets/taczweaponblueprints/blockstates/${id}.json".toString(),
+                        "assets/taczweaponblueprints/models/block/${id}.json".toString(),
+                        "assets/taczweaponblueprints/models/item/${id}.json".toString(),
+                        "data/taczweaponblueprints/recipes/${id}.json".toString(),
+                        "data/taczweaponblueprints/advancements/recipes/misc/${id}.json".toString(),
+                        "data/taczweaponblueprints/loot_tables/blocks/${id}.json".toString()
+                ])
+            }
             def missing = required.findAll { !names.contains(it) }
             if (!missing.isEmpty()) {
                 throw new GradleException("Release artifact is missing required entries: ${missing}")
@@ -3338,86 +3530,48 @@ tasks.register('verifyReleaseArtifact') {
                     jsonParser.parse(stream, 'UTF-8')
                 }
             }
-            def recyclerModelPath =
-                    'assets/taczweaponblueprints/models/block/blueprint_recycler.json'
-            def recyclerModel = parsePackagedJson(recyclerModelPath)
-            def recyclerElementNames = [
-                    'cabinet', 'top_deck', 'rear_console', 'paper_intake',
-                    'output_drawer', 'front_left_foot', 'front_right_foot', 'rear_feet'
-            ] as Set
-            def recyclerTexture = 'taczweaponblueprints:block/blueprint_recycler'
-            if (recyclerModel['parent'] != 'minecraft:block/block'
-                    || recyclerModel['ambientocclusion'] != false
-                    || recyclerModel['textures']?.keySet()
-                            != (['particle', 'side', 'front', 'top', 'control'] as Set)
-                    || recyclerModel['textures']?.values()?.toSet() != ([recyclerTexture] as Set)
-                    || !(recyclerModel['elements'] instanceof List)
-                    || recyclerModel['elements'].size() != 8
-                    || recyclerModel['elements'].collect { it['name'] }.toSet()
-                            != recyclerElementNames
-                    || recyclerModel['elements'].any { element ->
-                        !(element['from'] instanceof List) || element['from'].size() != 3
-                                || !(element['to'] instanceof List) || element['to'].size() != 3
-                                || (0..<3).any { axis ->
-                                    !(element['from'][axis] instanceof Number)
-                                            || !(element['to'][axis] instanceof Number)
-                                            || element['from'][axis] < 0
-                                            || element['to'][axis] > 16
-                                            || element['from'][axis] >= element['to'][axis]
-                                }
-                                || element['faces']?.keySet()
-                                        != (['north', 'east', 'south', 'west', 'up', 'down'] as Set)
-                                || element['faces'].values().any { face ->
-                                    !(face['texture'] instanceof String)
-                                            || !face['texture'].startsWith('#')
-                                            || !(face['uv'] instanceof List) || face['uv'].size() != 4
-                                            || face['uv'].any { coordinate ->
-                                                !(coordinate instanceof Number)
-                                                        || coordinate < 0 || coordinate > 16
-                                            }
-                                }
-                    }) {
-                throw new GradleException(
-                        'Packaged Blueprint Recycler model is not the final bounded eight-part workstation')
-            }
-            def recyclerBlockstate = parsePackagedJson(
-                    'assets/taczweaponblueprints/blockstates/blueprint_recycler.json')
-            def recyclerVariants = recyclerBlockstate['variants']
-            def expectedRecyclerRotations = [
-                    'facing=north': 0,
-                    'facing=east' : 90,
-                    'facing=south': 180,
-                    'facing=west' : 270
-            ]
-            if (!(recyclerVariants instanceof Map)
-                    || recyclerVariants.keySet() != expectedRecyclerRotations.keySet()
-                    || expectedRecyclerRotations.any { state, rotation ->
-                        recyclerVariants[state]?.get('model')
-                                != 'taczweaponblueprints:block/blueprint_recycler'
-                                || (recyclerVariants[state].containsKey('y')
-                                        ? recyclerVariants[state]['y'] : 0) != rotation
-                    }) {
-                throw new GradleException(
-                        'Packaged Blueprint Recycler blockstate must preserve all four horizontal facings')
-            }
-            def recyclerItemModel = parsePackagedJson(
-                    'assets/taczweaponblueprints/models/item/blueprint_recycler.json')
-            if (recyclerItemModel != [
-                    parent: 'taczweaponblueprints:block/blueprint_recycler'
-            ]) {
-                throw new GradleException(
-                        'Packaged Blueprint Recycler item must inherit the final block model')
-            }
-            def recyclerTextureEntry = zip.getEntry(
-                    'assets/taczweaponblueprints/textures/block/blueprint_recycler.png')
-            def recyclerTextureImage = zip.getInputStream(recyclerTextureEntry).withCloseable { stream ->
-                javax.imageio.ImageIO.read(stream)
-            }
-            if (recyclerTextureImage == null
-                    || recyclerTextureImage.width != 256
-                    || recyclerTextureImage.height != 256) {
-                throw new GradleException(
-                        'Packaged Blueprint Recycler texture must be a readable 256x256 PNG')
+            ['blueprint_recycler', 'advanced_blueprint_analyzer', 'experimental_blueprint_analyzer'].each { id ->
+                def texture = "taczweaponblueprints:block/${id}".toString()
+                ['block', 'item'].each { domain ->
+                    def model = parsePackagedJson("assets/taczweaponblueprints/models/${domain}/${id}.json")
+                    def layers = model['loader'] == 'forge:composite' ? model['children']?.values() : [model]
+                    if (!layers || (id == 'blueprint_recycler' &&
+                            (model['children']?.keySet() != (['body', 'glass'] as Set)
+                                    || model['children']['glass']['render_type'] != 'minecraft:translucent'))) {
+                        throw new GradleException("Analyzer ${id} is missing its rendering layers")
+                    }
+                    layers.each { layer ->
+                        def obj = layer['model'] instanceof String
+                                ? "assets/" + layer['model'].replace(':', '/') : ''
+                        if (layer['loader'] != 'forge:obj' || layer['flip_v'] != true
+                                || layer['automatic_culling'] != false
+                                || layer['textures']?.get('texture0') != texture || zip.getEntry(obj) == null) {
+                            throw new GradleException("Analyzer ${id} has an invalid packaged OBJ reference")
+                        }
+                        def material = zip.getEntry("assets/taczweaponblueprints/models/${domain}/${id}.mtl")
+                        if (material == null || !zip.getInputStream(material).getText('UTF-8').contains('map_Kd #texture0')) {
+                            throw new GradleException("Analyzer ${id} is missing its atlas material")
+                        }
+                    }
+                    if (domain == 'item' && !model['display']?.containsKey('gui')) {
+                        throw new GradleException("Analyzer ${id} is missing its inventory transform")
+                    }
+                }
+                def variants = parsePackagedJson("assets/taczweaponblueprints/blockstates/${id}.json")['variants']
+                if (variants?.size() != 8) throw new GradleException("Analyzer ${id} requires two-part blockstates")
+                ['north', 'east', 'south', 'west'].eachWithIndex { facing, turn ->
+                    def root = variants["extension=false,facing=${facing}".toString()]
+                    def extension = variants["extension=true,facing=${facing}".toString()]
+                    if (root?.get('model') != "taczweaponblueprints:block/${id}".toString()
+                            || (root['y'] ?: 0) != turn * 90 || extension?.get('model') != 'minecraft:block/air') {
+                        throw new GradleException("Analyzer ${id} has an invalid ${facing} placement model")
+                    }
+                }
+                def entry = zip.getEntry("assets/taczweaponblueprints/textures/block/${id}.png")
+                def image = entry == null ? null : zip.getInputStream(entry).withCloseable { javax.imageio.ImageIO.read(it) }
+                if (image == null || image.width != 512 || image.height != 256) {
+                    throw new GradleException("Analyzer ${id} requires its 512x256 pixel atlas")
+                }
             }
             def packagedAwards = researchPointAwardFiles.sort().collectEntries { path ->
                 [(path): parsePackagedJson(path)]
@@ -4049,6 +4203,13 @@ tasks.register('verifyReleaseArtifact') {
                     'gui.taczweaponblueprints.research_bench.tree.rail.entry.view_action',
                     'gui.taczweaponblueprints.research_bench.tree.rail.entry.usage',
                     'gui.taczweaponblueprints.research_bench.tree.guide.fullscreen',
+                    'gui.taczweaponblueprints.research_bench.tree.scene.help',
+                    'gui.taczweaponblueprints.research_bench.tree.scene.help_title',
+                    'gui.taczweaponblueprints.research_bench.tree.scene.focus_branch_hint',
+                    'gui.taczweaponblueprints.research_bench.tree.scene.unavailable',
+                    'gui.taczweaponblueprints.research_bench.tree.scene.unnamed_branch',
+                    'gui.taczweaponblueprints.research_bench.tree.scene.unassigned',
+                    'commands.taczweaponblueprints.research.authored_branches',
                     'gui.taczweaponblueprints.research_bench.tree.guide.help',
                     'gui.taczweaponblueprints.research_bench.tree.guide.navigation',
                     'gui.taczweaponblueprints.research_bench.tree.guide.narration',
@@ -4407,6 +4568,10 @@ tasks.register('verifyReleaseArtifact') {
                 new java.util.jar.Manifest(stream)
             }
             def attributes = manifest.mainAttributes
+            def sceneSource = file('src/main/java/com/gamergaming/taczweaponblueprints/client/ResearchTreeBranchSceneEngine.java').getText('UTF-8')
+            if (!sceneSource.contains('REVISION = "' + certifiedResearchTreeSceneLayout + '"')) {
+                throw new GradleException('Scene layout manifest contract does not match the runtime engine')
+            }
             if (attributes.getValue('Implementation-Version') != project.version.toString()) {
                 throw new GradleException('Manifest implementation version does not match the project version')
             }
@@ -4414,6 +4579,8 @@ tasks.register('verifyReleaseArtifact') {
                             != certifiedAutomaticPlacementVersion
                     || attributes.getValue('Research-Tree-Protocol')
                             != certifiedResearchTreeProtocol
+                    || attributes.getValue('Research-Tree-Scene-Layout')
+                            != certifiedResearchTreeSceneLayout
                     || attributes.getValue('Research-Catalog-Export-Format')
                             != certifiedResearchCatalogExportFormat.toString()
                     || attributes.getValue('Automatic-Prerequisite-Strategy')
@@ -4705,6 +4872,7 @@ tasks.register('certifyReleaseCandidate') {
                 tacz           : tacz_version,
                 fzzyConfig     : fzzy_config_version,
                 networkProtocol: protocolMatch.group(1),
+                researchTreeSceneLayout: certifiedResearchTreeSceneLayout,
                 tieredProgression: [
                         contract: tieredProgressionReport['contract'],
                         publicationState: tieredProgressionReport['publicationState'],

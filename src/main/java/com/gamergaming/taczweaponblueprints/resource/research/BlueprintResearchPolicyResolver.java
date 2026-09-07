@@ -241,6 +241,19 @@ public final class BlueprintResearchPolicyResolver {
                 BlueprintResearchPolicyResolver::authorsCraftingPolicy);
     }
 
+    public static RuleSelection analyzerRuleSelection(BlueprintResearchSnapshot snapshot,
+            ResourceLocation profileId, ResourceLocation blueprintId, BlueprintData data) {
+        if (snapshot == null || profileId == null || blueprintId == null) return RuleSelection.NONE;
+        return analyzerRuleSelector(snapshot, profileId).apply(blueprintId, data);
+    }
+
+    /** Compile once per immutable Analyzer context, including for bulk catalog export. */
+    static java.util.function.BiFunction<ResourceLocation, BlueprintData, RuleSelection> analyzerRuleSelector(
+            BlueprintResearchSnapshot snapshot, ResourceLocation profileId) {
+        var compiled = CompiledProfile.compile(snapshot, profileId);
+        return (id, data) -> compiled.select(id, data, binding -> binding.rule().analyzer().isPresent());
+    }
+
     static Map<ResourceLocation, RuleSelection> craftingRuleSelections(
             BlueprintResearchSnapshot snapshot,
             ResourceLocation profileId,
@@ -307,8 +320,8 @@ public final class BlueprintResearchPolicyResolver {
         }
         // Preserve pre-format-3 target-only rules as deliberate research
         // assignments. An extension-bearing rule with no core fields belongs to
-        // its progression/crafting projection and must not shadow core research.
-        return rule.progression().isEmpty() && rule.crafting().isEmpty();
+        // its progression/crafting/Analyzer projection and must not shadow core research.
+        return rule.progression().isEmpty() && rule.crafting().isEmpty() && rule.analyzer().isEmpty();
     }
 
     private static boolean containsResearchGate(

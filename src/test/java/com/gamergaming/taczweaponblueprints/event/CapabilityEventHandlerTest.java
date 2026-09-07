@@ -27,13 +27,16 @@ class CapabilityEventHandlerTest {
                 PlayerProgressValueMutation.Request.commit("test:fragment", 0, 6));
         original.applyProgressionCriterionMutation(
                 PlayerProgressValueMutation.Request.commit("test:criterion", 0, 2));
+        var analysis = new com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisFragmentCounts(1,2,3,4);
+        original.applyAnalysisFragmentMutation(new com.gamergaming.taczweaponblueprints.capabilities.AnalysisFragmentMutation(
+                PlayerProgressValueMutation.Operation.COMMIT, "removed:analysis", com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisFragmentCounts.EMPTY, analysis));
         PlayerRecipeData clone = new PlayerRecipeData();
 
         CapabilityEventHandler.copyRecipeData(original, clone);
         original.addRecipe("tacz:gun/m4a1");
         original.clearResearchPointAwardLedger();
         original.clearArchivedBlueprintFragments();
-        original.clearProgressionCriteria();
+        original.clearProgressionCriteria(); original.clearArchivedAnalysisFragments();
 
         assertEquals(Set.of("tacz:gun/ak47"), clone.getLearnedRecipes());
         assertEquals(Set.of("tacz:ak47"), clone.getLearnedBlueprints());
@@ -42,6 +45,7 @@ class CapabilityEventHandlerTest {
         assertEquals(Set.of(copiedClaim), clone.getResearchPointAwardLedger().claims());
         assertEquals(Map.of("test:fragment", 6), clone.getArchivedBlueprintFragments());
         assertEquals(Map.of("test:criterion", 2), clone.getProgressionCriteria());
+        assertEquals(Map.of("removed:analysis", analysis), clone.getArchivedAnalysisFragments());
         assertFalse(clone.hasRecipe("tacz:gun/m4a1"));
     }
 }

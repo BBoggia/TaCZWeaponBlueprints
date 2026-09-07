@@ -15,5 +15,10 @@ public interface BlueprintRecyclerMenuBridge {
             int expectedInputCount,
             long expectedStateToken);
 
+    default BlueprintRecyclerActionContract.ActionResult handleRecyclerRequest(ServerPlayer player, int requestId,
+            BlueprintRecyclerActionContract.Action action, ResourceLocation input, int count, long token) {
+        return handleRecyclerAction(player, action, input, count, token);
+    }
+
     void acceptRecyclerPreview(BlueprintRecyclerPreview preview);
 }

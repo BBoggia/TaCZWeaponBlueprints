@@ -61,6 +61,14 @@ public final class ResearchTreeInteractionPolicy {
         return layers.graphCanvas() ? PointerTarget.GRAPH_BACKGROUND : PointerTarget.NONE;
     }
 
+    /** Scene search results cover the docked inspector in both drawing and input order. */
+    public static PointerTarget routeScene(PointerLayers layers) {
+        if (layers == null) throw new IllegalArgumentException("scene pointer layers are required");
+        if (layers.guidance()) return PointerTarget.GUIDANCE;
+        if (layers.search()) return PointerTarget.SEARCH;
+        return route(layers);
+    }
+
     /** An overlay owns its wheel even when it does not currently scroll. */
     public static ScrollTarget scrollTarget(PointerTarget pointerTarget, boolean cardScrollable) {
         if (pointerTarget == null) {

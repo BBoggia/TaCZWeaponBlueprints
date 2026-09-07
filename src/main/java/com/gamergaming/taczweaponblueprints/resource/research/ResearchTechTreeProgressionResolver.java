@@ -95,7 +95,7 @@ final class ResearchTechTreeProgressionResolver {
                     continue;
                 }
 
-                if (dependent.bundle().format() == ResearchTechTreeEntryBundle.CURRENT_FORMAT) {
+                if (dependent.bundle().format() >= ResearchTechTreeEntryBundle.RANKED_FORMAT) {
                     if (!ResearchTechTreeContract.progressionTransitionAllowed(
                             prerequisiteCoordinate, initial)) {
                         throw invalidExplicitEdge(

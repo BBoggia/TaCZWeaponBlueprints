@@ -1,0 +1,16 @@
+{
+  "format": 2,
+  "profile": "example:nested",
+  "target": {
+    "blueprints": [
+      "tacz:glock_17"
+    ]
+  },
+  "visibility": "full",
+  "tree_enabled": true,
+  "research_enabled": true,
+  "research_cost": {
+    "points": 2
+  },
+  "prerequisite_groups": []
+}

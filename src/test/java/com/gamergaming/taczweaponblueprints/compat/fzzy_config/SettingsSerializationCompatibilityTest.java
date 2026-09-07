@@ -47,6 +47,47 @@ class SettingsSerializationCompatibilityTest {
     }
 
     @Test
+    void sceneMigrationPreservesDormantLegacyValuesThroughSerialization() {
+        ResearchTreeClientConfig original = ConfigApi.deserializeConfig(new ResearchTreeClientConfig(), """
+                version = 3
+                layoutPreset = "CUSTOM"
+                nodeGap = 37
+                canvasPadding = 29
+                tierGap = 43
+                portalPadding = 31
+                orderingSweeps = 2
+                compactionSweeps = 3
+                reduceMotion = true
+                minimap = "HIDDEN"
+                """).get();
+        String serialized = ConfigApi.serializeConfig(original).get();
+        ResearchTreeClientConfig restored = ConfigApi.deserializeConfig(new ResearchTreeClientConfig(), serialized).get();
+        assertEquals(ResearchTreeLayoutPreset.CUSTOM, restored.layoutPreset.get());
+        assertEquals(37, restored.nodeGap.getUnconditional());
+        assertEquals(29, restored.canvasPadding.getUnconditional());
+        assertEquals(43, restored.tierGap.getUnconditional());
+        assertEquals(31, restored.portalPadding.getUnconditional());
+        assertEquals(2, restored.orderingSweeps.getUnconditional());
+        assertEquals(3, restored.compactionSweeps.getUnconditional());
+        assertTrue(restored.reduceMotion.get());
+        assertEquals(ResearchTreeMinimapMode.HIDDEN, restored.minimap.get());
+    }
+
+    @Test
+    void currentVersionFilePublishesLoadedPolicyAfterRegistration() {
+        String serialized = ConfigApi.serializeConfig(new BlueprintConfig()).get()
+                .replace("activeResearchProfile = \"taczweaponblueprints:duplicate_recovery\"",
+                        "activeResearchProfile = \"example:nested\"")
+                .replace("researchPointCap = 10000", "researchPointCap = 2676");
+        var loaded = ConfigApi.deserializeConfig(new BlueprintConfig(), serialized).get();
+        assertEquals("example:nested", loaded.activeResearchProfile.get());
+        loaded.initializeLoadedSnapshots();
+        assertEquals(new net.minecraft.resources.ResourceLocation("example:nested"), loaded.progressionSnapshot().activeProfileId());
+        assertEquals(2676, loaded.progressionSnapshot().pointCap());
+        assertEquals(loaded.progressionSnapshot().activeProfileId(), loaded.awardSnapshot().activeProfileId());
+    }
+
+    @Test
     void serverGroupsDoNotChangePersistedFieldPaths() {
         String serialized = ConfigApi.serializeConfig(new BlueprintConfig()).get();
 

@@ -29,7 +29,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public class NetworkHandler {
-    public static final String PROTOCOL_VERSION = "55";
+    public static final String PROTOCOL_VERSION = "59";
     // A random per-server seed prevents a partial chunk set from an earlier
     // connection being mistaken for a new sync after reconnecting.
     private static final AtomicLong SYNC_SEQUENCE =
@@ -416,6 +416,10 @@ public class NetworkHandler {
                 includeSupplementalProgression);
         if (!treeKnownUnchanged || includeSupplementalProgression) {
             refreshOpenWorkstation(player);
+        } else if (player.containerMenu instanceof com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu menu) {
+            // A point-only publication still invalidates the inspected research quote.
+            // Use the menu's bounded admission/queued refresh without rebuilding crafting access.
+            menu.refreshAuthoritativePreview(player);
         }
     }
 

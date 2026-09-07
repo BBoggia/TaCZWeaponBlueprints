@@ -53,6 +53,7 @@ public final class ResearchTreeProjectionCache {
     private ResearchTechTreeLayoutPolicy techLayoutPolicy =
             ResearchTechTreeLayoutPolicy.fromShared(DEFAULT_LAYOUT_POLICY);
     private boolean overviewFallbackActive;
+    private final ResearchTreeSceneCache scenes = new ResearchTreeSceneCache();
 
     public ResearchTreeProjectionCache() {
         this(
@@ -159,6 +160,7 @@ public final class ResearchTreeProjectionCache {
                 ResearchTechTreeLayoutPolicy.fromShared(nextLayoutPolicy);
         boolean techGeometryChanged = !techTreeProjections.hasSameTopology(
                 nextTechTreeProjections)
+                || !techTreeLayouts.domains().equals(nextTechTreeProjections.domains())
                 || !techLayoutPolicy.equals(nextTechLayoutPolicy);
         ResearchTechTreeLayoutCatalog nextTechTreeLayouts = techGeometryChanged
                 ? techLayoutFactory.layout(
@@ -176,6 +178,7 @@ public final class ResearchTreeProjectionCache {
         // Commit only after every derived topology object has been prepared.
         // Search, navigation, layouts, and the canvas must never observe halves
         // of different publications if a layout implementation rejects input.
+        scenes.bind(nextPublication, nextTechTreeProjections);
         publication = nextPublication;
         legacyPublication = nextLegacyPublication;
         overview = nextOverview;
@@ -238,6 +241,36 @@ public final class ResearchTreeProjectionCache {
         }
     }
 
+    /** Typed Research Bench path: prepare public data without dormant legacy geometry. */
+    UpdateOutcome updateForScene(ResearchTreePublication next, ResearchTreeLayoutPolicy policy) {
+        java.util.Objects.requireNonNull(next);
+        java.util.Objects.requireNonNull(policy);
+        if (!next.techTree().available()) return updateWithBalancedFallback(next, policy);
+        var catalog = ResearchTechTreeProjectionBuilder.build(next);
+        var nextUnlocks = ResearchTreeUnlockIndex.create(next.graph());
+        boolean changed = !techTreeProjections.presentation().treeId().equals(catalog.presentation().treeId())
+                || !sceneTopologies(techTreeProjections).equals(sceneTopologies(catalog));
+        // Build before committing, retaining the atomic publication boundary.
+        scenes.clear();
+        publication = next;
+        techTreeProjections = catalog;
+        unlocks = nextUnlocks;
+        legacyPublication = ResearchTreePublication.EMPTY;
+        overview = ResearchTreeOverviewBuilder.build(ResearchTreePublication.EMPTY);
+        groupSkeletons = ResearchTreeGroupSkeletonCatalog.EMPTY;
+        techTreeLayouts = ResearchTechTreeLayoutCatalog.EMPTY;
+        projections.clear(); layouts.clear(); responsiveTechLayouts.clear();
+        overviewFallbackActive = false;
+        layoutPolicy = policy;
+        techLayoutPolicy = ResearchTechTreeLayoutPolicy.fromShared(policy);
+        return new UpdateOutcome(changed, Optional.empty());
+    }
+
+    private static List<ResearchTreeSceneInput.Topology> sceneTopologies(ResearchTechTreeProjectionCatalog catalog) {
+        var policy = ResearchTreeScenePolicy.compatibility(ResearchTechTreeLayoutPolicy.DEFAULT, 1024);
+        return catalog.projections().stream().map(p -> ResearchTreeSceneInput.from(p, policy).topology()).toList();
+    }
+
     public ResearchTreePublication publication() {
         return publication;
     }
@@ -248,6 +281,17 @@ public final class ResearchTreeProjectionCache {
 
     public ResearchTechTreeLayoutCatalog techTreeLayouts() {
         return techTreeLayouts;
+    }
+
+    /** Compatibility scene boundary after update(); the Research Bench owns its branch scene cache. */
+    public ResearchTreeSceneCache.Result techTreeScene(ResearchTreePublication expectedPublication,
+            Domain domain, int viewportWidth, ResearchTreeScenePolicy.NodeMetrics metrics, String metricsRevision) {
+        return scenes.scene(expectedPublication, domain,
+                new ResearchTreeScenePolicy(techLayoutPolicy, viewportWidth, metrics, metricsRevision));
+    }
+
+    public boolean isCurrentScene(ResearchTreeSceneCache.Result result) {
+        return scenes.isCurrent(result);
     }
 
     /**
@@ -298,6 +342,7 @@ public final class ResearchTreeProjectionCache {
     }
 
     public void clear() {
+        scenes.clear();
         publication = ResearchTreePublication.EMPTY;
         legacyPublication = ResearchTreePublication.EMPTY;
         overview = ResearchTreeOverviewBuilder.build(ResearchTreePublication.EMPTY);

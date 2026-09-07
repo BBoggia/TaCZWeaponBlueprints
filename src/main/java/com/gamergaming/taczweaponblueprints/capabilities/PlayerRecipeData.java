@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisFragmentCounts;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
@@ -46,6 +47,7 @@ public class PlayerRecipeData implements IPlayerRecipeData {
             new ResearchPointAwardLedger();
     private final List<RecentBlueprintUnlockBatch> recentUnlockBatches = new ArrayList<>();
     private final Map<String, Integer> archivedBlueprintFragments = new TreeMap<>();
+    private final Map<String, AnalysisFragmentCounts> archivedAnalysisFragments = new TreeMap<>();
     private final Map<String, Integer> progressionCriteria = new TreeMap<>();
     private int researchPoints;
     private long recentUnlockSequence;
@@ -103,6 +105,41 @@ public class PlayerRecipeData implements IPlayerRecipeData {
     }
 
     @Override
+    public synchronized Map<String, AnalysisFragmentCounts> getArchivedAnalysisFragments() {
+        return Collections.unmodifiableMap(new TreeMap<>(archivedAnalysisFragments));
+    }
+
+    private boolean hasFragmentRoom(String id) {
+        if (archivedBlueprintFragments.containsKey(id) || archivedAnalysisFragments.containsKey(id)) return true;
+        var targets = new TreeSet<>(archivedBlueprintFragments.keySet()); targets.addAll(archivedAnalysisFragments.keySet());
+        return targets.size() < PlayerProgressionLimits.MAX_FRAGMENT_TARGETS;
+    }
+
+    @Override
+    public synchronized PlayerProgressValueMutation.Status applyAnalysisFragmentMutation(AnalysisFragmentMutation request) {
+        if (request == null) throw new IllegalArgumentException("analysis mutation cannot be null");
+        String id = normalizeResourceId(request.target());
+        if (id == null || !id.equals(request.target())) return PlayerProgressValueMutation.Status.INVALID_IDENTITY;
+        var current = archivedAnalysisFragments.getOrDefault(id, AnalysisFragmentCounts.EMPTY);
+        if (!current.equals(request.expected())) return PlayerProgressValueMutation.Status.STALE;
+        if (request.resulting().total() > 0 && (!hasFragmentRoom(id)
+                || (long) archivedBlueprintFragments.getOrDefault(id, 0) + request.resulting().total() > PlayerProgressionLimits.MAX_PROGRESS_VALUE)) {
+            return PlayerProgressValueMutation.Status.CAPACITY_REACHED;
+        }
+        if (current.equals(request.resulting())) return PlayerProgressValueMutation.Status.UNCHANGED;
+        if (request.operation() == PlayerProgressValueMutation.Operation.PREFLIGHT) return PlayerProgressValueMutation.Status.READY;
+        if (request.resulting().total() == 0) archivedAnalysisFragments.remove(id);
+        else archivedAnalysisFragments.put(id, request.resulting());
+        return request.operation() == PlayerProgressValueMutation.Operation.ROLLBACK
+                ? PlayerProgressValueMutation.Status.ROLLED_BACK : PlayerProgressValueMutation.Status.APPLIED;
+    }
+
+    @Override
+    public synchronized boolean clearArchivedAnalysisFragments() {
+        boolean changed = !archivedAnalysisFragments.isEmpty(); archivedAnalysisFragments.clear(); return changed;
+    }
+
+    @Override
     public synchronized Map<String, Integer> getProgressionCriteria() {
         return Collections.unmodifiableMap(new TreeMap<>(progressionCriteria));
     }
@@ -110,6 +147,15 @@ public class PlayerRecipeData implements IPlayerRecipeData {
     @Override
     public synchronized PlayerProgressValueMutation.Result applyArchivedFragmentMutation(
             PlayerProgressValueMutation.Request request) {
+        if (request == null) throw new IllegalArgumentException("fragment mutation cannot be null");
+        String id = normalizeResourceId(request.progressId());
+        if (id != null && request.resultingValue() > request.expectedValue()
+                && ((long) request.resultingValue() + archivedAnalysisFragments.getOrDefault(id, AnalysisFragmentCounts.EMPTY).total()
+                        > PlayerProgressionLimits.MAX_PROGRESS_VALUE
+                    || !hasFragmentRoom(id))) {
+            return PlayerProgressValueMutation.Result.rejected(PlayerProgressValueMutation.Status.CAPACITY_REACHED,
+                    request, archivedBlueprintFragments.getOrDefault(id, 0));
+        }
         return applyProgressMutation(
                 archivedBlueprintFragments,
                 PlayerProgressionLimits.MAX_FRAGMENT_TARGETS,
@@ -129,19 +175,29 @@ public class PlayerRecipeData implements IPlayerRecipeData {
     public synchronized boolean replaceSupplementalProgression(
             Map<String, Integer> archivedFragments,
             Map<String, Integer> criteria) {
+        return replaceSupplementalProgression(archivedFragments, criteria, archivedAnalysisFragments);
+    }
+
+    @Override
+    public synchronized boolean replaceSupplementalProgression(Map<String, Integer> archivedFragments,
+            Map<String, Integer> criteria, Map<String, AnalysisFragmentCounts> analysis) {
+        Map<String, AnalysisFragmentCounts> analysisSnapshot;
+        try { analysisSnapshot = AnalysisFragmentCounts.snapshot(analysis); }
+        catch (IllegalArgumentException exception) { return false; }
         Map<String, Integer> fragmentSnapshot = normalizedProgressSnapshot(
                 archivedFragments,
                 PlayerProgressionLimits.MAX_FRAGMENT_TARGETS);
         Map<String, Integer> criterionSnapshot = normalizedProgressSnapshot(
                 criteria,
                 PlayerProgressionLimits.MAX_PROGRESSION_CRITERIA);
-        if (fragmentSnapshot == null || criterionSnapshot == null) {
+        if (fragmentSnapshot == null || criterionSnapshot == null || !AnalysisFragmentCounts.fitsTogether(fragmentSnapshot, analysisSnapshot)) {
             return false;
         }
         archivedBlueprintFragments.clear();
         archivedBlueprintFragments.putAll(fragmentSnapshot);
         progressionCriteria.clear();
         progressionCriteria.putAll(criterionSnapshot);
+        archivedAnalysisFragments.clear(); archivedAnalysisFragments.putAll(analysisSnapshot);
         return true;
     }
 
@@ -434,7 +490,7 @@ public class PlayerRecipeData implements IPlayerRecipeData {
     }
 
     @Override
-    public CompoundTag serializeNBT() {
+    public synchronized CompoundTag serializeNBT() {
         CompoundTag nbt = new CompoundTag();
         nbt.putInt(DATA_VERSION_TAG, PlayerProgressionLimits.DATA_VERSION);
         nbt.put(RECIPES_TAG, writeSortedIds(learnedRecipes));
@@ -456,17 +512,23 @@ public class PlayerRecipeData implements IPlayerRecipeData {
         nbt.put(RECENT_UNLOCKS_TAG, recentUnlocks);
         nbt.put(ARCHIVED_FRAGMENTS_TAG, writeProgressMap(archivedBlueprintFragments));
         nbt.put(PROGRESSION_CRITERIA_TAG, writeProgressMap(progressionCriteria));
+        var analysis = new ListTag();
+        archivedAnalysisFragments.forEach((id, counts) -> {
+            var entry = new CompoundTag(); entry.putString("Id", id); entry.put("Counts", counts.toTag()); analysis.add(entry);
+        });
+        nbt.put("ArchivedAnalysisFragments", analysis);
         return nbt;
     }
 
     @Override
-    public void deserializeNBT(CompoundTag nbt) {
+    public synchronized void deserializeNBT(CompoundTag nbt) {
         learnedRecipes.clear();
         learnedBlueprints.clear();
         discoveredBlueprints.clear();
         researchPointAwardLedger.clear();
         recentUnlockBatches.clear();
         archivedBlueprintFragments.clear();
+        archivedAnalysisFragments.clear();
         progressionCriteria.clear();
         recentUnlockSequence = 0L;
         researchPoints = 0;
@@ -514,6 +576,32 @@ public class PlayerRecipeData implements IPlayerRecipeData {
                     PlayerProgressionLimits.MAX_PROGRESSION_CRITERIA));
         }
 
+        if (dataVersion >= 5 && nbt.contains("ArchivedAnalysisFragments", Tag.TAG_LIST)) {
+            var list = nbt.getList("ArchivedAnalysisFragments", Tag.TAG_COMPOUND);
+            if (list.size() <= PlayerProgressionLimits.MAX_PERSISTED_PROGRESS_ENTRIES_TO_INSPECT) {
+                var candidates = new TreeMap<String, AnalysisFragmentCounts>();
+                var duplicates = new TreeSet<String>();
+                for (int index = 0; index < list.size(); index++) {
+                    var entry = list.getCompound(index);
+                    String id = entry.getString("Id");
+                    if (!id.equals(normalizeResourceId(id)) || entry.size() != 2 || !entry.contains("Counts", Tag.TAG_COMPOUND)) continue;
+                    try {
+                        var counts = AnalysisFragmentCounts.fromTag(entry.getCompound("Counts"));
+                        if (counts.total() > 0 && candidates.putIfAbsent(id, counts) != null) duplicates.add(id);
+                    } catch (IllegalArgumentException ignored) { }
+                }
+                duplicates.forEach(candidates::remove);
+                var retainedTargets = new TreeSet<>(archivedBlueprintFragments.keySet());
+                candidates.forEach((id, counts) -> {
+                    // Ordinary data loads first and is never displaced by new/malformed analysis data.
+                    if ((retainedTargets.contains(id) || retainedTargets.size() < PlayerProgressionLimits.MAX_FRAGMENT_TARGETS)
+                            && (long) archivedBlueprintFragments.getOrDefault(id, 0) + counts.total() <= PlayerProgressionLimits.MAX_PROGRESS_VALUE) {
+                        archivedAnalysisFragments.put(id, counts);
+                        retainedTargets.add(id);
+                    }
+                });
+            }
+        }
     }
 
     public static String normalizeRecipeId(String recipeId) {

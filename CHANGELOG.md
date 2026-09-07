@@ -6,11 +6,104 @@ documentation.
 
 ## Unreleased
 
+### Added
+
+- Added Scrap, a stackable salvage material with custom pixel art, available in
+  Creative mode and through commands for use in datapack recipes and costs.
+
+- Added optional Blueprint Analyzer datapacks for tiered analysis, legacy
+  behavior, and exact-target/tag overrides. Pack authors can report expected
+  attempts and resource costs, including fragment reconstruction, from a
+  resolved catalog export. See the [preset and balance guide](docs/analyzer-presets-and-balancing.md).
+
+- Added Advanced and Experimental Blueprint Analyzers with direct crafting
+  recipes, distinct models, and tier labels. Tiered policies can award full
+  blueprints, matching fragments, or an explicitly configured no-result outcome.
+  Profiles without the Analyzer extension retain deterministic behavior. See the
+  [station guide](docs/blueprint-analyzer-stations.md).
+
+- Added an API for protected analysis fragments, saved progress, and blueprint
+  reconstruction. Analysis progress stays separate from ordinary fragment
+  discounts and RP returns. The Analyzer can reconstruct matching blueprints
+  even after the target is learned. See the
+  [storage and reconstruction guide](docs/analysis-fragment-storage.md).
+
+- Pack authors can validate proposed tiered Blueprint Analyzer policies and inspect
+  their resolved odds, costs, and reconstruction thresholds in research exports.
+  See the
+  [policy authoring guide](docs/analyzer-policy-authoring.md).
+
+- Pack authors can name and nest Tech Tree branches, assign blueprints to separate
+  specialties, and control when branch labels become visible. Existing packs
+  retain inferred layouts. See the [authored branch guide](docs/research-tree-authored-branches.md).
+
+### Compatibility
+
+- Current builds require matching protocol-59 clients and servers, including
+  synchronization of analysis odds, separate action costs, committed outcomes,
+  and protected analysis-fragment progress. Player-data version 5
+  preserves existing saves and adds an empty analysis archive when upgrading.
+  Tree and placement formats 1 and 2 remain supported; new branch metadata uses
+  format 3. Analyzer policy extensions use profile/rule format 5, and research
+  catalog exports use format 22. Existing datapack formats remain readable.
+
 ### Changed
 
+- Replaced all three Blueprint Analyzer models with custom manual, microscope,
+  and electronic inspection benches. Analyzers now require two blocks of space
+  side by side; either half opens the menu and breaking either half removes the station.
+
+- The Blueprint Analyzer now shows station and weapon tiers, full/partial/no-result
+  odds, saved fragment progress, and separate costs for analysis and RP recovery.
+  Scroll its details for materials and blueprint requirements. Reconstruction
+  shows how many fragments stay in the input slot, and completed actions report
+  their actual result. See the [screen guide](docs/analyzer-screen.md).
+
+- Replaced all three crafting Workbench models and all three Research Bench
+  models with custom pixel-textured designs. Higher Research Bench tiers now
+  build on the basic drafting table with inspection tools and scanning equipment.
+- Reduced Tech Tree opening work and overview rendering cost, with cached node art
+  and fewer repeated draw operations while panning and zooming.
+
+- Reworked the Tech Tree with named compact tiles, separate branch regions,
+  proportional zoom, and a scrolling requirements inspector. Research actions
+  remain accessible while you scroll through requirements.
+- Added distinct Tech Tree marks for inspection, keyboard focus, search results,
+  and tracked research routes, with updated scrollable help. Tree updates and
+  resource reloads now refresh the displayed research details and clear
+  withdrawn content.
 - Replaced the three crafting Workbench models with surface-optimized voxel
   versions while retaining their existing placement footprint and item-view
   orientation.
+
+### Fixed
+
+- Turned Workbench, Research Bench, and Blueprint Analyzer inventory icons around
+  to show their fronts. Placed models retain their existing orientation.
+
+- When weapon analysis is blocked but RP recovery is available, the Blueprint
+  Analyzer now shows the recovery cost and status while explaining the analysis
+  restriction separately.
+
+- Blueprint Analyzer RP recovery now shows unmet requirements before its award
+  can be calculated, and direct-only mode hides inactive analysis details.
+  Blueprint outputs with disabled learning now state that restriction. Delayed
+  action feedback no longer attaches to replacement inputs with the same target
+  and count.
+
+- Analyzer requests now reject repeated request IDs and changes to inputs,
+  inventory, research progress, or policy since the displayed preview. Failed
+  tiered transactions restore consumed items, RP, output, and discovery together.
+
+- Blueprint Analyzer actions now reject removed or replaced stations, including
+  immediate same-tier replacements. The original Analyzer can now be harvested
+  with a pickaxe.
+
+- Kept the Tech Tree zoom-out button available at distant overview scales, matching
+  mouse-wheel zoom. Zoom controls now follow the destination of an active camera transition.
+
+- Research policy now uses the loaded configuration at server startup, including
+  the selected research profile and Research Points cap in current-version files.
 
 ### Removed
 

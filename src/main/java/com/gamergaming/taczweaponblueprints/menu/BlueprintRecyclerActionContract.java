@@ -181,11 +181,42 @@ public final class BlueprintRecyclerActionContract {
         }
     }
 
+    public record FragmentResult(int archived, int retained, int saved, boolean blueprintCreated) {
+        public FragmentResult {
+            if (archived < 0 || retained < 0 || (long) archived + retained > 64
+                    || saved < 0 || saved > PlayerProgressionLimits.MAX_PROGRESS_VALUE)
+                throw new IllegalArgumentException("invalid fragment result");
+        }
+    }
+
     public record ActionResult(
             Action action,
             Optional<ResourceLocation> inputId,
-            ResultCode code) {
+            ResultCode code,
+            Optional<com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable.Result> outcome,
+            Optional<FragmentResult> fragments,
+            long stateToken) {
+        public ActionResult(Action action, Optional<ResourceLocation> inputId, ResultCode code) {
+            this(action, inputId, code, Optional.empty(), Optional.empty());
+        }
+        public ActionResult(Action action, Optional<ResourceLocation> inputId, ResultCode code,
+                Optional<com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable.Result> outcome) {
+            this(action, inputId, code, outcome, Optional.empty());
+        }
+        public ActionResult(Action action, Optional<ResourceLocation> inputId, ResultCode code,
+                Optional<com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable.Result> outcome,
+                Optional<FragmentResult> fragments) {
+            this(action, inputId, code, outcome, fragments, 0L);
+        }
+        public ActionResult withStateToken(long token) {
+            return new ActionResult(action, inputId, code, outcome, fragments, token);
+        }
         public ActionResult {
+            if (stateToken < 0) throw new IllegalArgumentException("invalid result state token");
+            if (fragments == null || fragments.isPresent() && (code != ResultCode.SUCCESS || action != Action.ARCHIVE_FRAGMENTS))
+                throw new IllegalArgumentException("invalid fragment feedback");
+            if (outcome == null || outcome.isPresent() && (code != ResultCode.SUCCESS || action != Action.REVERSE_ENGINEER))
+                throw new IllegalArgumentException("invalid analysis outcome feedback");
             inputId = inputId == null ? Optional.empty() : inputId;
             if (action == null || code == null || inputId.isEmpty()
                     || inputId.filter(id -> id.toString().length()

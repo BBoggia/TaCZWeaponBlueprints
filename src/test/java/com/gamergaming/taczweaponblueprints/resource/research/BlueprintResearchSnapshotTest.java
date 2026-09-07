@@ -349,7 +349,7 @@ class BlueprintResearchSnapshotTest {
                     Map.of(id("taczweaponblueprints:default"), automatic));
 
             assertEquals(1, loaded.profiles().size());
-            assertEquals(BlueprintResearchProfile.CURRENT_FORMAT, packaged.format());
+            assertEquals(BlueprintResearchProfile.CRAFTING_FORMAT, packaged.format());
             assertEquals(
                     com.gamergaming.taczweaponblueprints.progression.workbench
                             .ResearchWorkbenchTier.TIER_2,

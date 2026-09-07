@@ -18,6 +18,63 @@ import net.minecraft.network.FriendlyByteBuf;
 
 class SyncPlayerSupplementalProgressionPacketTest {
     @Test
+    void analysisClassesRoundTripAcrossReorderedChunksWithoutPartialPublication() {
+        var analysis = new java.util.TreeMap<String, com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisFragmentCounts>();
+        var counts = new com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisFragmentCounts(1,2,3,4);
+        for (int i=0; i<PlayerProgressionLimits.MAX_FRAGMENT_TARGETS; i++) analysis.put("test:" + "x".repeat(240) + i, counts);
+        var view = new PlayerSupplementalProgressionView(Map.of(), Map.of("test:criterion",5), analysis);
+        var packets = SyncPlayerSupplementalProgressionPacket.split(view, 70L);
+        assertTrue(packets.size() > 1);
+        var accumulator = new SyncPlayerSupplementalProgressionPacket.ClientAccumulator();
+        for (int i=packets.size()-1; i>=0; i--) {
+            var buffer = new FriendlyByteBuf(Unpooled.buffer());
+            try {
+                packets.get(i).toBytes(buffer);
+                assertTrue(buffer.readableBytes() <= BlueprintSyncLimits.MAX_CHUNK_BYTES);
+                assertEquals(buffer.readableBytes(), packets.get(i).estimatedPayloadBytes());
+                var completed = accumulator.accept(new SyncPlayerSupplementalProgressionPacket(buffer));
+                assertEquals(0, buffer.readableBytes());
+                if (i>0) assertTrue(completed.isEmpty());
+                else {
+                    var snapshot = completed.orElseThrow();
+                    assertEquals(analysis, snapshot.analysisFragments());
+                    var client = new com.gamergaming.taczweaponblueprints.capabilities.PlayerRecipeData();
+                    assertTrue(client.replaceSupplementalProgression(snapshot.archivedFragments(), snapshot.publicCriteria(), snapshot.analysisFragments()));
+                    assertEquals(analysis, client.getArchivedAnalysisFragments());
+                }
+            } finally { buffer.release(); }
+        }
+        assertTrue(accumulator.accept(packets.get(0)).isEmpty());
+        accumulator.clear();
+        var empty = SyncPlayerSupplementalProgressionPacket.split(PlayerSupplementalProgressionView.EMPTY, 1L).get(0);
+        assertTrue(accumulator.accept(empty).orElseThrow().analysisFragments().isEmpty());
+    }
+
+    @Test
+    void malformedAnalysisValuesAndCrossChunkCombinedOverflowAreRejected() {
+        for (int value : new int[]{-1, Integer.MAX_VALUE, 0}) {
+            var buffer = rawPacketHeader(80L,0,1);
+            try {
+                buffer.writeVarInt(0); buffer.writeVarInt(0); buffer.writeVarInt(1);
+                buffer.writeUtf("test:rifle"); buffer.writeVarInt(value);
+                buffer.writeVarInt(0); buffer.writeVarInt(0); buffer.writeVarInt(0);
+                assertThrows(IllegalArgumentException.class, () -> new SyncPlayerSupplementalProgressionPacket(buffer));
+            } finally { buffer.release(); }
+        }
+        var accumulator = new SyncPlayerSupplementalProgressionPacket.ClientAccumulator();
+        var first = decodedPacket(90L,0,2,Map.of("test:rifle",PlayerProgressionLimits.MAX_PROGRESS_VALUE),Map.of());
+        assertTrue(accumulator.accept(first).isEmpty());
+        var buffer = rawPacketHeader(90L,1,2);
+        try {
+            buffer.writeVarInt(0); buffer.writeVarInt(0); buffer.writeVarInt(1);
+            buffer.writeUtf("test:rifle"); buffer.writeVarInt(1); buffer.writeVarInt(0); buffer.writeVarInt(0); buffer.writeVarInt(0);
+            var second = new SyncPlayerSupplementalProgressionPacket(buffer);
+            assertThrows(IllegalArgumentException.class, () -> accumulator.accept(second));
+        } finally { buffer.release(); }
+        assertTrue(accumulator.accept(decodedPacket(91L,0,1,Map.of(),Map.of())).isPresent());
+    }
+
+    @Test
     void packetRoundTripsStableMapsAndAccumulatesAtomically() {
         PlayerSupplementalProgressionView view = new PlayerSupplementalProgressionView(
                 Map.of("test:bravo", 2, "test:alpha", 1),
@@ -160,6 +217,7 @@ class SyncPlayerSupplementalProgressionPacketTest {
         try {
             writeMap(buffer, fragments);
             writeMap(buffer, criteria);
+            buffer.writeVarInt(0); // Protocol 57 analysis archive.
             return new SyncPlayerSupplementalProgressionPacket(buffer);
         } finally {
             buffer.release();

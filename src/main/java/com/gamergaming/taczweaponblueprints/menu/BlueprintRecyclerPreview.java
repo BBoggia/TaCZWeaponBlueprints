@@ -39,10 +39,16 @@ public record BlueprintRecyclerPreview(
         WeaponOrigin weaponOrigin,
         int recoveryPointValue,
         Optional<FoundWeaponRecoveryService.Status> recoveryStatus,
-        Optional<BlueprintFragmentAnalysisService.Evaluation> fragmentEvaluation) {
+        Optional<BlueprintFragmentAnalysisService.Evaluation> fragmentEvaluation,
+        AnalyzerPresentation presentation) {
     public static final BlueprintRecyclerPreview EMPTY = empty(0, 0);
 
     public BlueprintRecyclerPreview {
+        presentation = presentation == null ? AnalyzerPresentation.EMPTY : presentation;
+        if (presentation.weapon().isPresent() && inputKind != InputKind.PHYSICAL_ITEM
+                || presentation.recoveryCost().isPresent() && inputKind != InputKind.PHYSICAL_ITEM
+                || presentation.fragments().isPresent() && inputKind != InputKind.BLUEPRINT_FRAGMENT)
+            throw new IllegalArgumentException("Analyzer presentation does not match input");
         inputId = inputId == null ? Optional.empty() : inputId;
         recyclingStatus = recyclingStatus == null ? Optional.empty() : recyclingStatus;
         researchDataStatus = researchDataStatus == null ? Optional.empty() : researchDataStatus;
@@ -180,6 +186,36 @@ public record BlueprintRecyclerPreview(
                 }
             }
         }
+    }
+
+    public BlueprintRecyclerPreview(
+        InputKind inputKind,
+        Optional<ResourceLocation> inputId,
+        int inputCount,
+        int pointValue,
+        int pointBalance,
+        int pointCap,
+        Optional<BlueprintRecyclingService.Status> recyclingStatus,
+        Optional<ResearchDataRedemptionService.Status> researchDataStatus,
+        long stateToken,
+        Optional<ResourceLocation> outputBlueprintId,
+        int requiredInputCount,
+        int pointCost,
+        boolean ingredientsSatisfied,
+        boolean outputAvailable,
+        boolean customizationWillBeLost,
+        boolean alreadyKnown,
+        Optional<BlueprintReverseEngineeringService.Status> reverseEngineeringStatus,
+        List<IngredientPreview> ingredients,
+        WeaponOrigin weaponOrigin,
+        int recoveryPointValue,
+        Optional<FoundWeaponRecoveryService.Status> recoveryStatus,
+        Optional<BlueprintFragmentAnalysisService.Evaluation> fragmentEvaluation) {
+        this(inputKind, inputId, inputCount, pointValue, pointBalance, pointCap, recyclingStatus, researchDataStatus, stateToken, outputBlueprintId, requiredInputCount, pointCost, ingredientsSatisfied, outputAvailable, customizationWillBeLost, alreadyKnown, reverseEngineeringStatus, ingredients, weaponOrigin, recoveryPointValue, recoveryStatus, fragmentEvaluation, AnalyzerPresentation.EMPTY);
+    }
+
+    public BlueprintRecyclerPreview withPresentation(AnalyzerPresentation value) {
+        return new BlueprintRecyclerPreview(inputKind, inputId, inputCount, pointValue, pointBalance, pointCap, recyclingStatus, researchDataStatus, stateToken, outputBlueprintId, requiredInputCount, pointCost, ingredientsSatisfied, outputAvailable, customizationWillBeLost, alreadyKnown, reverseEngineeringStatus, ingredients, weaponOrigin, recoveryPointValue, recoveryStatus, fragmentEvaluation, value);
     }
 
     /** Compatibility constructor for Analyzer previews predating direct recovery. */
@@ -372,7 +408,7 @@ public record BlueprintRecyclerPreview(
                 weaponOrigin,
                 recoveryPointValue,
                 recoveryStatus,
-                fragmentEvaluation);
+                fragmentEvaluation, presentation);
     }
 
     private static void validateId(ResourceLocation id) {

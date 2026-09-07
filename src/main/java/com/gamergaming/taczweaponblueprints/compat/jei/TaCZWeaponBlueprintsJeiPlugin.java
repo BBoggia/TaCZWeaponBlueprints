@@ -39,7 +39,10 @@ public final class TaCZWeaponBlueprintsJeiPlugin implements IModPlugin {
                         new ItemStack(ModItems.WORKBENCH_LVL3_ITEM.get())),
                 descriptions(Topic.CRAFTING_WORKBENCH));
         registration.addItemStackInfo(
-                new ItemStack(ModItems.BLUEPRINT_RECYCLER_ITEM.get()), descriptions(Topic.BLUEPRINT_ANALYZER));
+                List.of(new ItemStack(ModItems.BLUEPRINT_RECYCLER_ITEM.get()),
+                        new ItemStack(ModItems.ADVANCED_BLUEPRINT_ANALYZER_ITEM.get()),
+                        new ItemStack(ModItems.EXPERIMENTAL_BLUEPRINT_ANALYZER_ITEM.get())),
+                descriptions(Topic.BLUEPRINT_ANALYZER));
         registration.addItemStackInfo(
                 List.of(
                         new ItemStack(ModItems.BLUEPRINT_ITEM.get()),

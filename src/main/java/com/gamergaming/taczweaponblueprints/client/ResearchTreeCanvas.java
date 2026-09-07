@@ -41,6 +41,9 @@ public final class ResearchTreeCanvas {
     private ResearchTreeDisplayPolicy displayPolicy = ResearchTreeDisplayPolicy.DEFAULT;
     private ResearchTreeGraph graph = ResearchTreeGraph.EMPTY;
     private ResearchTreeLayout layout = ResearchTreeLayout.EMPTY;
+    private ResearchTreeSceneView sceneView;
+    private ResearchTreeSceneRenderer sceneRenderer;
+    private boolean bindingScene;
     private ResearchTreeEdgeIndex edgeIndex = ResearchTreeEdgeIndex.EMPTY;
     private ResearchTreeEdgeIndex.RoutingProfile edgeRoutingProfile =
             ResearchTreeEdgeIndex.RoutingProfile.AUTO;
@@ -67,6 +70,7 @@ public final class ResearchTreeCanvas {
     private ResearchTechTreeLayout techTreeLayout;
     private List<ResearchTechTreeLayout.BoundaryPortal> techTreePortals = List.of();
     private ResourceLocation hoveredId;
+    private ResourceLocation pinnedId;
     private ResourceLocation authoritativeSelectedId;
     private ResourceLocation activeSearchMatch;
     private ResourceLocation progressionMarkerId;
@@ -110,6 +114,78 @@ public final class ResearchTreeCanvas {
 
     public ResearchTreeDisplayPolicy displayPolicy() {
         return displayPolicy;
+    }
+
+    /** The scene has already crossed the validated scene-cache boundary. */
+    public boolean setSceneContent(ResearchTreeSceneCache.Result result, Map<ResourceLocation, ItemStack> icons,
+            ResourceLocation focus, ResourceLocation selection) {
+        if (result.geometry().isEmpty() || result.presentation().isEmpty())
+            return setContent(ResearchTreeGraph.EMPTY, ResearchTreeLayout.EMPTY, Map.of(), null, null);
+        var geometry = result.geometry().orElseThrow();
+        boolean sameGeometry = sceneView != null && sceneView.scene == geometry;
+        var cameraBefore = viewport().snapshot();
+        var anchorId = sceneView != null && sceneView.scene.key().topology().domain() == geometry.key().topology().domain()
+                ? focusedId() : Optional.<ResourceLocation>empty();
+        var anchorBefore = anchorId.flatMap(this::nodeBounds);
+        var publicOrder = result.presentation().orElseThrow().graph().nodes().stream().map(ResearchTreeGraph.Node::blueprintId).toList();
+        var nextView = sceneView != null && sceneView.scene == geometry
+                && sceneView.navigation.nodes().stream().map(ResearchTreeLayout.PositionedNode::blueprintId).toList().equals(publicOrder)
+                ? sceneView : new ResearchTreeSceneView(geometry, publicOrder);
+        var nextRenderer = sceneView == nextView ? sceneRenderer : new ResearchTreeSceneRenderer(nextView);
+        nextRenderer.bind(result.presentation().orElseThrow());
+        boolean changed;
+        bindingScene = true;
+        try { changed = setContent(result.presentation().orElseThrow().graph(), nextView.navigation, icons, focus, selection); }
+        finally { bindingScene = false; }
+        sceneView = nextView; sceneRenderer = nextRenderer;
+        if (sameGeometry && changed) viewport().restore(cameraBefore);
+        else if (!sameGeometry && anchorBefore.isPresent()) {
+            anchorId.flatMap(this::nodeBounds).ifPresent(after -> {
+                var before = anchorBefore.orElseThrow();
+                viewport().restore(new ResearchTreeViewport.Snapshot(
+                        cameraBefore.panX() + after.centerX() - before.centerX(),
+                        cameraBefore.panY() + after.centerY() - before.centerY(), cameraBefore.scale()));
+            });
+        }
+        var links = geometry.boundaries().stream().flatMap(b -> b.links().stream()).toList();
+        boundaryRequirementCounts = links.stream().filter(l -> l.direction() == ResearchTechTreeProjection.Direction.REQUIREMENT)
+                .collect(java.util.stream.Collectors.toMap(ResearchTechTreeProjection.BoundaryLink::localNodeId, l -> 1, Integer::sum));
+        boundaryUnlockCounts = links.stream().filter(l -> l.direction() == ResearchTechTreeProjection.Direction.UNLOCK)
+                .collect(java.util.stream.Collectors.toMap(ResearchTechTreeProjection.BoundaryLink::localNodeId, l -> 1, Integer::sum));
+        return changed;
+    }
+
+    public Optional<ResearchTreeScene> scene() { return Optional.ofNullable(sceneView).map(v -> v.scene); }
+    public Optional<ResearchTreeScene.Bounds> nodeBounds(ResourceLocation id) {
+        if (sceneView != null) return sceneView.body(id);
+        return layout.position(id).map(n -> new ResearchTreeScene.Bounds(n.x(), n.y(), 24, 24));
+    }
+    public boolean focusBranch(ResourceLocation id) {
+        if (sceneView == null) return false;
+        return sceneView.branch(id).map(b -> { viewport().fitReadable(b.x(), b.y(), b.width(), b.height(), .6); return true; }).orElse(false);
+    }
+    public void focusTarget(ResourceLocation id) {
+        if (sceneView != null) viewport().restore(new ResearchTreeViewport.Snapshot(viewport().panX(), viewport().panY(), 1));
+        focusNode(id);
+    }
+    public void openingView() {
+        if (sceneView == null || graph.nodes().isEmpty()) { fit(); return; }
+        var familyMembers = sceneView.scene.regions().stream().filter(r -> r.seed().parentId().isPresent())
+                .flatMap(r -> r.seed().directMembers().stream()).collect(java.util.stream.Collectors.toSet());
+        var candidates = sceneView.scene.key().topology().nodes().stream().filter(p -> familyMembers.contains(p.nodeId())).toList();
+        if (candidates.isEmpty()) candidates = sceneView.scene.key().topology().nodes();
+        var first = candidates.stream().min(java.util.Comparator.comparingInt(ResearchTechTreeProjection.Placement::rank)
+                .thenComparing(p -> p.nodeId().toString())).orElseThrow();
+        var body = sceneView.body(first.nodeId()).orElseThrow();
+        var nearby = directRequirements(first.nodeId()).stream().map(sceneView::body).flatMap(Optional::stream)
+                .min(java.util.Comparator.comparingDouble(b -> Math.abs(b.centerX() - body.centerX())));
+        var opening = nearby.map(body::union).orElse(body);
+        setFocusedNode(first.nodeId());
+        viewport().fitReadable(opening.x(), opening.y(), opening.width(), opening.height(), .6);
+    }
+    public void renderNodeArt(GuiGraphics graphics, ResearchTreeGraph.Node node, ResearchTreeScene.Bounds box) {
+        if (sceneRenderer != null) sceneRenderer.renderArt(graphics, node, box);
+        else graphics.renderItem(icon(node.blueprintId()), (int) box.x(), (int) box.y());
     }
 
     /** Marks only the authoritative selection; ordinary nodes remain undecorated. */
@@ -186,7 +262,7 @@ public final class ResearchTreeCanvas {
         boolean topologyChanged = !this.graph.hasSameLayoutTopology(graph)
                 || this.layout != layout
                 || edgeRoutingProfile != indexedEdgeRoutingProfile;
-        ResearchTreeEdgeIndex nextEdgeIndex = topologyChanged
+        ResearchTreeEdgeIndex nextEdgeIndex = bindingScene ? ResearchTreeEdgeIndex.EMPTY : topologyChanged
                 ? ResearchTreeEdgeIndex.create(graph, layout, edgeRoutingProfile) : edgeIndex;
         ResearchTreeNodeIndex nextNodeIndex = topologyChanged
                 ? ResearchTreeNodeIndex.create(layout) : nodeIndex;
@@ -199,6 +275,9 @@ public final class ResearchTreeCanvas {
 
         // Commit only after every fallible derived object has been prepared.
         this.graph = graph;
+        if (graph.node(pinnedId).isEmpty()) pinnedId = null;
+        this.sceneView = null;
+        this.sceneRenderer = null;
         this.layout = layout;
         this.affordabilityResults = affordabilityResults.entrySet().stream()
                 .filter(entry -> graph.node(entry.getKey()).isPresent())
@@ -345,6 +424,10 @@ public final class ResearchTreeCanvas {
             throw new IllegalArgumentException("Research Tree canvas render inputs cannot be null");
         }
         drawBackground(graphics);
+        if (sceneRenderer != null) {
+            sceneRenderer.render(graphics, font, this, nodeName, nodeBorderColor, statusSymbol);
+            return;
+        }
         if (layout.nodes().isEmpty()) {
             return;
         }
@@ -484,7 +567,8 @@ public final class ResearchTreeCanvas {
         if (!contains(mouseX, mouseY)) {
             return false;
         }
-        viewport().zoomAt(delta, mouseX - bounds.x(), mouseY - bounds.y());
+        if (sceneView != null) viewport().zoomProportional(delta, mouseX - bounds.x(), mouseY - bounds.y());
+        else viewport().zoomAt(delta, mouseX - bounds.x(), mouseY - bounds.y());
         return true;
     }
 
@@ -495,6 +579,11 @@ public final class ResearchTreeCanvas {
     }
 
     public Optional<GraphElementHit> graphElementAt(double mouseX, double mouseY) {
+        if (sceneView != null) {
+            if (!contains(mouseX, mouseY)) return Optional.empty();
+            return sceneView.hit(viewport().canvasX(mouseX - bounds.x()), viewport().canvasY(mouseY - bounds.y()), viewport().scale())
+                    .flatMap(graph::node).map(n -> new GraphElementHit(n, null));
+        }
         if (!contains(mouseX, mouseY) || layout.nodes().isEmpty()
                 || isCoveredByCompactChrome(mouseX, mouseY)) {
             return Optional.empty();
@@ -559,6 +648,8 @@ public final class ResearchTreeCanvas {
     public Optional<ResearchTechTreeLayout.PortalTarget> techTreePortalTargetAt(
             double mouseX,
             double mouseY) {
+        if (sceneView != null) return !contains(mouseX, mouseY) ? Optional.empty()
+                : sceneView.portal(viewport().canvasX(mouseX - bounds.x()), viewport().canvasY(mouseY - bounds.y()), viewport().scale());
         if (techTreeLayout == null || !contains(mouseX, mouseY)
                 || isCoveredByCompactChrome(mouseX, mouseY)) {
             return Optional.empty();
@@ -664,7 +755,12 @@ public final class ResearchTreeCanvas {
     }
 
     public void zoomAtCenter(double direction) {
-        viewport().zoomAt(direction, bounds.width() / 2.0D, bounds.height() / 2.0D);
+        if (sceneView != null) viewport().zoomProportional(direction, bounds.width() / 2.0D, bounds.height() / 2.0D);
+        else viewport().zoomAt(direction, bounds.width() / 2.0D, bounds.height() / 2.0D);
+    }
+
+    public boolean canZoom(double direction) {
+        return !graph.nodes().isEmpty() && viewport().canZoom(direction, sceneView != null);
     }
 
     public void fit() {
@@ -693,6 +789,7 @@ public final class ResearchTreeCanvas {
     }
 
     private void fitViewport(ResearchTreeViewport viewport) {
+        if (sceneView != null || bindingScene) { viewport.fit(); return; }
         if (unifiedOverview) {
             viewport.fitReadable(
                     ResearchTreePresentationContract.MIN_READABLE_OVERVIEW_FIT_SCALE);
@@ -806,6 +903,10 @@ public final class ResearchTreeCanvas {
 
     public void focusNode(ResourceLocation blueprintId) {
         setFocusedNode(blueprintId);
+        if (sceneView != null) {
+            sceneView.body(blueprintId).ifPresent(b -> viewport().focus(b.x(), b.y(), b.width(), b.height()));
+            return;
+        }
         layout.position(blueprintId).ifPresent(position -> viewport().focus(
                 position.x(),
                 position.y(),
@@ -818,6 +919,8 @@ public final class ResearchTreeCanvas {
         if (screenPadding < 0) {
             throw new IllegalArgumentException("Research Tree reveal padding cannot be negative");
         }
+        if (sceneView != null) return sceneView.body(blueprintId)
+                .map(b -> viewport().reveal(b.x(), b.y(), b.width(), b.height(), screenPadding)).orElse(false);
         Optional<ResearchTreeLayout.PositionedNode> position = layout.position(blueprintId);
         if (position.isEmpty()) {
             return false;
@@ -975,6 +1078,38 @@ public final class ResearchTreeCanvas {
         return Optional.ofNullable(activeSearchMatch);
     }
 
+    public void setPinnedNode(ResourceLocation id) {
+        pinnedId = graph.node(id).map(ResearchTreeGraph.Node::blueprintId).orElse(null);
+    }
+
+    record SceneDecoration(boolean focused, boolean pinned, boolean hovered, boolean search,
+            boolean activeSearch, boolean trackedTarget, boolean trackedPath, boolean dimmed,
+            boolean fragments, boolean blocker) { }
+
+    SceneDecoration sceneDecoration(ResourceLocation id) {
+        boolean focus = focusedId().filter(id::equals).isPresent(), pin = id.equals(pinnedId);
+        boolean hover = id.equals(hoveredId), search = searchMatches().contains(id), path = isTrackedPathNode(id);
+        var role = relationshipRole(id); var hoverRole = hoverRelationshipRole(id);
+        boolean related = role != ResearchTreePresentationContract.RelationshipRole.NEUTRAL
+                && role != ResearchTreePresentationContract.RelationshipRole.UNRELATED;
+        related |= hoverRole != ResearchTreePresentationContract.RelationshipRole.NEUTRAL
+                && hoverRole != ResearchTreePresentationContract.RelationshipRole.UNRELATED;
+        var affordability = affordabilityTreatment(id);
+        boolean dim = !focus && !pin && !hover && !search && !path && !related
+                && (affordability == AffordabilityTreatment.DIMMED || affordability == AffordabilityTreatment.LEARNED_CONTEXT);
+        return new SceneDecoration(focus, pin, hover, search, id.equals(activeSearchMatch),
+                id.equals(trackedTargetId), path, dim,
+                id.equals(progressionMarkerId) && fragmentProgressMarker,
+                id.equals(progressionMarkerId) && progressionBlockerMarker);
+    }
+
+    boolean ownsScenePortal(ResearchTechTreeLayout.PortalTarget target) {
+        return sceneView != null && target != null && sceneView.scene.boundaries().stream().anyMatch(b -> {
+            var first = b.links().get(0);
+            return new ResearchTechTreeLayout.PortalTarget(first.localNodeId(), first.remoteDomain(), first.direction(), b.links()).equals(target);
+        });
+    }
+
     /** Server-authoritative Preview/Full selection, separate from local tree focus. */
     public void setAuthoritativeSelection(ResourceLocation blueprintId) {
         authoritativeSelectedId = graph.node(blueprintId)
@@ -1082,7 +1217,8 @@ public final class ResearchTreeCanvas {
     }
 
     private void configureViewport() {
-        viewport().configure(bounds.width(), bounds.height(), layout.width(), layout.height());
+        if (sceneView != null) viewport().configureAnchored(bounds.width(), bounds.height(), layout.width(), layout.height());
+        else viewport().configure(bounds.width(), bounds.height(), layout.width(), layout.height());
     }
 
     private void refreshFocusPath() {
@@ -1090,7 +1226,7 @@ public final class ResearchTreeCanvas {
     }
 
     private void drawBackground(GuiGraphics graphics) {
-        int background = viewMode == ResearchTreeScreenLayout.ViewMode.FULLSCREEN
+        int background = sceneView != null ? 0xff101923 : viewMode == ResearchTreeScreenLayout.ViewMode.FULLSCREEN
                 ? 0xA00B0F14
                 : style.background();
         graphics.fill(bounds.x(), bounds.y(), bounds.right(), bounds.bottom(), background);
@@ -1954,7 +2090,7 @@ public final class ResearchTreeCanvas {
         return edgeRole(positioned.edge());
     }
 
-    private ResearchTreePresentationContract.RelationshipRole edgeRole(
+    ResearchTreePresentationContract.RelationshipRole edgeRole(
             ResearchTreeGraph.Edge edge) {
         ResearchTreePresentationContract.RelationshipRole hoverRole =
                 hoverPath.role(edge);

@@ -851,6 +851,33 @@ class ResearchTechTreeDataTest {
     }
 
     @Test
+    void authoredBranchMembershipDoesNotChangeAutomaticAuthorityOrProposals() {
+        var gun = id("test:addon_weapon");
+        var profile = completeAutomaticProfile(AutomaticPlacementMode.DISTRIBUTED, 4);
+        var before = snapshotWithAutomaticProfile(profile);
+        var tree = before.techTrees().get(TREE);
+        var branch = new ResearchTechTreeBranchDefinition(id("test:specialty"), Domain.WEAPONS,
+                Optional.empty(), "Specialty", Optional.empty(), 0, Optional.of(gun),
+                ResearchTechTreeBranchDefinition.LabelVisibility.PUBLIC_WHEN_POPULATED);
+        var authored = new ResearchTechTreeDefinition(3, tree.title(), tree.translationKey(), tree.icon(),
+                tree.weaponPlacementMode(), tree.layout(), tree.bandPolicy(), tree.tiers(), tree.domains(), List.of(branch));
+        var membership = new ResearchTechTreeEntryBundle(3, TREE, 0, List.of(),
+                List.of(new ResearchTechTreeBranchMembership(branch.id(), List.of(gun))));
+        var after = BlueprintResearchSnapshot.create(Map.of(), before.profiles(), before.rules(), Map.of(),
+                Map.of(TREE, authored), Map.of(id("test:presentation"), membership), before.automaticPlacementProfiles());
+        var catalog = Map.of(gun, data(gun, BlueprintKind.GUN));
+        var evidence = evidence(gun.toString(), profile);
+        ResearchTechTreeCatalogValidator.validate(after, catalog);
+        var baseline = positionedCandidates(before, 7L, catalog, 11L, evidence, profile);
+        var decorated = positionedCandidates(after, 7L, catalog, 11L, evidence, profile);
+        assertEquals(baseline.eligibleProposals(), decorated.eligibleProposals());
+        assertEquals(baseline.excludedAutomaticCandidates(), decorated.excludedAutomaticCandidates());
+        assertTrue(decorated.authoredBlueprintIds().isEmpty());
+        assertEquals(ResearchTechTreePlacementResolver.resolveWithAutomatic(before, TREE, gun, catalog.get(gun), baseline),
+                ResearchTechTreePlacementResolver.resolveWithAutomatic(after, TREE, gun, catalog.get(gun), decorated));
+    }
+
+    @Test
     void scoredGunWithoutAnyEntryBecomesAnAutomaticCandidate() {
         ResourceLocation addOnId = id("orphan:scored_weapon");
         ResourceLocation ammoId = id("orphan:ammo");

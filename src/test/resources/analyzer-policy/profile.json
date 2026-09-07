@@ -1,0 +1,136 @@
+{
+  "format": 5,
+  "journal_enabled": true,
+  "visibility": "full",
+  "research_enabled": true,
+  "tree_enabled": false,
+  "recycling_enabled": true,
+  "allow_unlearned_recycling": false,
+  "recycling_value": 1,
+  "research_cost": {
+    "points": 8
+  },
+  "requires_discovery": false,
+  "creative_bypasses_cost": false,
+  "domain_policies": {
+    "weapons": {
+      "tree_enabled": false,
+      "research_enabled": true
+    },
+    "attachments": {
+      "tree_enabled": false,
+      "research_enabled": true
+    },
+    "ammo": {
+      "tree_enabled": false,
+      "research_enabled": true
+    }
+  },
+  "reverse_engineering": {
+    "cost": {
+      "points": 3
+    },
+    "allow_known": true
+  },
+  "analyzer": {
+    "mode": "tiered",
+    "fallback_weapon_tier": "tier_2",
+    "reconstruction": {
+      "thresholds": {
+        "tier_1": 5,
+        "tier_2": 10,
+        "tier_3": 15
+      },
+      "retained_progress_cap": 1000
+    },
+    "tiers": {
+      "tier_1": {
+        "tier_1": {
+          "outcomes": {
+            "blueprint_weight": 70,
+            "fragment_weight": 30,
+            "no_result_weight": 0,
+            "min_fragments": 1,
+            "max_fragments": 1
+          }
+        },
+        "tier_2": {
+          "outcomes": {
+            "blueprint_weight": 30,
+            "fragment_weight": 70,
+            "no_result_weight": 0,
+            "min_fragments": 1,
+            "max_fragments": 1
+          }
+        },
+        "tier_3": {
+          "outcomes": {
+            "blueprint_weight": 10,
+            "fragment_weight": 90,
+            "no_result_weight": 0,
+            "min_fragments": 1,
+            "max_fragments": 1
+          }
+        }
+      },
+      "tier_2": {
+        "tier_1": {
+          "outcomes": {
+            "blueprint_weight": 100,
+            "fragment_weight": 0,
+            "no_result_weight": 0,
+            "min_fragments": 0,
+            "max_fragments": 0
+          }
+        },
+        "tier_2": {
+          "outcomes": {
+            "blueprint_weight": 70,
+            "fragment_weight": 30,
+            "no_result_weight": 0,
+            "min_fragments": 1,
+            "max_fragments": 1
+          }
+        },
+        "tier_3": {
+          "outcomes": {
+            "blueprint_weight": 30,
+            "fragment_weight": 70,
+            "no_result_weight": 0,
+            "min_fragments": 1,
+            "max_fragments": 1
+          }
+        }
+      },
+      "tier_3": {
+        "tier_1": {
+          "outcomes": {
+            "blueprint_weight": 100,
+            "fragment_weight": 0,
+            "no_result_weight": 0,
+            "min_fragments": 0,
+            "max_fragments": 0
+          }
+        },
+        "tier_2": {
+          "outcomes": {
+            "blueprint_weight": 100,
+            "fragment_weight": 0,
+            "no_result_weight": 0,
+            "min_fragments": 0,
+            "max_fragments": 0
+          }
+        },
+        "tier_3": {
+          "outcomes": {
+            "blueprint_weight": 80,
+            "fragment_weight": 20,
+            "no_result_weight": 0,
+            "min_fragments": 1,
+            "max_fragments": 1
+          }
+        }
+      }
+    }
+  }
+}

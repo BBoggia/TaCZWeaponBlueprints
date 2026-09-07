@@ -49,7 +49,7 @@ class ResearchWorkstationsPhaseEightTest {
         assertEquals(RECYCLER, ModItems.BLUEPRINT_RECYCLER_ITEM.getId());
         assertEquals(RECYCLER, ModMenus.BLUEPRINT_RECYCLER.getId());
         assertTrue(ResearchBenchPresentationPolicy.permanentFullscreen());
-        assertEquals("55", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("59", NetworkHandler.PROTOCOL_VERSION);
     }
 
     @Test
@@ -92,9 +92,9 @@ class ResearchWorkstationsPhaseEightTest {
             assertTrue(build.contains(required), "Missing artifact requirement " + required);
         }
         assertTrue(build.contains(
-                "Packaged Blueprint Recycler model is not the final bounded eight-part workstation"));
+                "requires two-part blockstates"));
         assertTrue(build.contains(
-                "Packaged Blueprint Recycler texture must be a readable 256x256 PNG"));
+                "requires its 512x256 pixel atlas"));
         assertTrue(build.contains("researchWorkstations: ["));
         assertTrue(build.contains("presentation: 'permanent_fullscreen_research_tree'"));
         assertTrue(build.contains("presentation: 'two_slot_contextual_analyzer'"));
@@ -136,7 +136,7 @@ class ResearchWorkstationsPhaseEightTest {
         String changelog = Files.readString(PROJECT.resolve("CHANGELOG.md"));
         String release = Files.readString(PROJECT.resolve("docs/releases/1.3.0.md"));
 
-        assertTrue(manual.contains("protocol other than `55`"));
+        assertTrue(manual.contains("protocol other than `59`"));
         assertFalse(manual.contains("protocol other than `20`"));
         assertTrue(manual.contains("does not certify any"));
         assertTrue(manual.contains("unchecked hands-on behavior below"));

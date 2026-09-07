@@ -27,9 +27,11 @@ public record ResearchTechTreeEntryBundle(
         int format,
         ResourceLocation tree,
         int priority,
-        List<Entry> entries) {
+        List<Entry> entries,
+        List<ResearchTechTreeBranchMembership> branchMemberships) {
     public static final int LEGACY_FORMAT = 1;
-    public static final int CURRENT_FORMAT = 2;
+    public static final int RANKED_FORMAT = 2;
+    public static final int CURRENT_FORMAT = 3;
     public static final int MAX_PRIORITY = 1_000_000;
     public static final int MAX_ORDER = 1_000_000;
     public static final int MAX_ENTRIES = 4096;
@@ -148,8 +150,10 @@ public record ResearchTechTreeEntryBundle(
                                     : Optional.of(value))
                             .forGetter(ResearchTechTreeEntryBundle::priority),
                     ENTRY_CODEC.listOf().fieldOf("entries")
-                            .forGetter(ResearchTechTreeEntryBundle::entries))
-                    .apply(instance, ResearchTechTreeEntryBundle::new));
+                            .forGetter(ResearchTechTreeEntryBundle::entries),
+                    new StrictOptionalFieldCodec<>("branch_memberships", ResearchTechTreeBranchMembership.CODEC.listOf())
+                            .forGetter(v -> v.branchMemberships().isEmpty() ? Optional.empty() : Optional.of(v.branchMemberships())))
+                    .apply(instance, ResearchTechTreeEntryBundle::decode));
     public static final Codec<ResearchTechTreeEntryBundle> CODEC = StrictRecordCodec.wrap(
             "Research Tech Tree entry bundle",
             RAW_CODEC.flatXmap(
@@ -158,9 +162,23 @@ public record ResearchTechTreeEntryBundle(
             "format",
             "tree",
             "priority",
-            "entries");
+            "entries", "branch_memberships");
+
+    private static ResearchTechTreeEntryBundle decode(int format, ResourceLocation tree, int priority,
+            List<Entry> entries, Optional<List<ResearchTechTreeBranchMembership>> memberships) {
+        if (format < CURRENT_FORMAT && memberships.isPresent()) throw new IllegalArgumentException("Branch memberships require entry format 3");
+        return new ResearchTechTreeEntryBundle(format,tree,priority,entries,memberships.orElse(List.of()));
+    }
+
+    public ResearchTechTreeEntryBundle(int format, ResourceLocation tree, int priority, List<Entry> entries) {
+        this(format, tree, priority, entries, List.of());
+    }
 
     public ResearchTechTreeEntryBundle {
+        branchMemberships = branchMemberships == null ? List.of() : List.copyOf(branchMemberships);
+        if (format < CURRENT_FORMAT && !branchMemberships.isEmpty()) throw new IllegalArgumentException("Branch memberships require entry format 3");
+        if (branchMemberships.size() > 128 || branchMemberships.stream().mapToInt(m -> m.members().size()).sum() > 4096)
+            throw new IllegalArgumentException("Branch membership budget exceeded for tree " + tree);
         entries = entries == null ? List.of() : List.copyOf(entries);
         validateProgrammatic(format, tree, priority, entries);
     }
@@ -248,7 +266,7 @@ public record ResearchTechTreeEntryBundle(
                 return ResearchTechTreeContract.legacyProgressionCoordinate(
                         new ProgressionPosition(tier, level, order));
             }
-            if (bundleFormat == CURRENT_FORMAT) {
+            if (bundleFormat >= RANKED_FORMAT) {
                 return new ProgressionCoordinate(
                         rank.orElseThrow(() -> new IllegalArgumentException(
                                 "format-2 Research Tech Tree entry is missing rank")),
@@ -304,7 +322,7 @@ public record ResearchTechTreeEntryBundle(
         if (priority < 0 || priority > MAX_PRIORITY) {
             throw new IllegalArgumentException("Research Tech Tree entry priority is outside the supported range");
         }
-        if (entries == null || entries.isEmpty() || entries.size() > MAX_ENTRIES
+        if (entries == null || format < CURRENT_FORMAT && entries.isEmpty() || entries.size() > MAX_ENTRIES
                 || entries.stream().anyMatch(value -> value == null)) {
             throw new IllegalArgumentException(
                     "Research Tech Tree entry bundle must contain between 1 and " + MAX_ENTRIES + " entries");
@@ -326,7 +344,7 @@ public record ResearchTechTreeEntryBundle(
                 throw new IllegalArgumentException(
                         "format-1 Research Tech Tree entries cannot declare rank");
             }
-            if (format == CURRENT_FORMAT && entry.rank().isEmpty()) {
+            if (format >= RANKED_FORMAT && entry.rank().isEmpty()) {
                 throw new IllegalArgumentException(
                         "format-2 Research Tech Tree entries must declare rank");
             }

@@ -1,47 +1,156 @@
 {
-  "loader": "forge:obj",
-  "flip_v": true,
-  "model": "taczweaponblueprints:models/item/research_bench.obj",
-  "automatic_culling": false,
-  "gui_light": "front",
+  "loader": "forge:composite",
   "textures": {
-    "texture0": "taczweaponblueprints:block/research_bench",
     "particle": "taczweaponblueprints:block/research_bench"
   },
+  "children": {
+    "body": {
+      "loader": "forge:obj",
+      "flip_v": true,
+      "model": "taczweaponblueprints:models/item/research_bench.obj",
+      "automatic_culling": false,
+      "render_type": "minecraft:cutout",
+      "textures": {
+        "texture0": "taczweaponblueprints:block/research_bench",
+        "particle": "taczweaponblueprints:block/research_bench"
+      }
+    },
+    "glass": {
+      "loader": "forge:obj",
+      "flip_v": true,
+      "model": "taczweaponblueprints:models/item/research_bench_glass.obj",
+      "automatic_culling": false,
+      "render_type": "minecraft:translucent",
+      "textures": {
+        "texture0": "taczweaponblueprints:block/research_bench",
+        "particle": "taczweaponblueprints:block/research_bench"
+      }
+    }
+  },
+  "item_render_order": [
+    "body",
+    "glass"
+  ],
+  "gui_light": "front",
   "display": {
     "thirdperson_righthand": {
-      "rotation": [70, 35, 0],
-      "translation": [0, 1.5, 0],
-      "scale": [0.32, 0.32, 0.32]
+      "rotation": [
+        70,
+        -145,
+        0
+      ],
+      "translation": [
+        0,
+        1.5,
+        0
+      ],
+      "scale": [
+        0.32,
+        0.32,
+        0.32
+      ]
     },
     "thirdperson_lefthand": {
-      "rotation": [70, 35, 0],
-      "translation": [0, 1.5, 0],
-      "scale": [0.32, 0.32, 0.32]
+      "rotation": [
+        70,
+        -145,
+        0
+      ],
+      "translation": [
+        0,
+        1.5,
+        0
+      ],
+      "scale": [
+        0.32,
+        0.32,
+        0.32
+      ]
     },
     "firstperson_righthand": {
-      "rotation": [0, 135, 0],
-      "translation": [0, 0, 0],
-      "scale": [0.38, 0.38, 0.38]
+      "rotation": [
+        0,
+        -45,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.38,
+        0.38,
+        0.38
+      ]
     },
     "firstperson_lefthand": {
-      "rotation": [0, 135, 0],
-      "translation": [0, 0, 0],
-      "scale": [0.38, 0.38, 0.38]
+      "rotation": [
+        0,
+        -45,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.38,
+        0.38,
+        0.38
+      ]
     },
     "ground": {
-      "translation": [0, 2, 0],
-      "scale": [0.25, 0.25, 0.25]
+      "rotation": [
+        0,
+        180,
+        0
+      ],
+      "translation": [
+        0,
+        2,
+        0
+      ],
+      "scale": [
+        0.25,
+        0.25,
+        0.25
+      ]
     },
     "gui": {
-      "rotation": [20, 145, 0],
-      "translation": [0, -1.5, 0],
-      "scale": [0.48, 0.48, 0.48]
+      "rotation": [
+        25,
+        145,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.48,
+        0.48,
+        0.48
+      ]
     },
     "fixed": {
-      "rotation": [0, 180, 0],
-      "translation": [0, -2, 0],
-      "scale": [0.45, 0.45, 0.45]
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.45,
+        0.45,
+        0.45
+      ]
     }
   }
 }

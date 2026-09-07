@@ -34,6 +34,20 @@ public final class ResearchTechTreeCatalogValidator {
             return;
         }
 
+        snapshot.techTrees().forEach((treeId, tree) -> {
+            for (var branch : snapshot.authoredBranches(treeId)) {
+                var definition = tree.branches().stream().filter(b -> b.id().equals(branch.id())).findFirst().orElseThrow();
+                for (var id : branch.members()) {
+                    var data = catalog.get(id);
+                    if (data == null) throw new IllegalArgumentException("Tech Tree " + treeId + " branch " + branch.id() + " references missing blueprint " + id);
+                    var domain = com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain.forKind(data.getKind());
+                    var placement = ResearchTechTreePlacementResolver.resolve(snapshot,treeId,id,data).placement();
+                    if (domain != definition.domain() || placement.filter(p -> p.domain() != domain).isPresent()
+                            || placement.isEmpty() && !(tree.usesAutomaticWeaponPlacement() && domain == com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain.WEAPONS))
+                        throw new IllegalArgumentException("Tech Tree " + treeId + " branch " + branch.id() + " member has incompatible or absent placement: " + id);
+                }
+            }
+        });
         snapshot.profiles().entrySet().stream()
                 .sorted(Map.Entry.comparingByKey(
                         Comparator.comparing(ResourceLocation::toString)))

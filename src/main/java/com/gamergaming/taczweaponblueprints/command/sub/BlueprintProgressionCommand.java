@@ -145,6 +145,9 @@ public final class BlueprintProgressionCommand {
                     snapshot.fragmentTargets(),
                     snapshot.archivedFragments(),
                     snapshot.progressionCriteria()), false);
+            context.getSource().sendSuccess(() -> Component.translatable(
+                    "commands.taczweaponblueprints.progression.inspect.analysis",
+                    snapshot.analysisFragmentTargets(), snapshot.analysisFragments()), false);
             return 1;
         }).orElseGet(() -> {
             context.getSource().sendFailure(Component.translatable(
@@ -191,6 +194,12 @@ public final class BlueprintProgressionCommand {
                 return 0;
             }
             int archived = archivedValue;
+            var analysis = data.getArchivedAnalysisFragments().getOrDefault(blueprintId.toString(),
+                    com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisFragmentCounts.EMPTY);
+            context.getSource().sendSuccess(() -> Component.translatable(
+                    "commands.taczweaponblueprints.progression.inspect_blueprint.analysis",
+                    analysis.protectedPrerequisites(), analysis.protectedBypass(),
+                    analysis.recyclablePrerequisites(), analysis.recyclableBypass()), false);
             researchPolicy.ifPresentOrElse(policy -> {
                 var gates = ProgressionGateEvaluator.evaluateBlueprint(
                         player,

@@ -830,7 +830,7 @@ class DefaultTaCZResearchTreeTest {
     void packagedTechTreeDefinesDynamicBandsAndDormantOptInDomains() throws Exception {
         BlueprintResearchSnapshot snapshot = packagedSnapshot();
         BlueprintResearchProfile profile = snapshot.profiles().get(PROFILE_ID);
-        assertEquals(BlueprintResearchProfile.CURRENT_FORMAT, profile.format());
+        assertEquals(BlueprintResearchProfile.CRAFTING_FORMAT, profile.format());
         assertEquals(
                 com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchTier.TIER_2,
                 profile.progression().fallbackTiers().researchTier());
@@ -929,7 +929,7 @@ class DefaultTaCZResearchTreeTest {
             assertEquals(expectedDomains.get(target), entry.domain(),
                     () -> "wrong Tech Tree domain for " + target);
             if (entry.domain() == Domain.WEAPONS) {
-                assertEquals(ResearchTechTreeEntryBundle.CURRENT_FORMAT,
+                assertEquals(ResearchTechTreeEntryBundle.RANKED_FORMAT,
                         binding.bundle().format());
                 assertTrue(entry.rank().isPresent(),
                         () -> "missing explicit weapon rank for " + target);

@@ -40,6 +40,7 @@ final class ResearchTreeMinimap {
     private ResearchTreeScreenLayout.Rect panelBounds;
     private ResearchTreeScreenLayout.Rect contentBounds;
     private List<Marker> markers = List.of();
+    private List<ResearchTreeScreenLayout.Rect> regions = List.of();
     private ResearchTreeScreenLayout.Rect viewportBounds;
     private double canvasToMinimapScale;
     private boolean visible;
@@ -126,6 +127,12 @@ final class ResearchTreeMinimap {
                     positioned.blueprintId().equals(trackedTarget)));
         }
         markers = List.copyOf(nextMarkers);
+        regions = canvas.scene().map(scene -> scene.regions().stream().map(region -> {
+            var b = region.bounds();
+            return new ResearchTreeScreenLayout.Rect(projectX(b.x() - scene.extent().x()), projectY(b.y() - scene.extent().y()),
+                    Math.max(1, (int) Math.round(b.width() * canvasToMinimapScale)),
+                    Math.max(1, (int) Math.round(b.height() * canvasToMinimapScale)));
+        }).toList()).orElse(List.of());
         updateViewport(canvas.viewport());
     }
 
@@ -147,40 +154,44 @@ final class ResearchTreeMinimap {
         if (!visible || panelBounds == null || contentBounds == null) {
             return;
         }
-        graphics.fill(
-                panelBounds.x(), panelBounds.y(), panelBounds.right(), panelBounds.bottom(),
-                PANEL_COLOR);
-        graphics.renderOutline(
-                panelBounds.x(), panelBounds.y(), panelBounds.width(), panelBounds.height(),
-                BORDER_COLOR);
-        graphics.fill(
-                contentBounds.x(), contentBounds.y(), contentBounds.right(), contentBounds.bottom(),
-                CONTENT_COLOR);
-        for (Marker marker : markers) {
-            ResearchTreeScreenLayout.Rect bounds = marker.bounds();
-            graphics.fill(bounds.x(), bounds.y(), bounds.right(), bounds.bottom(),
-                    markerColor(marker.kind()));
-            if (marker.tracked()) {
-                graphics.renderOutline(
-                        bounds.x(), bounds.y(), bounds.width(), bounds.height(), ROUTE_COLOR);
-            }
-            if (marker.target()) {
-                graphics.renderOutline(
-                        bounds.x() - 1,
-                        bounds.y() - 1,
-                        bounds.width() + 2,
-                        bounds.height() + 2,
-                        TARGET_COLOR);
-            }
-        }
-        if (viewportBounds != null) {
+        // Markers share one primitive layer; avoid a native flush for every node.
+        graphics.drawManaged(() -> {
+            graphics.fill(
+                    panelBounds.x(), panelBounds.y(), panelBounds.right(), panelBounds.bottom(),
+                    PANEL_COLOR);
             graphics.renderOutline(
-                    viewportBounds.x(),
-                    viewportBounds.y(),
-                    viewportBounds.width(),
-                    viewportBounds.height(),
-                    VIEWPORT_COLOR);
-        }
+                    panelBounds.x(), panelBounds.y(), panelBounds.width(), panelBounds.height(),
+                    BORDER_COLOR);
+            graphics.fill(
+                    contentBounds.x(), contentBounds.y(), contentBounds.right(), contentBounds.bottom(),
+                    CONTENT_COLOR);
+            for (var region : regions) graphics.renderOutline(region.x(), region.y(), region.width(), region.height(), 0xff354653);
+            for (Marker marker : markers) {
+                ResearchTreeScreenLayout.Rect bounds = marker.bounds();
+                graphics.fill(bounds.x(), bounds.y(), bounds.right(), bounds.bottom(),
+                        markerColor(marker.kind()));
+                if (marker.tracked()) {
+                    graphics.renderOutline(
+                            bounds.x(), bounds.y(), bounds.width(), bounds.height(), ROUTE_COLOR);
+                }
+                if (marker.target()) {
+                    graphics.renderOutline(
+                            bounds.x() - 1,
+                            bounds.y() - 1,
+                            bounds.width() + 2,
+                            bounds.height() + 2,
+                            TARGET_COLOR);
+                }
+            }
+            if (viewportBounds != null) {
+                graphics.renderOutline(
+                        viewportBounds.x(),
+                        viewportBounds.y(),
+                        viewportBounds.width(),
+                        viewportBounds.height(),
+                        VIEWPORT_COLOR);
+            }
+        });
     }
 
     boolean contains(double mouseX, double mouseY) {

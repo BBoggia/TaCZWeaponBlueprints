@@ -136,6 +136,14 @@ public final class BlueprintResearchCommand {
                 groupAudit.catalogSize(),
                 groupAudit.fallbackBlueprintIds().size(),
                 groupAudit.missingMemberIds().size()), false);
+        Optional.ofNullable(research.snapshot().profiles().get(profileId))
+                .flatMap(com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchProfile::techTree)
+                .ifPresent(treeId -> {
+            var branches = research.snapshot().authoredBranches(treeId);
+            context.getSource().sendSuccess(() -> Component.translatable(
+                    "commands.taczweaponblueprints.research.authored_branches",
+                    treeId, branches.size(), branches.stream().mapToInt(branch -> branch.members().size()).sum()), false);
+        });
         var progressionAccess = ProgressionPolicyAccessService.acquire(
                 ProgressionPolicyAccessService.Mode.CURRENT_ONLY).orElse(null);
         var progressionPublication = progressionAccess == null

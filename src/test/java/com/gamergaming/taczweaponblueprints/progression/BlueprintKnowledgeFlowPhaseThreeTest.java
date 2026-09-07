@@ -51,8 +51,8 @@ class BlueprintKnowledgeFlowPhaseThreeTest {
         assertEquals(
                 ResearchBenchMenu.ActionResultCode.values().length - 1,
                 ResearchBenchMenu.ActionResultCode.REQUEST_THROTTLED.ordinal());
-        assertEquals("55", NetworkHandler.PROTOCOL_VERSION);
-        assertEquals(4, PlayerProgressionLimits.DATA_VERSION);
+        assertEquals("59", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals(5, PlayerProgressionLimits.DATA_VERSION);
     }
 
 }

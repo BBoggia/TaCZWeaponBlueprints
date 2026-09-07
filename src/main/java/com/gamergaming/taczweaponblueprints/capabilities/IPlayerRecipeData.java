@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import net.minecraft.nbt.CompoundTag;
+import com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisFragmentCounts;
 
 public interface IPlayerRecipeData {
     Set<String> getLearnedRecipes();
@@ -50,6 +51,18 @@ public interface IPlayerRecipeData {
      */
     default Map<String, Integer> getArchivedBlueprintFragments() {
         return Map.of();
+    }
+    /** Optional version-5 reconstruction-only archive. Older implementations fail unsupported. */
+    default Map<String, AnalysisFragmentCounts> getArchivedAnalysisFragments() { return Map.of(); }
+    default PlayerProgressValueMutation.Status applyAnalysisFragmentMutation(AnalysisFragmentMutation request) {
+        if (request == null) throw new IllegalArgumentException("analysis mutation cannot be null");
+        return PlayerProgressValueMutation.Status.UNSUPPORTED;
+    }
+    default boolean clearArchivedAnalysisFragments() { return false; }
+    /** Replaces all supplemental channels atomically; an older implementation cannot accept analysis state. */
+    default boolean replaceSupplementalProgression(Map<String, Integer> ordinary, Map<String, Integer> criteria,
+            Map<String, AnalysisFragmentCounts> analysis) {
+        return analysis != null && analysis.isEmpty() && replaceSupplementalProgression(ordinary, criteria);
     }
     /** Optional durable Progression Gate criterion extension. */
     default Map<String, Integer> getProgressionCriteria() {

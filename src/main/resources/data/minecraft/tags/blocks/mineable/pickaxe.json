@@ -3,6 +3,9 @@
   "values": [
     "taczweaponblueprints:workbench_lvl1",
     "taczweaponblueprints:workbench_lvl2",
-    "taczweaponblueprints:workbench_lvl3"
+    "taczweaponblueprints:workbench_lvl3",
+    "taczweaponblueprints:blueprint_recycler",
+    "taczweaponblueprints:advanced_blueprint_analyzer",
+    "taczweaponblueprints:experimental_blueprint_analyzer"
   ]
 }

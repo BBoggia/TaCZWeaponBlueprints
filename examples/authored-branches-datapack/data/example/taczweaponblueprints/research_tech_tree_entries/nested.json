@@ -1,0 +1,137 @@
+{
+  "format": 3,
+  "tree": "example:nested",
+  "entries": [
+    {
+      "target": {
+        "blueprints": [
+          "tacz:glock_17"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "example:weapons",
+      "tier": "starter",
+      "rank": 0,
+      "order": 0
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:uzi"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "example:weapons",
+      "tier": "starter",
+      "rank": 1,
+      "order": 1
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:ak47"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "example:weapons",
+      "tier": "starter",
+      "rank": 1,
+      "order": 2
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:hk_mp5a5"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "example:weapons",
+      "tier": "starter",
+      "rank": 2,
+      "order": 3
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:vector45"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "example:weapons",
+      "tier": "starter",
+      "rank": 2,
+      "order": 4
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:hk416d"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "example:weapons",
+      "tier": "starter",
+      "rank": 2,
+      "order": 5
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:sks_tactical"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "example:weapons",
+      "tier": "starter",
+      "rank": 2,
+      "order": 6
+    },
+    {
+      "target": {
+        "blueprints": [
+          "tacz:m4a1"
+        ]
+      },
+      "domain": "weapons",
+      "lane": "example:weapons",
+      "tier": "starter",
+      "rank": 3,
+      "order": 7
+    }
+  ],
+  "branch_memberships": [
+    {
+      "branch": "example:foundation",
+      "members": [
+        "tacz:glock_17",
+        "tacz:m4a1"
+      ]
+    },
+    {
+      "branch": "example:smg",
+      "members": [
+        "tacz:uzi"
+      ]
+    },
+    {
+      "branch": "example:rifle",
+      "members": [
+        "tacz:ak47",
+        "tacz:hk416d",
+        "tacz:sks_tactical"
+      ]
+    },
+    {
+      "branch": "example:controlled",
+      "members": [
+        "tacz:hk_mp5a5"
+      ]
+    },
+    {
+      "branch": "example:rapid",
+      "members": [
+        "tacz:vector45"
+      ]
+    }
+  ]
+}

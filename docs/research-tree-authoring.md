@@ -8,6 +8,10 @@ profile and its research rules. A server or modpack can replace the entire
 progression, rebalance individual weapons, or add content-pack branches without
 writing Java code.
 
+For named, nested presentation regions, see [Authored Tech Tree branches](research-tree-authored-branches.md).
+The optional format-3 metadata controls containment and sibling order while
+research rules continue to define progression.
+
 ## Start with the live catalog
 
 Run these operator commands after the server has loaded TaCZ recipes:
@@ -19,7 +23,7 @@ Run these operator commands after the server has loaded TaCZ recipes:
 ```
 
 `export` writes `taczweaponblueprints/research-catalog.json` inside the current
-world folder. Format 20 is stable and sorted. It includes every live blueprint
+world folder. Format 21 is stable and sorted. It includes every live blueprint
 ID, selected rule, visibility, cost, legacy prerequisite union, canonical
 prerequisite groups, authored group placement,
 fallback status, missing authored members, the selected tree's presentation-band
@@ -29,7 +33,7 @@ fully disclosed view, independent of any player's progress and the configured
 undiscovered-visibility ceiling. Use these exact IDs in rules and groups; do not
 infer them from display names.
 
-Format 20 additionally includes the revision-matched research and crafting
+Format 21 additionally includes the revision-matched research and crafting
 policy projections. Its top-level summaries record research-tier and fragment
 distributions, research omissions, complete crafting dispositions and
 Workbench levels, review fallbacks, and external workstation mappings from the

@@ -1,0 +1,31 @@
+{
+  "variants": {
+    "extension=false,facing=north": {
+      "model": "taczweaponblueprints:block/experimental_blueprint_analyzer"
+    },
+    "extension=true,facing=north": {
+      "model": "minecraft:block/air"
+    },
+    "extension=false,facing=east": {
+      "model": "taczweaponblueprints:block/experimental_blueprint_analyzer",
+      "y": 90
+    },
+    "extension=true,facing=east": {
+      "model": "minecraft:block/air"
+    },
+    "extension=false,facing=south": {
+      "model": "taczweaponblueprints:block/experimental_blueprint_analyzer",
+      "y": 180
+    },
+    "extension=true,facing=south": {
+      "model": "minecraft:block/air"
+    },
+    "extension=false,facing=west": {
+      "model": "taczweaponblueprints:block/experimental_blueprint_analyzer",
+      "y": 270
+    },
+    "extension=true,facing=west": {
+      "model": "minecraft:block/air"
+    }
+  }
+}

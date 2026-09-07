@@ -40,7 +40,7 @@ public final class BlueprintFragmentAnalysisService {
         } catch (RuntimeException exception) {
             return Evaluation.failure(Status.TRANSACTION_FAILED);
         }
-        Optional<ResourceLocation> target = BlueprintFragmentItem.getTarget(input);
+        Optional<ResourceLocation> target = BlueprintFragmentItem.getOrdinaryTarget(input);
         if (target.isEmpty()) {
             return Evaluation.failure(Status.INVALID_INPUT);
         }
@@ -211,6 +211,7 @@ public final class BlueprintFragmentAnalysisService {
         int pointsBefore;
         Map<String, Integer> fragmentsBefore;
         Map<String, Integer> criteriaBefore;
+        Map<String, com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisFragmentCounts> analysisBefore;
         boolean changesArchive;
         try {
             inputBefore = transaction.physicalInput().copy();
@@ -228,6 +229,7 @@ public final class BlueprintFragmentAnalysisService {
             pointsBefore = data.getResearchPoints();
             fragmentsBefore = Map.copyOf(data.getArchivedBlueprintFragments());
             criteriaBefore = Map.copyOf(data.getProgressionCriteria());
+            analysisBefore = Map.copyOf(data.getArchivedAnalysisFragments());
             changesArchive = evaluation.archivedBefore() != evaluation.archivedAfterAction();
             if (changesArchive) {
                 PlayerProgressValueMutation.Result preflight = data.applyArchivedFragmentMutation(
@@ -296,7 +298,7 @@ public final class BlueprintFragmentAnalysisService {
                     outputBefore,
                     pointsBefore,
                     fragmentsBefore,
-                    criteriaBefore);
+                    criteriaBefore, analysisBefore);
             return Result.failure(
                     restored ? Status.TRANSACTION_FAILED : Status.ROLLBACK_FAILED,
                     evaluation.target());
@@ -319,7 +321,8 @@ public final class BlueprintFragmentAnalysisService {
             ItemStack output,
             int points,
             Map<String, Integer> fragments,
-            Map<String, Integer> criteria) {
+            Map<String, Integer> criteria,
+            Map<String, com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisFragmentCounts> analysis) {
         boolean workstation = false;
         boolean balance = false;
         boolean supplemental = false;
@@ -332,7 +335,7 @@ public final class BlueprintFragmentAnalysisService {
         } catch (RuntimeException ignored) {
         }
         try {
-            supplemental = data.replaceSupplementalProgression(fragments, criteria);
+            supplemental = data.replaceSupplementalProgression(fragments, criteria, analysis);
         } catch (RuntimeException ignored) {
         }
         return workstation && balance && supplemental;
@@ -357,7 +360,7 @@ public final class BlueprintFragmentAnalysisService {
         ItemStack physicalInput();
 
         default Optional<ResourceLocation> fragmentTarget() {
-            return BlueprintFragmentItem.getTarget(physicalInput());
+            return BlueprintFragmentItem.getOrdinaryTarget(physicalInput());
         }
 
         ItemStack outputStack();

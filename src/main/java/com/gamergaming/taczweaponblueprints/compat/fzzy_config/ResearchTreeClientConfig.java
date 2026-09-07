@@ -55,6 +55,7 @@ public final class ResearchTreeClientConfig extends Config {
             ResearchTreeDisplayPolicy.DEFAULT.reduceMotion());
     public ValidatedBoolean showBackgroundGrid = new ValidatedBoolean(
             ResearchTreeDisplayPolicy.DEFAULT.showBackgroundGrid());
+    // Compatibility-only value; keep its persisted field path for older configurations.
     public ValidatedEnum<ResearchTreeLayoutPreset> layoutPreset = new ValidatedEnum<>(
             ResearchTreeLayoutPreset.BALANCED,
             ValidatedEnum.WidgetType.CYCLING);
@@ -68,8 +69,11 @@ public final class ResearchTreeClientConfig extends Config {
             .build(this::restoreTreeAppearanceDefaults);
 
     public ConfigGroup advancedLayout = new ConfigGroup("advancedLayout", true);
+    // Compatibility-only value; keep its persisted field path for older configurations.
     public ValidatedCondition<Integer> canvasPadding = customSpacing(DEFAULTS.canvasPadding());
+    // Compatibility-only value; keep its persisted field path for older configurations.
     public ValidatedCondition<Integer> nodeGap = customSpacing(DEFAULTS.nodeGap());
+    // Compatibility-only value; keep its persisted field path for older configurations.
     public ValidatedCondition<Integer> tierGap = customSpacing(DEFAULTS.tierGap());
     @ConfigDeprecated("No longer used by the visible Tech Tree")
     public ValidatedCondition<Integer> componentGap = customSpacing(DEFAULTS.componentGap());
@@ -81,15 +85,18 @@ public final class ResearchTreeClientConfig extends Config {
     public ValidatedCondition<Integer> groupPadding = customSpacing(DEFAULTS.groupPadding());
     @ConfigDeprecated("No longer used by the visible Tech Tree")
     public ValidatedCondition<Integer> groupHeaderHeight = customSpacing(DEFAULTS.groupHeaderHeight());
+    // Compatibility-only value; keep its persisted field path for older configurations.
     public ValidatedCondition<Integer> portalPadding = customSpacing(DEFAULTS.portalPadding());
     @ConfigDeprecated("No longer used by the visible Tech Tree")
     public ValidatedCondition<Integer> maxRankBlockWidth = customSetting(new ValidatedInt(
             DEFAULTS.maxRankBlockWidth(),
             ResearchTreeLayout.MAX_DIMENSION,
             ResearchTreeLayout.NODE_WIDTH));
+    // Compatibility-only value; keep its persisted field path for older configurations.
     public ValidatedCondition<Integer> orderingSweeps = customSetting(new ValidatedInt(
             DEFAULTS.orderingSweeps(), ResearchTreeLayoutPolicy.MAX_SWEEPS, 0));
     @ConfigGroup.Pop
+    // Compatibility-only value; keep its persisted field path for older configurations.
     public ValidatedCondition<Integer> compactionSweeps = customSetting(new ValidatedInt(
             DEFAULTS.compactionSweeps(), ResearchTreeLayoutPolicy.MAX_SWEEPS, 0));
 

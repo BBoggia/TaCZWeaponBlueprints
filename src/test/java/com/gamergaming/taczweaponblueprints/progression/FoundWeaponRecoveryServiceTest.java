@@ -76,6 +76,26 @@ class FoundWeaponRecoveryServiceTest {
     }
 
     @Test
+    void everyRecoveryModeKeepsCraftedAndUnknownInputsOutOfDirectPoints() {
+        PlayerRecipeData data = data(10);
+        var reverse = reverse(data, 20);
+        for (var mode : FoundWeaponRecoveryMode.values()) {
+            ItemStack found = gun();
+            mark(found, PhysicalWeaponProvenance.Origin.LOOT_GENERATED, LOOT);
+            assertEquals(mode == FoundWeaponRecoveryMode.DIRECT_RP_ONLY
+                            || mode == FoundWeaponRecoveryMode.PLAYER_CHOICE,
+                    evaluate(found, data, reverse, mode).ready(), mode.name());
+            ItemStack crafted = gun();
+            mark(crafted, PhysicalWeaponProvenance.Origin.CRAFTED_SURVIVAL,
+                    new ResourceLocation("test:rifle_recipe"));
+            for (var input : List.of(crafted, gun())) {
+                assertEquals(FoundWeaponRecoveryService.Status.VERIFIED_LOOT_REQUIRED,
+                        evaluate(input, data, reverse, mode).status(), mode.name());
+            }
+        }
+    }
+
+    @Test
     void pointCapIsCalculatedAfterPayingTheReverseEngineeringCost() {
         PlayerRecipeData data = data(20);
         ItemStack found = gun();

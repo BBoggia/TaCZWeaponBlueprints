@@ -84,7 +84,7 @@ class ResearchTreeProgressionRankPhaseTwoTest {
         ResearchTechTreeEntryBundle ranked = decode(
                 ResearchTechTreeEntryBundle.CODEC,
                 bundleJson(2, "\"rank\": 73,"));
-        assertEquals(ResearchTechTreeEntryBundle.CURRENT_FORMAT, ranked.format());
+        assertEquals(ResearchTechTreeEntryBundle.RANKED_FORMAT, ranked.format());
         assertEquals(73, ranked.entries().get(0).rank().orElseThrow());
         assertEquals(73, ranked.entries().get(0)
                 .initialProgressionCoordinate(ranked.format()).rank());

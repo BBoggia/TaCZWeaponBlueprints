@@ -186,7 +186,22 @@ lexicographically earliest 4,096 canonical IDs. A list with more than 8,192
 serialized entries is rejected as a unit without affecting learned blueprints,
 discoveries, RP, award history, or recent unlocks.
 
-The custom network protocol is `55`, so clients and servers must update
+Player-data version 5 adds `ArchivedAnalysisFragments` with four named reward
+classes per target. Versions 0–4 load with that archive empty. Analysis progress
+is reconstruction-only and shares the target-count and hard per-target bounds
+with ordinary fragments. Existing ordinary counts load first and are never
+displaced by the new channel. Protocol 59 synchronizes disclosed analysis counts
+alongside ordinary fragments and public criteria. See
+[analysis fragment storage](analysis-fragment-storage.md) for the implemented
+format and API; Analyzer menu integration remains pending.
+
+Optional [Analyzer datapacks and balance reports](analyzer-presets-and-balancing.md)
+provide tiered starting values without changing existing installations. Merge
+only the Analyzer extension when your pack already customizes the active
+profile. Disabling tiered analysis preserves marked fragments and saved counts;
+it does not convert them into ordinary discounts or RP.
+
+The custom network protocol is `59`, so clients and servers must update
 together. Protocol 50 transfers each
 disclosure-safe research graph, matching group presentation, and optional
 identity-safe Tech Tree metadata as one bounded atomic publication. It also
@@ -248,7 +263,7 @@ Exact tracked-goal pricing and Affordable Now are hidden when the server uses
 the `CREATE_BLUEPRINT` compatibility result mode because that mode does not
 purchase a complete prerequisite path.
 
-Protocol 55 also binds each open crafting Workbench recipe response to the
+Protocol 56 also binds each open crafting Workbench recipe response to the
 exact menu request, response sequence, active profile, loaded catalog,
 research data, automatic evidence, ammo associations, crafting rules, and
 effective Workbench context that produced it. The first chunk of a newer
@@ -338,7 +353,7 @@ data/<namespace>/taczweaponblueprints/research_point_awards/<path>.json
 Roll out group resources after their referenced profile and rules. Group ranks
 organize the UI only; they never replace prerequisite rules. After `/reload`,
 use `research status`, inspect representative members, and run `research
-export`. Export format 20 retains the format-2 research and presentation fields
+export`. Export format 22 retains the format-2 research and presentation fields
 and the revision-matched automatic-placement summary and per-weapon
 decision: authored, automatic, excluded automatic, or legacy-compatible
 unplaced. Automatic entries
@@ -431,6 +446,12 @@ inclusion. Research and crafting choose the most-specific applicable rule in
 independent precedence passes, so a rule scoped to one action cannot hide a
 broader rule for the other. Strict format-19 consumers must migrate explicitly;
 the format-19 research, fragment, and gate fields retain their meanings.
+Format 21 adds authored Tech Tree branches. Format 22 adds `analyzer_policy`
+to gun entries, including effective tiered odds, costs, reconstruction thresholds,
+and rule evidence. These policy-only projections use a labelled protected-mode
+baseline; Analyzer gameplay remains deterministic. See
+[Blueprint Analyzer policy authoring](analyzer-policy-authoring.md) for profile/rule
+format 5 and the export contract. Strict format-21 consumers must migrate explicitly.
 Tech Tree-only members still record
 their domain/lane/tier/order, and groups still record authored IDs absent from
 the live TaCZ catalog. A malformed group,
@@ -647,7 +668,7 @@ To roll back the mod version, stop the server, restore the previous JAR and matc
 - `preview` applies the current catalog, predicates, defaults, overrides, and immutable blacklist snapshot without consuming RNG.
 - `research status` audits rule assignment plus authored group coverage and missing members for the active profile.
 - `research inspect` reports separate research and crafting results for one live blueprint, including crafting disposition, Workbench level, assignment source, selected rule, reason, and bounded warnings.
-- `research export` writes a sorted format-20 authoring catalog with complete
+- `research export` writes a sorted format-22 authoring catalog with complete
   crafting-policy coverage, dispositions, Workbench levels, sources, selected
   rules, reasons, warnings, canonical prerequisite groups, presentation groups,
   fallback, revision-matched automatic placement, topology,
@@ -708,7 +729,7 @@ bundled `connected` mode with `place_connected` review handling, the three
 version identities, dynamic layering with a configured 9–20-node range and its
 baseline resolved width, optional
 tree-owned optional/dynamic/configured presentation bands, the 4,096-candidate
-limit, protocol 55, export format 20, and automatic prerequisite strategy
+limit, protocol 59, export format 22, and automatic prerequisite strategy
 `grouped_routes_v1` unless the
 corresponding contract and compatibility documentation are deliberately
 revised.
@@ -716,7 +737,7 @@ revised.
 The Phase 10 research-guidance handoff writes
 `build/reports/research-guidance-candidate-handoff.json`. It binds the complete
 Phase 9 automated report and manual-QA matrix to the exact candidate JAR,
-preserves the protocol 55/player-data 4/client-settings 3 compatibility tuple,
+preserves the protocol 59/player-data 5/client-settings 3 compatibility tuple,
 and carries 21 clean invariants, 16 packaged classes, and 48 localized surfaces
 into release certification. Its `requires_manual_qa` state is intentional:
 complete the linked runtime matrix before publication rather than treating an
@@ -779,8 +800,8 @@ The grouped-prerequisite Phase 12 visual-refinement gate writes
 `branch-aware-visual-refinement-v1` and verifies client-only family-preserving
 responsive wrapping, bounded grouped-junction clearance, branch-seam pressure,
 and deterministic 287/4,096-node geometry. It does not migrate saves or change
-the published graph: prerequisite groups, semantic ranks, costs, protocol 55,
-export format 20, and the packaged `grouped_routes_v1` strategy remain
+the published graph: prerequisite groups, semantic ranks, costs, protocol 59,
+export format 22, and the packaged `grouped_routes_v1` strategy remain
 authoritative. Before public release, retain the gate report and complete its
 linked before/after screenshot checks at normal and maximum zoom-out.
 

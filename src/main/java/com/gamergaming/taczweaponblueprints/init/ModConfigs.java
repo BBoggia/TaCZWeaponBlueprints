@@ -23,6 +23,11 @@ public class ModConfigs {
     }
 
     private static <T extends Config> T register(Supplier<T> supplier, RegisterType type) {
-        return ConfigApiJava.registerAndLoadConfig(supplier, type);
+        T config = ConfigApiJava.registerAndLoadConfig(supplier, type);
+        // Fzzy calls update(version) only for migrations, not current-version files.
+        if (config instanceof BlueprintConfig blueprint) {
+            blueprint.initializeLoadedSnapshots();
+        }
+        return config;
     }
 }

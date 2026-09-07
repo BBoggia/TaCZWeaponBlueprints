@@ -39,14 +39,10 @@ public final class ResearchBenchBlock extends HorizontalDirectionalBlock {
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
     public static final BooleanProperty EXTENSION = BooleanProperty.create("extension");
     private static final VoxelShape BASE_SHAPE = Block.box(0, 0, 0, 16, 14, 16);
-    private static final VoxelShape NORTH_SHAPE = Shapes.or(
-            BASE_SHAPE, Block.box(0, 14, 0, 16, 27, 4));
-    private static final VoxelShape SOUTH_SHAPE = Shapes.or(
-            BASE_SHAPE, Block.box(0, 14, 12, 16, 27, 16));
-    private static final VoxelShape EAST_SHAPE = Shapes.or(
-            BASE_SHAPE, Block.box(12, 14, 0, 16, 27, 16));
-    private static final VoxelShape WEST_SHAPE = Shapes.or(
-            BASE_SHAPE, Block.box(0, 14, 0, 4, 27, 16));
+    private final VoxelShape northShape;
+    private final VoxelShape southShape;
+    private final VoxelShape eastShape;
+    private final VoxelShape westShape;
     private static final int TRANSACTION_FLAGS =
             Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS;
     private static final ThreadLocal<Integer> STRUCTURE_REPLACEMENT_DEPTH =
@@ -59,6 +55,20 @@ public final class ResearchBenchBlock extends HorizontalDirectionalBlock {
             throw new IllegalArgumentException("Research Bench tier cannot be null");
         }
         this.tier = tier;
+        // Approximate the inclined tabletop and rear equipment on each half.
+        double equipmentHeight = tier == ResearchWorkbenchTier.TIER_3 ? 30.0D : 28.1D;
+        northShape = Shapes.or(BASE_SHAPE,
+                Block.box(0, 14, 0, 16, 20, 10),
+                Block.box(0, 20, 0, 16, equipmentHeight, 4));
+        southShape = Shapes.or(BASE_SHAPE,
+                Block.box(0, 14, 6, 16, 20, 16),
+                Block.box(0, 20, 12, 16, equipmentHeight, 16));
+        eastShape = Shapes.or(BASE_SHAPE,
+                Block.box(6, 14, 0, 16, 20, 16),
+                Block.box(12, 20, 0, 16, equipmentHeight, 16));
+        westShape = Shapes.or(BASE_SHAPE,
+                Block.box(0, 14, 0, 10, 20, 16),
+                Block.box(0, 20, 0, 4, equipmentHeight, 16));
         registerDefaultState(stateDefinition.any()
                 .setValue(FACING, Direction.NORTH)
                 .setValue(EXTENSION, false));
@@ -245,10 +255,10 @@ public final class ResearchBenchBlock extends HorizontalDirectionalBlock {
             BlockPos pos,
             CollisionContext context) {
         return switch (state.getValue(FACING)) {
-            case NORTH -> NORTH_SHAPE;
-            case SOUTH -> SOUTH_SHAPE;
-            case EAST -> EAST_SHAPE;
-            case WEST -> WEST_SHAPE;
+            case NORTH -> northShape;
+            case SOUTH -> southShape;
+            case EAST -> eastShape;
+            case WEST -> westShape;
             default -> BASE_SHAPE;
         };
     }

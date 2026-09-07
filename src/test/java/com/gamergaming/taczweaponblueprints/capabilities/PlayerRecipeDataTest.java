@@ -223,7 +223,7 @@ class PlayerRecipeDataTest {
 
         assertTrue(restored.getArchivedBlueprintFragments().isEmpty());
         assertTrue(restored.getProgressionCriteria().isEmpty());
-        assertEquals(4, restored.serializeNBT().getInt("DataVersion"));
+        assertEquals(PlayerProgressionLimits.DATA_VERSION, restored.serializeNBT().getInt("DataVersion"));
     }
 
     @Test

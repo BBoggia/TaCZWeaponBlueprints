@@ -35,6 +35,18 @@ class BlueprintFragmentResearchServiceTest {
     private static final ResourceLocation TARGET = new ResourceLocation("test:target");
 
     @Test
+    void analysisFragmentsNeverProvideAnOrdinaryResearchDiscount() {
+        var data = new PlayerRecipeData();
+        data.applyAnalysisFragmentMutation(new com.gamergaming.taczweaponblueprints.capabilities.AnalysisFragmentMutation(
+                PlayerProgressValueMutation.Operation.COMMIT, TARGET.toString(), com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisFragmentCounts.EMPTY,
+                new com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisFragmentCounts(100,100,100,100)));
+        var base = plan(data);
+        var adjusted = BlueprintFragmentResearchService.adjust(base, data,
+                Map.of(TARGET, resolved(TARGET, 5, BlueprintFragmentDiscount.fixed(8))));
+        assertEquals(base, adjusted); assertTrue(adjusted.fragmentSetUses().isEmpty());
+    }
+
+    @Test
     void completeSetsDiscountEachMatchingNodeWithoutChangingRouteIdentity() {
         PlayerRecipeData data = new PlayerRecipeData();
         setFragments(data, ROOT, 5);

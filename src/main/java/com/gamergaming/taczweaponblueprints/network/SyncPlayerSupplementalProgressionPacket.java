@@ -1,5 +1,6 @@
 package com.gamergaming.taczweaponblueprints.network;
 
+import com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisFragmentCounts;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -27,13 +28,15 @@ public final class SyncPlayerSupplementalProgressionPacket {
     private final int chunkCount;
     private final Map<String, Integer> archivedFragments;
     private final Map<String, Integer> publicCriteria;
+    private final Map<String, AnalysisFragmentCounts> analysisFragments;
 
     private SyncPlayerSupplementalProgressionPacket(
             long syncId,
             int chunkIndex,
             int chunkCount,
             Map<String, Integer> archivedFragments,
-            Map<String, Integer> publicCriteria) {
+            Map<String, Integer> publicCriteria,
+            Map<String, AnalysisFragmentCounts> analysisFragments) {
         validateChunkMetadata(chunkIndex, chunkCount);
         this.syncId = syncId;
         this.chunkIndex = chunkIndex;
@@ -46,6 +49,8 @@ public final class SyncPlayerSupplementalProgressionPacket {
                 publicCriteria,
                 PlayerProgressionLimits.MAX_PROGRESSION_CRITERIA,
                 "public criterion");
+        this.analysisFragments = AnalysisFragmentCounts.snapshot(analysisFragments);
+        if (!AnalysisFragmentCounts.fitsTogether(this.archivedFragments, this.analysisFragments)) throw new IllegalArgumentException("combined fragment chunk exceeds limits");
         if (estimatedPayloadBytes() > BlueprintSyncLimits.MAX_CHUNK_BYTES) {
             throw new IllegalArgumentException(
                     "Supplemental progression synchronization chunk exceeds the byte budget");
@@ -66,6 +71,16 @@ public final class SyncPlayerSupplementalProgressionPacket {
                 buffer,
                 PlayerProgressionLimits.MAX_PROGRESSION_CRITERIA,
                 "public criterion");
+        int analysisSize = buffer.readVarInt();
+        if (analysisSize < 0 || analysisSize > PlayerProgressionLimits.MAX_FRAGMENT_TARGETS) throw new IllegalArgumentException("invalid analysis target count");
+        var analysis = new TreeMap<String, AnalysisFragmentCounts>();
+        for (int index = 0; index < analysisSize; index++) {
+            String id = buffer.readUtf(PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH);
+            var counts = new AnalysisFragmentCounts(buffer.readVarInt(), buffer.readVarInt(), buffer.readVarInt(), buffer.readVarInt());
+            if (analysis.putIfAbsent(id, counts) != null) throw new IllegalArgumentException("duplicate analysis target");
+        }
+        analysisFragments = AnalysisFragmentCounts.snapshot(analysis);
+        if (!AnalysisFragmentCounts.fitsTogether(archivedFragments, analysisFragments)) throw new IllegalArgumentException("combined fragment chunk exceeds limits");
         if (buffer.readerIndex() - start > BlueprintSyncLimits.MAX_CHUNK_BYTES) {
             throw new IllegalArgumentException(
                     "Supplemental progression synchronization chunk exceeds the byte budget");
@@ -105,6 +120,13 @@ public final class SyncPlayerSupplementalProgressionPacket {
             current.criteria.put(entry.getKey(), entry.getValue());
             current.addBytes(entry);
         }
+        for (var entry : view.analysisFragments().entrySet()) {
+            int bytes = encodedAnalysisBytes(entry);
+            if (!current.empty() && current.estimatedBytes + bytes > BlueprintSyncLimits.MAX_CHUNK_BYTES) {
+                chunks.add(current); current = new ProgressionChunk();
+            }
+            current.analysis.put(entry.getKey(), entry.getValue()); current.estimatedBytes += bytes;
+        }
         if (!current.empty() || chunks.isEmpty()) {
             chunks.add(current);
         }
@@ -120,7 +142,8 @@ public final class SyncPlayerSupplementalProgressionPacket {
                     index,
                     chunks.size(),
                     chunk.fragments,
-                    chunk.criteria));
+                    chunk.criteria,
+                    chunk.analysis));
         }
         return List.copyOf(packets);
     }
@@ -132,6 +155,12 @@ public final class SyncPlayerSupplementalProgressionPacket {
         buffer.writeVarInt(chunkCount);
         writeProgressMap(buffer, archivedFragments);
         writeProgressMap(buffer, publicCriteria);
+        buffer.writeVarInt(analysisFragments.size());
+        analysisFragments.forEach((id, counts) -> {
+            buffer.writeUtf(id, PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH);
+            buffer.writeVarInt(counts.protectedPrerequisites()); buffer.writeVarInt(counts.protectedBypass());
+            buffer.writeVarInt(counts.recyclablePrerequisites()); buffer.writeVarInt(counts.recyclableBypass());
+        });
         if (buffer.writerIndex() - start > BlueprintSyncLimits.MAX_CHUNK_BYTES) {
             throw new IllegalArgumentException(
                     "Supplemental progression synchronization chunk exceeds the byte budget");
@@ -145,7 +174,7 @@ public final class SyncPlayerSupplementalProgressionPacket {
                 minecraft.player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).ifPresent(data -> {
                     if (!data.replaceSupplementalProgression(
                             snapshot.archivedFragments(),
-                            snapshot.publicCriteria())) {
+                            snapshot.publicCriteria(), snapshot.analysisFragments())) {
                         throw new IllegalArgumentException(
                                 "Completed supplemental progression snapshot is invalid");
                     }
@@ -168,12 +197,22 @@ public final class SyncPlayerSupplementalProgressionPacket {
         return publicCriteria;
     }
 
+    Map<String, AnalysisFragmentCounts> analysisFragments() { return analysisFragments; }
+
+    private static int encodedAnalysisBytes(Map.Entry<String, AnalysisFragmentCounts> entry) {
+        var counts = entry.getValue();
+        return BlueprintSyncLimits.encodedUtfBytes(entry.getKey())
+                + BlueprintSyncLimits.varIntBytes(counts.protectedPrerequisites()) + BlueprintSyncLimits.varIntBytes(counts.protectedBypass())
+                + BlueprintSyncLimits.varIntBytes(counts.recyclablePrerequisites()) + BlueprintSyncLimits.varIntBytes(counts.recyclableBypass());
+    }
+
     int estimatedPayloadBytes() {
         int size = 8
                 + BlueprintSyncLimits.varIntBytes(chunkIndex)
                 + BlueprintSyncLimits.varIntBytes(chunkCount)
                 + BlueprintSyncLimits.varIntBytes(archivedFragments.size())
-                + BlueprintSyncLimits.varIntBytes(publicCriteria.size());
+                + BlueprintSyncLimits.varIntBytes(publicCriteria.size()) + BlueprintSyncLimits.varIntBytes(analysisFragments.size());
+        for (var entry : analysisFragments.entrySet()) size += encodedAnalysisBytes(entry);
         for (Map.Entry<String, Integer> entry : archivedFragments.entrySet()) {
             size += encodedEntryBytes(entry);
         }
@@ -257,12 +296,14 @@ public final class SyncPlayerSupplementalProgressionPacket {
 
     record Snapshot(
             Map<String, Integer> archivedFragments,
-            Map<String, Integer> publicCriteria) {
+            Map<String, Integer> publicCriteria,
+            Map<String, AnalysisFragmentCounts> analysisFragments) {
     }
 
     private static final class ProgressionChunk {
         private final Map<String, Integer> fragments = new TreeMap<>();
         private final Map<String, Integer> criteria = new TreeMap<>();
+        private final Map<String, AnalysisFragmentCounts> analysis = new TreeMap<>();
         private int estimatedBytes = BlueprintSyncLimits.CHUNK_HEADER_RESERVE;
 
         private boolean canAdd(Map.Entry<String, Integer> entry) {
@@ -275,7 +316,7 @@ public final class SyncPlayerSupplementalProgressionPacket {
         }
 
         private boolean empty() {
-            return fragments.isEmpty() && criteria.isEmpty();
+            return fragments.isEmpty() && criteria.isEmpty() && analysis.isEmpty();
         }
     }
 
@@ -313,7 +354,8 @@ public final class SyncPlayerSupplementalProgressionPacket {
                     chunks.putIfAbsent(packet.chunkIndex, packet);
             if (existing != null
                     && (!existing.archivedFragments.equals(packet.archivedFragments)
-                            || !existing.publicCriteria.equals(packet.publicCriteria))) {
+                            || !existing.publicCriteria.equals(packet.publicCriteria)
+                            || !existing.analysisFragments.equals(packet.analysisFragments))) {
                 chunks.clear();
                 throw new IllegalArgumentException(
                         "Conflicting duplicate supplemental progression chunk");
@@ -322,7 +364,8 @@ public final class SyncPlayerSupplementalProgressionPacket {
                     .mapToLong(chunk -> chunk.archivedFragments.size()).sum();
             long criterionCount = chunks.values().stream()
                     .mapToLong(chunk -> chunk.publicCriteria.size()).sum();
-            if (fragmentCount > PlayerProgressionLimits.MAX_FRAGMENT_TARGETS
+            long analysisCount = chunks.values().stream().mapToLong(chunk -> chunk.analysisFragments.size()).sum();
+            if (analysisCount > PlayerProgressionLimits.MAX_FRAGMENT_TARGETS || fragmentCount > PlayerProgressionLimits.MAX_FRAGMENT_TARGETS
                     || criterionCount > PlayerProgressionLimits.MAX_PROGRESSION_CRITERIA) {
                 chunks.clear();
                 throw new IllegalArgumentException(
@@ -334,11 +377,14 @@ public final class SyncPlayerSupplementalProgressionPacket {
 
             TreeMap<String, Integer> fragments = new TreeMap<>();
             TreeMap<String, Integer> criteria = new TreeMap<>();
+            var analysis = new TreeMap<String, AnalysisFragmentCounts>();
             try {
                 for (SyncPlayerSupplementalProgressionPacket chunk : chunks.values()) {
                     mergeUnique(fragments, chunk.archivedFragments, "fragment");
                     mergeUnique(criteria, chunk.publicCriteria, "criterion");
+                    mergeUnique(analysis, chunk.analysisFragments, "analysis fragment");
                 }
+                if (!AnalysisFragmentCounts.fitsTogether(fragments, analysis)) throw new IllegalArgumentException("combined fragment snapshot exceeds limits");
             } catch (RuntimeException exception) {
                 clear();
                 throw exception;
@@ -347,14 +393,14 @@ public final class SyncPlayerSupplementalProgressionPacket {
             completed = true;
             return Optional.of(new Snapshot(
                     Collections.unmodifiableMap(fragments),
-                    Collections.unmodifiableMap(criteria)));
+                    Collections.unmodifiableMap(criteria), AnalysisFragmentCounts.snapshot(analysis)));
         }
 
-        private static void mergeUnique(
-                Map<String, Integer> target,
-                Map<String, Integer> source,
+        private static <T> void mergeUnique(
+                Map<String, T> target,
+                Map<String, T> source,
                 String description) {
-            for (Map.Entry<String, Integer> entry : source.entrySet()) {
+            for (Map.Entry<String, T> entry : source.entrySet()) {
                 if (target.putIfAbsent(entry.getKey(), entry.getValue()) != null) {
                     throw new IllegalArgumentException(
                             "Duplicate " + description + " across progression chunks");

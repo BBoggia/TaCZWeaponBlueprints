@@ -1,8 +1,31 @@
 {
   "variants": {
-    "facing=north": { "model": "taczweaponblueprints:block/blueprint_recycler" },
-    "facing=east": { "model": "taczweaponblueprints:block/blueprint_recycler", "y": 90 },
-    "facing=south": { "model": "taczweaponblueprints:block/blueprint_recycler", "y": 180 },
-    "facing=west": { "model": "taczweaponblueprints:block/blueprint_recycler", "y": 270 }
+    "extension=false,facing=north": {
+      "model": "taczweaponblueprints:block/blueprint_recycler"
+    },
+    "extension=true,facing=north": {
+      "model": "minecraft:block/air"
+    },
+    "extension=false,facing=east": {
+      "model": "taczweaponblueprints:block/blueprint_recycler",
+      "y": 90
+    },
+    "extension=true,facing=east": {
+      "model": "minecraft:block/air"
+    },
+    "extension=false,facing=south": {
+      "model": "taczweaponblueprints:block/blueprint_recycler",
+      "y": 180
+    },
+    "extension=true,facing=south": {
+      "model": "minecraft:block/air"
+    },
+    "extension=false,facing=west": {
+      "model": "taczweaponblueprints:block/blueprint_recycler",
+      "y": 270
+    },
+    "extension=true,facing=west": {
+      "model": "minecraft:block/air"
+    }
   }
 }

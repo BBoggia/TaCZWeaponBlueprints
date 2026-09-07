@@ -1,0 +1,69 @@
+{
+  "format": 3,
+  "title": "Nested research example",
+  "weapon_placement_mode": "authored_only",
+  "layout": {
+    "max_nodes_per_layer": 9
+  },
+  "domains": [
+    {
+      "id": "weapons",
+      "title": "Weapons",
+      "fallback_lane": "example:weapons",
+      "fallback_tier": "starter",
+      "lanes": [
+        {
+          "id": "example:weapons",
+          "title": "Weapons",
+          "order": 0
+        }
+      ]
+    }
+  ],
+  "branches": [
+    {
+      "id": "example:foundation",
+      "domain": "weapons",
+      "title": "Shared foundations",
+      "order": 0,
+      "anchor": "tacz:glock_17",
+      "label_visibility": "public_when_populated"
+    },
+    {
+      "id": "example:smg",
+      "domain": "weapons",
+      "title": "Submachine guns",
+      "order": 10,
+      "anchor": "tacz:uzi",
+      "label_visibility": "public_when_populated",
+      "parent": "example:foundation"
+    },
+    {
+      "id": "example:rifle",
+      "domain": "weapons",
+      "title": "Rifles",
+      "order": 20,
+      "anchor": "tacz:ak47",
+      "label_visibility": "public_when_populated",
+      "parent": "example:foundation"
+    },
+    {
+      "id": "example:controlled",
+      "domain": "weapons",
+      "title": "Controlled fire",
+      "order": 10,
+      "anchor": "tacz:hk_mp5a5",
+      "label_visibility": "public_when_populated",
+      "parent": "example:smg"
+    },
+    {
+      "id": "example:rapid",
+      "domain": "weapons",
+      "title": "Rapid fire",
+      "order": 20,
+      "anchor": "tacz:vector45",
+      "label_visibility": "public_when_populated",
+      "parent": "example:smg"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  fragment:{BlueprintTarget:"tacz:ak47"},
+  legacy_blueprint:{bpId:"tacz:ak47"},
+  reverse_blueprint:{bpId:"tacz:ak47","taczweaponblueprints:provenance":{format:1,source:"reverse_engineering",recyclable:0b,learning_mode:"bypass_tree_prerequisites"}},
+  reconstructed_blueprint:{bpId:"tacz:ak47","taczweaponblueprints:provenance":{format:1,source:"fragment_reconstruction",recyclable:0b,learning_mode:"require_tree_prerequisites"}},
+  found_blueprint:{bpId:"tacz:ak47","taczweaponblueprints:provenance":{format:1,source:"reverse_engineering",recyclable:1b,learning_mode:"bypass_tree_prerequisites"}},
+  crafted_weapon:{"taczweaponblueprints:weapon_provenance":{format:1,origin:"crafted_survival",source_id:"test:rifle_recipe"}},
+  found_weapon:{"taczweaponblueprints:weapon_provenance":{format:1,origin:"loot_generated",source_id:"minecraft:chests/simple_dungeon"}},
+  unknown_weapon:{}
+}

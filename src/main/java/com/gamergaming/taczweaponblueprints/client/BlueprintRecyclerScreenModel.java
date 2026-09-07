@@ -99,14 +99,16 @@ public record BlueprintRecyclerScreenModel(
             statusKey = PREFIX + "reverse.status.choice_ready";
         } else if (recoveryReady) {
             statusKey = PREFIX + "reverse.status.direct_ready";
+        } else if (directOnly && preview.presentation().recoveryCost().filter(c ->
+                c.status() != BlueprintReverseEngineeringService.Status.READY).isPresent()) {
+            statusKey = PREFIX + "reverse.status." + enumKey(preview.presentation().recoveryCost().orElseThrow().status());
         } else if (directOnly && preview.recoveryStatus().isPresent()) {
             statusKey = PREFIX + "recovery.status."
                     + enumKey(preview.recoveryStatus().orElseThrow());
         } else if (knownCopy) {
             statusKey = PREFIX + "reverse.status.known_copy";
         } else {
-            statusKey = PREFIX + "reverse.status."
-                    + enumKey(preview.reverseEngineeringStatus().orElseThrow());
+            statusKey = analysisStatusKey(preview);
         }
         return new BlueprintRecyclerScreenModel(
                 PREFIX + "reverse.title",
@@ -133,6 +135,22 @@ public record BlueprintRecyclerScreenModel(
             throw new IllegalArgumentException("Recycler action is required");
         }
         return PREFIX + "action." + enumKey(action);
+    }
+
+    /** The only available action owns the prominent consumption summary. */
+    public static boolean focusesRecovery(BlueprintRecyclerPreview preview) {
+        return preview.reverseEngineeringStatus().filter(s -> s == BlueprintReverseEngineeringService.Status.RECOVERY_MODE_DISABLED).isPresent()
+                || preview.recoveryStatus().filter(s -> s == FoundWeaponRecoveryService.Status.READY).isPresent()
+                && preview.reverseEngineeringStatus().filter(s -> s == BlueprintReverseEngineeringService.Status.READY).isEmpty();
+    }
+
+    /** Preserve the precise policy reason separately from a ready alternative action. */
+    public static String analysisStatusKey(BlueprintRecyclerPreview preview) {
+        return preview.presentation().weapon().filter(w ->
+                        w.status() != com.gamergaming.taczweaponblueprints.resource.research.AnalyzerPolicyQuote.Status.CONFIGURED
+                        && w.status() != com.gamergaming.taczweaponblueprints.resource.research.AnalyzerPolicyQuote.Status.DIRECT_RECOVERY_ONLY)
+                .map(w -> "gui.taczweaponblueprints.analyzer.status." + enumKey(w.status()))
+                .orElseGet(() -> PREFIX + "reverse.status." + enumKey(preview.reverseEngineeringStatus().orElseThrow()));
     }
 
     public static String resultKey(BlueprintRecyclerActionContract.ResultCode result) {

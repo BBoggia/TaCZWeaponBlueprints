@@ -1,6 +1,12 @@
 package com.gamergaming.taczweaponblueprints.client;
 
+import com.gamergaming.taczweaponblueprints.progression.BlueprintReverseEngineeringService;
+
 import java.util.Optional;
+import java.util.List;
+import java.util.ArrayList;
+import com.gamergaming.taczweaponblueprints.menu.AnalyzerPresentation;
+import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerActionContract;
@@ -46,6 +52,9 @@ public final class BlueprintRecyclerScreen
     private Optional<BlueprintRecyclerActionContract.Action> secondaryAction = Optional.empty();
     private Optional<BlueprintRecyclerActionContract.Action> confirmationAction = Optional.empty();
     private int confirmationTicks;
+    private int detailScroll;
+    private static final int DETAIL_LINES = 6;
+    private static final String ANALYZER = "gui.taczweaponblueprints.analyzer.";
     private BlueprintRecyclerPreview observedPreview = BlueprintRecyclerPreview.EMPTY;
 
     public BlueprintRecyclerScreen(
@@ -87,6 +96,7 @@ public final class BlueprintRecyclerScreen
         primaryButton.setTabOrderGroup(0);
         secondaryButton.setTabOrderGroup(1);
         updateControls();
+        setFocused(null);
     }
 
     @Override
@@ -95,6 +105,7 @@ public final class BlueprintRecyclerScreen
         BlueprintRecyclerPreview currentPreview = menu.preview();
         if (!currentPreview.equals(observedPreview)) {
             clearConfirmation();
+            if (!currentPreview.inputId().equals(observedPreview.inputId())) detailScroll = 0;
             feedback.reconcile(currentPreview);
             observedPreview = currentPreview;
             triggerImmediateNarration(true);
@@ -129,6 +140,7 @@ public final class BlueprintRecyclerScreen
             return;
         }
         feedback.accept(result, menu.preview());
+        detailScroll = 0;
         updateControls();
         triggerImmediateNarration(true);
     }
@@ -157,6 +169,7 @@ public final class BlueprintRecyclerScreen
         }
         BlueprintRecyclerRequestTracker.Request request = started.orElseThrow();
         feedback.clear();
+        detailScroll = 0;
         try {
             NetworkHandler.INSTANCE.sendToServer(new BlueprintRecyclerActionPacket(
                     menu.containerId,
@@ -198,8 +211,7 @@ public final class BlueprintRecyclerScreen
                         actionMessageKey(action)))
                 .orElse(Component.empty()));
         primaryButton.setTooltip(primaryAction
-                .map(action -> Tooltip.create(Component.translatable(
-                        actionTooltipKey(action))))
+                .map(action -> Tooltip.create(actionTooltip(action)))
                 .orElse(null));
 
         secondaryButton.visible = secondaryAction.isPresent();
@@ -209,9 +221,10 @@ public final class BlueprintRecyclerScreen
                         actionMessageKey(action)))
                 .orElse(Component.empty()));
         secondaryButton.setTooltip(secondaryAction
-                .map(action -> Tooltip.create(Component.translatable(
-                        actionTooltipKey(action))))
+                .map(action -> Tooltip.create(actionTooltip(action)))
                 .orElse(null));
+        primaryButton.setMessage(clipped(primaryButton.getMessage(), primaryButton.getWidth() - 8));
+        secondaryButton.setMessage(clipped(secondaryButton.getMessage(), secondaryButton.getWidth() - 8));
         if (getFocused() == primaryButton && !primaryButton.visible
                 || getFocused() == secondaryButton && !secondaryButton.visible) {
             setFocused(null);
@@ -258,9 +271,9 @@ public final class BlueprintRecyclerScreen
         graphics.drawCenteredString(
                 font,
                 Component.literal("→"),
-                (BlueprintRecyclerMenu.Layout.INPUT_X
+                leftPos + (BlueprintRecyclerMenu.Layout.INPUT_X
                         + BlueprintRecyclerMenu.Layout.OUTPUT_X) / 2 + 8,
-                BlueprintRecyclerMenu.Layout.INPUT_Y + 4,
+                topPos + BlueprintRecyclerMenu.Layout.INPUT_Y + 4,
                 MUTED);
         drawPlayerInventory(graphics);
     }
@@ -297,7 +310,8 @@ public final class BlueprintRecyclerScreen
         BlueprintRecyclerPreview preview = menu.preview();
         BlueprintRecyclerScreenModel model =
                 BlueprintRecyclerScreenModel.from(preview, requests.pending());
-        graphics.drawString(font, title, titleLabelX, titleLabelY, TEXT, false);
+        graphics.drawString(font, clipped(title, imageWidth - 20), titleLabelX, titleLabelY, TEXT, false);
+        if (preview.presentation().stationTier() > 0) graphics.drawString(font, clipped(tr("tier", preview.presentation().stationTier()), 92), 14, 24, MUTED, false);
         graphics.drawCenteredString(
                 font,
                 clipped(
@@ -316,10 +330,15 @@ public final class BlueprintRecyclerScreen
                 BlueprintRecyclerMenu.Layout.OUTPUT_X + 8,
                 35,
                 MUTED);
+        if (detailed(preview)) {
+            renderAnalyzerDetails(graphics, preview, model);
+            graphics.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, MUTED, false);
+            return;
+        }
         graphics.drawString(
                 font,
                 clipped(
-                        Component.translatable(model.headingKey()),
+                        (feedback.visibleOutcome().isPresent() || feedback.visibleFragments().isPresent()) ? tr("result.title") : Component.translatable(model.headingKey()),
                         BlueprintRecyclerMenu.Layout.DETAIL_WIDTH),
                 BlueprintRecyclerMenu.Layout.DETAIL_X,
                 30,
@@ -345,7 +364,7 @@ public final class BlueprintRecyclerScreen
                     31,
                     ACCENT);
         }
-        int statusColor = requests.pending()
+        int statusColor = requests.pending() || feedback.visibleOutcome().filter(o -> o.kind() == com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable.Kind.NO_RESULT).isPresent()
                 ? ACCENT
                 : visibleFeedback.isPresent()
                         ? visibleFeedback.orElseThrow()
@@ -433,6 +452,14 @@ public final class BlueprintRecyclerScreen
             return Component.translatable(
                     "gui.taczweaponblueprints.blueprint_recycler.processing");
         }
+        if (visibleFeedback.isPresent() && feedback.visibleOutcome().isPresent()) {
+            var outcome = feedback.visibleOutcome().orElseThrow();
+            return tr("result." + outcome.kind().name().toLowerCase(java.util.Locale.ROOT), outcome.count());
+        }
+        if (visibleFeedback.isPresent() && feedback.visibleFragments().isPresent()) {
+            var f = feedback.visibleFragments().orElseThrow();
+            return tr(f.blueprintCreated() ? "result.reconstructed" : "result.archived", f.archived(), f.retained(), f.saved());
+        }
         return visibleFeedback
                 .map(result -> Component.translatable(
                         BlueprintRecyclerScreenModel.resultKey(result)))
@@ -440,6 +467,8 @@ public final class BlueprintRecyclerScreen
     }
 
     private Component summary(BlueprintRecyclerPreview preview) {
+        if (preview.inputKind() == BlueprintRecyclerPreview.InputKind.EMPTY && feedback.visibleTarget().isPresent())
+            return targetName(feedback.visibleTarget().orElseThrow());
         if (preview.inputKind() == BlueprintRecyclerPreview.InputKind.BLUEPRINT_FRAGMENT) {
             var fragment = preview.fragmentEvaluation().orElseThrow();
             if (fragment.awardedPoints() > 0) {
@@ -493,6 +522,12 @@ public final class BlueprintRecyclerScreen
         BlueprintRecyclerPreview preview = menu.preview();
         BlueprintRecyclerScreenModel model =
                 BlueprintRecyclerScreenModel.from(preview, requests.pending());
+        if (detailed(preview)) {
+            MutableComponent result = title.copy();
+            for (Component line : analyzerLines(preview, model)) result.append("\n").append(line);
+            for (Component line : sidebarLines(preview)) result.append("\n").append(line);
+            return result.append("\n").append(actionSummary(model));
+        }
         MutableComponent details = model.summaryVisible()
                 ? Component.translatable(
                         "gui.taczweaponblueprints.blueprint_recycler.narration",
@@ -528,6 +563,10 @@ public final class BlueprintRecyclerScreen
     }
 
     private String actionMessageKey(BlueprintRecyclerActionContract.Action action) {
+        if (action == BlueprintRecyclerActionContract.Action.ARCHIVE_FRAGMENTS)
+            return ANALYZER + (menu.preview().fragmentEvaluation().filter(f -> f.createsBlueprint()).isPresent() ? "action.reconstruct" : "action.archive");
+        if (action == BlueprintRecyclerActionContract.Action.REVERSE_ENGINEER && menu.preview().presentation().weapon().isPresent())
+            return ANALYZER + "action.analyze";
         String base = BlueprintRecyclerScreenModel.actionKey(action);
         return confirmationAction.filter(action::equals).isPresent()
                 ? base + ".confirm"
@@ -581,12 +620,12 @@ public final class BlueprintRecyclerScreen
                     "gui.taczweaponblueprints.blueprint_recycler.narration.waiting");
         }
         Component primary = Component.translatable(
-                BlueprintRecyclerScreenModel.actionKey(model.primaryAction().orElseThrow()));
+                actionMessageKey(model.primaryAction().orElseThrow()));
         return model.secondaryAction()
                 .<Component>map(action -> Component.translatable(
                         "gui.taczweaponblueprints.blueprint_recycler.narration.actions",
                         primary,
-                        Component.translatable(BlueprintRecyclerScreenModel.actionKey(action))))
+                        Component.translatable(actionMessageKey(action))))
                 .orElse(primary);
     }
 
@@ -594,6 +633,21 @@ public final class BlueprintRecyclerScreen
             GuiGraphics graphics,
             int mouseX,
             int mouseY) {
+        if (detailed(menu.preview())) {
+            int x = mouseX - leftPos, y = mouseY - topPos;
+            Component hover = null;
+            if (x >= BlueprintRecyclerMenu.Layout.DETAIL_X && x < imageWidth - 12 && y >= 29 && y < 95) {
+                var lines = analyzerLines(menu.preview(), BlueprintRecyclerScreenModel.from(menu.preview(), requests.pending()));
+                int index = detailScroll + (y - 29) / 11;
+                if (index < lines.size()) hover = lines.get(index);
+            } else if (x >= 12 && x < BlueprintRecyclerMenu.Layout.DIVIDER_X - 2 && y >= 80 && y < 120) {
+                var lines = sidebarLines(menu.preview());
+                int index = (y - 80) / 10;
+                if (index < lines.size()) hover = lines.get(index);
+            } else if (y >= 5 && y < 19 && x >= 8 && x < imageWidth - 8) hover = title;
+            if (hover != null) graphics.renderTooltip(font, font.split(hover, Math.max(80, Math.min(220, width - 32))), mouseX, mouseY);
+            return;
+        }
         if (mouseX < leftPos + BlueprintRecyclerMenu.Layout.DETAIL_X
                 || mouseX >= leftPos + BlueprintRecyclerMenu.Layout.DETAIL_X
                         + BlueprintRecyclerMenu.Layout.DETAIL_WIDTH
@@ -607,6 +661,176 @@ public final class BlueprintRecyclerScreen
                 font.split(detailsNarration(), maximumWidth),
                 mouseX,
                 mouseY);
+    }
+
+    private static Component tr(String key, Object... values) { return Component.translatable(ANALYZER + key, values); }
+
+    private boolean detailed(BlueprintRecyclerPreview p) {
+        return p.inputKind() == BlueprintRecyclerPreview.InputKind.PHYSICAL_ITEM
+                || p.inputKind() == BlueprintRecyclerPreview.InputKind.BLUEPRINT_FRAGMENT;
+    }
+
+    private Component targetName(BlueprintRecyclerPreview p) {
+        return p.inputId().<Component>map(this::targetName).orElse(Component.empty());
+    }
+    private Component targetName(ResourceLocation id) {
+        var data = BlueprintDataManager.presentationCatalog().getBlueprintData(id.toString());
+        if (data == null) return Component.literal(id.toString());
+        var name = Component.translatable(data.getNameKey());
+        return name.getString().equals(data.getNameKey()) ? Component.literal(id.toString()) : name;
+    }
+
+    private List<Component> sidebarLines(BlueprintRecyclerPreview p) {
+        var lines = new ArrayList<Component>();
+        if (p.inputKind() == BlueprintRecyclerPreview.InputKind.PHYSICAL_ITEM) {
+            boolean recoveryFocused = BlueprintRecyclerScreenModel.focusesRecovery(p);
+            var c = p.presentation().recoveryCost();
+            lines.add(tr("consumes", recoveryFocused && c.isPresent() ? c.orElseThrow().inputCount() : p.requiredInputCount()));
+            lines.add(tr(recoveryFocused && c.isPresent() ? (c.orElseThrow().ingredients().isEmpty() ? "cost" : "cost_materials")
+                    : (p.ingredients().isEmpty() ? "cost" : "cost_materials"), recoveryFocused && c.isPresent() ? c.orElseThrow().points() : p.pointCost()));
+            if (p.presentation().recoveryCost().isPresent() && !recoveryFocused) {
+                var cost = p.presentation().recoveryCost().orElseThrow();
+                lines.add(cost.status() != com.gamergaming.taczweaponblueprints.progression.BlueprintReverseEngineeringService.Status.READY
+                        ? tr("recovery_cost_pending", cost.points())
+                        : tr(cost.ingredients().isEmpty() ? "recovery_cost" : "recovery_cost_materials", cost.points(), p.recoveryPointValue()));
+            }
+            if (recoveryFocused && c.filter(cost -> cost.status() == com.gamergaming.taczweaponblueprints.progression.BlueprintReverseEngineeringService.Status.READY).isPresent())
+                lines.add(tr("recovery_award", p.recoveryPointValue()));
+            if (!recoveryFocused) p.presentation().weapon().filter(w -> w.reward().isPresent() && w.threshold() > 0).ifPresent(w -> lines.add(tr("saved", w.saved(), w.threshold())));
+        } else {
+            var f = p.fragmentEvaluation().orElseThrow();
+            lines.add(tr("accepts", f.accepted()));
+            lines.add(tr("keeps", f.rejected()));
+            lines.add(f.status() == com.gamergaming.taczweaponblueprints.progression.fragment.BlueprintFragmentAnalysisService.Status.FRAGMENTS_DISABLED
+                    ? tr("saved_count", f.archivedBefore()) : tr("saved", f.archivedBefore(), f.threshold()));
+        }
+        if (lines.size() < 4) lines.add(tr("balance", p.pointBalance()));
+        return List.copyOf(lines);
+    }
+
+    private List<Component> analyzerLines(BlueprintRecyclerPreview p, BlueprintRecyclerScreenModel model) {
+        var lines = new ArrayList<Component>();
+        boolean recoveryFocused = BlueprintRecyclerScreenModel.focusesRecovery(p);
+        lines.add(targetName(p));
+        var weapon = p.presentation().weapon();
+        lines.add(weapon.isPresent() ? tr("tiers", p.presentation().stationTier(),
+                weapon.orElseThrow().tier() == 0 ? "?" : weapon.orElseThrow().tier()) : tr("station", p.presentation().stationTier()));
+        Component decision = status(model, visibleFeedback(p));
+        if (!requests.pending() && visibleFeedback(p).isEmpty() && p.fragmentEvaluation().filter(f -> f.ready() && f.createsBlueprint()).isPresent())
+            decision = tr("ready_reconstruct");
+        lines.add(decision);
+        if (recoveryFocused && p.reverseEngineeringStatus().filter(s -> s != BlueprintReverseEngineeringService.Status.RECOVERY_MODE_DISABLED).isPresent())
+            lines.add(tr("analysis_status", Component.translatable(BlueprintRecyclerScreenModel.analysisStatusKey(p))));
+        if (weapon.isPresent() && !recoveryFocused) {
+            var w = weapon.orElseThrow();
+            w.outcomes().ifPresent(o -> {
+                lines.add(tr("odds.blueprint", AnalyzerProbabilityText.format(o.blueprintWeight(), o.totalWeight())));
+                lines.add(tr("odds.fragments", o.minimumFragments() == o.maximumFragments() ? Integer.toString(o.minimumFragments())
+                        : o.minimumFragments() + "–" + o.maximumFragments(), AnalyzerProbabilityText.format(o.fragmentWeight(), o.totalWeight())));
+                lines.add(tr("odds.no_result", AnalyzerProbabilityText.format(o.noResultWeight(), o.totalWeight())));
+            });
+            if (w.reward().isPresent() && w.threshold() > 0) {
+                lines.add(tr("saved", w.saved(), w.threshold()));
+                if (w.saved() >= w.threshold()) lines.add(tr("stored_set"));
+                if (w.totalSaved() >= w.cap()) lines.add(tr("archive_full"));
+                lines.add(tr("archive", w.totalSaved(), w.cap()));
+            }
+            w.reward().ifPresent(reward -> { lines.add(tr("learning." + (reward.learningMode() == com.gamergaming.taczweaponblueprints.progression.PhysicalBlueprintLearningMode.BYPASS_TREE_PREREQUISITES ? "bypass" : "prerequisites")));
+                lines.add(tr(reward.recyclable() ? "recyclable" : "protected")); });
+            if (w.blueprintLearningDisabled()) lines.add(tr("learning.disabled"));
+        }
+        if (p.inputKind() == BlueprintRecyclerPreview.InputKind.BLUEPRINT_FRAGMENT) {
+            var f = p.fragmentEvaluation().orElseThrow();
+            lines.add(f.status() == com.gamergaming.taczweaponblueprints.progression.fragment.BlueprintFragmentAnalysisService.Status.FRAGMENTS_DISABLED
+                    ? tr("saved_count", f.archivedBefore()) : tr("fragment.saved", f.archivedBefore(), f.threshold()));
+            lines.add(tr("fragment.transfer", f.accepted(), f.rejected()));
+            lines.add(tr(f.createsBlueprint() ? "fragment.reconstruct" : "fragment.after", f.archivedAfterAction()));
+            if (f.awardedPoints() > 0) lines.add(tr("fragment.rp", f.awardedPoints()));
+            p.presentation().fragments().ifPresent(a -> {
+                lines.add(tr("archive", a.totalSaved(), a.cap()));
+                a.outputReward().ifPresent(reward -> {
+                    lines.add(tr(reward.recyclable() ? "recyclable" : "protected"));
+                    lines.add(tr("learning." + (reward.learningMode() == com.gamergaming.taczweaponblueprints.progression.PhysicalBlueprintLearningMode.BYPASS_TREE_PREREQUISITES ? "bypass" : "prerequisites")));
+                });
+                lines.add(tr("fragment.separate"));
+            });
+        } else {
+            if (!recoveryFocused) {
+                lines.add(tr("analysis_status", Component.translatable(BlueprintRecyclerScreenModel.analysisStatusKey(p))));
+                lines.add(tr("consumption", p.requiredInputCount(), p.pointCost()));
+                for (var i : p.ingredients()) lines.add(materialLine(i));
+            }
+            if (p.customizationWillBeLost()) lines.add(tr("modified"));
+            lines.add(Component.translatable("gui.taczweaponblueprints.blueprint_recycler.reverse.origin." + p.weaponOrigin().name().toLowerCase(java.util.Locale.ROOT)));
+            p.presentation().recoveryCost().ifPresent(c -> {
+                lines.add(c.status() != com.gamergaming.taczweaponblueprints.progression.BlueprintReverseEngineeringService.Status.READY
+                        ? tr("recovery_pending", c.inputCount(), c.points()) : tr("recovery", c.inputCount(), c.points(), p.recoveryPointValue()));
+                p.recoveryStatus().ifPresent(s -> lines.add(Component.translatable("gui.taczweaponblueprints.blueprint_recycler.recovery.status." + s.name().toLowerCase(java.util.Locale.ROOT))));
+                if (c.status() != com.gamergaming.taczweaponblueprints.progression.BlueprintReverseEngineeringService.Status.READY)
+                    lines.add(Component.translatable("gui.taczweaponblueprints.blueprint_recycler.reverse.status." + c.status().name().toLowerCase(java.util.Locale.ROOT)));
+                for (var i : c.ingredients()) lines.add(materialLine(i));
+            });
+        }
+        return List.copyOf(lines);
+    }
+
+    private Component materialLine(BlueprintRecyclerPreview.IngredientPreview i) {
+        return Component.translatable("gui.taczweaponblueprints.blueprint_recycler.reverse.material", ingredientLabel(i), i.inventoryAvailable(), i.required());
+    }
+
+    private Component actionTooltip(BlueprintRecyclerActionContract.Action action) {
+        MutableComponent text = Component.translatable(actionMessageKey(action)).append("\n")
+                .append(Component.translatable(actionTooltipKey(action)));
+        var p = menu.preview();
+        if (action == BlueprintRecyclerActionContract.Action.REVERSE_ENGINEER) {
+            text.append("\n").append(tr("consumption", p.requiredInputCount(), p.pointCost()));
+            if (!p.ingredients().isEmpty()) text.append("\n").append(tr("materials_help"));
+            if (p.presentation().weapon().isPresent()) text.append("\n").append(tr("attempt_warning"));
+        } else if (action == BlueprintRecyclerActionContract.Action.RECOVER_POINTS) p.presentation().recoveryCost().ifPresent(c -> {
+            text.append("\n").append(tr("recovery", c.inputCount(), c.points(), p.recoveryPointValue()));
+            if (!c.ingredients().isEmpty()) text.append("\n").append(tr("materials_help"));
+        });
+        return text;
+    }
+
+    private void renderAnalyzerDetails(GuiGraphics g, BlueprintRecyclerPreview p, BlueprintRecyclerScreenModel model) {
+        var lines = analyzerLines(p, model);
+        detailScroll = Math.max(0, Math.min(detailScroll, lines.size() - Math.min(DETAIL_LINES, lines.size())));
+        for (int row = 0; row < DETAIL_LINES && row + detailScroll < lines.size(); row++) {
+            int index = row + detailScroll;
+            int decisionColor = requests.pending() ? ACCENT : feedback.visibleCode().isPresent()
+                    ? feedback.visibleCode().orElseThrow() != BlueprintRecyclerActionContract.ResultCode.SUCCESS ? BAD
+                        : feedback.visibleOutcome().filter(o -> o.kind() == com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable.Kind.NO_RESULT).isPresent() ? ACCENT : GOOD
+                    : model.controlsEnabled() ? GOOD : model.statusEmphasis() == BlueprintRecyclerScreenModel.StatusEmphasis.NOTICE ? ACCENT : MUTED;
+            int color = index == 0 ? TEXT : index == 2 ? decisionColor : index >= 3 && index <= 5 ? ACCENT : MUTED;
+            g.drawString(font, clipped(lines.get(index), BlueprintRecyclerMenu.Layout.DETAIL_WIDTH - 6), BlueprintRecyclerMenu.Layout.DETAIL_X, 29 + row * 11, color, false);
+        }
+        if (lines.size() > DETAIL_LINES) {
+            int x = BlueprintRecyclerMenu.Layout.DETAIL_X + BlueprintRecyclerMenu.Layout.DETAIL_WIDTH - 2;
+            g.fill(x, 29, x + 2, 94, BORDER);
+            int thumb = Math.max(6, 65 * DETAIL_LINES / lines.size());
+            int offset = (65 - thumb) * detailScroll / (lines.size() - DETAIL_LINES);
+            g.fill(x, 29 + offset, x + 2, 29 + offset + thumb, ACCENT);
+        }
+        var side = sidebarLines(p);
+        for (int i = 0; i < Math.min(4, side.size()); i++) g.drawString(font, clipped(side.get(i), 92), 14, 80 + i * 10, i == 1 ? ACCENT : MUTED, false);
+    }
+
+    @Override public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
+        if (detailed(menu.preview()) && mouseX >= leftPos + BlueprintRecyclerMenu.Layout.DETAIL_X
+                && mouseX < leftPos + imageWidth - 8 && mouseY >= topPos + 22 && mouseY < topPos + BlueprintRecyclerMenu.Layout.ACTION_Y) {
+            scrollDetails(amount > 0 ? -1 : 1); return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, amount);
+    }
+    @Override public boolean keyPressed(int key, int scan, int modifiers) {
+        if (detailed(menu.preview()) && (key == 266 || key == 267)) { scrollDetails(key == 266 ? -DETAIL_LINES : DETAIL_LINES); return true; }
+        return super.keyPressed(key, scan, modifiers);
+    }
+    private void scrollDetails(int amount) {
+        int size = analyzerLines(menu.preview(), BlueprintRecyclerScreenModel.from(menu.preview(), requests.pending())).size();
+        detailScroll = Math.max(0, Math.min(Math.max(0, size - DETAIL_LINES), detailScroll + amount));
+        triggerImmediateNarration(true);
     }
 
     @Override

@@ -1,3 +1,156 @@
 {
-  "parent": "taczweaponblueprints:block/blueprint_recycler"
+  "loader": "forge:composite",
+  "textures": {
+    "particle": "taczweaponblueprints:block/blueprint_recycler"
+  },
+  "children": {
+    "body": {
+      "loader": "forge:obj",
+      "model": "taczweaponblueprints:models/item/blueprint_recycler.obj",
+      "flip_v": true,
+      "automatic_culling": false,
+      "render_type": "minecraft:cutout",
+      "textures": {
+        "texture0": "taczweaponblueprints:block/blueprint_recycler",
+        "particle": "taczweaponblueprints:block/blueprint_recycler"
+      }
+    },
+    "glass": {
+      "loader": "forge:obj",
+      "model": "taczweaponblueprints:models/item/blueprint_recycler_glass.obj",
+      "flip_v": true,
+      "automatic_culling": false,
+      "render_type": "minecraft:translucent",
+      "textures": {
+        "texture0": "taczweaponblueprints:block/blueprint_recycler",
+        "particle": "taczweaponblueprints:block/blueprint_recycler"
+      }
+    }
+  },
+  "item_render_order": [
+    "body",
+    "glass"
+  ],
+  "gui_light": "front",
+  "display": {
+    "thirdperson_righthand": {
+      "rotation": [
+        70,
+        -145,
+        0
+      ],
+      "translation": [
+        0,
+        1.5,
+        0
+      ],
+      "scale": [
+        0.32,
+        0.32,
+        0.32
+      ]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [
+        70,
+        -145,
+        0
+      ],
+      "translation": [
+        0,
+        1.5,
+        0
+      ],
+      "scale": [
+        0.32,
+        0.32,
+        0.32
+      ]
+    },
+    "firstperson_righthand": {
+      "rotation": [
+        0,
+        -45,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.38,
+        0.38,
+        0.38
+      ]
+    },
+    "firstperson_lefthand": {
+      "rotation": [
+        0,
+        -45,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.38,
+        0.38,
+        0.38
+      ]
+    },
+    "ground": {
+      "rotation": [
+        0,
+        180,
+        0
+      ],
+      "translation": [
+        0,
+        2,
+        0
+      ],
+      "scale": [
+        0.25,
+        0.25,
+        0.25
+      ]
+    },
+    "gui": {
+      "rotation": [
+        25,
+        145,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.48,
+        0.48,
+        0.48
+      ]
+    },
+    "fixed": {
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.45,
+        0.45,
+        0.45
+      ]
+    }
+  }
 }

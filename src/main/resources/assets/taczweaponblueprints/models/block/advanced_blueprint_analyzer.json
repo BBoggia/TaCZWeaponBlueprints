@@ -1,0 +1,11 @@
+{
+  "loader": "forge:obj",
+  "model": "taczweaponblueprints:models/block/advanced_blueprint_analyzer.obj",
+  "flip_v": true,
+  "automatic_culling": false,
+  "render_type": "minecraft:cutout",
+  "textures": {
+    "texture0": "taczweaponblueprints:block/advanced_blueprint_analyzer",
+    "particle": "taczweaponblueprints:block/advanced_blueprint_analyzer"
+  }
+}

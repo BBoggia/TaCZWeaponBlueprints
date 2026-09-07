@@ -1,5 +1,6 @@
 package com.gamergaming.taczweaponblueprints.progression;
 
+import com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisFragmentCounts;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
@@ -19,17 +20,23 @@ import net.minecraft.resources.ResourceLocation;
 /** Builds the bounded, disclosure-safe subset of supplemental player state. */
 public record PlayerSupplementalProgressionView(
         Map<String, Integer> archivedFragments,
-        Map<String, Integer> publicCriteria) {
+        Map<String, Integer> publicCriteria,
+        Map<String, AnalysisFragmentCounts> analysisFragments) {
+    public PlayerSupplementalProgressionView(Map<String, Integer> archivedFragments, Map<String, Integer> publicCriteria) {
+        this(archivedFragments, publicCriteria, Map.of());
+    }
     public static final PlayerSupplementalProgressionView EMPTY =
             new PlayerSupplementalProgressionView(Map.of(), Map.of());
 
     public PlayerSupplementalProgressionView {
+        analysisFragments = AnalysisFragmentCounts.snapshot(analysisFragments);
         archivedFragments = immutableProgressMap(
                 archivedFragments,
                 PlayerProgressionLimits.MAX_FRAGMENT_TARGETS);
         publicCriteria = immutableProgressMap(
                 publicCriteria,
                 PlayerProgressionLimits.MAX_PROGRESSION_CRITERIA);
+        if (!AnalysisFragmentCounts.fitsTogether(archivedFragments, analysisFragments)) throw new IllegalArgumentException("combined fragment view exceeds limits");
     }
 
     public static PlayerSupplementalProgressionView create(
@@ -55,9 +62,12 @@ public record PlayerSupplementalProgressionView(
             throw new IllegalArgumentException("player supplemental progression maps cannot be null");
         }
 
+        var analysis = new TreeMap<String, AnalysisFragmentCounts>();
+        var savedAnalysis = AnalysisFragmentCounts.snapshot(playerData.getArchivedAnalysisFragments());
         TreeMap<String, Integer> fragments = new TreeMap<>();
         TreeSet<String> permittedCriteria = new TreeSet<>();
         for (ResourceLocation blueprintId : disclosed) {
+            if (savedAnalysis.containsKey(blueprintId.toString())) analysis.put(blueprintId.toString(), savedAnalysis.get(blueprintId.toString()));
             ResolvedBlueprintProgressionPolicy policy = policies.get(blueprintId);
             if (policy == null) {
                 continue;
@@ -82,7 +92,7 @@ public record PlayerSupplementalProgressionView(
                 criteria.put(criterionId, value);
             }
         }
-        return new PlayerSupplementalProgressionView(fragments, criteria);
+        return new PlayerSupplementalProgressionView(fragments, criteria, analysis);
     }
 
     /**

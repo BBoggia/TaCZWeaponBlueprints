@@ -1,0 +1,40 @@
+{
+  "format": 5,
+  "profile": "taczweaponblueprints:duplicate_recovery",
+  "priority": 0,
+  "target": {
+    "blueprints": [
+      "tacz:ak47"
+    ]
+  },
+  "analyzer": {
+    "weapon_tier": "tier_3",
+    "minimum_analyzer_tier": "tier_2",
+    "attempt": {
+      "cost": {
+        "points": 4,
+        "ingredients": [
+          {
+            "items": [
+              "minecraft:iron_ingot"
+            ],
+            "count": 1
+          }
+        ]
+      }
+    },
+    "tiers": {
+      "tier_2": {
+        "tier_3": {
+          "outcomes": {
+            "blueprint_weight": 1,
+            "fragment_weight": 0,
+            "no_result_weight": 0,
+            "min_fragments": 0,
+            "max_fragments": 0
+          }
+        }
+      }
+    }
+  }
+}

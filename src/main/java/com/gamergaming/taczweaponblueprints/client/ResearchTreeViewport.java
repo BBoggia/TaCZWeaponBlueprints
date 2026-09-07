@@ -32,6 +32,25 @@ public final class ResearchTreeViewport {
         clampBoth();
     }
 
+    /** Resizes a scene's viewport without moving the world point at its center. */
+    public void configureAnchored(int width, int height, int canvasWidth, int canvasHeight) {
+        double dx = (this.viewportWidth - Math.max(1, width)) / 2.0;
+        double dy = (this.viewportHeight - Math.max(1, height)) / 2.0;
+        panX += dx / scale; panY += dy / scale;
+        targetPanX += dx / targetScale; targetPanY += dy / targetScale;
+        configure(width, height, canvasWidth, canvasHeight);
+    }
+
+    /** Proportional pointer-anchored zoom, including views below the manual legacy floor. */
+    public void zoomProportional(double wheelDelta, double x, double y) {
+        validateFinite(wheelDelta, x); validateFinite(y, 0);
+        if (wheelDelta == 0) return;
+        double anchorX = canvasX(x), anchorY = canvasY(y);
+        targetScale = nextZoomScale(wheelDelta, true);
+        targetPanX = anchorX - x / targetScale; targetPanY = anchorY - y / targetScale;
+        clampTarget(); applyTargetImmediatelyWhenStatic();
+    }
+
     /** Replaces the content bounds while retaining this presentation's last viewport size. */
     public void replaceCanvas(int canvasWidth, int canvasHeight, boolean fit) {
         this.canvasWidth = Math.max(0, canvasWidth);
@@ -133,6 +152,7 @@ public final class ResearchTreeViewport {
     }
 
     public void zoomAt(double wheelDelta, double viewportX, double viewportY) {
+        validateFinite(wheelDelta, viewportX); validateFinite(viewportY, 0);
         if (wheelDelta == 0.0D) {
             return;
         }
@@ -141,14 +161,23 @@ public final class ResearchTreeViewport {
         }
         double anchorX = canvasX(viewportX);
         double anchorY = canvasY(viewportY);
-        double nextScale = targetScale < MIN_SCALE
-                ? MIN_SCALE
-                : targetScale + Math.copySign(SCALE_STEP, wheelDelta);
-        targetScale = clampScale(nextScale);
+        targetScale = nextZoomScale(wheelDelta, false);
         targetPanX = anchorX - viewportX / targetScale;
         targetPanY = anchorY - viewportY / targetScale;
         clampTarget();
         applyTargetImmediatelyWhenStatic();
+    }
+
+    /** Uses the pending destination so controls agree with queued camera motion. */
+    public boolean canZoom(double direction, boolean proportional) {
+        validateFinite(direction, 0);
+        return nextZoomScale(direction, proportional) != targetScale;
+    }
+
+    private double nextZoomScale(double direction, boolean proportional) {
+        if (direction == 0 || !proportional && direction < 0 && targetScale < MIN_SCALE) return targetScale;
+        if (proportional) return clampFitScale(targetScale * Math.pow(1.18, Math.max(-8, Math.min(8, direction))));
+        return clampScale(targetScale < MIN_SCALE ? MIN_SCALE : targetScale + Math.copySign(SCALE_STEP, direction));
     }
 
     public void focus(double x, double y, double width, double height) {

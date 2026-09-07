@@ -36,6 +36,17 @@ class PlayerSupplementalProgressionViewTest {
     private static final ResourceLocation OTHER = id("test:other");
 
     @Test
+    void analysisArchiveFollowsDisclosedIdentityWithoutBecomingAnOrdinaryDiscount() {
+        var data = new PlayerRecipeData();
+        var counts = new com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisFragmentCounts(1,2,3,4);
+        for (var id : List.of(VISIBLE, OTHER)) data.applyAnalysisFragmentMutation(new com.gamergaming.taczweaponblueprints.capabilities.AnalysisFragmentMutation(
+                PlayerProgressValueMutation.Operation.COMMIT, id.toString(), com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisFragmentCounts.EMPTY, counts));
+        var view = PlayerSupplementalProgressionView.create(data, List.of(VISIBLE), Map.of());
+        assertEquals(Map.of(VISIBLE.toString(), counts), view.analysisFragments());
+        assertEquals(Map.of(), view.archivedFragments());
+    }
+
+    @Test
     void viewIncludesOnlyDisclosedFragmentsAndPublicReferencedCriteria() {
         PlayerRecipeData data = new PlayerRecipeData();
         data.applyArchivedFragmentMutation(

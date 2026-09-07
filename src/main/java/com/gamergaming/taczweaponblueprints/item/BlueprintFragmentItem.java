@@ -2,6 +2,7 @@ package com.gamergaming.taczweaponblueprints.item;
 
 import java.util.List;
 import java.util.Optional;
+import com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisRewardClass;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.init.ModItems;
@@ -20,9 +21,11 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 
-/** One stackable fragment whose only valid data is a canonical target blueprint ID. */
+/** Target-specific ordinary fragments or versioned, reconstruction-only analysis fragments. */
 public final class BlueprintFragmentItem extends Item {
     public static final String TARGET_TAG = "BlueprintTarget";
+    public static final String ANALYSIS_TAG = "taczweaponblueprints:analysis";
+    public static final int ANALYSIS_FORMAT = 1;
 
     public BlueprintFragmentItem(Properties properties) {
         super(properties);
@@ -38,10 +41,54 @@ public final class BlueprintFragmentItem extends Item {
     }
 
     static Optional<ResourceLocation> getTarget(CompoundTag tag) {
-        if (tag == null || tag.size() != 1 || !tag.contains(TARGET_TAG, Tag.TAG_STRING)) {
-            return Optional.empty();
+        return identity(tag).map(Identity::target);
+    }
+
+    public record Identity(ResourceLocation target, Optional<AnalysisRewardClass> analysisClass) {
+        public Identity {
+            if (target == null || parseTarget(target.toString()).isEmpty() || analysisClass == null) {
+                throw new IllegalArgumentException("invalid fragment identity");
+            }
         }
-        return parseTarget(tag.getString(TARGET_TAG));
+    }
+
+    public static Optional<Identity> identity(ItemStack stack) {
+        return stack == null || stack.isEmpty() || !(stack.getItem() instanceof BlueprintFragmentItem)
+                ? Optional.empty() : identity(stack.getTag());
+    }
+
+    static Optional<Identity> identity(CompoundTag tag) {
+        if (tag == null || !tag.contains(TARGET_TAG, Tag.TAG_STRING)) return Optional.empty();
+        var target = parseTarget(tag.getString(TARGET_TAG));
+        if (target.isEmpty()) return Optional.empty();
+        if (!tag.contains(ANALYSIS_TAG)) {
+            return tag.size() == 1 ? Optional.of(new Identity(target.orElseThrow(), Optional.empty())) : Optional.empty();
+        }
+        if (tag.size() != 2 || !tag.contains(ANALYSIS_TAG, Tag.TAG_COMPOUND)) return Optional.empty();
+        var marker = tag.getCompound(ANALYSIS_TAG);
+        if (marker.size() != 2 || !marker.contains("format", Tag.TAG_INT)
+                || marker.getInt("format") != ANALYSIS_FORMAT || !marker.contains("reward_class", Tag.TAG_STRING)) return Optional.empty();
+        return AnalysisRewardClass.parse(marker.getString("reward_class"))
+                .map(reward -> new Identity(target.orElseThrow(), Optional.of(reward)));
+    }
+
+    /** Ordinary discount/RP consumers must use this method, never the shared target accessor. */
+    public static Optional<ResourceLocation> getOrdinaryTarget(ItemStack stack) {
+        return identity(stack).filter(value -> value.analysisClass().isEmpty()).map(Identity::target);
+    }
+
+    public static ItemStack createAnalysis(ResourceLocation target, AnalysisRewardClass reward) {
+        return createAnalysis(ModItems.BLUEPRINT_FRAGMENT.get(), target, reward);
+    }
+
+    public static ItemStack createAnalysis(BlueprintFragmentItem item, ResourceLocation target, AnalysisRewardClass reward) {
+        if (reward == null) throw new IllegalArgumentException("analysis reward class cannot be null");
+        var stack = create(item, target);
+        var marker = new CompoundTag();
+        marker.putInt("format", ANALYSIS_FORMAT);
+        marker.putString("reward_class", reward.serializedName());
+        stack.getOrCreateTag().put(ANALYSIS_TAG, marker);
+        return stack;
     }
 
     public static Optional<ResourceLocation> parseTarget(String value) {
@@ -132,8 +179,13 @@ public final class BlueprintFragmentItem extends Item {
             tooltip.add(Component.translatable(
                     "item.taczweaponblueprints.blueprint_fragment.tooltip.target",
                     displayName(data)));
-            tooltip.add(Component.translatable(
-                    "item.taczweaponblueprints.blueprint_fragment.tooltip.archive"));
+            var reward = identity(stack).flatMap(Identity::analysisClass);
+            if (reward.isPresent()) {
+                tooltip.add(Component.translatable("item.taczweaponblueprints.blueprint_fragment.tooltip.analysis"));
+                tooltip.add(Component.translatable("item.taczweaponblueprints.blueprint_fragment.tooltip." + reward.orElseThrow().serializedName()));
+            } else {
+                tooltip.add(Component.translatable("item.taczweaponblueprints.blueprint_fragment.tooltip.archive"));
+            }
         }
         super.appendHoverText(stack, level, tooltip, flag);
     }

@@ -3,8 +3,9 @@
   "flip_v": true,
   "model": "taczweaponblueprints:models/block/workbench_lvl1.obj",
   "automatic_culling": false,
+  "render_type": "minecraft:cutout",
   "textures": {
-    "texture0": "taczweaponblueprints:block/voxel_white",
+    "texture0": "taczweaponblueprints:block/workbench_lvl1",
     "particle": "taczweaponblueprints:block/workbench_lvl1"
   }
 }

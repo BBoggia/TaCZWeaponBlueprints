@@ -31,6 +31,12 @@ public final class ResearchTechTreeViewState {
         return preferredDomain;
     }
 
+    /** A failed publication or connection boundary must not retain old names or pins. */
+    public void clear() {
+        states.clear(); selectedDomain = null;
+        preferredDomain = ResearchTechTreeContract.DEFAULT_DOMAIN;
+    }
+
     public Optional<Domain> selectedDomain() {
         return Optional.ofNullable(selectedDomain);
     }
@@ -56,6 +62,18 @@ public final class ResearchTechTreeViewState {
             throw new IllegalArgumentException(
                     "Research Tech Tree layout catalog does not match its projection");
         }
+        retainInternal(catalog, projection -> layouts.layout(projection.domain()).orElseThrow(), preferredNodeId);
+    }
+
+    /** Scene cameras validate their own geometry keys; no legacy row layout is needed. */
+    public void retainScenes(ResearchTechTreeProjectionCatalog catalog, ResourceLocation preferredNodeId) {
+        requireCatalog(catalog);
+        retainInternal(catalog, projection -> null, preferredNodeId);
+    }
+
+    private void retainInternal(ResearchTechTreeProjectionCatalog catalog,
+            java.util.function.Function<ResearchTechTreeProjection, ResearchTechTreeLayout> layout,
+            ResourceLocation preferredNodeId) {
         LinkedHashSet<Domain> available = new LinkedHashSet<>(catalog.domains());
         states.keySet().removeIf(domain -> !available.contains(domain));
         selectedDomain = ResearchTechTreeContract.fallbackDomain(
@@ -64,7 +82,7 @@ public final class ResearchTechTreeViewState {
         for (ResearchTechTreeProjection projection : catalog.projections()) {
             MutableDomainState state = states.computeIfAbsent(
                     projection.domain(), ignored -> new MutableDomainState());
-            state.retain(projection, layouts.layout(projection.domain()).orElseThrow());
+            state.retain(projection, layout.apply(projection));
         }
         if (selectedDomain == null) {
             return;
@@ -215,6 +233,18 @@ public final class ResearchTechTreeViewState {
         return selectedState().map(state -> state.cameras.get(surface));
     }
 
+    /** Scene cameras are keyed by geometry, independent of responsive legacy row packing. */
+    public void saveSceneCamera(Surface surface, ResearchTreeSceneInput.Key key, ResearchTreeViewport.Snapshot camera) {
+        if (surface == null || key == null || camera == null || key.topology().domain() != selectedDomain)
+            throw new IllegalArgumentException("invalid scene camera identity");
+        var state = requireSelectedState();
+        state.sceneKeys.put(surface, key); state.cameras.put(surface, camera); state.cameraLayouts.remove(surface);
+    }
+    public Optional<ResearchTreeViewport.Snapshot> sceneCamera(Surface surface, ResearchTreeSceneInput.Key key) {
+        if (surface == null || key == null) throw new IllegalArgumentException("scene camera lookup requires surface and key");
+        return selectedState().flatMap(s -> key.equals(s.sceneKeys.get(surface)) ? Optional.ofNullable(s.cameras.get(surface)) : Optional.empty());
+    }
+
     /** Rejects a saved camera whose responsive row geometry no longer matches. */
     public Optional<ResearchTreeViewport.Snapshot> camera(
             Surface surface,
@@ -304,6 +334,7 @@ public final class ResearchTechTreeViewState {
     }
 
     private static final class MutableDomainState {
+        private final EnumMap<Surface, ResearchTreeSceneInput.Key> sceneKeys = new EnumMap<>(Surface.class);
         private ResourceLocation focusedNodeId;
         private String searchQuery = "";
         private ResourceLocation activeSearchMatch;
@@ -318,7 +349,7 @@ public final class ResearchTechTreeViewState {
                 ResearchTechTreeProjection projection,
                 ResearchTechTreeLayout layout) {
             if (layoutIdentity != null && !layoutIdentity.equals(layout)) {
-                cameras.clear();
+                cameras.keySet().removeIf(surface -> !sceneKeys.containsKey(surface));
                 cameraLayouts.clear();
             }
             layoutIdentity = layout;

@@ -76,6 +76,9 @@ public final class BlueprintResearchSnapshot {
         this.placementsByProfile = immutablePlacementMap(placementsByProfile);
         this.techTreeProgressionByProfile = immutableProgressionMap(techTreeProgressionByProfile);
         this.techTreeIndexes = immutableTechTreeIndexMap(techTreeIndexes);
+        Map<ResourceLocation,List<com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeBranch>> branches = new LinkedHashMap<>();
+        this.techTrees.forEach((id,tree) -> branches.put(id,ResearchTechTreeBranches.compile(id,tree,this.techTreeEntryBundles)));
+        this.authoredBranches = Collections.unmodifiableMap(branches);
     }
 
     public static BlueprintResearchSnapshot create(
@@ -147,6 +150,7 @@ public final class BlueprintResearchSnapshot {
         sortedProfiles.values().forEach(profile -> {
             profile.researchCost().validateForSnapshot();
             profile.reverseEngineering().validateForSnapshot();
+            profile.analyzer().ifPresent(policy -> policy.validateAgainst(profile.reverseEngineering()));
             BlueprintResearchPolicyDefinition.fromProfile(profile);
         });
         validateProfileTechTrees(sortedProfiles, sortedTechTrees);
@@ -175,6 +179,9 @@ public final class BlueprintResearchSnapshot {
             // expose an invalid economy that was silently accepted earlier.
             BlueprintResearchPolicyDefinition.fromProfile(profile)
                     .apply(ruleId, rule, BlueprintResearchTarget.MatchSpecificity.EXACT);
+            var analyzerBase = profile.analyzer().orElse(BlueprintAnalyzerPolicy.LEGACY);
+            var analyzerPolicy = analyzerBase.apply(rule.analyzer().orElse(null));
+            analyzerPolicy.validateAgainst(profile.reverseEngineering().apply(rule.reverseEngineering().orElse(null)));
             byProfile.computeIfAbsent(rule.profile(), ignored -> new ArrayList<>())
                     .add(new RuleBinding(ruleId, rule));
         }
@@ -227,6 +234,12 @@ public final class BlueprintResearchSnapshot {
 
     public Map<ResourceLocation, ResearchTreeGroupDefinition> groups() {
         return groups;
+    }
+
+    private final Map<ResourceLocation, List<com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeBranch>> authoredBranches;
+
+    public List<com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeBranch> authoredBranches(ResourceLocation treeId) {
+        return authoredBranches.getOrDefault(treeId, List.of());
     }
 
     public Map<ResourceLocation, ResearchTechTreeDefinition> techTrees() {
@@ -395,6 +408,10 @@ public final class BlueprintResearchSnapshot {
                 }
             }
         }
+        ingredientTerms += profiles.values().stream().flatMap(p -> p.analyzer().stream())
+                .flatMap(BlueprintAnalyzerPolicy::costs).mapToLong(BlueprintResearchSnapshot::ingredientTermCount).sum();
+        ingredientTerms += rules.values().stream().flatMap(r -> r.analyzer().stream())
+                .flatMap(BlueprintAnalyzerOverride::costs).mapToLong(BlueprintResearchSnapshot::ingredientTermCount).sum();
         if (targetTerms > MAX_TOTAL_RULE_TARGET_TERMS) {
             throw new IllegalArgumentException(
                     "research rules cannot contain more than " + MAX_TOTAL_RULE_TARGET_TERMS + " total target terms");

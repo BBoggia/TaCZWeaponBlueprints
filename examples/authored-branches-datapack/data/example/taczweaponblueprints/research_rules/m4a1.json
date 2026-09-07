@@ -1,0 +1,28 @@
+{
+  "format": 2,
+  "profile": "example:nested",
+  "target": {
+    "blueprints": [
+      "tacz:m4a1"
+    ]
+  },
+  "visibility": "full",
+  "tree_enabled": true,
+  "research_enabled": true,
+  "research_cost": {
+    "points": 2
+  },
+  "prerequisite_groups": [
+    {
+      "any_of": [
+        "tacz:hk_mp5a5",
+        "tacz:vector45"
+      ]
+    },
+    {
+      "any_of": [
+        "tacz:hk416d"
+      ]
+    }
+  ]
+}

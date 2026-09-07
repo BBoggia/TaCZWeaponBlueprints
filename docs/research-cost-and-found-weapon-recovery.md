@@ -96,7 +96,7 @@ used by ordinary reverse engineering. RP caps, maximum transaction bounds, and
 rollback behavior remain in force.
 
 Found-weapon recovery was introduced without changing the player-save version
-or rewriting existing items. Current builds require matching protocol-55
+or rewriting existing items. Current builds require matching protocol-59
 clients and servers. Existing guns have no origin marker and remain protected
 unless a trusted server workflow later creates a newly marked gun. No automatic
 backfill guesses whether an old gun was crafted or looted.

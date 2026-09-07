@@ -131,12 +131,21 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
     protected void apply(BlueprintResearchSnapshot prepared, ResourceManager resourceManager, ProfilerFiller profiler) {
         BlueprintDataManager.CatalogPublication catalog =
                 BlueprintDataManager.SERVER.catalogPublication();
+        applySnapshot(prepared, catalog, progressionConfig().activeProfileId(),
+                id -> !ForgeRegistries.ITEMS.tags().getTag(TagKey.create(Registries.ITEM, id)).isEmpty());
+    }
+
+    /** Publishes validated data using explicitly captured reload dependencies. */
+    void applySnapshot(BlueprintResearchSnapshot prepared, BlueprintDataManager.CatalogPublication catalog,
+            ResourceLocation activeProfile, Predicate<ResourceLocation> resolvedIngredientTag) {
         ResearchTechTreeCatalogValidator.validate(prepared, catalog.blueprints());
+        Set<ResourceLocation> unresolvedIngredientTags = BlueprintResearchIngredientValidator.unresolvedTags(
+                prepared, resolvedIngredientTag);
         Publication previous = publication;
         publication = new Publication(
                 prepared, PublicationRevision.next(previous.revision()));
         AutomaticWeaponPlacementCandidateManager.INSTANCE.invalidateForRevisions(
-                BlueprintDataManager.SERVER.catalogRevision(), publication.revision());
+                catalog.revision(), publication.revision());
         BlueprintResearchPolicyResolver.clearCache();
         BlueprintResearchDiagnostics.Summary summary = BlueprintResearchDiagnostics.summarize(prepared);
         TaCZWeaponBlueprints.LOGGER.info(
@@ -155,18 +164,12 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
                 summary.tagTargetCount(),
                 summary.selectorTargetCount(),
                 summary.groupMemberCount());
-        ResourceLocation activeProfile = progressionConfig().activeProfileId();
         if (!prepared.profiles().containsKey(activeProfile)) {
             TaCZWeaponBlueprints.LOGGER.warn(
                     "Blueprint research snapshot does not define the configured active profile {}; "
                             + "default research policy is disabled",
                     activeProfile);
         }
-        Set<ResourceLocation> unresolvedIngredientTags = BlueprintResearchIngredientValidator.unresolvedTags(
-                prepared,
-                id -> !ForgeRegistries.ITEMS.tags()
-                        .getTag(TagKey.create(Registries.ITEM, id))
-                        .isEmpty());
         if (!unresolvedIngredientTags.isEmpty()) {
             TaCZWeaponBlueprints.LOGGER.warn(
                     "Blueprint research data references {} unresolved item tags; affected costs remain unavailable: {}",

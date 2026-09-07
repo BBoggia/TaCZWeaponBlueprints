@@ -81,8 +81,8 @@ public final class BlueprintRecyclerActionPacket {
                     && sender.containerMenu instanceof BlueprintRecyclerMenuBridge menu
                     && menu.isRecyclerMenuValid(sender)) {
                 BlueprintRecyclerActionContract.ActionResult result =
-                        menu.handleRecyclerAction(
-                                sender,
+                        menu.handleRecyclerRequest(
+                                sender, requestId,
                                 action,
                                 expectedInputId,
                                 expectedInputCount,

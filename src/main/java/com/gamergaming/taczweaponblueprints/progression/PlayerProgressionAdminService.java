@@ -19,7 +19,8 @@ public final class PlayerProgressionAdminService {
         }
         var fragments = data.getArchivedBlueprintFragments();
         var criteria = data.getProgressionCriteria();
-        if (fragments == null || criteria == null) {
+        var analysis = data.getArchivedAnalysisFragments();
+        if (fragments == null || criteria == null || analysis == null) {
             throw new IllegalArgumentException("player supplemental progression cannot be null");
         }
         return new Snapshot(
@@ -30,7 +31,8 @@ public final class PlayerProgressionAdminService {
                 fragments.size(),
                 fragments.values().stream()
                         .mapToLong(Integer::longValue).sum(),
-                criteria.size());
+                criteria.size(), analysis.size(),
+                analysis.values().stream().mapToLong(value -> value.total()).sum());
     }
 
     public static boolean reset(IPlayerRecipeData data, ResetState state) {
@@ -56,6 +58,7 @@ public final class PlayerProgressionAdminService {
             }
             case FRAGMENTS -> {
                 data.clearArchivedBlueprintFragments();
+                data.clearArchivedAnalysisFragments();
                 yield true;
             }
             case CRITERIA -> {
@@ -68,6 +71,7 @@ public final class PlayerProgressionAdminService {
                     data.replaceRecipes(List.of());
                     data.clearResearchPointAwardLedger();
                     data.clearArchivedBlueprintFragments();
+                    data.clearArchivedAnalysisFragments();
                     data.clearProgressionCriteria();
                 }
                 yield replaced;
@@ -130,10 +134,18 @@ public final class PlayerProgressionAdminService {
             int researchPoints,
             int fragmentTargets,
             long archivedFragments,
-            int progressionCriteria) {
+            int progressionCriteria,
+            int analysisFragmentTargets,
+            long analysisFragments) {
+        public Snapshot(int learnedBlueprints, int discoveredBlueprints, int legacyRecipes, int researchPoints,
+                int fragmentTargets, long archivedFragments, int progressionCriteria) {
+            this(learnedBlueprints, discoveredBlueprints, legacyRecipes, researchPoints, fragmentTargets, archivedFragments, progressionCriteria, 0, 0);
+        }
         public Snapshot {
             if (learnedBlueprints < 0 || discoveredBlueprints < learnedBlueprints
                     || legacyRecipes < 0 || researchPoints < 0
+                    || analysisFragmentTargets < 0 || analysisFragmentTargets > PlayerProgressionLimits.MAX_FRAGMENT_TARGETS
+                    || analysisFragments < 0 || analysisFragments > (long) PlayerProgressionLimits.MAX_FRAGMENT_TARGETS * PlayerProgressionLimits.MAX_PROGRESS_VALUE
                     || fragmentTargets < 0
                     || fragmentTargets > PlayerProgressionLimits.MAX_FRAGMENT_TARGETS
                     || archivedFragments < 0L

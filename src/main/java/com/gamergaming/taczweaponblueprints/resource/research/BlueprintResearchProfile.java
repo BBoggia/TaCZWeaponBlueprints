@@ -38,12 +38,14 @@ public record BlueprintResearchProfile(
         Optional<ResourceLocation> techTree,
         BlueprintReverseEngineeringPolicy reverseEngineering,
         BlueprintProgressionProfilePolicy progression,
-        BlueprintCraftingProfilePolicy crafting) {
+        BlueprintCraftingProfilePolicy crafting,
+        Optional<BlueprintAnalyzerPolicy> analyzer) {
     public static final int LEGACY_FORMAT = 1;
     public static final int DOMAIN_POLICY_FORMAT = 2;
     public static final int PROGRESSION_FORMAT = 3;
     public static final int CRAFTING_FORMAT = 4;
-    public static final int CURRENT_FORMAT = CRAFTING_FORMAT;
+    public static final int ANALYZER_FORMAT = 5;
+    public static final int CURRENT_FORMAT = ANALYZER_FORMAT;
 
     private static final Codec<Integer> FORMAT_CODEC = Codec.INT.flatXmap(
             BlueprintResearchProfile::validateFormat,
@@ -70,7 +72,9 @@ public record BlueprintResearchProfile(
                     new StrictOptionalFieldCodec<>(
                             "crafting",
                             BlueprintCraftingProfilePolicy.CODEC)
-                            .forGetter(ProfileExtensions::crafting))
+                            .forGetter(ProfileExtensions::crafting),
+                    new AnalyzerOptionalFieldCodec<>("analyzer", BlueprintAnalyzerPolicy.CODEC)
+                            .forGetter(ProfileExtensions::analyzer))
                     .apply(instance, ProfileExtensions::new));
 
     private static final Codec<BlueprintResearchProfile> RAW_CODEC = RecordCodecBuilder.create(instance ->
@@ -139,7 +143,31 @@ public record BlueprintResearchProfile(
             "tech_tree",
             "reverse_engineering",
             "progression",
-            "crafting");
+            "crafting",
+            "analyzer");
+
+    /** Compatibility constructor for the format-4 record shape. */
+    public BlueprintResearchProfile(
+        int format,
+        boolean journalEnabled,
+        JournalVisibility visibility,
+        boolean researchEnabled,
+        boolean recyclingEnabled,
+        boolean allowUnlearnedRecycling,
+        int recyclingValue,
+        BlueprintResearchCost researchCost,
+        boolean requiresDiscovery,
+        boolean creativeBypassesCost,
+        boolean treeEnabled,
+        Map<Domain, DomainPolicy> domainPolicies,
+        List<ResourceLocation> entryPointCandidates,
+        Map<Domain, List<ResourceLocation>> techEntryPointCandidates,
+        Optional<ResourceLocation> techTree,
+        BlueprintReverseEngineeringPolicy reverseEngineering,
+        BlueprintProgressionProfilePolicy progression,
+        BlueprintCraftingProfilePolicy crafting) {
+        this(format, journalEnabled, visibility, researchEnabled, recyclingEnabled, allowUnlearnedRecycling, recyclingValue, researchCost, requiresDiscovery, creativeBypassesCost, treeEnabled, domainPolicies, entryPointCandidates, techEntryPointCandidates, techTree, reverseEngineering, progression, crafting, Optional.empty());
+    }
 
     /** Compatibility constructor for callers compiled against the format-3 record shape. */
     public BlueprintResearchProfile(
@@ -400,6 +428,7 @@ public record BlueprintResearchProfile(
     }
 
     public BlueprintResearchProfile {
+        analyzer = analyzer == null ? Optional.empty() : analyzer;
         if (format < LEGACY_FORMAT || format > CURRENT_FORMAT) {
             throw new IllegalArgumentException("unsupported blueprint research-profile format " + format);
         }
@@ -515,6 +544,7 @@ public record BlueprintResearchProfile(
     }
 
     private Optional<String> domainPolicyValidationError() {
+        if (format < ANALYZER_FORMAT && analyzer.isPresent()) return Optional.of("analyzer requires research-profile format " + ANALYZER_FORMAT);
         if (format < DOMAIN_POLICY_FORMAT && !domainPolicies.isEmpty()) {
             return Optional.of("format-1 profiles cannot declare domain policies");
         }
@@ -539,7 +569,7 @@ public record BlueprintResearchProfile(
         return new ProfileExtensions(
                 Optional.of(reverseEngineering),
                 format >= PROGRESSION_FORMAT ? Optional.of(progression) : Optional.empty(),
-                format >= CRAFTING_FORMAT ? Optional.of(crafting) : Optional.empty());
+                format >= CRAFTING_FORMAT ? Optional.of(crafting) : Optional.empty(), analyzer);
     }
 
     private static BlueprintResearchProfile fromCodec(
@@ -577,7 +607,7 @@ public record BlueprintResearchProfile(
                 techTree,
                 extensions.reverseEngineering().orElse(BlueprintReverseEngineeringPolicy.DEFAULT),
                 extensions.progression().orElse(defaultProgressionPolicy(format)),
-                extensions.crafting().orElse(defaultCraftingPolicy(format)));
+                extensions.crafting().orElse(defaultCraftingPolicy(format)), extensions.analyzer());
     }
 
     private static BlueprintProgressionProfilePolicy defaultProgressionPolicy(int format) {
@@ -595,11 +625,13 @@ public record BlueprintResearchProfile(
     private record ProfileExtensions(
             Optional<BlueprintReverseEngineeringPolicy> reverseEngineering,
             Optional<BlueprintProgressionProfilePolicy> progression,
-            Optional<BlueprintCraftingProfilePolicy> crafting) {
+            Optional<BlueprintCraftingProfilePolicy> crafting,
+            Optional<BlueprintAnalyzerPolicy> analyzer) {
         private ProfileExtensions {
             reverseEngineering = reverseEngineering == null ? Optional.empty() : reverseEngineering;
             progression = progression == null ? Optional.empty() : progression;
             crafting = crafting == null ? Optional.empty() : crafting;
+            analyzer = analyzer == null ? Optional.empty() : analyzer;
         }
     }
 

@@ -87,27 +87,27 @@ class TieredCraftingWorkbenchResourcesTest {
     }
 
     @Test
-    void packagedTexturesAreBoundedAndVoxelModelsUseTheForgeAlias() throws IOException {
+    void packagedPixelAtlasesUseTheForgeTextureAlias() throws IOException {
         for (String id : WORKBENCH_IDS) {
             BufferedImage texture = ImageIO.read(PROJECT.resolve(
                     "src/main/resources/assets/taczweaponblueprints/textures/block/"
                             + id + ".png").toFile());
             assertNotNull(texture, id);
-            assertEquals(1024, texture.getWidth(), id);
-            assertEquals(1024, texture.getHeight(), id);
+            assertEquals(512, texture.getWidth(), id);
+            assertEquals(256, texture.getHeight(), id);
 
             for (String domain : List.of("block", "item")) {
                 JsonObject model = json(
                         "src/main/resources/assets/taczweaponblueprints/models/"
                                 + domain + '/' + id + ".json");
                 assertEquals("forge:obj", model.get("loader").getAsString());
-                assertEquals("taczweaponblueprints:block/voxel_white",
+                assertEquals("taczweaponblueprints:block/" + id,
                         model.getAsJsonObject("textures").get("texture0").getAsString());
                 assertEquals("taczweaponblueprints:block/" + id,
                         model.getAsJsonObject("textures").get("particle").getAsString());
                 if (domain.equals("item")) {
                     JsonObject display = model.getAsJsonObject("display");
-                    assertEquals(-35, display.getAsJsonObject("gui")
+                    assertEquals(145, display.getAsJsonObject("gui")
                             .getAsJsonArray("rotation").get(1).getAsInt(), id + " GUI yaw");
                     assertEquals(-45, display.getAsJsonObject("firstperson_righthand")
                             .getAsJsonArray("rotation").get(1).getAsInt(), id + " held yaw");
@@ -118,16 +118,10 @@ class TieredCraftingWorkbenchResourcesTest {
                         "src/main/resources/assets/taczweaponblueprints/models/"
                                 + domain + '/' + id + ".mtl"));
                 assertTrue(material.contains("map_Kd #texture0"), domain + '/' + id);
-                assertTrue(material.contains("newmtl RGB_"), domain + '/' + id);
+                assertTrue(material.contains("newmtl workstation"), domain + '/' + id);
             }
         }
 
-        BufferedImage white = ImageIO.read(PROJECT.resolve(
-                "src/main/resources/assets/taczweaponblueprints/textures/block/voxel_white.png")
-                .toFile());
-        assertNotNull(white);
-        assertEquals(16, white.getWidth());
-        assertEquals(16, white.getHeight());
     }
 
     @Test

@@ -38,9 +38,11 @@ public record ResearchTechTreeDefinition(
         LayoutDefinition layout,
         BandPolicyDefinition bandPolicy,
         List<TierDefinition> tiers,
-        List<DomainDefinition> domains) {
+        List<DomainDefinition> domains,
+        List<ResearchTechTreeBranchDefinition> branches) {
     public static final int LEGACY_FORMAT = 1;
-    public static final int CURRENT_FORMAT = 2;
+    public static final int RANKED_FORMAT = 2;
+    public static final int CURRENT_FORMAT = 3;
     public static final int MAX_TITLE_LENGTH = 80;
     public static final int MAX_TRANSLATION_KEY_LENGTH = 256;
     public static final int MAX_LANES_PER_DOMAIN = 64;
@@ -256,11 +258,11 @@ public record ResearchTechTreeDefinition(
                                             : Optional.of(value))
                             .forGetter(ResearchTechTreeDefinition::weaponPlacementMode),
                     new StrictOptionalFieldCodec<>("layout", LAYOUT_DEFINITION_CODEC)
-                            .forGetter(definition -> definition.format() == CURRENT_FORMAT
+                            .forGetter(definition -> definition.format() >= RANKED_FORMAT
                                     ? Optional.of(definition.layout())
                                     : Optional.empty()),
                     new StrictOptionalFieldCodec<>("bands", BAND_POLICY_DEFINITION_CODEC)
-                            .forGetter(definition -> definition.format() == CURRENT_FORMAT
+                            .forGetter(definition -> definition.format() >= RANKED_FORMAT
                                             && definition.bandPolicy().mode() != BandMode.NONE
                                     ? Optional.of(definition.bandPolicy())
                                     : Optional.empty()),
@@ -269,7 +271,9 @@ public record ResearchTechTreeDefinition(
                                     ? Optional.empty()
                                     : Optional.of(definition.tiers())),
                     DOMAIN_DEFINITION_CODEC.listOf().fieldOf("domains")
-                            .forGetter(ResearchTechTreeDefinition::domains))
+                            .forGetter(ResearchTechTreeDefinition::domains),
+                    new StrictOptionalFieldCodec<>("branches", ResearchTechTreeBranchDefinition.CODEC.listOf())
+                            .forGetter(v -> v.branches().isEmpty() ? Optional.empty() : Optional.of(v.branches())))
                     .apply(instance, ResearchTechTreeDefinition::decode));
     public static final Codec<ResearchTechTreeDefinition> CODEC = StrictRecordCodec.wrap(
             "Research Tech Tree",
@@ -284,7 +288,7 @@ public record ResearchTechTreeDefinition(
             "layout",
             "bands",
             "tiers",
-            "domains");
+            "domains", "branches");
 
     /** Compatibility constructor for version-1 definitions and existing fixtures. */
     public ResearchTechTreeDefinition(
@@ -353,7 +357,17 @@ public record ResearchTechTreeDefinition(
                 domains);
     }
 
+    public ResearchTechTreeDefinition(int format, String title, Optional<String> translationKey,
+            Optional<ResourceLocation> icon, WeaponPlacementMode weaponPlacementMode,
+            LayoutDefinition layout, BandPolicyDefinition bandPolicy, List<TierDefinition> tiers,
+            List<DomainDefinition> domains) {
+        this(format,title,translationKey,icon,weaponPlacementMode,layout,bandPolicy,tiers,domains,List.of());
+    }
+
     public ResearchTechTreeDefinition {
+        branches = branches == null ? List.of() : List.copyOf(branches);
+        if (format < CURRENT_FORMAT && !branches.isEmpty()) throw new IllegalArgumentException("Tech Tree branches require format 3");
+        ResearchTechTreeBranches.validateDefinitions(branches, domains);
         translationKey = translationKey == null ? Optional.empty() : translationKey;
         icon = icon == null ? Optional.empty() : icon;
         weaponPlacementMode = weaponPlacementMode == null
@@ -393,7 +407,7 @@ public record ResearchTechTreeDefinition(
     }
 
     public boolean containsTier(Tier tier) {
-        return tier != null && (format == CURRENT_FORMAT
+        return tier != null && (format >= RANKED_FORMAT
                 || tiers.stream().anyMatch(value -> value.tier() == tier));
     }
 
@@ -680,7 +694,7 @@ public record ResearchTechTreeDefinition(
                     "Research Tech Tree format 1 must use the default layout policy");
         }
         if (format == LEGACY_FORMAT && bandPolicy.mode() != BandMode.LEGACY
-                || format == CURRENT_FORMAT && bandPolicy.mode() == BandMode.LEGACY) {
+                || format >= RANKED_FORMAT && bandPolicy.mode() == BandMode.LEGACY) {
             throw new IllegalArgumentException(
                     "Research Tech Tree band policy does not match its format");
         }
@@ -693,7 +707,7 @@ public record ResearchTechTreeDefinition(
         validateOptionalId(icon, "Research Tech Tree icon");
         if (tiers == null || tiers.stream().anyMatch(value -> value == null)
                 || format == LEGACY_FORMAT && tiers.size() != Tier.values().length
-                || format == CURRENT_FORMAT
+                || format >= RANKED_FORMAT
                         && !tiers.isEmpty() && tiers.size() != Tier.values().length) {
             throw new IllegalArgumentException(
                     "Research Tech Tree legacy labels must define all "
@@ -752,8 +766,10 @@ public record ResearchTechTreeDefinition(
             Optional<LayoutDefinition> layout,
             Optional<BandPolicyDefinition> bandPolicy,
             Optional<List<TierDefinition>> tiers,
-            List<DomainDefinition> domains) {
-        if (format == CURRENT_FORMAT && layout.isEmpty()) {
+            List<DomainDefinition> domains,
+            Optional<List<ResearchTechTreeBranchDefinition>> branches) {
+        if (format < CURRENT_FORMAT && branches.isPresent()) throw new IllegalArgumentException("Tech Tree branches require format 3");
+        if (format >= RANKED_FORMAT && layout.isEmpty()) {
             throw new IllegalArgumentException(
                     "Research Tech Tree format 2 requires a layout object");
         }
@@ -776,7 +792,7 @@ public record ResearchTechTreeDefinition(
                         ? BandPolicyDefinition.LEGACY
                         : BandPolicyDefinition.NONE),
                 tiers.orElse(List.of()),
-                domains);
+                domains, branches.orElse(List.of()));
     }
 
     private static void validateConfiguredBands(

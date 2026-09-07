@@ -13,6 +13,14 @@ public final class BlueprintRecyclerFeedbackState {
 
     private Feedback feedback;
     private int remainingTicks;
+    private long stateToken;
+    private Optional<com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable.Result> outcome = Optional.empty();
+    private Optional<BlueprintRecyclerActionContract.FragmentResult> fragments = Optional.empty();
+    public Optional<BlueprintRecyclerActionContract.FragmentResult> visibleFragments() { return visibleCode().isPresent() ? fragments : Optional.empty(); }
+    public Optional<ResourceLocation> visibleTarget() { return visibleCode().isPresent() ? Optional.of(feedback.inputId()) : Optional.empty(); }
+    public Optional<com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable.Result> visibleOutcome() {
+        return visibleCode().isPresent() ? outcome : Optional.empty();
+    }
 
     public void accept(
             BlueprintRecyclerActionContract.ActionResult result,
@@ -21,7 +29,15 @@ public final class BlueprintRecyclerFeedbackState {
             clear();
             return;
         }
+        // The same target/count can describe a replacement weapon or fragment stack.
+        if (result.stateToken() > 0 && result.stateToken() != preview.stateToken()) {
+            clear();
+            return;
+        }
+        stateToken = result.stateToken();
         ResourceLocation resultInputId = result.inputId().orElseThrow();
+        outcome = result.outcome();
+        fragments = result.fragments();
         if (preview.inputKind() == BlueprintRecyclerPreview.InputKind.EMPTY) {
             if (result.code() == BlueprintRecyclerActionContract.ResultCode.SUCCESS) {
                 feedback = Feedback.afterConsumption(result.code(), resultInputId);
@@ -46,6 +62,9 @@ public final class BlueprintRecyclerFeedbackState {
             clear();
             return;
         }
+        stateToken = 0L;
+        outcome = Optional.empty();
+        fragments = Optional.empty();
         show(code, preview.inputId().orElseThrow(), preview);
     }
 
@@ -65,7 +84,8 @@ public final class BlueprintRecyclerFeedbackState {
             }
             return;
         }
-        if (feedback.observedEmpty()
+        if (stateToken > 0 && preview.stateToken() != stateToken
+                || feedback.observedEmpty()
                 || preview.inputId().filter(feedback.inputId()::equals).isEmpty()
                 || preview.inputKind() != feedback.inputKind()
                 || preview.inputCount() != feedback.inputCount()) {
@@ -95,6 +115,9 @@ public final class BlueprintRecyclerFeedbackState {
     public void clear() {
         feedback = null;
         remainingTicks = 0;
+        stateToken = 0L;
+        outcome = Optional.empty();
+        fragments = Optional.empty();
     }
 
     private void show(

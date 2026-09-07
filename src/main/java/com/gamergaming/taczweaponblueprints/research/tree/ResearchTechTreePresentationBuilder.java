@@ -195,7 +195,11 @@ final class ResearchTechTreePresentationBuilder {
                     domainDefinition.translationKey(),
                     safeIcon(domainDefinition.icon(), domainMemberIds, publicIds, graph)
                             .or(() -> firstSafeIcon(domainMemberIds, graph)),
-                    lanes));
+                    lanes,
+                    com.gamergaming.taczweaponblueprints.resource.research.ResearchTechTreeBranches.publish(
+                            snapshot,treeId,domainDefinition.domain(),domainMemberIds,publicIds,
+                            graph.nodes().stream().filter(node -> node.visibility().revealsIdentity())
+                                    .map(ResearchTreeGraph.Node::blueprintId).collect(java.util.stream.Collectors.toSet()))));
         }
         if (domains.isEmpty()) {
             return ResearchTechTreePresentation.EMPTY;
@@ -247,7 +251,7 @@ final class ResearchTechTreePresentationBuilder {
             BlueprintResearchSnapshot snapshot,
             Map<ResourceLocation, BlueprintData> catalog,
             AutomaticWeaponPlacementCandidateSnapshot automaticCandidates) {
-        if (definition.format() >= ResearchTechTreeDefinition.CURRENT_FORMAT
+        if (definition.format() >= ResearchTechTreeDefinition.RANKED_FORMAT
                 && automaticCandidates != null
                 && automaticCandidates.treeId().equals(treeId)
                 && definition.layout().acceptsResolvedWidth(

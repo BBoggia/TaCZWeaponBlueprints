@@ -63,7 +63,7 @@ public final class AutomaticWeaponCandidatePositioner {
                     "Automatic weapon placement-policy inputs are invalid");
         }
         return tree != null
-                && tree.format() >= ResearchTechTreeDefinition.CURRENT_FORMAT
+                && tree.format() >= ResearchTechTreeDefinition.RANKED_FORMAT
                         ? basePolicy.withMaxNodesPerRank(
                                 ResearchTechTreeLayerWidthResolver.resolve(
                                         tree.layout(), topologyWeaponCount))

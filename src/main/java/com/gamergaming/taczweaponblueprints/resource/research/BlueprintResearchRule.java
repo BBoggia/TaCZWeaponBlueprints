@@ -32,12 +32,14 @@ public record BlueprintResearchRule(
         Optional<Boolean> creativeBypassesCost,
         Optional<BlueprintReverseEngineeringOverride> reverseEngineering,
         Optional<BlueprintProgressionRuleOverride> progression,
-        Optional<BlueprintCraftingRuleOverride> crafting) {
+        Optional<BlueprintCraftingRuleOverride> crafting,
+        Optional<BlueprintAnalyzerOverride> analyzer) {
     public static final int LEGACY_FORMAT = 1;
     public static final int GROUPED_PREREQUISITE_FORMAT = 2;
     public static final int PROGRESSION_FORMAT = 3;
     public static final int CRAFTING_FORMAT = 4;
-    public static final int CURRENT_FORMAT = CRAFTING_FORMAT;
+    public static final int ANALYZER_FORMAT = 5;
+    public static final int CURRENT_FORMAT = ANALYZER_FORMAT;
     public static final int MAX_ABSOLUTE_PRIORITY = 1_000_000;
     public static final int MAX_PREREQUISITES =
             ResearchRequirements.MAX_TOTAL_ALTERNATIVES;
@@ -61,7 +63,9 @@ public record BlueprintResearchRule(
                     new StrictOptionalFieldCodec<>(
                             "crafting",
                             BlueprintCraftingRuleOverride.CODEC)
-                            .forGetter(RuleExtensions::crafting))
+                            .forGetter(RuleExtensions::crafting),
+                    new AnalyzerOptionalFieldCodec<>("analyzer", BlueprintAnalyzerOverride.CODEC)
+                            .forGetter(RuleExtensions::analyzer))
                     .apply(instance, RuleExtensions::new));
 
     private static final Codec<BlueprintResearchRule> RAW_CODEC = RecordCodecBuilder.create(instance ->
@@ -122,7 +126,31 @@ public record BlueprintResearchRule(
             "creative_bypasses_cost",
             "reverse_engineering",
             "progression",
-            "crafting");
+            "crafting",
+            "analyzer");
+
+    /** Compatibility constructor for the format-4 record shape. */
+    public BlueprintResearchRule(
+        int format,
+        ResourceLocation profile,
+        int priority,
+        BlueprintResearchTarget target,
+        Optional<JournalVisibility> visibility,
+        Optional<Boolean> treeEnabled,
+        Optional<Boolean> researchEnabled,
+        Optional<Boolean> recyclingEnabled,
+        Optional<Boolean> allowUnlearnedRecycling,
+        Optional<Integer> recyclingValue,
+        Optional<BlueprintResearchCost> researchCost,
+        Optional<Boolean> requiresDiscovery,
+        Optional<List<ResourceLocation>> prerequisites,
+        Optional<ResearchRequirements> prerequisiteGroups,
+        Optional<Boolean> creativeBypassesCost,
+        Optional<BlueprintReverseEngineeringOverride> reverseEngineering,
+        Optional<BlueprintProgressionRuleOverride> progression,
+        Optional<BlueprintCraftingRuleOverride> crafting) {
+        this(format, profile, priority, target, visibility, treeEnabled, researchEnabled, recyclingEnabled, allowUnlearnedRecycling, recyclingValue, researchCost, requiresDiscovery, prerequisites, prerequisiteGroups, creativeBypassesCost, reverseEngineering, progression, crafting, Optional.empty());
+    }
 
     /** Compatibility constructor for callers compiled against the format-3 record shape. */
     public BlueprintResearchRule(
@@ -343,6 +371,7 @@ public record BlueprintResearchRule(
         reverseEngineering = optional(reverseEngineering);
         progression = optional(progression);
         crafting = optional(crafting);
+        analyzer = optional(analyzer);
     }
 
     private static DataResult<Integer> validateFormat(int value) {
@@ -359,6 +388,7 @@ public record BlueprintResearchRule(
     }
 
     private static DataResult<BlueprintResearchRule> validateRule(BlueprintResearchRule rule) {
+        if (rule.format() < ANALYZER_FORMAT && rule.analyzer().isPresent()) return DataResult.error(() -> "analyzer requires research-rule format " + ANALYZER_FORMAT);
         if (rule.prerequisites().isPresent() && rule.prerequisiteGroups().isPresent()) {
             return DataResult.error(() -> "research rule fields prerequisites and prerequisite_groups are mutually exclusive");
         }
@@ -400,6 +430,7 @@ public record BlueprintResearchRule(
     }
 
     void validateForSnapshot() {
+        if (format < ANALYZER_FORMAT && analyzer.isPresent()) throw new IllegalArgumentException("analyzer requires research-rule format " + ANALYZER_FORMAT);
         target.validateForSnapshot();
         researchCost.ifPresent(BlueprintResearchCost::validateForSnapshot);
         reverseEngineering.ifPresent(BlueprintReverseEngineeringOverride::validateForSnapshot);
@@ -452,7 +483,7 @@ public record BlueprintResearchRule(
         return new RuleExtensions(
                 reverseEngineering,
                 format >= PROGRESSION_FORMAT ? progression : Optional.empty(),
-                format >= CRAFTING_FORMAT ? crafting : Optional.empty());
+                format >= CRAFTING_FORMAT ? crafting : Optional.empty(), analyzer);
     }
 
     private static BlueprintResearchRule fromCodec(
@@ -490,7 +521,7 @@ public record BlueprintResearchRule(
                 creativeBypassesCost,
                 extensions.reverseEngineering(),
                 extensions.progression(),
-                extensions.crafting());
+                extensions.crafting(), extensions.analyzer());
     }
 
     private static DataResult<BlueprintResearchRule> validateCraftingConflicts(
@@ -523,11 +554,13 @@ public record BlueprintResearchRule(
     private record RuleExtensions(
             Optional<BlueprintReverseEngineeringOverride> reverseEngineering,
             Optional<BlueprintProgressionRuleOverride> progression,
-            Optional<BlueprintCraftingRuleOverride> crafting) {
+            Optional<BlueprintCraftingRuleOverride> crafting,
+            Optional<BlueprintAnalyzerOverride> analyzer) {
         private RuleExtensions {
             reverseEngineering = optional(reverseEngineering);
             progression = optional(progression);
             crafting = optional(crafting);
+            analyzer = optional(analyzer);
         }
     }
 }

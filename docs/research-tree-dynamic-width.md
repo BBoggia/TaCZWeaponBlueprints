@@ -63,6 +63,14 @@ changing rank identities, prerequisites, costs, or unlock authority.
 Manual wheel/button zoom reaches 15%; Fit may still frame below that floor when
 the complete canvas requires it.
 
+The [branch scene engine](research-tree-branch-layout.md) supersedes
+responsive row wrapping for its own visual geometry. It places each occupied
+semantic rank on one shared row and reserves branch widths independently of the
+window. The active Research Bench uses this scene: resizing cannot repartition
+those rows or move branch nodes. Its proportional wheel zoom also operates below
+the legacy manual floor. This change does not alter the server width formula, semantic ranks,
+generated prerequisites, or the published `max_nodes_per_layer` value.
+
 ## Compatibility and observability
 
 - Existing format-1 trees remain fixed at their legacy default.
@@ -74,7 +82,7 @@ the complete canvas requires it.
   envelope to the client.
 - Automatic topology version `tacz-gun-placement-v13` identifies the current
   gradual branch, terminal-cohort, and bounded local-prerequisite result.
-- Export format 20 records the topology population, resolved width, width mode,
+- Export format 22 records the topology population, resolved width, width mode,
   configured bounds, canonical branch decisions, and finalized ranks.
   `/gg research status` reports the population and resolved visual-row capacity
   for the active revision-matched automatic publication.

@@ -1,0 +1,16 @@
+{
+  "format": 1,
+  "journal_enabled": true,
+  "visibility": "full",
+  "tree_enabled": false,
+  "research_enabled": false,
+  "recycling_enabled": true,
+  "allow_unlearned_recycling": false,
+  "recycling_value": 1,
+  "research_cost": {
+    "points": 2
+  },
+  "requires_discovery": false,
+  "creative_bypasses_cost": false,
+  "tech_tree": "example:nested"
+}

@@ -56,15 +56,15 @@ scales 1, 2, 3, 4, and Auto where the display supports them. Include 320x240,
 - [ ] Inventory and material slots are absent and inactive in Research.
 - [ ] Only the dedicated Blueprint Analyzer exposes the contextual input,
   extract-only output, and player inventory.
-- [ ] Fullscreen is a translucent world-backed overlay at every supported size and reserves no permanent right, bottom, or drawer details panel.
+- [ ] The Tech Tree has a quiet opaque surface, a persistent header, and a requirements inspector to the right (or below at narrow GUI widths).
 - [ ] Opening, resizing, and closing the permanent Research Tree preserve a valid focus without exposing inactive inventory slots.
 - [ ] Search text and independent per-domain Tech Tree pan and zoom positions survive repeated domain changes.
 - [ ] Fullscreen controls remain readable over bright and dark world backgrounds.
 - [ ] The pinned context card fully covers every graph edge, label, badge, and item model behind it; only the card's own icons and widgets render above its background.
 - [ ] Selected, focused, and hovered rail labels avoid the pinned context card; if space is exhausted, the conflicting label stays hidden and never claims clicks through the card.
-- [ ] Changing Research Tree Settings spacing, wrapping, and pass settings while the bench is open refreshes Tech Tree geometry once without changing the server tree or entering a rebuild loop.
+- [ ] Legacy spacing/preset keys remain compatible stored data and do not alter scene geometry. Reduce Motion, grid, minimap, and hold settings still apply.
 - [ ] A large content-pack catalog with many entries at the same progression
-  level wraps into multiple Tech Tree rows without overlap or an empty first publication.
+  level fits into separate scene branches without node overlap or an empty first publication.
 - [ ] If Tech Tree publication is deliberately fault-injected, the Bench stays
   in Tech Tree and reports that it is unavailable; it never opens Branches or
   All Weapons and the server log records the generation failure.
@@ -340,7 +340,7 @@ unchecked until that behavior has been confirmed in a real client/server run.
 - [ ] A datapack-authored prerequisite remains the complete effective prerequisite list for that gun and is never replaced or extended by the connected-mode heuristic.
 - [ ] A legacy rule with `prerequisites: [A, B]` still requires both A and B. A format-2 rule with one `prerequisite_groups` entry containing `any_of: [A, B]` becomes researchable after learning either A or B, while a second singleton group remains independently mandatory.
 - [ ] A partially disclosed any-of group shows its visible alternatives and a bounded hidden-choice count without exposing hidden IDs. Preview/name/silhouette visibility must not reveal whether the group is satisfied; full visibility may show the current satisfaction count.
-- [ ] A client or server still using an older protocol is rejected cleanly. Matching protocol-55 peers reconstruct identical group ordinals, alternatives, hidden counts, disclosure state, aggregate path-purchase previews, typed route-authority failures, route fingerprints, correlated authoritative guidance, bounded Affordable Now batches, Recent unlock history, disclosure-filtered Blueprint Fragment, crafting-access, and Progression Gate state, and the exact native crafting allow-list with its policy identity even when updates arrive out of order.
+- [ ] A client or server still using an older protocol is rejected cleanly. Matching protocol-59 peers reconstruct identical group ordinals, alternatives, hidden counts, disclosure state, aggregate path-purchase previews, typed route-authority failures, route fingerprints, correlated authoritative guidance, bounded Affordable Now batches, Recent unlock history, disclosure-filtered Blueprint Fragment, crafting-access, and Progression Gate state, and the exact native crafting allow-list with its policy identity even when updates arrive out of order.
 - [ ] With a crafting Workbench open, simulate or pause an incomplete crafting-access response for at least five seconds. Confirm the client retries the original request once, accepts the replacement snapshot, and does not issue additional retries while the same menu remains open.
 - [ ] Open each Research Bench tier and confirm it exposes only the Tech Tree. Open each crafting Workbench level and confirm it exposes only TaCZ crafting. Neither screen should offer a mode-switch button.
 - [ ] Break or replace either half of a crafting Workbench while its menu is open. Moving away or changing dimension must also invalidate the old crafting session.
@@ -357,7 +357,7 @@ unchecked until that behavior has been confirmed in a real client/server run.
 - [ ] Confirm the ordinary `tacz:gun_smith_table` recipe is absent after startup and `/reload`, while an existing table still opens. A higher-priority world datapack may deliberately restore that recipe without restoring any other removed content.
 - [ ] `/gg research status` reports the selected automatic mode and prerequisite strategy, tree, eligible/excluded counts, planned references/groups/alternate-route groups, omissions, branch boundaries, same/cross-family edges and merges, maximum fan-out, the current catalog/research revision pair, and complete candidate/branch-coordinate/decision/finalized-rank counts; a legacy tree may show the explicitly diagnostic Phase-0 counterfactual, while an authoritative grouped tree instead reports live effective-alternative, ancestry, route-cost, chain, branch-entry, per-phase fan-out/family-density, terminal-affordability, warning evidence, and the Phase-6 retain/prototype/insufficient motif decision with its review limits. A stale publication reports `awaiting_rebuild`, a failed rebuild reports its exact stage and bounded reason, and a later revision clears that stale failure.
 - [ ] `/gg research inspect <blueprint>` explains an add-on gun's automatic state, score, confidence, generated rank, optional band, stable sibling order, planned prerequisite or omission, exact branch strategy, parent-family counts, terminal/depth flags, and any grouped route-review outcome/cost bounds/ancestry diversity without adding a line for attachment/ammo entries.
-- [ ] `/gg research export` writes format 20 deterministically, preserves canonical prerequisite-group boundaries plus the legacy prerequisite union, records the automatic strategy, explicit generated relationship shapes and hybrid aggregate counts, planned generated groups, and exact/bounded alternative-route review evidence, includes complete independent crafting-policy coverage, dispositions, Workbench levels, assignment sources, selected rules, reasons, and warnings, includes the complete `grouped_route_quality` distributions/warnings/terminal bounds plus `grouped_route_motif_assessment` signals/recommendations/visual-evidence boundary, includes revision-matched research-workstation, Blueprint Fragment, Progression Gate, external-workstation mapping, review-fallback, and omission diagnostics, and its tree-owned band policy, configured/effective layer width, topology population, branch-prerequisite and publication-completeness summaries, planned and published ranks, topology/economy sections, second-parent quotas, strategy-specific rejection evidence, and per-weapon decision/parent relationships agree with status/inspect for representative authored, automatic, excluded, and unplaced weapons.
+- [ ] `/gg research export` writes format 22 deterministically, preserves canonical prerequisite-group boundaries plus the legacy prerequisite union, records the automatic strategy, explicit generated relationship shapes and hybrid aggregate counts, planned generated groups, and exact/bounded alternative-route review evidence, includes complete independent crafting-policy coverage, dispositions, Workbench levels, assignment sources, selected rules, reasons, and warnings, includes the complete `grouped_route_quality` distributions/warnings/terminal bounds plus `grouped_route_motif_assessment` signals/recommendations/visual-evidence boundary, includes revision-matched research-workstation, Blueprint Fragment, Progression Gate, external-workstation mapping, review-fallback, and omission diagnostics, and its tree-owned band policy, configured/effective layer width, topology population, branch-prerequisite and publication-completeness summaries, planned and published ranks, topology/economy sections, second-parent quotas, strategy-specific rejection evidence, and per-weapon decision/parent relationships agree with status/inspect for representative authored, automatic, excluded, and unplaced weapons.
 - [ ] For the Phase 10 default-rollout check, confirm the packaged profile reports `grouped_routes_v1`; a temporary format-3 profile with `prerequisite_strategy: legacy_and` restores mandatory generated pairs without changing authored prerequisites or learned blueprints, and restoring the packaged profile returns to grouped routes without revoking progress.
 - [ ] At normal zoom and maximum zoom-out, select targets behind singleton, grouped, and mixed requirements. Confirm route highlighting chooses one viable OR route, grouped junctions remain legible, learning an alternative updates satisfaction without resetting the camera, Fit still frames the full tree, and no new top-heavy or excessive-width regression is visible.
 - [ ] In `DIRECT_LEARN`, select a higher unlearned target. Confirm the action reads `Research Path (N)`, RP is the aggregate distinct-node cost, additional material types are disclosed when the six-row preview is truncated, and success learns the prerequisite-first shortest closure plus target. Missing RP/materials and an injected late learning rejection must leave all inventory, points, blueprint/discovery knowledge, and legacy recipe aliases unchanged. In `CREATE_BLUEPRINT`, the same locked target must retain ordinary unmet-prerequisite behavior.
@@ -425,7 +425,7 @@ unchecked until that behavior has been confirmed in a real client/server run.
 - [ ] Under the packaged profile, unmatched ammo and attachments retain their authored 4 RP Preview fallback rules but remain non-researchable and unpublished; enabling their domains makes the fallbacks selectable without fabricating prerequisites.
 - [ ] Large generated add-on weapon families wrap across Tech Tree rows instead of one ultra-wide strip, and repeated reloads produce the same placement.
 - [ ] Changing dormant legacy group metadata during `/reload` does not change the visible Tech Tree or reintroduce a hidden view selector.
-- [ ] Dedicated server rejects a client with any protocol other than `55`.
+- [ ] Dedicated server rejects a client with any protocol other than `59`.
 - [ ] With the Blueprint Journal disabled, identities still disclosed by the Tech Tree receive their Blueprint Fragment and public Progression Gate state. Silhouette, hidden, omitted, and unrelated identities receive no supplemental state.
 - [ ] Select a node with a Bench-tier requirement, a Progression Gate, and archived Blueprint Fragments. Its details and narration list the current/required tier first, the active blocker, then fragment progress; only the selected node receives the small progress/blocker marks.
 - [ ] Open the Blueprint Journal and confirm full-detail entries show their Workbench level, no-level access, or unavailable state. Disclosed fragment targets show progress in details and a compact row suffix only after at least one fragment is archived. Preview, name-only, and silhouette entries reveal no crafting policy, and name-only and silhouette entries reveal neither the target ID nor fragment metadata.
@@ -470,3 +470,61 @@ excessively wide, or tall/thin regression.
 
 Do not use a development build watermark or a screenshot from a different JAR
 than the recorded release hash.
+
+## Scene migration regression cases
+
+- [ ] Search results remain readable and clickable when they overlap the narrow
+  inspector. Enter selects the active result; Escape closes search before help
+  and inspected selection. Closing the inspector does not repin it on a refresh.
+- [ ] Scroll help with the wheel or arrow/Page keys. The inspector, item art, and
+  graph never draw over it. Its dismiss action remains accessible at GUI 320×240.
+- [ ] Focus, hover, inspected selection, active search, tracked target, and route
+  marks can coexist without changing geometry. The affordability lens preserves
+  these contexts and dims only other blocked/learned choices.
+- [ ] A cross-domain portal is validated against the displayed scene, opens the
+  correct public domain, and never selects a hidden or withdrawn target.
+- [ ] F3+T and language changes refresh names, search results, and artwork while
+  preserving geometry/camera when measured dimensions remain unchanged.
+- [ ] Withdraw the current domain/publication while search, tracking, and an
+  inspector are open. Old nodes, results, tooltips, pins, and art disappear before
+  the next render/input. Restore valid data and verify current selection/preview.
+- [ ] Inject a rejected replacement. The screen shows unavailable with no old
+  graph or active research action; subsequent valid input or reopening recovers.
+- [ ] Close/disconnect and reconnect with another profile or server. No camera,
+  query, pin, preview, or tracked route from the prior menu becomes active.
+
+
+## Authored branch layouts
+
+- [ ] Load the [nested example](../examples/authored-branches-datapack/README.md)
+  on a dedicated server and confirm five branches, eight visible nodes, and the
+  shared M4A1 requirement in status/export output.
+- [ ] Connect with a matching protocol-59 client. Check nested containment,
+  sibling spacing, translated labels, and the cross-branch OR requirement.
+- [ ] Change only a branch title and reload; check that the label refreshes
+  without moving nodes. Change membership and verify that geometry refreshes.
+- [ ] Test `anchor_revealed` with hidden, anonymous, and revealed anchors. Hidden
+  labels and translation keys must not appear until the anchor is revealed.
+- [ ] Remove the example and restore the prior profile. Confirm that formats
+  1 and 2 still use the inferred layout and preserve research requirements.
+
+## Performance and final artifact checks
+
+Use the same frozen public input, camera, window/framebuffer size, GUI scale,
+resource packs, and graphics settings for before/after comparisons. Keep builds
+and offline profiling stopped during native timing. Record canvas CPU separately
+from the full Research Bench and paced frame interval. Include the first useful
+frame, opening, stationary overview, target detail, pan, zoom, resource reload,
+and publication withdrawal/restoration. Preserve server inventory and authority.
+
+Exercise the authored-branches example in an isolated world with its selected
+profile. Verify nested region labels, the shared later milestone, and cross-branch
+OR alternatives at normal and minimum size. Repeat with long translated labels.
+Check GUI scales 1–4 and Auto, 320×240 GUI, 854×480 window, and bright/dark worlds.
+Stress checks must record explicit unavailable results and verify that a later
+valid publication recovers. Do not treat a written report as proof of valid geometry.
+
+Tie the final client/server checks to a source digest and tested JAR hash. Run a
+fresh full test/build and artifact verification. Release certification follows
+version and release-note finalization; implementation validation does not publish
+or certify an unfinished release.

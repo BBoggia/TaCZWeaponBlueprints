@@ -35,6 +35,11 @@ public final class BlueprintReverseEngineeringService {
     public static Evaluation evaluate(
             ServerPlayer player,
             WorkstationTransaction transaction) {
+        var analysis = BlueprintWeaponAnalysisService.prepare(player, transaction);
+        return analysis.isPresent() ? analysis.orElseThrow().evaluation() : evaluateLegacy(player, transaction);
+    }
+
+    private static Evaluation evaluateLegacy(ServerPlayer player, WorkstationTransaction transaction) {
         if (player == null || !player.isAlive() || transaction == null) {
             return Evaluation.failure(Status.INVALID_PLAYER, 0, 0, true);
         }
@@ -118,22 +123,42 @@ public final class BlueprintReverseEngineeringService {
      * Re-evaluates current input, policy, costs, output, and progression before
      * applying one rollback-safe transaction.
      */
-    public static Result reverseEngineer(
+    public static Result reverseEngineer(ServerPlayer player, WorkstationTransaction transaction) {
+        return reverseEngineerDetailed(player, transaction).transaction();
+    }
+
+    public record Execution(Result transaction, Optional<com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable.Result> outcome) {
+        public Execution {
+            if (transaction == null || outcome == null || transaction.successful() != outcome.isPresent())
+                throw new IllegalArgumentException("only committed analysis has an outcome");
+        }
+    }
+
+    public static Execution reverseEngineerDetailed(
             ServerPlayer player,
             WorkstationTransaction transaction) {
         if (player == null || !player.isAlive() || transaction == null) {
-            return Result.failure(Status.INVALID_PLAYER, Optional.empty(), 0);
+            return new Execution(Result.failure(Status.INVALID_PLAYER, Optional.empty(), 0), Optional.empty());
         }
         Optional<IPlayerRecipeData> resolvedData =
                 player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve();
         if (resolvedData.isEmpty()) {
-            return Result.failure(Status.PLAYER_DATA_UNAVAILABLE, Optional.empty(), 0);
+            return new Execution(Result.failure(Status.PLAYER_DATA_UNAVAILABLE, Optional.empty(), 0), Optional.empty());
         }
         IPlayerRecipeData playerData = resolvedData.orElseThrow();
-        Evaluation evaluation = evaluate(player, transaction);
-        Result result = commit(evaluation, playerData, transaction);
+        var context = BlueprintWeaponAnalysisService.context();
+        var config = ModConfigs.BLUEPRINT.progressionSnapshot();
+        var analysis = BlueprintWeaponAnalysisService.prepare(player, transaction);
+        var tiered = analysis.map(prepared -> BlueprintWeaponAnalysisService.commit(prepared, playerData, transaction,
+                bound -> java.util.concurrent.ThreadLocalRandom.current().nextLong(bound)));
+        Result result = tiered.map(BlueprintWeaponAnalysisService.AttemptResult::transaction)
+                .orElseGet(() -> commitLegacyCurrent(player, transaction, playerData, context, config));
+        var outcome = result.successful() ? tiered.flatMap(BlueprintWeaponAnalysisService.AttemptResult::outcome)
+                .or(() -> Optional.of(new com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable.Result(
+                        com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable.Kind.BLUEPRINT, 1)))
+                : Optional.<com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable.Result>empty();
         if (!result.successful()) {
-            return result;
+            return new Execution(result, Optional.empty());
         }
 
         ResourceLocation blueprintId = result.blueprintId().orElseThrow();
@@ -157,7 +182,18 @@ public final class BlueprintReverseEngineeringService {
                 BlueprintProgressionSyncScheduler.markDirty(player);
             }
         }
-        return finalResult;
+        return new Execution(finalResult, outcome);
+    }
+
+    private static Result commitLegacyCurrent(ServerPlayer player, WorkstationTransaction transaction, IPlayerRecipeData data,
+            com.gamergaming.taczweaponblueprints.resource.research.BlueprintAnalyzerPolicyResolver.Context context,
+            BlueprintProgressionConfigSnapshot config) {
+        var evaluation = evaluateLegacy(player, transaction);
+        if (BlueprintWeaponAnalysisService.context() != context || !ModConfigs.BLUEPRINT.progressionSnapshot().equals(config)
+                || BlueprintWeaponAnalysisService.prepare(player, transaction).isPresent()) {
+            return Result.failure(Status.STALE_POLICY, evaluation.blueprintId(), data.getResearchPoints());
+        }
+        return commit(evaluation, data, transaction);
     }
 
     static Evaluation evaluate(
@@ -203,6 +239,17 @@ public final class BlueprintReverseEngineeringService {
             int pointCap,
             PhysicalItemBlueprintResolver.IdentityAdapter identityAdapter,
             boolean nonLearningResultPermitted) {
+        return evaluate(physicalInput, inventory, outputAvailable, snapshot, catalog, profileId, playerData,
+                blockedPredicate, progressionExemptPredicate, blueprintsEnabled, pointCap, identityAdapter,
+                nonLearningResultPermitted, null);
+    }
+
+    static Evaluation evaluate(ItemStack physicalInput, List<ItemStack> inventory, boolean outputAvailable,
+            BlueprintResearchSnapshot snapshot, Map<ResourceLocation, BlueprintData> catalog,
+            ResourceLocation profileId, IPlayerRecipeData playerData, Predicate<String> blockedPredicate,
+            Predicate<ResourceLocation> progressionExemptPredicate, boolean blueprintsEnabled, int pointCap,
+            PhysicalItemBlueprintResolver.IdentityAdapter identityAdapter, boolean nonLearningResultPermitted,
+            BlueprintReverseEngineeringPolicy analysisAttempt) {
         int balance = playerData == null ? 0 : playerData.getResearchPoints();
         BlueprintReverseEngineeringEvaluator.Evaluation base =
                 BlueprintReverseEngineeringEvaluator.evaluate(
@@ -214,7 +261,7 @@ public final class BlueprintReverseEngineeringService {
                         blockedPredicate,
                         progressionExemptPredicate,
                         identityAdapter,
-                        nonLearningResultPermitted);
+                        nonLearningResultPermitted, analysisAttempt);
         Status baseStatus = map(base.status());
         BlueprintResearchCost cost = base.reversePolicy()
                 .map(BlueprintReverseEngineeringPolicy::cost)
@@ -655,6 +702,20 @@ public final class BlueprintReverseEngineeringService {
 
     /** Menu-owned physical input, player materials, and extract-only output. */
     public interface WorkstationTransaction {
+        /** Tiered operations require a current, server-bound physical station. */
+        default Optional<com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerTier> analyzerTier() {
+            return Optional.empty();
+        }
+
+        default boolean stationValid() { return false; }
+
+        default ItemStack createFragments(ResourceLocation target,
+                com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisRewardClass reward, int count) {
+            ItemStack stack = com.gamergaming.taczweaponblueprints.item.BlueprintFragmentItem.createAnalysis(target, reward);
+            stack.setCount(count);
+            return stack;
+        }
+
         ItemStack physicalInput();
 
         ItemStack outputStack();

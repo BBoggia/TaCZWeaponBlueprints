@@ -17,6 +17,8 @@ final class BlueprintResearchIngredientValidator {
             throw new IllegalArgumentException("snapshot and item registry predicate cannot be null");
         }
         for (var entry : snapshot.profiles().entrySet()) {
+            entry.getValue().analyzer().stream().flatMap(BlueprintAnalyzerPolicy::costs).forEach(cost ->
+                    validateCost("Analyzer profile " + entry.getKey(), cost, itemExists));
             validateCost("research profile " + entry.getKey(), entry.getValue().researchCost(), itemExists);
             validateCost(
                     "reverse-engineering profile " + entry.getKey(),
@@ -24,6 +26,8 @@ final class BlueprintResearchIngredientValidator {
                     itemExists);
         }
         for (var entry : snapshot.rules().entrySet()) {
+            entry.getValue().analyzer().stream().flatMap(BlueprintAnalyzerOverride::costs).forEach(cost ->
+                    validateCost("Analyzer rule " + entry.getKey(), cost, itemExists));
             entry.getValue().researchCost().ifPresent(cost ->
                     validateCost("research rule " + entry.getKey(), cost, itemExists));
             entry.getValue().reverseEngineering()
@@ -54,6 +58,10 @@ final class BlueprintResearchIngredientValidator {
         snapshot.rules().values().forEach(rule -> rule.reverseEngineering()
                 .flatMap(BlueprintReverseEngineeringOverride::cost)
                 .ifPresent(cost -> collectUnresolvedTags(cost, tagExists, unresolved)));
+        snapshot.profiles().values().stream().flatMap(p -> p.analyzer().stream()).flatMap(BlueprintAnalyzerPolicy::costs)
+                .forEach(cost -> collectUnresolvedTags(cost, tagExists, unresolved));
+        snapshot.rules().values().stream().flatMap(r -> r.analyzer().stream()).flatMap(BlueprintAnalyzerOverride::costs)
+                .forEach(cost -> collectUnresolvedTags(cost, tagExists, unresolved));
         return Set.copyOf(unresolved);
     }
 

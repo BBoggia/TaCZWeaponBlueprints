@@ -33,7 +33,7 @@ public record BlueprintProvenance(
                 learningMode);
     }
 
-    /** Reconstructed fragments may create an item, but never a prerequisite bypass. */
+    /** Ordinary fragments reconstruct protected blueprints requiring prerequisites. */
     public static BlueprintProvenance fragmentReconstructed() {
         return new BlueprintProvenance(
                 CURRENT_FORMAT,

@@ -23,7 +23,7 @@ class BlueprintKnowledgeFlowPhaseSixTest {
         assertTrue(BlueprintAccessConfigSnapshot.EMPTY.progressionExemptKinds().isEmpty());
         assertTrue(BlueprintAccessConfigSnapshot.EMPTY.progressionExemptItemTypes().isEmpty());
         assertTrue(BlueprintAccessConfigSnapshot.EMPTY.startingBlueprints().isEmpty());
-        assertEquals("55", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("59", NetworkHandler.PROTOCOL_VERSION);
     }
 
     @Test

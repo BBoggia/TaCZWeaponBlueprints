@@ -29,6 +29,37 @@ import net.minecraft.util.profiling.InactiveProfiler;
 
 class BlueprintResearchDataManagerTest {
     @Test
+    void analyzerReloadPublishesWholeSnapshotAndRetainsPriorOnInvalidPolicy() {
+        net.minecraft.SharedConstants.tryDetectVersion();
+        net.minecraft.server.Bootstrap.bootStrap();
+        var manager = BlueprintResearchDataManager.INSTANCE;
+        manager.clear();
+        try {
+            var json = BlueprintAnalyzerPolicyTest.profileJson();
+            var path = new ResourceLocation("test", "taczweaponblueprints/research_profiles/analyzer.json");
+            var valid = resourceManager(Map.of(path, resource(json.toString())));
+            var prepared = manager.prepare(valid, InactiveProfiler.INSTANCE);
+            var catalog = com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager.SERVER.catalogPublication();
+            manager.applySnapshot(prepared, catalog, BlueprintAnalyzerPolicyTest.PROFILE, ignored -> true);
+            var published = manager.publication();
+            assertSame(prepared, published.snapshot());
+            json.getAsJsonObject("analyzer").getAsJsonObject("tiers").remove("tier_2");
+            var invalid = resourceManager(Map.of(path, resource(json.toString())));
+            assertThrows(RuntimeException.class, () -> manager.prepare(invalid, InactiveProfiler.INSTANCE));
+            assertSame(published, manager.publication());
+            json = BlueprintAnalyzerPolicyTest.profileJson();
+            json.getAsJsonObject("analyzer").addProperty("minimum_analyzer_tier", "tier_3");
+            var changed = resourceManager(Map.of(path, resource(json.toString())));
+            var replacement = manager.prepare(changed, InactiveProfiler.INSTANCE);
+            manager.applySnapshot(replacement, catalog, BlueprintAnalyzerPolicyTest.PROFILE, ignored -> true);
+            assertSame(replacement, manager.snapshot());
+            assertEquals(published.revision() + 1, manager.revision());
+            assertEquals(com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerTier.TIER_1,
+                    published.snapshot().profiles().get(BlueprintAnalyzerPolicyTest.PROFILE).analyzer().orElseThrow().minimumAnalyzerTier());
+        } finally { manager.clear(); }
+    }
+
+    @Test
     void planningAccessKeepsItsResolverAuthorityAndExemptionSnapshotTogether() {
         Predicate<ResourceLocation> exemption = id -> id.getPath().startsWith("free_");
         BlueprintResearchDataManager.ResearchPlanningAccess access =
