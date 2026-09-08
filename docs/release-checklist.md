@@ -45,6 +45,11 @@ Build and certify the exact release candidate:
 - Confirm `build/reports/research-guidance-candidate-handoff.json` references
   the same JAR digest and remains marked `requires_manual_qa` until the linked
   Research Tree runtime checks are completed.
+- Boot the unmodified, reobfuscated JAR in a standalone Forge server installation
+  with the supported dependency JARs. Record its SHA-256, Forge/Java versions,
+  successful startup, `/reload`, and clean shutdown. A Gradle development server
+  or a remapped copy does not satisfy this check: production method names must
+  be exercised. Test the packaged client crafting screen when changing mixins.
 - Inspect the JAR for development files, local paths, logs, and editor output.
 - Run the release build again after any source, resource, metadata, or
   documentation correction that affects the candidate.

@@ -151,7 +151,26 @@ class GunSmithTableMenuMixinContractTest {
         assertArrayEquals(new String[] {"stillValid"}, inject.method());
         assertEquals("HEAD", inject.at()[0].value());
         assertTrue(inject.cancellable());
+        assertTrue(inject.remap(), "Minecraft overrides must map to production names");
+    }
+
+    @Test
+    void menuProviderOverridePinsBothNamespacesAndExactlyOneTarget() throws ReflectiveOperationException {
+        var handler = GunSmithTableBlockEntityMixin.class.getDeclaredMethod("attachPhysicalWorkbench",
+                int.class, net.minecraft.world.entity.player.Inventory.class, Player.class, CallbackInfoReturnable.class);
+        var inject = handler.getAnnotation(Inject.class);
+        String descriptor = "(ILnet/minecraft/world/entity/player/Inventory;Lnet/minecraft/world/entity/player/Player;)Lnet/minecraft/world/inventory/AbstractContainerMenu;";
+        assertArrayEquals(new String[] {"createMenu" + descriptor, "m_7208_" + descriptor}, inject.method());
+        assertEquals(1, inject.require()); assertEquals(1, inject.allow());
         assertFalse(inject.remap());
+    }
+
+    @Test
+    void screenInitializationUsesTheMinecraftOverrideMapping() throws ReflectiveOperationException {
+        var handler = GunSmithTableScreenMixin.class.getDeclaredMethod("requestCraftingAccess", CallbackInfo.class);
+        var inject = handler.getAnnotation(Inject.class);
+        assertArrayEquals(new String[] {"init"}, inject.method());
+        assertTrue(inject.remap());
     }
 
     @Test

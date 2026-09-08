@@ -91,7 +91,7 @@ class SettingsSerializationCompatibilityTest {
     void serverGroupsDoNotChangePersistedFieldPaths() {
         String serialized = ConfigApi.serializeConfig(new BlueprintConfig()).get();
 
-        assertTrue(serialized.contains("version = 4"));
+        assertTrue(serialized.contains("version = 5"));
         assertTrue(serialized.contains("balancePreset = \"BALANCED\""));
         assertTrue(serialized.contains("enableBlueprints = true"));
         assertTrue(serialized.contains("researchPointCap = 10000"));

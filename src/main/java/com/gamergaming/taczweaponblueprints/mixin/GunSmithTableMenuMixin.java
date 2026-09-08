@@ -151,7 +151,7 @@ public abstract class GunSmithTableMenuMixin implements TaCZWorkbenchMenuBridge 
         }
     }
 
-    @Inject(method = "stillValid", at = @At("HEAD"), cancellable = true, remap = false)
+    @Inject(method = "stillValid", at = @At("HEAD"), cancellable = true)
     private void validatePhysicalWorkbench(
             Player player,
             org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable<Boolean> cir) {

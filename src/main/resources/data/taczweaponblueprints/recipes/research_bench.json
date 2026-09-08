@@ -20,5 +20,12 @@
   "result": {
     "item": "taczweaponblueprints:research_bench"
   },
-  "show_notification": true
+  "show_notification": true,
+  "conditions": [
+    {
+      "type": "taczweaponblueprints:station_setup",
+      "analyzer": false,
+      "tier": 1
+    }
+  ]
 }

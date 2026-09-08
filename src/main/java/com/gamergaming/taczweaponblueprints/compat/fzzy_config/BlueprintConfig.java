@@ -73,7 +73,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraftforge.fml.loading.FMLPaths;
 
-@Version(version = 4)
+@Version(version = 5)
 @Translation(prefix = ModConfigs.BASE_KEY + "blueprint")
 public class BlueprintConfig extends Config {
     public static final int MAX_BLUEPRINTS_PER_LOOT_CONTAINER = 64;
@@ -108,6 +108,24 @@ public class BlueprintConfig extends Config {
             "grip",
             "laser",
             "extended_mag");
+
+    public ConfigGroup stationAccess = new ConfigGroup("stationAccess");
+    @WithPerms(opLevel = 2)
+    public ValidatedEnum<com.gamergaming.taczweaponblueprints.progression.StationSetup.AnalyzerMode> analyzerSetup =
+            new ValidatedEnum<>(com.gamergaming.taczweaponblueprints.progression.StationSetup.AnalyzerMode.TIERED);
+    @WithPerms(opLevel = 2)
+    public ValidatedEnum<com.gamergaming.taczweaponblueprints.progression.StationSetup.ResearchAccess> researchAccess =
+            new ValidatedEnum<>(com.gamergaming.taczweaponblueprints.progression.StationSetup.ResearchAccess.TIERED);
+    @ConfigGroup.Pop
+    @WithPerms(opLevel = 2)
+    public ValidatedCondition<com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerTier> singleAnalyzerDataTier =
+            uiCondition(new ValidatedEnum<>(com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerTier.TIER_1),
+                    () -> analyzerSetup.get() == com.gamergaming.taczweaponblueprints.progression.StationSetup.AnalyzerMode.SINGLE,
+                    TRANSLATION_PREFIX + "condition.singleAnalyzer");
+
+    public com.gamergaming.taczweaponblueprints.progression.StationSetup stationSetup() {
+        return new com.gamergaming.taczweaponblueprints.progression.StationSetup(analyzerSetup.get(), researchAccess.get(), singleAnalyzerDataTier.get());
+    }
 
     public ConfigGroup generalProgression = new ConfigGroup("generalProgression");
     @WithPerms(opLevel = 2)
@@ -455,6 +473,8 @@ public class BlueprintConfig extends Config {
 
     @Override
     public void update(int deserializedVersion) {
+        if (deserializedVersion < 5) researchAccess.validateAndSet(
+                com.gamergaming.taczweaponblueprints.progression.StationSetup.ResearchAccess.PRESET);
         if (deserializedVersion < 1) {
             // Version-zero files exposed these four discovery settings
             // directly. Preserve their established behavior by migrating the
@@ -505,6 +525,7 @@ public class BlueprintConfig extends Config {
         // context always retains the server needed to republish every open
         // workstation even in those cases.
         refreshOnlinePlayers(context.getServer());
+
     }
 
     private static void closeChangedExternalWorkbenchMenus(

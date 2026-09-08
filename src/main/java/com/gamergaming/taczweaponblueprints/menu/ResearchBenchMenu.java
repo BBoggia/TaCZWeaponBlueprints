@@ -67,6 +67,16 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
     private boolean authoritativePreviewRefreshPending;
     private final DataSlot routeGuidanceAvailable = DataSlot.standalone();
 
+    private final boolean portable;
+    private final com.gamergaming.taczweaponblueprints.progression.StationSetup.ResearchAccess openingAccessMode;
+    public boolean portable() { return portable; }
+    public ResearchWorkbenchTier physicalTier() { return workbenchTier; }
+    public static ResearchBenchMenu portable(int id, Inventory inventory) {
+        return new ResearchBenchMenu(id, inventory, inventory.player.level(), inventory.player.blockPosition(),
+                ResearchWorkbenchTier.TIER_3, true,
+                com.gamergaming.taczweaponblueprints.progression.StationSetup.ResearchAccess.PORTABLE);
+    }
+
     public ResearchBenchMenu(int containerId, Inventory inventory, FriendlyByteBuf buffer) {
         this(containerId, inventory, readOpenData(buffer));
     }
@@ -80,7 +90,7 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
                 .orElseThrow(() -> new IllegalStateException(
                         "Cannot open a Research Bench menu for an invalid structure"));
         return new ResearchBenchMenu(
-                containerId, inventory, level, pos, tier);
+                containerId, inventory, level, pos, tier, false, ModConfigs.BLUEPRINT.stationSetup().research());
     }
 
     private ResearchBenchMenu(int containerId, Inventory inventory, OpenData openData) {
@@ -89,7 +99,7 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
                 inventory,
                 inventory.player.level(),
                 openData.position(),
-                openData.tier());
+                openData.tier(), openData.portable(), openData.mode());
     }
 
     private ResearchBenchMenu(
@@ -97,11 +107,14 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
             Inventory inventory,
             Level level,
             BlockPos workbenchPosition,
-            ResearchWorkbenchTier workbenchTier) {
+            ResearchWorkbenchTier workbenchTier, boolean portable,
+            com.gamergaming.taczweaponblueprints.progression.StationSetup.ResearchAccess mode) {
         super(ModMenus.RESEARCH_BENCH.get(), containerId);
         if (level == null || workbenchPosition == null || workbenchTier == null) {
             throw new IllegalArgumentException("Research Bench menu context cannot be null");
         }
+        this.portable = portable;
+        this.openingAccessMode = mode;
         this.access = ContainerLevelAccess.create(level, workbenchPosition);
         this.workbenchLevel = level;
         this.workbenchPosition = workbenchPosition.immutable();
@@ -123,7 +136,9 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
     }
 
     public ResearchWorkbenchTier workbenchTier() {
-        return workbenchTier;
+        return openingAccessMode == com.gamergaming.taczweaponblueprints.progression.StationSetup.ResearchAccess.SINGLE
+                || openingAccessMode == com.gamergaming.taczweaponblueprints.progression.StationSetup.ResearchAccess.PORTABLE
+                ? ResearchWorkbenchTier.TIER_3 : workbenchTier;
     }
 
     /** Whether the server supports exact path pricing for this open Bench. */
@@ -822,6 +837,10 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
                 || player.level() != workbenchLevel || !stillValid(player)) {
             return Optional.empty();
         }
+        if (portable) return Optional.of(new ResearchWorkbenchContext(workbenchPosition,
+                workbenchLevel.dimension().location(),
+                new ResourceLocation("taczweaponblueprints", "portable_research"), ResearchWorkbenchTier.TIER_3,
+                ResearchInteractionMode.RESEARCH, (long) containerId + 1L));
         var state = workbenchLevel.getBlockState(workbenchPosition);
         if (!(state.getBlock() instanceof ResearchBenchBlock bench)
                 || bench.tier() != workbenchTier) {
@@ -835,7 +854,7 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
                 workbenchPosition,
                 workbenchLevel.dimension().location(),
                 workstationId,
-                workbenchTier,
+                workbenchTier(),
                 ResearchInteractionMode.RESEARCH,
                 (long) containerId + 1L));
     }
@@ -843,7 +862,7 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
     /** Server-validated source used only to transition this exact menu to crafting. */
     public Optional<ResearchWorkbenchContext> authoritativeTransitionContext(
             ServerPlayer player) {
-        return authoritativeWorkbenchContext(player);
+        return portable ? Optional.empty() : authoritativeWorkbenchContext(player);
     }
 
     /**
@@ -1008,6 +1027,10 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(Player player) {
+        if (!player.isAlive() || player.level() != workbenchLevel) return false;
+        if (!player.level().isClientSide && ModConfigs.BLUEPRINT.stationSetup().research() != openingAccessMode) return false;
+        if (portable) return player.level().isClientSide || (ModConfigs.BLUEPRINT.progressionSnapshot().blueprintsEnabled()
+                && ModConfigs.BLUEPRINT.progressionSnapshot().researchEnabled() && !player.isSpectator());
         return access.evaluate((level, pos) ->
                 ResearchBenchBlock.isValidRoot(level, pos, workbenchTier)
                         && player.distanceToSqr(
@@ -1023,10 +1046,12 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
         }
         return new OpenData(
                 buffer.readBlockPos(),
-                ResearchWorkbenchTier.fromLevel(buffer.readVarInt()));
+                ResearchWorkbenchTier.fromLevel(buffer.readVarInt()), buffer.readBoolean(),
+                buffer.readEnum(com.gamergaming.taczweaponblueprints.progression.StationSetup.ResearchAccess.class));
     }
 
-    private record OpenData(BlockPos position, ResearchWorkbenchTier tier) {
+    private record OpenData(BlockPos position, ResearchWorkbenchTier tier, boolean portable,
+            com.gamergaming.taczweaponblueprints.progression.StationSetup.ResearchAccess mode) {
         private OpenData {
             if (position == null || tier == null) {
                 throw new IllegalArgumentException("Research Bench open data is invalid");

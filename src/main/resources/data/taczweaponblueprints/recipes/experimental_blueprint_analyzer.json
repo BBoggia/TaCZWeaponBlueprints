@@ -29,5 +29,12 @@
   "result": {
     "item": "taczweaponblueprints:experimental_blueprint_analyzer"
   },
-  "show_notification": true
+  "show_notification": true,
+  "conditions": [
+    {
+      "type": "taczweaponblueprints:station_setup",
+      "analyzer": true,
+      "tier": 3
+    }
+  ]
 }

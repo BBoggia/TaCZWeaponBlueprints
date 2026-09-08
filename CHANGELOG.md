@@ -6,7 +6,32 @@ documentation.
 
 ## Unreleased
 
+## 1.3.2 - 2026-09-08
+
+- Fixed production startup and crafting-screen hooks targeting development-only
+  Minecraft method names in TaCZ workstation mixins.
+
+- Added Stations & Research Access settings for tiered or single Blueprint
+  Analyzers, tiered or single Research Benches, and portable research through the
+  Journal / Research key. Portable research keeps the Journal available from the
+  tree. Research costs and non-bench progression requirements still apply.
+- Single Analyzers use each weapon's same-tier reward rules. A separate setting
+  chooses Research Data reward tables without changing the Data item's target pool.
+  Existing higher-tier stations remain usable in single-station modes.
+- Station mode changes close open research stations and refresh bundled crafting
+  recipes. Crafting Workbench tiers remain independent. Existing configurations
+  retain their progression-preset behavior until an operator selects a new mode.
+- Research Designer captures and offline Analyzer comparisons include station
+  choices. Older projects retain their original station rules when opened.
+- Updated the network protocol to 64 and server settings to version 5. Clients
+  and servers must update together; saved player progression is unchanged.
+
 ## 1.3.1 - 2026-09-07
+
+This is the first public release of the 1.3 update; 1.3.0 was not published.
+The [combined release notes](docs/releases/1.3.1.md) cover all changes from
+1.3.0 and 1.3.1, including the beta, for users upgrading from 1.2.0. The entries
+below retain their development-version grouping.
 
 - Released the 1.3.1 progression update, including physical Scrap, tiered stations,
   Research Data analysis, Blueprint Fragments, and the redesigned Tech Tree from

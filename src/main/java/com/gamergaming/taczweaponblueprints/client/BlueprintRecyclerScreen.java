@@ -220,7 +220,7 @@ public final class BlueprintRecyclerScreen extends AbstractContainerScreen<Bluep
         var p=menu.preview();var model=BlueprintRecyclerScreenModel.from(p,requests.pending());
         line(g,Component.translatable("block.taczweaponblueprints.blueprint_recycler"),12,9,modeButton.visible?180:246,TEXT);
         int tier=p.presentation().stationTier()>0?p.presentation().stationTier():menu.analyzerTier().map(t->t.level()).orElse(0);
-        if(tier>0)line(g,w("tier",tier),270,9,22,0xFF83B0D0);
+        if(tier>0 && com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.stationSetup().analyzer() != com.gamergaming.taczweaponblueprints.progression.StationSetup.AnalyzerMode.SINGLE)line(g,w("tier",tier),270,9,22,0xFF83B0D0);
         line(g,playerInventoryTitle,12,136,160,MUTED);
         if(detailsOpen)renderDetails(g,p);else renderOverview(g,p,model);
         renderCost(g,p);
@@ -412,7 +412,7 @@ public final class BlueprintRecyclerScreen extends AbstractContainerScreen<Bluep
             var data=p.presentation().data().orElseThrow();
             lines.add(ResearchDataPresentationText.tr(data.allowLearned()?"duplicates_allowed":"duplicates_excluded"));
             lines.add(ResearchDataPresentationText.tr(data.allowUndiscovered()?"undiscovered_allowed":"discovered_only"));
-            for(var station:data.stations())if(station.tier()!=p.presentation().stationTier())lines.add(station.available()
+            for(var station:data.stations())if(com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.stationSetup().analyzer() != com.gamergaming.taczweaponblueprints.progression.StationSetup.AnalyzerMode.SINGLE && station.tier()!=p.presentation().stationTier())lines.add(station.available()
                     ?ResearchDataPresentationText.tr("station_compare",station.tier(),ResearchDataPresentationText.full(station),ResearchDataPresentationText.quantity(station))
                     :ResearchDataPresentationText.tr("station_unavailable",station.tier()));
             if(data.partialProgressBias())lines.add(ResearchDataPresentationText.tr("partial_bias"));

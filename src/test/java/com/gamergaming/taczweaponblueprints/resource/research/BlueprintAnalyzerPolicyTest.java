@@ -44,6 +44,25 @@ class BlueprintAnalyzerPolicyTest {
         assertEquals(PhysicalBlueprintLearningMode.BYPASS_TREE_PREREQUISITES, legacy.physicalBlueprintLearningMode());
     }
 
+    @ParameterizedTest
+    @CsvSource({"1,1,70", "1,2,70", "1,3,80", "2,1,70", "2,2,70", "2,3,80", "3,1,70", "3,2,70", "3,3,80"})
+    void singleAnalyzerUsesSameTierDatapackRowAtEveryPhysicalStation(int station, int weapon, int probability) {
+        var json = profileJson();
+        json.getAsJsonObject("analyzer").addProperty("minimum_analyzer_tier", "tier_3");
+        var snapshot = snapshot(json, Map.of(id("test:tier"), rule("{\"weapon_tier\":\"tier_" + weapon + "\"}")));
+        var setup = new com.gamergaming.taczweaponblueprints.progression.StationSetup(
+                com.gamergaming.taczweaponblueprints.progression.StationSetup.AnalyzerMode.SINGLE,
+                com.gamergaming.taczweaponblueprints.progression.StationSetup.ResearchAccess.TIERED, AnalyzerTier.TIER_1);
+        var context = new BlueprintAnalyzerPolicyResolver.Context(snapshot, CATALOG, 7, 4,
+                BlueprintProgressionPolicySnapshot.EMPTY, setup);
+        var quote = BlueprintAnalyzerPolicyResolver.resolve(context, PROFILE, TARGET, AnalyzerTier.fromLevel(station),
+                BlueprintAnalyzerPolicy.Origin.UNKNOWN, FoundWeaponRecoveryMode.PROTECTED_BLUEPRINT_ONLY);
+        assertEquals(AnalyzerPolicyQuote.Status.CONFIGURED, quote.status());
+        assertEquals(probability / 100.0, quote.outcomes().orElseThrow().blueprintProbability());
+        assertEquals(weapon * 5, quote.fragmentThreshold());
+        assertEquals(3, quote.attempt().orElseThrow().cost().points());
+    }
+
     @Test void exactAndStableWinnerDoNotAccumulateLowerRulesOrShadowCoreCosts() {
         var tag = rule("{\"weapon_tier\":\"tier_3\",\"attempt\":{\"cost\":{\"points\":99}}}");
         var tagJson = BlueprintResearchRule.CODEC.encodeStart(JsonOps.INSTANCE, tag).getOrThrow(false, ignored -> {}).getAsJsonObject();

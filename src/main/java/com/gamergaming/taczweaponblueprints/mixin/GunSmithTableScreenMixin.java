@@ -215,7 +215,7 @@ public abstract class GunSmithTableScreenMixin
         return List.copyOf(result);
     }
 
-    @Inject(method = "init", at = @At("RETURN"), remap = false)
+    @Inject(method = "init", at = @At("RETURN"))
     private void requestCraftingAccess(CallbackInfo ci) {
         long requestId = ClientCraftingAccessState.beginRequest(menu.containerId, menu);
         if (requestId > 0L) {

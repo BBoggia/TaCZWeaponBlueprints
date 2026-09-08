@@ -214,7 +214,7 @@ only the Analyzer extension when your pack already customizes the active
 profile. Disabling tiered analysis preserves marked fragments and saved counts;
 it does not convert them into ordinary discounts or RP.
 
-The custom network protocol is `63`, so clients and servers must update
+The custom network protocol is `64`, so clients and servers must update
 together. Protocol 50 transfers each
 disclosure-safe research graph, matching group presentation, and optional
 identity-safe Tech Tree metadata as one bounded atomic publication. It also
@@ -751,7 +751,7 @@ bundled `connected` mode with `place_connected` review handling, the three
 version identities, dynamic layering with a configured 9–20-node range and its
 baseline resolved width, optional
 tree-owned optional/dynamic/configured presentation bands, the 4,096-candidate
-limit, protocol 63, export format 22, and automatic prerequisite strategy
+limit, protocol 64, export format 22, and automatic prerequisite strategy
 `grouped_routes_v1` unless the
 corresponding contract and compatibility documentation are deliberately
 revised.
@@ -759,7 +759,7 @@ revised.
 The Phase 10 research-guidance handoff writes
 `build/reports/research-guidance-candidate-handoff.json`. It binds the complete
 Phase 9 automated report and manual-QA matrix to the exact candidate JAR,
-preserves the protocol 63/player-data 5/client-settings 3 compatibility tuple,
+preserves the protocol 64/player-data 5/client-settings 3 compatibility tuple,
 and carries 21 clean invariants, 16 packaged classes, and 48 localized surfaces
 into release certification. Its `requires_manual_qa` state is intentional:
 complete the linked runtime matrix before publication rather than treating an
@@ -822,7 +822,7 @@ The grouped-prerequisite Phase 12 visual-refinement gate writes
 `branch-aware-visual-refinement-v1` and verifies client-only family-preserving
 responsive wrapping, bounded grouped-junction clearance, branch-seam pressure,
 and deterministic 287/4,096-node geometry. It does not migrate saves or change
-the published graph: prerequisite groups, semantic ranks, costs, protocol 63,
+the published graph: prerequisite groups, semantic ranks, costs, protocol 64,
 export format 22, and the packaged `grouped_routes_v1` strategy remain
 authoritative. Before public release, retain the gate report and complete its
 linked before/after screenshot checks at normal and maximum zoom-out.

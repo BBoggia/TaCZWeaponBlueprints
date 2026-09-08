@@ -23,5 +23,12 @@
   "result": {
     "item": "taczweaponblueprints:blueprint_recycler"
   },
-  "show_notification": true
+  "show_notification": true,
+  "conditions": [
+    {
+      "type": "taczweaponblueprints:station_setup",
+      "analyzer": true,
+      "tier": 1
+    }
+  ]
 }

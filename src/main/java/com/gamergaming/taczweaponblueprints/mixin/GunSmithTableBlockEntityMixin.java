@@ -26,7 +26,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 /** Captures the physical source of TaCZ and gun-pack crafting menus. */
 @Mixin(GunSmithTableBlockEntity.class)
 public abstract class GunSmithTableBlockEntityMixin {
-    @Inject(method = "createMenu", at = @At("RETURN"), remap = false)
+    // This Minecraft interface override is not resolved by the Mixin annotation
+    // processor through TaCZ's interface hierarchy. Pin both supported names;
+    // exactly one must match in either the development or production namespace.
+    @Inject(method = {
+            "createMenu(ILnet/minecraft/world/entity/player/Inventory;Lnet/minecraft/world/entity/player/Player;)Lnet/minecraft/world/inventory/AbstractContainerMenu;",
+            "m_7208_(ILnet/minecraft/world/entity/player/Inventory;Lnet/minecraft/world/entity/player/Player;)Lnet/minecraft/world/inventory/AbstractContainerMenu;"
+    }, at = @At("RETURN"), remap = false, require = 1, allow = 1)
     private void attachPhysicalWorkbench(
             int containerId,
             Inventory inventory,

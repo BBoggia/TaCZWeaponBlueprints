@@ -440,7 +440,8 @@ public final class BlueprintResearchCatalogExporter {
         }
         root.add("groups", exportedGroups);
         var analyzerContext = new BlueprintAnalyzerPolicyResolver.Context(stableSnapshot, stableCatalog,
-                stableProgressionPolicy.researchRevision(), stableProgressionPolicy.catalogRevision(), stableProgressionPolicy);
+                stableProgressionPolicy.researchRevision(), stableProgressionPolicy.catalogRevision(), stableProgressionPolicy,
+                featureConfig == null ? com.gamergaming.taczweaponblueprints.progression.StationSetup.COMPATIBILITY : featureConfig.stations());
         if (!stableSnapshot.researchData().policies().isEmpty()) root.add("research_data_economy", ResearchDataEconomyExport.create(analyzerContext, profileId));
         JsonArray exportedEntries = new JsonArray();
         for (Map.Entry<ResourceLocation, BlueprintData> entry : entries) {

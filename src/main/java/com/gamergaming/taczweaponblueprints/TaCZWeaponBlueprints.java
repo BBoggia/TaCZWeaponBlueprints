@@ -27,6 +27,9 @@ public class TaCZWeaponBlueprints {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 
         ModConfigs.init();
+        modEventBus.addListener((net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent event) ->
+                event.enqueueWork(() -> net.minecraftforge.common.crafting.CraftingHelper.register(
+                        new com.gamergaming.taczweaponblueprints.resource.StationRecipeCondition.Serializer())));
 
         NetworkHandler.registerPackets();
 

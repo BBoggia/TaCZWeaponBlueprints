@@ -29,7 +29,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public class NetworkHandler {
-    public static final String PROTOCOL_VERSION = "63";
+    public static final String PROTOCOL_VERSION = "64";
     // A random per-server seed prevents a partial chunk set from an earlier
     // connection being mistaken for a new sync after reconnecting.
     private static final AtomicLong SYNC_SEQUENCE =
@@ -47,6 +47,9 @@ public class NetworkHandler {
 
     public static void registerPackets() {
         int id = 0;
+        INSTANCE.registerMessage(id++, OpenPortableResearchPacket.class, OpenPortableResearchPacket::toBytes,
+                OpenPortableResearchPacket::new, OpenPortableResearchPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_SERVER));
 
         INSTANCE.registerMessage(id++, SyncPlayerRecipeDataPacket.class,
                 SyncPlayerRecipeDataPacket::toBytes, SyncPlayerRecipeDataPacket::new,

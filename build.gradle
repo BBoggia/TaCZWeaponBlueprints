@@ -36,7 +36,7 @@ def removeStaleModArchives = tasks.register('removeStaleModArchives') {
 // Deliberate changes must update runtime constants, release gates, and
 // migration documentation together.
 def certifiedAutomaticPlacementVersion = 'tacz-gun-placement-v13'
-def certifiedResearchTreeProtocol = '63'
+def certifiedResearchTreeProtocol = '64'
 def certifiedResearchTreeSceneLayout = 'branches-v2'
 def certifiedResearchTreeProtocolNumber = certifiedResearchTreeProtocol as int
 def certifiedResearchCatalogExportFormat = 22
@@ -2918,7 +2918,7 @@ tasks.register('verifyTieredProgressionReleaseContract') {
                 || !dataVersionMatcher.find()
                 || (dataVersionMatcher.group(1) as int) != certifiedPlayerDataVersion
                 || !configVersionMatcher.find()
-                || (configVersionMatcher.group(1) as int) != 4) {
+                || (configVersionMatcher.group(1) as int) != 5) {
             throw new GradleException(
                     'Tiered progression compatibility tuple drifted from its certified values')
         }
@@ -3078,7 +3078,7 @@ tasks.register('verifyTieredProgressionReleaseContract') {
                 compatibility: [
                         networkProtocol: certifiedResearchTreeProtocolNumber,
                         playerDataVersion: certifiedPlayerDataVersion,
-                        serverConfigVersion: 4
+                        serverConfigVersion: 5
                 ],
                 defaults: [
                         progressionPreset: 'tiered_research_and_crafting',
@@ -4592,6 +4592,14 @@ tasks.register('verifyReleaseArtifact') {
                         'Packaged crafted-gun mixin refmap does not remap ItemStack.copy')
             }
 
+            def inheritedMappings = jsonParser.parseText(refmapText).mappings
+            ['GunSmithTableMenuMixin': ['stillValid', 'm_6875_'],
+             'GunSmithTableScreenMixin': ['init', 'm_7856_']].each { mixin, method ->
+                def mapped = inheritedMappings["com/gamergaming/taczweaponblueprints/mixin/${mixin}"]?.get(method[0])
+                if (mapped == null || !mapped.contains(method[1]))
+                    throw new GradleException("Packaged ${mixin}.${method[0]} lacks its production mapping")
+            }
+
             def globalEntry = zip.getEntry('data/forge/loot_modifiers/global_loot_modifiers.json')
             def globalIndex = zip.getInputStream(globalEntry).withCloseable { stream ->
                 jsonParser.parse(stream, 'UTF-8')
@@ -5304,5 +5312,18 @@ if (providers.gradleProperty('designerWorkspaceQA').isPresent()) {
         mods { "${mod_id}" { source sourceSets.development } }
         property 'tacz.designerWorkspaceQA.root', designerUiRoot.absolutePath
         property 'tacz.designerWorkspaceQA.capture', file(providers.gradleProperty('designerWorkspaceCapture').get()).absolutePath
+    }
+}
+
+// Explicit disposable dedicated-server authority check, excluded from normal runs.
+if (providers.gradleProperty('stationAccessQA').isPresent()) {
+    def stationQaRoot = file(providers.gradleProperty('stationAccessQA').get())
+    if (!new File(stationQaRoot, '.disposable-station-qa').isFile())
+        throw new GradleException('Station QA requires a marked disposable directory')
+    minecraft.runs.server {
+        workingDirectory stationQaRoot
+        mods { "${mod_id}" { source sourceSets.development } }
+        property 'tacz.stationAccessQA', new File(stationQaRoot, 'result.txt').absolutePath
+        args '--nogui'
     }
 }

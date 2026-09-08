@@ -89,7 +89,13 @@ public final class ClientConnectionEvents {
             return;
         }
         if (minecraft.player != null && minecraft.level != null && minecraft.screen == null) {
-            minecraft.setScreen(new BlueprintJournalScreen());
+            if (com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.stationSetup().research()
+                    == com.gamergaming.taczweaponblueprints.progression.StationSetup.ResearchAccess.PORTABLE
+                    && com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.progressionSnapshot().researchEnabled()
+                    && com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.progressionSnapshot().blueprintsEnabled()) {
+                com.gamergaming.taczweaponblueprints.network.NetworkHandler.INSTANCE.sendToServer(
+                        new com.gamergaming.taczweaponblueprints.network.OpenPortableResearchPacket());
+            } else minecraft.setScreen(new BlueprintJournalScreen());
         }
     }
 }

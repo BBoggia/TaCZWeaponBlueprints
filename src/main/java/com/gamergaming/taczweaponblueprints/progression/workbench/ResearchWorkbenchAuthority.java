@@ -22,14 +22,17 @@ public final class ResearchWorkbenchAuthority {
                 || !context.hasSession()
                 || !(player.containerMenu instanceof ResearchBenchMenu menu)
                 || !menu.authorizesResearchContext(player, context)
-                || !player.level().dimension().location().equals(context.dimensionId())
-                || !player.level().isLoaded(context.rootPosition())
+                || !player.level().dimension().location().equals(context.dimensionId())) {
+            return false;
+        }
+        if (menu.portable()) return true; // Exact menu/session and live mode were authenticated above.
+        if (!player.level().isLoaded(context.rootPosition())
                 || player.distanceToSqr(
                         context.rootPosition().getX() + 0.5D,
                         context.rootPosition().getY() + 0.5D,
                         context.rootPosition().getZ() + 0.5D) > 64.0D
                 || !ResearchBenchBlock.isValidRoot(
-                        player.level(), context.rootPosition(), context.tier())) {
+                        player.level(), context.rootPosition(), menu.physicalTier())) {
             return false;
         }
         BlockState root = player.level().getBlockState(context.rootPosition());

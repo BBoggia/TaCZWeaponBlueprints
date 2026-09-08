@@ -7,13 +7,28 @@
     "III"
   ],
   "key": {
-    "I": { "item": "minecraft:iron_ingot" },
-    "P": { "item": "minecraft:piston" },
-    "R": { "item": "minecraft:redstone_block" },
-    "C": { "item": "minecraft:cartography_table" }
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "P": {
+      "item": "minecraft:piston"
+    },
+    "R": {
+      "item": "minecraft:redstone_block"
+    },
+    "C": {
+      "item": "minecraft:cartography_table"
+    }
   },
   "result": {
     "item": "taczweaponblueprints:advanced_research_bench"
   },
-  "show_notification": true
+  "show_notification": true,
+  "conditions": [
+    {
+      "type": "taczweaponblueprints:station_setup",
+      "analyzer": false,
+      "tier": 2
+    }
+  ]
 }

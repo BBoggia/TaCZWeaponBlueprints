@@ -99,7 +99,7 @@ public final class ResearchDataPoolResolver {
         Status status = !policy.enabled() || policy.behavior() == ResearchDataPolicy.Behavior.DISABLED ? Status.DISABLED
                 : policy.behavior() == ResearchDataPolicy.Behavior.LEGACY_CURRENCY ? Status.LEGACY_CURRENCY
                 : !source.research().profiles().containsKey(profile) || policy.profile().filter(id -> !id.equals(profile)).isPresent() ? Status.PROFILE_UNAVAILABLE
-                : station.level() < policy.minimumAnalyzerTier().level() ? Status.STATION_TIER_REQUIRED
+                : source.stations().analyzer() != com.gamergaming.taczweaponblueprints.progression.StationSetup.AnalyzerMode.SINGLE && station.level() < policy.minimumAnalyzerTier().level() ? Status.STATION_TIER_REQUIRED
                 : !source.progression().matches(source.catalogRevision(), source.researchRevision()) ? Status.STALE_PROGRESSION : Status.READY;
         if (status != Status.READY) return new Pool(status, definition, policy, List.of(), Map.of(), 0, 0, 0);
         var prepared = context.candidates(definition, profile, station);
@@ -161,7 +161,7 @@ public final class ResearchDataPoolResolver {
             if (tier.isEmpty()) { count(exclusions, "tier_unavailable"); continue; }
             int weight = pool.weaponWeights().getOrDefault(id, 1);
             if (weight == 0 || pool.tierWeights().getOrDefault(tier.orElseThrow(), 0) == 0) { count(exclusions, "zero_weight_or_tier"); continue; }
-            var outcomes = policy.outcome(station, tier.orElseThrow());
+            var outcomes = policy.outcome(context.stations().dataRewardTier(station), tier.orElseThrow());
             var reconstruction = AnalysisReconstructionResolver.resolve(context, profile, id, station);
             if (outcomes.fragmentWeight() > 0 && !reconstruction.available()) { count(exclusions, "reconstruction_unavailable"); continue; }
             candidates.add(new Candidate(id, tier.orElseThrow(), weight, outcomes,

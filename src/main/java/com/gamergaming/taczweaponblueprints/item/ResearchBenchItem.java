@@ -44,7 +44,12 @@ public final class ResearchBenchItem extends BlockItem {
             Level level,
             List<Component> tooltip,
             TooltipFlag flag) {
-        tooltip.add(Component.translatable(
+        if (com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.stationSetup().research()
+                == com.gamergaming.taczweaponblueprints.progression.StationSetup.ResearchAccess.SINGLE
+                || com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.stationSetup().research()
+                == com.gamergaming.taczweaponblueprints.progression.StationSetup.ResearchAccess.PORTABLE)
+            tooltip.add(Component.translatable("item.taczweaponblueprints.station.single").withStyle(ChatFormatting.GRAY));
+        else tooltip.add(Component.translatable(
                 "item.taczweaponblueprints.research_bench.tooltip.tier",
                 tier.level()).withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable(

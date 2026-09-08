@@ -35,11 +35,35 @@ public record ResearchFeatureConfigSnapshot(
         BlueprintFragmentDiscount customFragmentDiscount,
         int customLearnedTargetResearchPoints,
         int fragmentLootReplacementBasisPoints,
+        CraftingPolicyConfigSnapshot craftingPolicy,
+        StationSetup stations) {
+    /** Compatibility for existing policy integrations and captured projects. */
+    public ResearchFeatureConfigSnapshot(
+        ResearchProgressionPreset progressionPreset,
+        boolean enforceResearchTiers,
+        boolean enforceCraftingTiers,
+        BlueprintFragmentPreset fragmentPreset,
+        AutomaticWorkbenchTierPercentiles automaticTierPercentiles,
+        Map<ResourceLocation, ResearchWorkbenchTier> externalWorkstationTiers,
+        ResearchWorkbenchTier unknownWorkstationFallbackTier,
+        boolean unknownExternalWorkstationsUnrestricted,
+        boolean creativeBypassesWorkbenchTiers,
+        boolean creativeBypassesProgressionGates,
+        Map<ResourceLocation, Integer> exactFragmentThresholds,
+        BlueprintFragmentPolicy.CompletionMode customFragmentMode,
+        Map<ResearchWorkbenchTier, Integer> customFragmentThresholds,
+        int customFragmentRetainedCap,
+        BlueprintFragmentDiscount customFragmentDiscount,
+        int customLearnedTargetResearchPoints,
+        int fragmentLootReplacementBasisPoints,
         CraftingPolicyConfigSnapshot craftingPolicy) {
+        this(progressionPreset, enforceResearchTiers, enforceCraftingTiers, fragmentPreset, automaticTierPercentiles, externalWorkstationTiers, unknownWorkstationFallbackTier, unknownExternalWorkstationsUnrestricted, creativeBypassesWorkbenchTiers, creativeBypassesProgressionGates, exactFragmentThresholds, customFragmentMode, customFragmentThresholds, customFragmentRetainedCap, customFragmentDiscount, customLearnedTargetResearchPoints, fragmentLootReplacementBasisPoints, craftingPolicy, StationSetup.COMPATIBILITY);
+    }
+
     public static final int MAX_MAPPINGS = 4_096;
 
     public ResearchFeatureConfigSnapshot {
-        if (progressionPreset == null || fragmentPreset == null
+        if (stations == null || progressionPreset == null || fragmentPreset == null
                 || automaticTierPercentiles == null || externalWorkstationTiers == null
                 || unknownWorkstationFallbackTier == null || exactFragmentThresholds == null
                 || customFragmentMode == null || customFragmentThresholds == null
@@ -92,7 +116,7 @@ public record ResearchFeatureConfigSnapshot(
                 ResearchWorkbenchTier.TIER_3, config.tierThreeFragmentThreshold.get());
         return new ResearchFeatureConfigSnapshot(
                 progression,
-                progression.enforcesResearch(config.customEnforceResearchTiers.get()),
+                config.stationSetup().enforceResearchTiers(progression.enforcesResearch(config.customEnforceResearchTiers.get())),
                 progression.enforcesCrafting(config.customEnforceCraftingTiers.get()),
                 config.fragmentPreset.get(),
                 new AutomaticWorkbenchTierPercentiles(
@@ -110,7 +134,7 @@ public record ResearchFeatureConfigSnapshot(
                 config.fragmentDiscountType.get().create(config.fragmentDiscountValue.get()),
                 config.learnedTargetFragmentResearchPoints.get(),
                 config.fragmentLootReplacementPercent.get() * 100,
-                CraftingPolicyConfigSnapshot.from(config));
+                CraftingPolicyConfigSnapshot.from(config), config.stationSetup());
     }
 
     public ResearchPolicyShapeSnapshot policyShape() {

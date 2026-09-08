@@ -33,11 +33,12 @@ public final class BlueprintWeaponAnalysisService {
         long revision = BlueprintResearchDataManager.INSTANCE.revision();
         long catalogRevision = BlueprintDataManager.SERVER.catalogRevision();
         var progression = BlueprintProgressionPolicyManager.INSTANCE.publication().snapshot();
+        var stations = ModConfigs.BLUEPRINT.researchFeatureSnapshot().stations();
         var cached = cachedContext;
         if (cached != null && cached.research() == research && cached.researchRevision() == revision
-                && cached.catalogRevision() == catalogRevision && cached.progression() == progression) return cached;
+                && cached.catalogRevision() == catalogRevision && cached.progression() == progression && cached.stations().equals(stations)) return cached;
         cached = new BlueprintAnalyzerPolicyResolver.Context(research, BlueprintDataManager.SERVER.getBlueprintDataMap(),
-                revision, catalogRevision, progression);
+                revision, catalogRevision, progression, stations);
         cachedContext = cached;
         return cached;
     }

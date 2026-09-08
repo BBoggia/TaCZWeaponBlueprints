@@ -5,13 +5,15 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 
 /** Analysis capability, independent of research/crafting workstation requirements. */
-public enum AnalyzerTier {
+public enum AnalyzerTier implements me.fzzyhmstrs.fzzy_config.util.EnumTranslatable {
     TIER_1(1), TIER_2(2), TIER_3(3);
 
     public static final Codec<AnalyzerTier> CODEC = Codec.STRING.flatXmap(value -> {
         for (var tier : values()) if (tier.serializedName().equals(value)) return DataResult.success(tier);
         return DataResult.error(() -> "analysis tier must be tier_1, tier_2, or tier_3");
     }, value -> DataResult.success(value.serializedName()));
+
+    @Override public String prefix() { return "config.taczweaponblueprints.blueprint.singleAnalyzerDataTier"; }
 
     private final int level;
     AnalyzerTier(int level) { this.level = level; }

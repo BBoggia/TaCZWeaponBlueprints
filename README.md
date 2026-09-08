@@ -87,7 +87,11 @@ blueprint catalog is rebuilt from the recipes currently loaded by the server.
 
 ## Configuration
 
-The synchronized Server Settings screen organizes its controls into General
+Start with [Stations & Research Access](docs/station-access.md) to choose single
+or tiered Analyzers, single or tiered Research Benches, or portable research
+through the Journal / Research key. Crafting Workbench tiers remain separate.
+
+The synchronized Server Settings screen organizes its other controls into General
 Progression, Discovery and Loot, Research and RP, Blueprint Analyzer, Starting
 Access, and a collapsed Advanced section. Related controls become visibly
 inactive when their parent feature or preset is disabled, with a tooltip that
@@ -198,7 +202,7 @@ last working data active.
 - [Research economy supply and balance](docs/research-economy-balance.md)
 - [Research currency integration API](docs/research-currency-integrations.md)
 - [Economy release handoff and playtest checklist](docs/research-economy-release-handoff.md)
-- [Current release notes](docs/releases/1.3.1.md)
+- [Current release notes](docs/releases/1.3.2.md)
 - [CurseForge description](docs/curseforge-description.md)
 - [Operations and migration](docs/operations-and-migration.md)
 - [Research Designer workspace](docs/research-designer-workspace.md)

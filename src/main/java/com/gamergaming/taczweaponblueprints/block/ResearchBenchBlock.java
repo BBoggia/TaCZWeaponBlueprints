@@ -242,6 +242,8 @@ public final class ResearchBenchBlock extends HorizontalDirectionalBlock {
                         buffer -> {
                             buffer.writeBlockPos(rootPos);
                             buffer.writeVarInt(tier.level());
+                            buffer.writeBoolean(false);
+                            buffer.writeEnum(com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.stationSetup().research());
                         });
             }
         }

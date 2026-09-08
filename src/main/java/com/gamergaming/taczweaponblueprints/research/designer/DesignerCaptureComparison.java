@@ -25,8 +25,8 @@ public final class DesignerCaptureComparison {
         var changes = new ArrayList<Difference>();
         var originalProgression = context.progression(context.source()); var customProgression = context.progression(candidate.snapshot());
         var originalCrafting = context.crafting(context.source()); var customCrafting = context.crafting(candidate.snapshot());
-        var originalAnalyzer = new BlueprintAnalyzerPolicyResolver.Context(context.source(), context.catalog(), 1, 1, originalProgression);
-        var customAnalyzer = new BlueprintAnalyzerPolicyResolver.Context(candidate.snapshot(), context.catalog(), 1, 1, customProgression);
+        var originalAnalyzer = new BlueprintAnalyzerPolicyResolver.Context(context.source(), context.catalog(), 1, 1, originalProgression, DesignerCapturedSettings.features(context.capture()).stations());
+        var customAnalyzer = new BlueprintAnalyzerPolicyResolver.Context(candidate.snapshot(), context.catalog(), 1, 1, customProgression, DesignerCapturedSettings.features(context.capture()).stations());
         var sourceConfig = DesignerCapturedSettings.progression(context.capture(), context.profile());
         var customConfig = DesignerCapturedSettings.progression(context.capture(), candidate.profile());
         for (var id : context.catalog().keySet()) {

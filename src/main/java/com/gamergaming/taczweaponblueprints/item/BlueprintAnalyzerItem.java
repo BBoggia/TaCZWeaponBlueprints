@@ -29,7 +29,10 @@ public final class BlueprintAnalyzerItem extends BlockItem {
 
     @Override
     public void appendHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("item.taczweaponblueprints.blueprint_analyzer.tooltip.tier",
+        if (com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.stationSetup().analyzer()
+                == com.gamergaming.taczweaponblueprints.progression.StationSetup.AnalyzerMode.SINGLE)
+            tooltip.add(Component.translatable("item.taczweaponblueprints.station.single").withStyle(ChatFormatting.GRAY));
+        else tooltip.add(Component.translatable("item.taczweaponblueprints.blueprint_analyzer.tooltip.tier",
                 ((BlueprintRecyclerBlock) getBlock()).tier().level()).withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("item.taczweaponblueprints.blueprint_analyzer.tooltip.footprint")
                 .withStyle(ChatFormatting.DARK_GRAY));

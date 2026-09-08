@@ -15,6 +15,8 @@ public final class BlueprintAnalyzerPolicyResolver {
     private BlueprintAnalyzerPolicyResolver() { }
 
     public static final class Context {
+        private final com.gamergaming.taczweaponblueprints.progression.StationSetup stations;
+        public com.gamergaming.taczweaponblueprints.progression.StationSetup stations() { return stations; }
         private final BlueprintResearchSnapshot research;
         private final Map<ResourceLocation, BlueprintData> catalog;
         private final long researchRevision, catalogRevision;
@@ -25,6 +27,13 @@ public final class BlueprintAnalyzerPolicyResolver {
 
         public Context(BlueprintResearchSnapshot research, Map<ResourceLocation, BlueprintData> catalog,
                 long researchRevision, long catalogRevision, BlueprintProgressionPolicySnapshot progression) {
+            this(research, catalog, researchRevision, catalogRevision, progression,
+                    com.gamergaming.taczweaponblueprints.progression.StationSetup.COMPATIBILITY);
+        }
+        public Context(BlueprintResearchSnapshot research, Map<ResourceLocation, BlueprintData> catalog,
+                long researchRevision, long catalogRevision, BlueprintProgressionPolicySnapshot progression,
+                com.gamergaming.taczweaponblueprints.progression.StationSetup stations) {
+            this.stations = Objects.requireNonNull(stations);
             this.research = Objects.requireNonNull(research); this.catalog = Map.copyOf(catalog);
             this.progression = Objects.requireNonNull(progression);
             if (researchRevision < 0 || catalogRevision < 0) throw new IllegalArgumentException("negative analysis context revision");
@@ -102,7 +111,7 @@ public final class BlueprintAnalyzerPolicyResolver {
             if (stale) status = AnalyzerPolicyQuote.Status.STALE_PROGRESSION;
             else if (weapon.isEmpty()) status = AnalyzerPolicyQuote.Status.TIER_UNAVAILABLE;
             else {
-                var row = policy.tiers().get(station).get(weapon.orElseThrow());
+                var row = policy.tiers().get(context.stations().weaponRewardTier(station, weapon.orElseThrow())).get(weapon.orElseThrow());
                 var legacy = BlueprintResearchPolicyResolver.reverseEngineeringPolicyFor(context.research(), context.catalog(), profileId, target);
                 var effective = policy.effectiveAttempt(legacy, row);
                 if (origin == BlueprintAnalyzerPolicy.Origin.FOUND) {
@@ -115,7 +124,7 @@ public final class BlueprintAnalyzerPolicyResolver {
                     threshold = reconstruction.thresholds().get(weapon.orElseThrow()); cap = reconstruction.retainedProgressCap();
                 }
                 if (!row.enabled() || !effective.enabled() || (!effective.physicalBlueprintLearningMode().learningPermitted() && !effective.outputRecyclable())) status = AnalyzerPolicyQuote.Status.DISABLED;
-                else if (station.level() < policy.minimumAnalyzerTier().level()) status = AnalyzerPolicyQuote.Status.STATION_TIER_REQUIRED;
+                else if (context.stations().analyzer() != com.gamergaming.taczweaponblueprints.progression.StationSetup.AnalyzerMode.SINGLE && station.level() < policy.minimumAnalyzerTier().level()) status = AnalyzerPolicyQuote.Status.STATION_TIER_REQUIRED;
                 else if (!policy.allowedOrigins().contains(origin)) status = AnalyzerPolicyQuote.Status.ORIGIN_DISABLED;
                 else if (origin == BlueprintAnalyzerPolicy.Origin.FOUND && !recovery.blueprintExtractionEnabled()) status = AnalyzerPolicyQuote.Status.DIRECT_RECOVERY_ONLY;
                 else status = AnalyzerPolicyQuote.Status.CONFIGURED;

@@ -60,6 +60,27 @@ class ResearchDataPolicyTest {
         if (name.equals("note")) for (var station : AnalyzerTier.values()) assertEquals(0, p.outcome(station, AnalyzerTier.TIER_1).blueprintWeight());
         assertEquals(AnalysisRewardClass.PROTECTED_PREREQUISITES, p.rewardClass());
     }
+    @ParameterizedTest @CsvSource({"note,1", "report,2", "dossier,3"})
+    void singleAnalyzerUsesChosenDataRewardsWithoutChangingTargetPools(String name, int targetTiers) {
+        var definition = json(name); definition.addProperty("minimum_analyzer_tier", "tier_3");
+        var policy = decode(ResearchDataPolicy.CODEC, definition);
+        var original = context(policy, threeTiers());
+        var setup = new com.gamergaming.taczweaponblueprints.progression.StationSetup(
+                com.gamergaming.taczweaponblueprints.progression.StationSetup.AnalyzerMode.SINGLE,
+                com.gamergaming.taczweaponblueprints.progression.StationSetup.ResearchAccess.SINGLE, AnalyzerTier.TIER_2);
+        var source = new BlueprintAnalyzerPolicyResolver.Context(original.research(), original.catalog(),
+                original.researchRevision(), original.catalogRevision(), original.progression(), setup);
+        for (var station : AnalyzerTier.values()) {
+            var result = ResearchDataPoolResolver.evaluate(new ResearchDataPoolResolver.Context(source), POLICY, PROFILE,
+                    station, ResearchDataPoolResolver.Defaults.STANDARD, EMPTY_PLAYER, ignored -> true);
+            assertTrue(result.ready()); assertEquals(targetTiers, result.tiers().size());
+            for (var tier : result.tiers()) for (var candidate : tier.candidates()) {
+                assertTrue(candidate.tier().level() <= targetTiers);
+                assertEquals(policy.outcome(AnalyzerTier.TIER_2, candidate.tier()), candidate.outcomes());
+            }
+        }
+    }
+
     @ParameterizedTest @ValueSource(strings = {
             "\"format\":2", "\"enabled\":null", "\"enabled\":\"true\"", "\"priority\":1.5", "\"progress_bonus\":1001",
             "\"unknown\":true", "\"input\":{\"item\":\"paper\"}", "\"input\":{\"item\":\"test:data\",\"tag\":\"test:data\"}",

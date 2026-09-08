@@ -197,6 +197,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     private Button guidanceDismissButton;
     private Button recommendationButton;
     private Button helpButton;
+    private Button journalButton;
     private Button railPinButton;
     private List<RelationCardButton> relationButtons = List.of();
     private List<RailEntryButton> sidebarButtons = List.of();
@@ -259,6 +260,14 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         ResearchTreeScreenLayout.Rect closeBounds = fullscreen
                 ? fullscreenOverlayLayout.close()
                 : activeTreeLayout.expand();
+
+        journalButton = null;
+        if (menu.portable()) journalButton = addRenderableWidget(Button.builder(
+                Component.literal("J"), ignored -> {
+                    minecraft.player.closeContainer();
+                    minecraft.setScreen(new BlueprintJournalScreen());
+                }).bounds(leftPos + closeBounds.x() - 24, topPos + closeBounds.y(), 20, closeBounds.height())
+                .tooltip(Tooltip.create(Component.translatable("key.taczweaponblueprints.open_journal"))).build());
 
         searchBox = addRenderableWidget(new EditBox(
                 font,
@@ -1495,6 +1504,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         affordabilityButton.visible = fullscreen && !guidanceVisible && railVisible
                 && menu.routeGuidanceAvailable() && !researchTreePublicationRejected;
         affordabilityButton.active = affordabilityButton.visible;
+        if (journalButton != null) journalButton.visible = !guidanceVisible;
         helpButton.visible = !guidanceVisible && (!fullscreen || railVisible);
         railPinButton.visible = fullscreen && railVisible;
         railPinButton.active = railPinButton.visible;
@@ -1960,6 +1970,8 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 .flatMap(Optional::stream)
                 .forEach(obstacles::add);
         obstacles.add(fullscreenOverlayLayout.close());
+        if (journalButton != null && journalButton.visible) obstacles.add(new ResearchTreeScreenLayout.Rect(
+                journalButton.getX(), journalButton.getY(), journalButton.getWidth(), journalButton.getHeight()));
         fullscreenRejectedPublicationWarningBounds().ifPresent(obstacles::add);
         if (searchBox != null && searchBox.visible) {
             obstacles.add(fullscreenOverlayLayout.searchField());
@@ -3119,6 +3131,8 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     private ResearchTreeInteractionPolicy.PointerTarget fullscreenPointerTarget(
             double mouseX,
             double mouseY) {
+        if (journalButton != null && journalButton.visible && journalButton.isMouseOver(mouseX, mouseY))
+            return ResearchTreeInteractionPolicy.PointerTarget.CLOSE;
         if (!fullscreen) {
             return ResearchTreeInteractionPolicy.PointerTarget.NONE;
         }
@@ -3249,6 +3263,10 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     }
 
     private Component workbenchTierLabel() {
+        if (menu.portable()) return Component.translatable("gui.taczweaponblueprints.portable_research");
+        if (com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.stationSetup().research()
+                == com.gamergaming.taczweaponblueprints.progression.StationSetup.ResearchAccess.SINGLE)
+            return Component.translatable("block.taczweaponblueprints.research_bench");
         return Component.translatable(
                 "gui.taczweaponblueprints.research_bench.workbench_tier",
                 menu.workbenchTier().level());
@@ -4671,6 +4689,10 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         reconcileScenePresentation();
+        if (journalButton != null && journalButton.visible && journalButton.isMouseOver(mouseX, mouseY)) {
+            cancelTreeInteraction();
+            return clickFullscreenWidget(journalButton, mouseX, mouseY, button);
+        }
         if (guidanceContains(mouseX, mouseY)) {
             cancelTreeInteraction();
             clickGuidance(mouseX, mouseY, button);

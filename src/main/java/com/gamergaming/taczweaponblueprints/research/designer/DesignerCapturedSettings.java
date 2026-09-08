@@ -51,7 +51,12 @@ public final class DesignerCapturedSettings {
         if (cls.isEnum()) return Enum.valueOf((Class) cls, value.getAsString().toUpperCase(Locale.ROOT));
         if (!cls.isRecord() || !cls.getPackageName().startsWith("com.gamergaming.taczweaponblueprints."))
             throw new IllegalArgumentException("Unsupported captured settings type " + cls.getName());
-        var components = cls.getRecordComponents(); var object = value.getAsJsonObject();
+        var components = cls.getRecordComponents(); var object = value.getAsJsonObject().deepCopy();
+        if (cls == ResearchFeatureConfigSnapshot.class && !object.has("stations")) {
+            var stations = new JsonObject(); stations.addProperty("analyzer", "TIERED");
+            stations.addProperty("research", "PRESET"); stations.addProperty("dataRewardTier", "TIER_1");
+            object.add("stations", stations);
+        }
         if (!object.keySet().equals(new HashSet<>(Arrays.stream(components).map(RecordComponent::getName).toList())))
             throw new IllegalArgumentException("Incomplete or unsupported captured settings: " + cls.getSimpleName());
         Object[] values = new Object[components.length]; Class<?>[] types = new Class<?>[components.length];
