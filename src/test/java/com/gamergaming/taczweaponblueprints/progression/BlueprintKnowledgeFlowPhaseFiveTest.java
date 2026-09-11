@@ -37,7 +37,7 @@ class BlueprintKnowledgeFlowPhaseFiveTest {
         assertEquals(0, BlueprintRecyclerMenu.INPUT_SLOT);
         assertEquals(1, BlueprintRecyclerMenu.OUTPUT_SLOT);
         assertEquals(2, BlueprintRecyclerMenu.FIRST_PLAYER_SLOT);
-        assertEquals("64", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("65", NetworkHandler.PROTOCOL_VERSION);
     }
 
     @Test

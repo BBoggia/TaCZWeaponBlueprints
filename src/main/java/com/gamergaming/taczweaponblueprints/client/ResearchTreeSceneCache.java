@@ -42,6 +42,9 @@ public final class ResearchTreeSceneCache {
     private ResearchTreePublication publication = ResearchTreePublication.EMPTY;
     private ResearchTechTreeProjectionCatalog catalog = ResearchTechTreeProjectionCatalog.EMPTY;
     private long generation;
+    private long layoutAttempts;
+
+    long layoutAttempts() { return layoutAttempts; }
 
     public ResearchTreeSceneCache() {
         this(ResearchTreeCompatibilitySceneEngine::new, new ResearchTreeSimpleSceneEngine());
@@ -113,6 +116,7 @@ public final class ResearchTreeSceneCache {
         // Incompatible geometry must never escape if both engines fail.
         invalidate(domain);
         try {
+            layoutAttempts++;
             var scene = ResearchTreeSceneValidator.validate(input, primaryRevision, primary.layout(input));
             requireRouting(groupedRouting, scene);
             entries.put(domain, new Entry(primaryRevision, fallbackRevision, groupedRouting, scene, Status.VALID, List.of()));
@@ -125,6 +129,7 @@ public final class ResearchTreeSceneCache {
                         List.of(diagnostic(primaryFailure), "simple fallback cannot provide required grouped routing"), false);
             }
             try {
+                layoutAttempts++;
                 var scene = ResearchTreeSceneValidator.validate(input, fallbackRevision, fallback.layout(input));
                 requireRouting(groupedRouting, scene);
                 var diagnostics = List.of(diagnostic(primaryFailure));

@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 
 import com.gamergaming.taczweaponblueprints.menu.ResearchSelectionPreview;
+import com.gamergaming.taczweaponblueprints.menu.ResearchSelectionProgressionPreview;
+import com.gamergaming.taczweaponblueprints.progression.eligibility.ResearchAccessSummary;
 import com.gamergaming.taczweaponblueprints.progression.ResearchCostMode;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
 
@@ -32,6 +34,7 @@ final class ResearchTreeSelectedNodePresenter {
             ResearchSelectionPreview preview = input.preview();
             Message message = authoritativeMessage(input.node(), preview);
             return new Presentation(
+                    input.node().blueprintId(), preview.accessSummary(), preview.progression(),
                     message,
                     true,
                     preview.pointCost(),
@@ -54,6 +57,7 @@ final class ResearchTreeSelectedNodePresenter {
 
         ResearchTreeGraph.Node node = input.node();
         return new Presentation(
+                node.blueprintId(), ResearchAccessSummary.NONE, ResearchSelectionProgressionPreview.EMPTY,
                 publishedMessage(
                         node,
                         input.canAffordPoints(),
@@ -118,10 +122,14 @@ final class ResearchTreeSelectedNodePresenter {
         if (!preview.policyEligible()) {
             return Message.LOCKED;
         }
-        if (!preview.creativeBypass() && preview.pointBalance() < preview.pointCost()) {
-            return Message.POINTS_REQUIRED;
+        boolean missingPoints = preview.costMode().pointsEnabled() && !preview.creativeBypass()
+                && preview.pointBalance() < preview.pointCost();
+        boolean missingMaterials = preview.costMode().itemsEnabled() && !preview.creativeBypass()
+                && !preview.ingredientsSatisfied();
+        if (missingPoints) {
+            return missingMaterials ? Message.POINTS_AND_MATERIALS_REQUIRED : Message.POINTS_REQUIRED;
         }
-        if (!preview.ingredientsSatisfied()) {
+        if (missingMaterials) {
             return Message.MATERIALS_REQUIRED;
         }
         if (!preview.transactionCapacityAvailable()) {
@@ -167,6 +175,9 @@ final class ResearchTreeSelectedNodePresenter {
     }
 
     record Presentation(
+            ResourceLocation blueprintId,
+            ResearchAccessSummary access,
+            ResearchSelectionProgressionPreview progression,
             Message message,
             boolean exactPreview,
             int pointCost,
@@ -184,7 +195,8 @@ final class ResearchTreeSelectedNodePresenter {
             ResearchCostMode costMode) {
         Presentation {
             ingredients = ingredients == null ? List.of() : List.copyOf(ingredients);
-            if (message == null || costMode == null || pointCost < 0 || pointBalance < 0
+            if (blueprintId == null || access == null || progression == null
+                    || message == null || costMode == null || pointCost < 0 || pointBalance < 0
                     || ingredients.stream().anyMatch(java.util.Objects::isNull)
                     || unlockCount < 0
                     || ingredientTypeCount < ingredients.size()
@@ -212,6 +224,10 @@ final class ResearchTreeSelectedNodePresenter {
             return unlockCount > 1;
         }
 
+        boolean hasPurchaseQuote() {
+            return exactPreview && !pathPlanningFailed() && unlockCount > 0 && message != Message.LEARNED;
+        }
+
         boolean pathPlanningFailed() {
             return message == Message.PATH_TOO_LARGE
                     || message == Message.ROUTE_TOO_COMPLEX
@@ -233,6 +249,7 @@ final class ResearchTreeSelectedNodePresenter {
         CHECKING_REQUIREMENTS,
         LEARNED,
         POINTS_REQUIRED,
+        POINTS_AND_MATERIALS_REQUIRED,
         MATERIALS_REQUIRED,
         INVENTORY_SPACE_REQUIRED,
         PROGRESSION_CAPACITY_EXHAUSTED,

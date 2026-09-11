@@ -238,7 +238,7 @@
     "autosave_interval_seconds": 5
   },
   "capture_transport": {
-    "protocol": 64,
+    "protocol": 65,
     "permission_level": 2,
     "chunk_bytes": 24576,
     "maximum_concurrent": 2,

@@ -233,7 +233,7 @@ public final class ClientResearchGuidanceState {
         nextRequestId = 1;
     }
 
-    private static boolean validAgainst(
+    static boolean validAgainst(
             ResearchGuidanceSnapshot snapshot,
             ResearchTreeGraph graph) {
         if (!publicTarget(graph, snapshot.targetId())

@@ -21,6 +21,10 @@ public final class ClientResearchState {
         return publication;
     }
 
+    public static boolean hasPublication() {
+        return publication != Publication.EMPTY;
+    }
+
     public static synchronized void acceptJournal(
             long generation,
             BlueprintJournalSnapshot journal,

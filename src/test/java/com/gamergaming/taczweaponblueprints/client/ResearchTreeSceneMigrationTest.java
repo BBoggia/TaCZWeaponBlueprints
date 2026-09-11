@@ -38,6 +38,21 @@ class ResearchTreeSceneMigrationTest {
         c.setSceneContent(cache.scene(publication,Domain.WEAPONS,policy()),Map.of(),null,null);
         c.viewport().setAnimated(false);return c;
     }
+    @Test void openingPrefersTrackedTargetAndRegionFocusDoesNotChangeSelectionOrGeometry() {
+        var c=canvas(); var id=ResearchTechTreeClientFixture.WEAPON_UPGRADE;
+        var geometry=c.scene().orElseThrow(); c.setTrackedPlan(ResearchTreePlanner.plan(c.graph(),id,100).orElseThrow());
+        c.openingView(); assertEquals(id,c.focusedId().orElseThrow());
+        c.setPinnedNode(id); var selection=c.authoritativeSelectedId();
+        c.focusRegion(geometry.regions().get(0));
+        assertEquals(selection,c.authoritativeSelectedId()); assertTrue(c.sceneDecoration(id).pinned());
+        assertTrue(c.sceneDecoration(id).trackedTarget()); assertSame(geometry,c.scene().orElseThrow());
+    }
+    @Test void inspectedRequirementsKeepTheirEmphasisWhenKeyboardFocusMoves() {
+        var c=canvas(); var root=ResearchTechTreeClientFixture.WEAPON_ROOT;
+        var target=ResearchTechTreeClientFixture.WEAPON_UPGRADE;
+        c.setPinnedNode(target); c.setFocusedNode(root);
+        assertEquals(ResearchTreeConnectorStyle.DIRECT,c.sceneEdgeStyle(new ResearchTreeGraph.Edge(root,target)));
+    }
     @Test void independentDecorationsDoNotReplaceFocusOrGeometry() {
         var c=canvas();var id=ResearchTechTreeClientFixture.WEAPON_UPGRADE;var geometry=c.scene().orElseThrow();
         c.focusTarget(id);var camera=c.viewport().snapshot();c.setPinnedNode(ResearchTechTreeClientFixture.WEAPON_ROOT);

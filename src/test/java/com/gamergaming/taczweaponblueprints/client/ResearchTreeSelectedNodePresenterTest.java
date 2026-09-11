@@ -121,6 +121,8 @@ class ResearchTreeSelectedNodePresenterTest {
         assertTrue(presentation.pointsSatisfied());
         assertTrue(presentation.materialsSatisfied());
         assertTrue(presentation.actionEnabled());
+        assertEquals("gui.taczweaponblueprints.research_bench.tree.cost_bypassed",
+                ((net.minecraft.network.chat.contents.TranslatableContents) ResearchTreePurchaseText.cost(presentation).getContents()).getKey());
     }
 
     @Test
@@ -319,6 +321,79 @@ class ResearchTreeSelectedNodePresenterTest {
         assertEquals(
                 ResearchTreeSelectedNodePresenter.Message.CHECKING_REQUIREMENTS,
                 presentation.message());
+    }
+
+    @Test
+    void combinedShortagesKeepBothCostChannelsAndTheirPurchaseScope() {
+        var id = new ResourceLocation("test:path_shortages");
+        var preview = shortagePreview(id, ResearchCostMode.POINTS_AND_ITEMS, ResearchAccessSummary.NONE);
+        var details = ResearchTreeSelectedNodePresenter.present(input(availableNode(id), false, Optional.of(id), preview));
+        assertEquals(ResearchTreeSelectedNodePresenter.Message.POINTS_AND_MATERIALS_REQUIRED, details.message());
+        assertFalse(details.pointsSatisfied());
+        assertFalse(details.materialsSatisfied());
+        assertFalse(details.actionEnabled());
+        assertTrue(details.hasPurchaseQuote());
+        assertEquals(id, details.blueprintId());
+        assertEquals(9, details.unlockCount());
+        assertEquals(72, details.pointCost());
+        assertEquals(36, details.ingredients().get(0).required());
+        assertEquals(3, details.ingredients().get(0).inventoryAvailable());
+        var scope = (net.minecraft.network.chat.contents.TranslatableContents) ResearchTreePurchaseText.scope(details).getContents();
+        assertEquals("gui.taczweaponblueprints.research_bench.tree.purchase.path", scope.getKey());
+        assertEquals(9, scope.getArgs()[0]);
+    }
+
+    @Test
+    void disabledCostChannelsAndAccessRestrictionsDoNotBecomeShortages() {
+        var id = new ResourceLocation("test:cost_modes");
+        for (var mode : ResearchCostMode.values()) {
+            var preview = shortagePreview(id, mode, ResearchAccessSummary.NONE);
+            var details = ResearchTreeSelectedNodePresenter.present(input(availableNode(id), false, Optional.of(id), preview));
+            assertEquals(switch (mode) {
+                case POINTS_ONLY -> ResearchTreeSelectedNodePresenter.Message.POINTS_REQUIRED;
+                case ITEMS_ONLY -> ResearchTreeSelectedNodePresenter.Message.MATERIALS_REQUIRED;
+                case POINTS_AND_ITEMS -> ResearchTreeSelectedNodePresenter.Message.POINTS_AND_MATERIALS_REQUIRED;
+            }, details.message());
+        }
+        for (var access : List.of(ResearchAccessSummary.POLICY_UNAVAILABLE,
+                ResearchAccessSummary.workbench(ResearchWorkbenchTier.TIER_1, ResearchWorkbenchTier.TIER_3),
+                ResearchAccessSummary.gate("gate.test.trial"))) {
+            var preview = shortagePreview(id, ResearchCostMode.POINTS_AND_ITEMS, access);
+            var details = ResearchTreeSelectedNodePresenter.present(input(availableNode(id), false, Optional.of(id), preview));
+            assertEquals(access, details.access());
+            assertFalse(details.actionEnabled());
+            assertFalse(details.message() == ResearchTreeSelectedNodePresenter.Message.POINTS_AND_MATERIALS_REQUIRED);
+        }
+    }
+
+    @Test
+    void unboundOrFailedPreviewCannotDescribeAPurchaseOrItsSecondaryDetails() {
+        var id = new ResourceLocation("test:private_quote");
+        var preview = shortagePreview(id, ResearchCostMode.POINTS_AND_ITEMS,
+                ResearchAccessSummary.gate("gate.test.secret"));
+        var unbound = ResearchTreeSelectedNodePresenter.present(input(availableNode(id), true, Optional.empty(), preview));
+        assertFalse(unbound.hasPurchaseQuote());
+        assertTrue(ResearchTreePurchaseText.scope(unbound).getString().isEmpty());
+        assertEquals(ResearchAccessSummary.NONE, unbound.access());
+        assertEquals(com.gamergaming.taczweaponblueprints.menu.ResearchSelectionProgressionPreview.EMPTY, unbound.progression());
+        var failed = new ResearchSelectionPreview(Optional.of(id), 0, 0, false, true, true, false, false,
+                List.of(), 1, 0, ResearchSelectionPreview.PathPlanningState.TECH_TREE_UNAVAILABLE);
+        var details = ResearchTreeSelectedNodePresenter.present(input(availableNode(id), true, Optional.of(id), failed));
+        assertFalse(details.hasPurchaseQuote());
+        assertTrue(ResearchTreePurchaseText.scope(details).getString().isEmpty());
+        assertEquals("gui.taczweaponblueprints.research_bench.tree.path.cost_unavailable",
+                ((net.minecraft.network.chat.contents.TranslatableContents) ResearchTreePurchaseText.cost(details).getContents()).getKey());
+    }
+
+    private static ResearchSelectionPreview shortagePreview(ResourceLocation id, ResearchCostMode mode,
+            ResearchAccessSummary access) {
+        var ingredients = mode.itemsEnabled() ? List.of(new ResearchSelectionPreview.IngredientPreview(
+                List.of(new ResourceLocation("minecraft:paper")), Optional.empty(), 36, 3))
+                : List.<ResearchSelectionPreview.IngredientPreview>of();
+        return new ResearchSelectionPreview(Optional.of(id), mode.pointsEnabled() ? 72 : 0, 0,
+                access.equals(ResearchAccessSummary.NONE), !mode.itemsEnabled(), true, false, false,
+                ingredients, 9, ingredients.size(), ResearchSelectionPreview.PathPlanningState.NONE,
+                mode, Optional.empty(), access);
     }
 
     @Test

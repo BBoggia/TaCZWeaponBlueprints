@@ -118,7 +118,7 @@ public final class ResearchGuidanceResultPacket {
         return result;
     }
 
-    private static ResearchGuidanceSnapshot readSnapshot(FriendlyByteBuf buffer) {
+    static ResearchGuidanceSnapshot readSnapshot(FriendlyByteBuf buffer) {
         ResourceLocation targetId = readId(buffer);
         ResearchGuidanceSnapshot.State state = readEnum(
                 buffer, ResearchGuidanceSnapshot.State.values(), "guidance state");
@@ -180,7 +180,7 @@ public final class ResearchGuidanceResultPacket {
                 readOptionalId(buffer));
     }
 
-    private static void writeSnapshot(
+    static void writeSnapshot(
             FriendlyByteBuf buffer,
             ResearchGuidanceSnapshot snapshot) {
         writeId(buffer, snapshot.targetId());

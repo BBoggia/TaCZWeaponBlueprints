@@ -14,10 +14,25 @@ task also compares three scene engines without opening Minecraft.
 `ResearchTreeWorkbenchLayout` owns the persistent header, canvas, inspector,
 action row, and shared search/navigation overlay geometry. The inspector appears only while a valid research node is selected; clearing
 the selection returns its space to the canvas. Its hidden area does not block
-canvas clicks or scrolling. Resizing the canvas preserves the camera anchor.
-The inspector docks
-right at GUI widths of 420 or more and below the canvas at smaller supported
-sizes. Its requirement list scrolls independently; actions remain fixed. The
+canvas clicks or scrolling. Resizing preserves the selected node’s absolute screen position when it fits the new canvas; otherwise the view moves only enough to reveal it, subject to content bounds.
+Selection opens a docked inspector when both canvas width and detail height fit.
+Smaller screens use a compact selection strip with a Details button; expanding
+it opens an overlay. The compact strip has no purchase action. Expanded details
+reserve at least four normal text rows at the minimum supported 320×240 GUI size.
+Identity, purchase scope, status, cost, and controls remain fixed while the body
+scrolls. Long names and summaries wrap within a measured budget, then use an
+ellipsis; tooltips expose the full text.
+
+Requirement rows distinguish explanations, materials, groups, prerequisites,
+and external links. Every group is required; alternatives inside a group use
+choose-one wording. Only disclosed, selectable requirement targets become links.
+Arrow keys visit links, Enter follows them, and Page Up/Down scroll the body.
+Back restores the inspected target, domain, camera, scroll, and expansion state
+from a bounded 32-entry history. Only following a requirement adds an entry;
+ordinary selection clears the chain. Progress updates preserve valid entries,
+while incompatible publications and closing the screen clear them. Inspection
+never changes the tracked research goal. Escape collapses the small-screen
+overlay when search or help is not handling the key. The
 minimap respects its existing setting and avoids the central target area. It
 yields when no corner fits, and contains only disclosed compact marks and region
 outlines.
@@ -43,7 +58,25 @@ Scene cameras use the existing `ResearchTechTreeViewState` domain and surface
 state, keyed by scene geometry. Progress refreshes reuse geometry and camera;
 changed metrics preserve a surviving focused node's screen position, subject to
 viewport bounds. Opening, Overview, Branch, and target navigation are explicit
-camera actions. Preview refreshes do not reframe the target.
+camera actions. Compatible saved views take priority over a fresh opening view.
+Preview refreshes do not reframe the target. Animated pointer zoom stores a world
+point and its screen coordinate, interpolates scale, and derives pan from that
+anchor each frame. Bounds may clamp it. Repeated input retargets from the rendered
+camera; dragging cancels the pending transition. Reduced motion applies camera
+destinations immediately.
+
+Wheel ownership uses the same frontmost-layer policy as pointer input. Search
+results and help cover the inspector; inspector and minimap wheels never zoom
+the underlying graph. Canvas, minimap, and scrollbar drags retain their owner
+through release outside their starting region. Window focus loss cancels drag
+and hold state. Hold eligibility also requires an active window and no focused
+widget or help overlay, in addition to the existing selection and quote checks.
+
+Inspector and search scrolling accumulate fractional wheel distances. Search
+scrolling moves the visible window without committing a different research
+selection. The inspector scrollbar supports dragging; its focused content uses
+Page Up/Down. Those keys scroll focused search results as well, while domain
+switching remains available outside these contexts.
 
 The inspector requires a matching authoritative preview for exact costs,
 material allocation, and research eligibility. The existing action controller
@@ -53,6 +86,24 @@ The server's access summary supplies the blocker. Crafting access and Blueprint
 Fragment progress appear separately. Every public prerequisite group and visible
 alternative remains available in the scrolling content; undisclosed alternatives
 remain counts.
+
+`ResearchTreeSelectedNodePresenter` carries the selected identity, matching quote,
+access summary, and progression details. A matching quote can report currency
+and material shortages together; planning and access failures take priority.
+The inspector, action tooltip, and narration describe the number of blueprints
+in the purchase, including the target and required unlearned predecessors.
+Currency and materials are purchase totals. Published summaries alone cannot
+expose inventory allocation or enable research. Currency wording uses the current
+server-issued denomination, including research failure feedback.
+
+`ResearchTreeCanvasStatusPresenter` resolves loading, rejected publication,
+unavailable scene, empty publication/domain, and zero search matches independently
+of inspector visibility. Loading means no complete publication or scene has
+arrived; an accepted empty publication is distinct. Rejected replacements clear
+the previous presentation. Failure states take priority over empty search results.
+Clear search uses the current domain's existing search controller. Closing the
+Bench allows the player to reopen it; no automatic retry or purchase is submitted.
+The status panel owns its pointer area and supplies narrator text.
 
 Search, Next, tracked goals, affordability, keyboard navigation, and domain
 portals use the current public projection. Focus uses gold outlines; inspected
@@ -92,6 +143,40 @@ the open menu. Point-only updates also request a bounded Research Bench preview
 refresh, without rebuilding crafting access. Withdrawal and rejection clear the
 server selection as well as the local preview; reselecting the same blueprint
 therefore produces a fresh quote instead of a duplicate-selection acknowledgment.
+
+## Purchase-bound route review
+
+The expanded inspector offers Review research path separately from Track and
+Research. It uses screen-owned state, so reviewing B while tracking A does not
+replace A's goal. The review lists newly purchased blueprints, learned support,
+and the selected alternative for each requirement group. Disclosed selectable
+steps use the inspector's navigation and Back history. Current authoritative
+preview data supplies purchase totals, balances, and material allocation.
+
+Protocol 65 adds a dedicated request/result pair. Each request identifies the
+menu, unique request identity, publication generation, target, and opaque
+route fingerprint from the selection preview. The server checks the open menu,
+selected quote, disclosed target, current publication, and freshly evaluated
+fingerprint. It constructs the guidance payload from that same evaluation.
+Review shares the menu's guidance limiter and global planning admission; the
+existing bounded guidance codec and disclosure checks apply. Oversized or
+unavailable routes receive an explicit explanation.
+
+A review is labeled Current purchase only while its complete binding matches:
+menu, publication, inspected target, authoritative preview, and captured inventory
+identity. Changed bindings discard pending and accepted reviews before rendering.
+The client checks support disclosure, learned/purchased membership, chosen public
+alternatives, required group coverage, and connectivity. Delayed responses must
+match the current request exactly. Resource allocation is not encoded in the
+route fingerprint; visible allocations are checked against the authoritative
+preview, and inventory changes invalidate the review even with the same fingerprint.
+
+Requests have a 500 ms minimum spacing and a 3 second timeout, with at most two
+attempts per unchanged binding. A throttled request waits before retrying. Closing
+the review or screen discards its state. A rejected review can be retried by
+reopening it or after a relevant binding change. Review failure never changes
+purchase eligibility; Research continues through the existing quote fingerprint
+check and atomic transaction.
 
 ## Input and geometry
 
@@ -311,7 +396,7 @@ development comparisons. Window resize changes the viewport, not node placement.
 No renderer selector or profiling tool is included in the release JAR. The
 `Research-Tree-Scene-Layout` manifest attribute records `branches-v2`; artifact
 verification checks it against the runtime engine revision. This layout contract
-is independent of protocol 63 and does not change research authority.
+is independent of the network protocol version and does not change research authority.
 
 Run `./gradlew researchTreePerformance` with Java 17 for the frozen live catalog
 and structural limits. Override output with
@@ -334,21 +419,76 @@ opening path fits the target, and layout already has explicit work limits.
 
 ## Zoom detail and hover artwork
 
-Scene rendering uses three levels of detail based on the smallest displayed
-node body in logical GUI pixels. Close views include artwork, names, and status
-symbols. The middle level gives artwork the tile interior, uses a neutral
-background, and keeps state in the border and status strip. Very small nodes
-become colored overview markers. This changes presentation only; geometry,
-selection, prerequisites, and hit targets keep the same meaning.
+Artwork, ordinary names, status marks, and junction text have independent
+screen-space thresholds with transition buffers. Artwork appears at 18×8 GUI
+pixels and remains down to 16×7. Ordinary names appear at 76×36 and remain down
+to 72×34; they render at the normal GUI font size inside the available card
+space. Status marks appear at 32×14 and remain down to 28×12. Junction text
+appears at a node height of 28 and remains down to 26. Both dimensions must fit
+where a width and height are given. Framebuffer density does not change these
+thresholds.
 
-Labels disappear below 64×28 pixels and return at 68×30. Artwork disappears
-below 16×7 and returns at 18×8. Both dimensions must fit; the small transition
-buffers prevent flicker. For the usual 96×44 tile, artwork therefore remains
-visible at 20% scale. Thresholds apply to GUI pixels rather than raw framebuffer
-pixels, preserving behavior across Minecraft GUI scales.
+Artwork always uses the same 16-unit-high allocation near the top of a node,
+with aspect ratio preserved by the existing crop cache. It does not expand into
+the name area when names disappear. Very small nodes retain colored overview
+markers. These choices do not change geometry, hit targets, or selection.
 
-When labels are hidden, hovering a disclosed node shows its readable name,
-status, progression information, and enlarged artwork without selecting it or
-opening the inspector. The preview wraps text, stays within the screen, and
-uses the existing public artwork cache. Nodes whose visibility hides their
-identity retain the normal restricted tooltip and never request weapon art.
+The inspected node, keyboard focus, and active search result receive readable
+screen-space labels in that priority order. Labels are clipped to the canvas and
+placed around higher-priority annotations. Ordinary names yield to these labels.
+Branch titles and Shared foundations also use screen-space labels with clipping,
+collision handling, and full-name hover tooltips. Generated branches retain
+neutral numbered titles; authored titles and translation keys are preserved.
+The shared landmark follows its direct foundation nodes, excluding child branch
+crowns from its framing bounds. Clicking a landmark frames its region. Clicking
+a node at overview still inspects that node. A landmark drag only pans.
+
+Connector precedence is verified review route, direct inspected requirements,
+tracked route, earlier inspected requirements, then quiet context. Review lines
+are thicker gold, direct requirements are gold, ancestry is muted gold, and
+tracking is cyan. The tracked goal retains a fixed-size cyan cross even while
+another target is reviewed. Review emphasis is withdrawn whenever the
+quote-bound review becomes non-current. Crossing gaps account for the width of
+both lines; group junctions and AND-of-OR identities are retained. Renderer state
+and labels never enter the scene geometry key. The text cache is bounded to 4,096
+entries.
+
+A fresh view with no compatible saved camera prefers a disclosed tracked target
+in its domain, then a publicly actionable frontier, then the existing structural
+fallback. It does not infer exact affordability. Ordinary publication updates,
+hovering, and review responses do not apply this opening policy.
+
+When ordinary names are hidden, hovering a disclosed node shows its readable
+name, status, progression information, and enlarged artwork without selecting
+it. The preview wraps text, stays within the screen, and uses the existing public
+artwork cache. Restricted nodes retain the normal restricted tooltip.
+
+## Minimap coverage and artwork preparation
+
+Automatic minimap visibility follows the rendered camera, including zoom and
+usable canvas insets. It appears below 80% visible layout area and stays visible
+until coverage reaches 92%. Always and Hidden retain their explicit meanings.
+The outer panel follows the layout aspect ratio, within a 168×112 GUI-pixel
+maximum and a 48×36 minimum where space permits. Existing overlay avoidance
+still applies. Very narrow content retains a usable panel hit area.
+
+During minimap navigation, visibility, placement, and coordinate mapping remain
+fixed until release. Publication replacement, canvas resize, explicit hiding,
+and ordinary interaction cancellation invalidate the drag. The camera outline
+is white; the tracked target uses a cyan mark drawn above it. Neither navigation
+nor visibility changes modify research selection or progression.
+
+Disclosed artwork is prepared on demand, not by scanning every pack texture.
+Pack API bindings and resource lookup remain on the client thread. One daemon
+worker reads PNG resources and calculates crop metadata, with at most 64 queued
+jobs. A full queue leaves the blueprint fallback visible and retries on a later
+frame. Texture drawing, uploads triggered by drawing, and item rendering remain
+on the render thread. Completed metadata is reused across camera movement.
+
+Resource reload cancels queued work and invalidates its generation; running work
+checks cancellation before decoding and during cropping. Old results cannot
+populate the new presentation. Streams and decoded native images are closed;
+only small crop records remain cached. The cache retains textures referenced by
+the current bounded public graph. Missing, malformed, oversized, or unavailable
+artwork retains the blueprint fallback. PNG reads remain capped at 8 MiB and
+4,194,304 pixels.

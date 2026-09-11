@@ -14,6 +14,24 @@ import net.minecraft.resources.ResourceLocation;
 
 /** Pure ordered search state for one disclosure-safe Research Tree publication. */
 final class ResearchTreeSearchController {
+    private int windowStart;
+    private boolean followActive = true;
+    private int windowSize = 1;
+    private final ResearchTreeScrollAccumulator wheel = new ResearchTreeScrollAccumulator();
+    void scroll(double delta, int visible) {
+        windowSize = Math.max(1, visible);
+        followActive = false;
+        windowStart = Math.max(0, Math.min(Math.max(0, matches.size() - windowSize),
+                windowStart + wheel.consume(-delta)));
+    }
+    void page(int direction, int visible) { scroll(-direction * Math.max(1, visible), visible); }
+    private void revealActive() {
+        followActive = true;
+        if (activeMatch == null) { windowStart = 0; return; }
+        int index = List.copyOf(matches).indexOf(activeMatch);
+        if (index < windowStart) windowStart = Math.max(0, index);
+        else if (index >= windowStart + windowSize) windowStart = index - windowSize + 1;
+    }
     private String query = "";
     private Set<ResourceLocation> matches = Set.of();
     private ResourceLocation activeMatch;
@@ -26,7 +44,10 @@ final class ResearchTreeSearchController {
                 || nodes.stream().anyMatch(java.util.Objects::isNull)) {
             throw new IllegalArgumentException("invalid Research Tree search input");
         }
-        query = rawQuery.strip().toLowerCase(Locale.ROOT);
+        String nextQuery = rawQuery.strip().toLowerCase(Locale.ROOT);
+        boolean queryChanged = !query.equals(nextQuery);
+        if (queryChanged) { windowStart = 0; wheel.reset(); }
+        query = nextQuery;
         if (query.isEmpty()) {
             matches = Set.of();
             activeMatch = null;
@@ -45,7 +66,9 @@ final class ResearchTreeSearchController {
         matches = Collections.unmodifiableSet(next);
         if (activeMatch == null || !matches.contains(activeMatch)) {
             activeMatch = matches.isEmpty() ? null : matches.iterator().next();
+            followActive = true;
         }
+        if (queryChanged) revealActive();
     }
 
     String query() {
@@ -78,6 +101,7 @@ final class ResearchTreeSearchController {
             return Optional.empty();
         }
         activeMatch = blueprintId;
+        revealActive();
         return Optional.of(activeMatch);
     }
 
@@ -89,6 +113,7 @@ final class ResearchTreeSearchController {
         List<ResourceLocation> ordered = List.copyOf(matches);
         int currentIndex = activeMatch == null ? -1 : ordered.indexOf(activeMatch);
         activeMatch = ordered.get(Math.floorMod(currentIndex + delta, ordered.size()));
+        revealActive();
         return Optional.of(activeMatch);
     }
 
@@ -104,11 +129,10 @@ final class ResearchTreeSearchController {
         if (ordered.isEmpty()) {
             return List.of();
         }
-        int activeIndex = Math.max(0, ordered.indexOf(activeMatch));
-        int windowSize = Math.min(maximumVisible, ordered.size());
-        int start = Math.max(0, Math.min(
-                activeIndex - windowSize / 2,
-                ordered.size() - windowSize));
+        windowSize = Math.min(maximumVisible, ordered.size());
+        if (followActive) { windowStart = Math.max(0, ordered.indexOf(activeMatch) - windowSize / 2); followActive = false; }
+        windowStart = Math.max(0, Math.min(windowStart, ordered.size() - windowSize));
+        int start = windowStart;
         java.util.ArrayList<Result> results = new java.util.ArrayList<>(windowSize);
         for (int index = start; index < start + windowSize; index++) {
             ResourceLocation blueprintId = ordered.get(index);

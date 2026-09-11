@@ -96,11 +96,19 @@ public final class ResearchTreeCanvas {
         if (viewMode == null || bounds == null) {
             throw new IllegalArgumentException("Research Tree canvas bounds cannot be null");
         }
+        var previousBounds = this.bounds;
         this.viewMode = viewMode;
         this.bounds = bounds;
         cancelInteraction();
         applyCameraAnimationPolicy();
-        configureViewport();
+        if (sceneView != null && previousBounds != null) {
+            viewport().configureScreenAnchored(previousBounds.x(), previousBounds.y(), bounds.x(), bounds.y(),
+                    bounds.width(), bounds.height(), layout.width(), layout.height());
+            Optional.ofNullable(pinnedId).flatMap(this::nodeBounds).ifPresent(node -> {
+                viewport().reveal(node.x(), node.y(), node.width(), node.height(), 0);
+                viewport().finishAnimation();
+            });
+        } else configureViewport();
     }
 
     /** Applies client-only motion and decoration preferences without rebuilding topology. */
@@ -168,11 +176,51 @@ public final class ResearchTreeCanvas {
         if (sceneView != null) viewport().restore(new ResearchTreeViewport.Snapshot(viewport().panX(), viewport().panY(), 1));
         focusNode(id);
     }
+    private Set<ResearchTreeGraph.Edge> reviewedEdges = Set.of();
+    private ResearchTreeRelations.FocusPath inspectionPath = ResearchTreeRelations.FocusPath.EMPTY;
+    private ResearchTreeGraph inspectionGraph;
+    private com.gamergaming.taczweaponblueprints.progression.ResearchGuidanceSnapshot reviewIdentity;
+    private ResearchTreeGraph reviewGraph;
+    public void setReviewedRoute(com.gamergaming.taczweaponblueprints.progression.ResearchGuidanceSnapshot review) {
+        if (reviewIdentity == review && reviewGraph == graph) return;
+        reviewIdentity = review; reviewGraph = graph;
+        var visibleEdges = Set.copyOf(graph.edges());
+        reviewedEdges = review == null ? Set.of() : review.selectedRequirements().stream()
+                .map(r -> new ResearchTreeGraph.Edge(r.prerequisiteId(), r.dependentId()))
+                .filter(visibleEdges::contains).collect(java.util.stream.Collectors.toUnmodifiableSet());
+    }
+    ResearchTreeConnectorStyle sceneEdgeStyle(ResearchTreeGraph.Edge edge) {
+        var role = pinnedId == null ? focusPath.role(edge) : inspectionPath.role(edge);
+        var inspected = pinnedId == null ? focusedId().orElse(null) : pinnedId;
+        if (role == ResearchTreePresentationContract.RelationshipRole.ALTERNATIVE_REQUIREMENT
+                && !edge.dependentId().equals(inspected)) role = ResearchTreePresentationContract.RelationshipRole.REQUIREMENT_PATH;
+        return ResearchTreeConnectorStyle.resolve(reviewedEdges.contains(edge), isTrackedPathEdge(edge),role);
+    }
+    public Optional<ResearchTreeScene.Region> landmarkAt(double x, double y) {
+        return sceneRenderer == null || !contains(x,y) ? Optional.empty()
+                : sceneRenderer.landmarkAt(this,x,y);
+    }
+    public Optional<Component> landmarkTitleAt(double x, double y) {
+        return sceneRenderer == null ? Optional.empty() : landmarkAt(x,y).map(sceneRenderer::regionTitle);
+    }
+    public void focusRegion(ResearchTreeScene.Region region) {
+        if (sceneView == null || !sceneView.scene.regions().contains(region)) return;
+        var b = sceneView.canvas(ResearchTreeSceneLandmarks.bounds(sceneView.scene,region));
+        viewport().fit(b.x(), b.y(), b.width(), b.height());
+    }
     public void openingView() {
         if (sceneView == null || graph.nodes().isEmpty()) { fit(); return; }
+        if (trackedTargetId != null && graph.node(trackedTargetId).filter(n -> n.visibility().allowsServerSelection()).isPresent()) {
+            setFocusedNode(trackedTargetId); focusTarget(trackedTargetId); return;
+        }
+        var frontier = graph.nodes().stream().filter(n -> !n.learned() && n.visibility().allowsServerSelection()
+                && n.availability() == ResearchTreeGraph.Availability.AVAILABLE).map(ResearchTreeGraph.Node::blueprintId)
+                .collect(java.util.stream.Collectors.toSet());
         var familyMembers = sceneView.scene.regions().stream().filter(r -> r.seed().parentId().isPresent())
                 .flatMap(r -> r.seed().directMembers().stream()).collect(java.util.stream.Collectors.toSet());
         var candidates = sceneView.scene.key().topology().nodes().stream().filter(p -> familyMembers.contains(p.nodeId())).toList();
+        if (!frontier.isEmpty()) candidates = sceneView.scene.key().topology().nodes().stream()
+                .filter(p -> frontier.contains(p.nodeId())).toList();
         if (candidates.isEmpty()) candidates = sceneView.scene.key().topology().nodes();
         var first = candidates.stream().min(java.util.Comparator.comparingInt(ResearchTechTreeProjection.Placement::rank)
                 .thenComparing(p -> p.nodeId().toString())).orElseThrow();
@@ -1083,7 +1131,11 @@ public final class ResearchTreeCanvas {
     }
 
     public void setPinnedNode(ResourceLocation id) {
-        pinnedId = graph.node(id).map(ResearchTreeGraph.Node::blueprintId).orElse(null);
+        var next = graph.node(id).map(ResearchTreeGraph.Node::blueprintId).orElse(null);
+        if (!java.util.Objects.equals(next, pinnedId) || inspectionGraph != graph) {
+            inspectionPath = relations.focus(next); inspectionGraph = graph;
+        }
+        pinnedId = next;
     }
 
     record SceneDecoration(boolean focused, boolean pinned, boolean hovered, boolean search,

@@ -23,6 +23,22 @@ public final class ResearchTreeViewport {
     private double targetScale = 1.0D;
     private Insets safeInsets = Insets.NONE;
     private boolean animated;
+    private ZoomAnchor zoomAnchor;
+    private record ZoomAnchor(double worldX, double worldY, double screenX, double screenY) { }
+
+    /** Captures the camera currently on screen, rather than a queued destination. */
+    public Snapshot renderedSnapshot() { return new Snapshot(panX, panY, scale); }
+
+    /** Retains absolute screen coordinates across changes to the canvas origin and size. */
+    public void configureScreenAnchored(int oldX, int oldY, int newX, int newY,
+            int width, int height, int canvasWidth, int canvasHeight) {
+        cancelAnimation();
+        panX += (newX - oldX) / scale;
+        panY += (newY - oldY) / scale;
+        syncTargetToCurrent();
+        configure(width, height, canvasWidth, canvasHeight);
+    }
+
 
     public void configure(int viewportWidth, int viewportHeight, int canvasWidth, int canvasHeight) {
         this.viewportWidth = Math.max(1, viewportWidth);
@@ -38,6 +54,10 @@ public final class ResearchTreeViewport {
         double dy = (this.viewportHeight - Math.max(1, height)) / 2.0;
         panX += dx / scale; panY += dy / scale;
         targetPanX += dx / targetScale; targetPanY += dy / targetScale;
+        if (zoomAnchor != null) {
+            zoomAnchor = new ZoomAnchor(zoomAnchor.worldX(), zoomAnchor.worldY(),
+                    zoomAnchor.screenX() - dx, zoomAnchor.screenY() - dy);
+        }
         configure(width, height, canvasWidth, canvasHeight);
     }
 
@@ -46,6 +66,8 @@ public final class ResearchTreeViewport {
         validateFinite(wheelDelta, x); validateFinite(y, 0);
         if (wheelDelta == 0) return;
         double anchorX = canvasX(x), anchorY = canvasY(y);
+        cancelAnimation();
+        zoomAnchor = new ZoomAnchor(anchorX, anchorY, x, y);
         targetScale = nextZoomScale(wheelDelta, true);
         targetPanX = anchorX - x / targetScale; targetPanY = anchorY - y / targetScale;
         clampTarget(); applyTargetImmediatelyWhenStatic();
@@ -161,6 +183,8 @@ public final class ResearchTreeViewport {
         }
         double anchorX = canvasX(viewportX);
         double anchorY = canvasY(viewportY);
+        cancelAnimation();
+        zoomAnchor = new ZoomAnchor(anchorX, anchorY, viewportX, viewportY);
         targetScale = nextZoomScale(wheelDelta, false);
         targetPanX = anchorX - viewportX / targetScale;
         targetPanY = anchorY - viewportY / targetScale;
@@ -182,6 +206,7 @@ public final class ResearchTreeViewport {
 
     public void focus(double x, double y, double width, double height) {
         validateFocusBounds(x, y, width, height, false);
+        zoomAnchor = null;
         double safeCenterX = safeInsets.left()
                 + availableWidth() / 2.0D;
         double safeCenterY = safeInsets.top()
@@ -217,6 +242,7 @@ public final class ResearchTreeViewport {
         double safeTop = safeInsets.top() + verticalPadding;
         double safeRight = viewportWidth - safeInsets.right() - horizontalPadding;
         double safeBottom = viewportHeight - safeInsets.bottom() - verticalPadding;
+        zoomAnchor = null;
         double previousPanX = targetPanX;
         double previousPanY = targetPanY;
         targetPanX = revealAxis(
@@ -298,9 +324,14 @@ public final class ResearchTreeViewport {
             return false;
         }
         double factor = 1.0D - Math.exp(-EASING_SPEED * Math.min(deltaSeconds, 0.1D));
-        panX = approach(panX, targetPanX, factor, PAN_SNAP_DISTANCE);
-        panY = approach(panY, targetPanY, factor, PAN_SNAP_DISTANCE);
         scale = approach(scale, targetScale, factor, SCALE_SNAP_DISTANCE);
+        if (zoomAnchor != null) {
+            panX = zoomAnchor.worldX() - zoomAnchor.screenX() / scale;
+            panY = zoomAnchor.worldY() - zoomAnchor.screenY() / scale;
+        } else {
+            panX = approach(panX, targetPanX, factor, PAN_SNAP_DISTANCE);
+            panY = approach(panY, targetPanY, factor, PAN_SNAP_DISTANCE);
+        }
         clampCurrent();
         return true;
     }
@@ -416,6 +447,7 @@ public final class ResearchTreeViewport {
     }
 
     private void syncTargetToCurrent() {
+        zoomAnchor = null;
         targetPanX = panX;
         targetPanY = panY;
         targetScale = scale;

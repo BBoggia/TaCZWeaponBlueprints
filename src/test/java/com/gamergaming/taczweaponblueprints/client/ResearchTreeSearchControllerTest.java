@@ -14,6 +14,24 @@ import net.minecraft.resources.ResourceLocation;
 
 class ResearchTreeSearchControllerTest {
     @Test
+    void emptyResultQueryClearsTheCursorAndCanRecoverAfterScrolling() {
+        var graph = ResearchTreeUxPhaseZeroFixture.everyAvailability();
+        var search = new ResearchTreeSearchController();
+        search.update("required", graph.nodes(), node -> node.blueprintId().getPath());
+        search.selectNext(1);
+        search.scroll(-8, 1);
+        search.update("no_such_blueprint", graph.nodes(), node -> node.blueprintId().getPath());
+        assertTrue(search.activeMatch().isEmpty());
+        assertTrue(search.commit().isEmpty());
+        assertTrue(search.window(3).isEmpty());
+        assertTrue(search.selectNext(1).isEmpty());
+        search.update("discovery", graph.nodes(), node -> node.blueprintId().getPath());
+        assertEquals(new ResourceLocation("phase_zero:discovery_required"), search.window(1).get(0).blueprintId());
+        search.update("another_missing_query", List.of(), node -> "");
+        assertTrue(search.window(3).isEmpty());
+    }
+
+    @Test
     void normalizedSearchRetainsPublicationOrderAndVisibleSubset() {
         ResearchTreeGraph graph = ResearchTreeUxPhaseZeroFixture.everyAvailability();
         ResearchTreeSearchController search = new ResearchTreeSearchController();

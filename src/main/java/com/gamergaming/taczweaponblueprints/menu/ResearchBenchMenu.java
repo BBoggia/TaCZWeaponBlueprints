@@ -713,6 +713,29 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
         }
     }
 
+    /** Review uses one admitted evaluation for both its route proof and quote identity. */
+    public GuidanceResult handleReviewRequest(ServerPlayer player, ResourceLocation targetId,
+            ResearchRouteFingerprint fingerprint) {
+        if (player == null || player.containerMenu != this || !stillValid(player)
+                || !java.util.Objects.equals(selectedBlueprint, targetId)
+                || fingerprint == null || !preview.routeFingerprint().filter(fingerprint::equals).isPresent()
+                || !ModConfigs.BLUEPRINT.progressionSnapshot().treeResearchResultMode().learnsDirectly())
+            return GuidanceResult.rejected();
+        if (requestLimiter.admitGuidance(serverTick(player)) == ResearchBenchRequestLimiter.Decision.THROTTLE
+                || !ResearchPlanningAdmission.admit(serverTick(player))) return GuidanceResult.throttled();
+        var prepared = prepareRouteEvaluation(player, targetId).orElse(null);
+        if (prepared == null || !prepared.evaluation().routeFingerprint().filter(fingerprint::equals).isPresent())
+            return GuidanceResult.rejected();
+        try {
+            return ResearchRouteEvaluationService.guidanceSnapshot(prepared.evaluation(),
+                    BlueprintResearchDataManager.INSTANCE.treeFor(prepared.playerData()), prepared.costMode())
+                    .map(GuidanceResult::success).orElseGet(GuidanceResult::rejected);
+        } catch (RuntimeException exception) {
+            ResearchRouteFailureReporter.report("route review construction", exception);
+            return GuidanceResult.rejected();
+        }
+    }
+
     private Optional<PreparedRouteEvaluation> prepareRouteEvaluation(
             ServerPlayer player,
             ResourceLocation targetId) {

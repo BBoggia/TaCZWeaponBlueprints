@@ -13,11 +13,12 @@ import net.minecraft.client.gui.GuiGraphics;
  * It never recomputes topology or renders scaled node cards.
  */
 final class ResearchTreeMinimap {
-    static final double AUTOMATIC_OVERSIZE_RATIO = 1.15D;
+    static final double AUTOMATIC_SHOW_COVERAGE = 0.80D;
+    static final double AUTOMATIC_HIDE_COVERAGE = 0.92D;
     private static final int OUTER_MARGIN = 10;
     private static final int CONTENT_PADDING = 5;
-    private static final int MIN_PANEL_WIDTH = 88;
-    private static final int MIN_PANEL_HEIGHT = 60;
+    private static final int MIN_PANEL_WIDTH = 48;
+    private static final int MIN_PANEL_HEIGHT = 36;
     private static final int MAX_PANEL_WIDTH = 168;
     private static final int MAX_PANEL_HEIGHT = 112;
     private static final int PANEL_COLOR = 0xD8111820;
@@ -29,7 +30,7 @@ final class ResearchTreeMinimap {
     private static final int LOCKED_COLOR = 0xFFFFA45C;
     private static final int HIDDEN_COLOR = 0xFF536476;
     private static final int ROUTE_COLOR = 0xFF62C7D9;
-    private static final int TARGET_COLOR = 0xFFFFFFFF;
+    private static final int TARGET_COLOR = 0xFF62C7D9;
 
     private ResearchTreeMinimapMode preparedMode;
     private ResearchTreeGraph preparedGraph;
@@ -67,6 +68,11 @@ final class ResearchTreeMinimap {
         ResearchTreeGraph graph = canvas.graph();
         ResearchTreeLayout layout = canvas.layout();
         ResearchTreeScreenLayout.Rect canvasBounds = canvas.bounds();
+        // Camera movement and changing overlays must not move the navigation surface
+        // under a held pointer. Structural replacement/resize and explicit hiding cancel it.
+        if (navigating && fullscreen && mode != ResearchTreeMinimapMode.HIDDEN
+                && graph == preparedGraph && layout == preparedLayout
+                && canvasBounds.equals(preparedCanvas)) return;
         long trackedRevision = canvas.trackedPlanRevision();
         if (mode == preparedMode
                 && graph == preparedGraph
@@ -77,13 +83,14 @@ final class ResearchTreeMinimap {
                 && visible == shouldShow(mode, graph, layout, canvas.viewport(), fullscreen)) {
             return;
         }
+        boolean nextVisible = shouldShow(mode, graph, layout, canvas.viewport(), fullscreen);
         preparedMode = mode;
         preparedGraph = graph;
         preparedLayout = layout;
         preparedCanvas = canvasBounds;
         preparedObstacles = List.copyOf(placementObstacles);
         preparedTrackedPlanRevision = trackedRevision;
-        visible = shouldShow(mode, graph, layout, canvas.viewport(), fullscreen);
+        visible = nextVisible;
         navigating = false;
         viewportBounds = null;
         if (!visible || !createBounds(canvasBounds, placementObstacles)) {
@@ -91,6 +98,7 @@ final class ResearchTreeMinimap {
             panelBounds = null;
             contentBounds = null;
             markers = List.of();
+            regions = List.of();
             return;
         }
 
@@ -115,7 +123,7 @@ final class ResearchTreeMinimap {
             int centerX = projectX(positioned.centerX());
             int centerY = projectY(positioned.centerY());
             boolean tracked = canvas.isTrackedPathNode(positioned.blueprintId());
-            int markerSize = tracked ? 3 : 2;
+            int markerSize = Math.min(tracked ? 3 : 2, Math.min(contentBounds.width(), contentBounds.height()));
             int x = clamp(centerX - markerSize / 2,
                     contentBounds.x(), contentBounds.right() - markerSize);
             int y = clamp(centerY - markerSize / 2,
@@ -174,14 +182,6 @@ final class ResearchTreeMinimap {
                     graphics.renderOutline(
                             bounds.x(), bounds.y(), bounds.width(), bounds.height(), ROUTE_COLOR);
                 }
-                if (marker.target()) {
-                    graphics.renderOutline(
-                            bounds.x() - 1,
-                            bounds.y() - 1,
-                            bounds.width() + 2,
-                            bounds.height() + 2,
-                            TARGET_COLOR);
-                }
             }
             if (viewportBounds != null) {
                 graphics.renderOutline(
@@ -190,6 +190,12 @@ final class ResearchTreeMinimap {
                         viewportBounds.width(),
                         viewportBounds.height(),
                         VIEWPORT_COLOR);
+            }
+            for (Marker marker : markers) if (marker.target()) {
+                var b = marker.bounds();
+                graphics.renderOutline(b.x() - 1, b.y() - 1, b.width() + 2, b.height() + 2, TARGET_COLOR);
+                graphics.fill(b.x() + b.width() / 2, b.y() - 3,
+                        b.x() + b.width() / 2 + 1, b.y() - 1, TARGET_COLOR);
             }
         });
     }
@@ -258,6 +264,13 @@ final class ResearchTreeMinimap {
         int height = Math.min(
                 availableHeight,
                 Math.min(MAX_PANEL_HEIGHT, Math.max(MIN_PANEL_HEIGHT, canvas.height() / 5)));
+        // Shrink the outer frame too; retain a small usable hit area for extreme shapes.
+        double fit = Math.min((width - CONTENT_PADDING * 2) / (double) preparedLayout.width(),
+                (height - CONTENT_PADDING * 2) / (double) preparedLayout.height());
+        width = Math.min(width, Math.max(MIN_PANEL_WIDTH,
+                (int) Math.round(preparedLayout.width() * fit) + CONTENT_PADDING * 2));
+        height = Math.min(height, Math.max(MIN_PANEL_HEIGHT,
+                (int) Math.round(preparedLayout.height() * fit) + CONTENT_PADDING * 2));
         panelBounds = placePanel(canvas, width, height, obstacles);
         if (panelBounds == null) {
             return false;
@@ -310,7 +323,7 @@ final class ResearchTreeMinimap {
         return null;
     }
 
-    private static boolean shouldShow(
+    private boolean shouldShow(
             ResearchTreeMinimapMode mode,
             ResearchTreeGraph graph,
             ResearchTreeLayout layout,
@@ -323,9 +336,11 @@ final class ResearchTreeMinimap {
         if (mode == ResearchTreeMinimapMode.ALWAYS) {
             return true;
         }
-        ResearchTreeViewport.ViewportSize usable = viewport.unobscuredSize();
-        return layout.width() > usable.width() * AUTOMATIC_OVERSIZE_RATIO
-                || layout.height() > usable.height() * AUTOMATIC_OVERSIZE_RATIO;
+        ResearchTreeViewport.CanvasBounds camera = viewport.visibleCanvasBounds();
+        double coverage = Math.min(1.0D, camera.width() / layout.width())
+                * Math.min(1.0D, camera.height() / layout.height());
+        return coverage < (visible && preparedMode == mode
+                ? AUTOMATIC_HIDE_COVERAGE : AUTOMATIC_SHOW_COVERAGE);
     }
 
     private void navigate(double mouseX, double mouseY, ResearchTreeViewport viewport) {

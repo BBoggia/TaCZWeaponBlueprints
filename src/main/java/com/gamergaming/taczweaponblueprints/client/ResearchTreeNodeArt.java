@@ -17,19 +17,26 @@ import net.minecraft.resources.ResourceLocation;
 /** Slot artwork for UI nodes only. Physical blueprint item rendering remains independent. */
 final class ResearchTreeNodeArt {
     record Art(ResourceLocation texture, int width, int height, int left, int top, int cropWidth, int cropHeight) { }
-    private static volatile long reload;
-    private final Map<ResourceLocation, Optional<Art>> textures = new HashMap<>();
+    private static final ResearchTreeArtPreparation PREPARATION = new ResearchTreeArtPreparation(64);
+    private final Map<ResourceLocation, java.util.concurrent.Future<Optional<Art>>> textures = new HashMap<>();
     private final Map<ResourceLocation, Optional<Art>> nodes = new HashMap<>();
     private final Map<ResourceLocation, Optional<ResourceLocation>> bindings = new HashMap<>();
     private final Map<ResourceLocation, net.minecraft.world.item.ItemStack> fallbackItems = new HashMap<>();
     private long generation = -1;
+    private final java.util.concurrent.atomic.AtomicLong decodeCount = new java.util.concurrent.atomic.AtomicLong();
+    private final java.util.concurrent.atomic.AtomicLong decodeNanos = new java.util.concurrent.atomic.AtomicLong();
 
-    static void reloaded() { reload++; }
-    static long reloadGeneration() { return reload; }
+    long decodeCount() { return decodeCount.get(); }
+    long decodeNanos() { return decodeNanos.get(); }
+    int cachedTextures() { return textures.size(); }
+    static int pendingPreparation() { return PREPARATION.pendingCount(); }
+
+    static void reloaded() { PREPARATION.invalidate(); }
+    static long reloadGeneration() { return PREPARATION.generation(); }
     void clearPresentation() { nodes.clear(); bindings.clear(); fallbackItems.clear(); }
 
     void prepare(ResearchTechTreeProjection projection) {
-        if (generation != reload) { textures.clear(); generation = reload; }
+        if (generation != reloadGeneration()) { textures.clear(); generation = reloadGeneration(); }
         clearPresentation();
         var usedTextures = new java.util.HashSet<ResourceLocation>();
         for (var node : projection.graph().nodes()) {
@@ -46,15 +53,27 @@ final class ResearchTreeNodeArt {
             if (texture != null) usedTextures.add(texture);
             bindings.put(node.blueprintId(), Optional.ofNullable(texture));
         }
-        textures.keySet().retainAll(usedTextures);
+        textures.entrySet().removeIf(entry -> {
+            if (usedTextures.contains(entry.getKey())) return false;
+            entry.getValue().cancel(true);
+            return true;
+        });
     }
 
-    private Optional<Art> read(ResourceLocation texture) {
-        var resource = Minecraft.getInstance().getResourceManager().getResource(texture);
-        if (resource.isEmpty()) return Optional.empty();
-        try (var stream = resource.orElseThrow().open()) {
+    private Optional<Art> read(ResourceLocation texture, net.minecraft.server.packs.resources.Resource resource,
+            java.util.function.BooleanSupplier cancelled) {
+        if (cancelled.getAsBoolean()) return Optional.empty();
+        long started = System.nanoTime();
+        decodeCount.incrementAndGet();
+        try { return readResource(texture, resource, cancelled); }
+        finally { decodeNanos.addAndGet(System.nanoTime() - started); }
+    }
+
+    private Optional<Art> readResource(ResourceLocation texture, net.minecraft.server.packs.resources.Resource resource,
+            java.util.function.BooleanSupplier cancelled) {
+        try (var stream = resource.open()) {
             byte[] bytes = stream.readNBytes(8 * 1024 * 1024 + 1);
-            if (bytes.length > 8 * 1024 * 1024 || bytes.length < 24) return Optional.empty();
+            if (cancelled.getAsBoolean() || bytes.length > 8 * 1024 * 1024 || bytes.length < 24) return Optional.empty();
             // Slot art is PNG. Check its header dimensions before allocating the decoded image.
             var header = java.nio.ByteBuffer.wrap(bytes);
             if (header.getLong(0) != 0x89504e470d0a1a0aL) return Optional.empty();
@@ -62,9 +81,12 @@ final class ResearchTreeNodeArt {
             if (width < 1 || height < 1 || (long) width * height > 4_194_304) return Optional.empty();
             try (var image = NativeImage.read(new ByteArrayInputStream(bytes))) {
                 int left = width, top = height, right = -1, bottom = -1;
-                for (int y = 0; y < height; y++) for (int x = 0; x < width; x++) {
-                    if ((image.getPixelRGBA(x, y) >>> 24) > 8) {
-                        left = Math.min(left, x); right = Math.max(right, x); top = Math.min(top, y); bottom = Math.max(bottom, y);
+                for (int y = 0; y < height; y++) {
+                    if (cancelled.getAsBoolean()) return Optional.empty();
+                    for (int x = 0; x < width; x++) {
+                        if ((image.getPixelRGBA(x, y) >>> 24) > 8) {
+                            left = Math.min(left, x); right = Math.max(right, x); top = Math.min(top, y); bottom = Math.max(bottom, y);
+                        }
                     }
                 }
                 if (right < left) return Optional.empty();
@@ -75,9 +97,34 @@ final class ResearchTreeNodeArt {
 
     void render(GuiGraphics g, ResearchTreeGraph.Node node, ResearchTreeScene.Bounds box) {
         if (!node.visibility().revealsIcon()) return;
-        // Decode only artwork that is actually drawn. State-only frames reuse the result.
-        var art = nodes.computeIfAbsent(node.blueprintId(), id -> bindings.getOrDefault(id, Optional.empty())
-                .flatMap(texture -> textures.computeIfAbsent(texture, this::read)));
+        // Resolve pack bindings/resources on the render thread. Only bounded PNG reading
+        // and crop calculation run in the worker; pending nodes use the existing fallback.
+        var art = nodes.get(node.blueprintId());
+        if (art == null) {
+            var texture = bindings.getOrDefault(node.blueprintId(), Optional.empty());
+            if (texture.isEmpty()) art = Optional.empty();
+            else {
+                var key = texture.orElseThrow();
+                var future = textures.get(key);
+                if (future == null) {
+                    var resource = Minecraft.getInstance().getResourceManager().getResource(key);
+                    if (resource.isEmpty()) art = Optional.empty();
+                    else {
+                        future = PREPARATION.submit(generation, cancelled -> read(key, resource.orElseThrow(), cancelled));
+                        if (future != null) textures.put(key, future);
+                    }
+                }
+                if (future != null && future.isDone()) {
+                    try { art = future.get(); }
+                    catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
+                    catch (java.util.concurrent.ExecutionException | java.util.concurrent.CancellationException unavailable) {
+                        art = Optional.empty();
+                    }
+                }
+            }
+            if (art != null) nodes.put(node.blueprintId(), art);
+        }
+        if (art == null) art = Optional.empty();
         if (art.isPresent()) {
             var a = art.orElseThrow();
             var fit = ResearchTreeSceneView.fitArt(a.cropWidth(), a.cropHeight(), box);

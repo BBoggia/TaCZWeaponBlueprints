@@ -14,10 +14,20 @@ class ResearchTreeWorkbenchSceneTest {
         var source = ResearchTreeBaselineInput.read(java.nio.file.Path.of("src/test/resources/research-tree-baseline/live-weapons-287.json"));
         var projection = source.projections().get(0).replay(); var input = ResearchTreeSceneInput.from(projection,policy());
         var engine = new ResearchTreeBranchSceneEngine(); var scene = ResearchTreeSceneValidator.validate(input,engine.revision(),engine.layout(input));
+        var shared = scene.regions().stream().filter(r -> r.seed().id().equals("automatic/shared")).findFirst().orElseThrow();
+        var foundation = ResearchTreeSceneLandmarks.bounds(scene,shared);
+        assertTrue(shared.bounds().contains(foundation));
+        assertTrue(foundation.y()>shared.bounds().y(), "foundation title must stay below child branch crowns");
         var canvas = new ResearchTreeCanvas(new ResearchTreeViewState(),new ResearchTreeCanvas.Style(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24));
         var result = new ResearchTreeSceneCache.Result(new Object(),1,ResearchTechTreeClientFixture.publication(),Domain.WEAPONS,
                 Optional.of(projection),ResearchTreeSceneCache.Status.VALID,Optional.of(scene),List.of(),false);
         assertTrue(canvas.setSceneContent(result,Map.of(),null,null)); assertEquals(287,canvas.graph().nodes().size());
+        var inspected = new net.minecraft.resources.ResourceLocation("ccrp:sai_gry_lite_black");
+        canvas.setPinnedNode(inspected);
+        assertEquals(canvas.graph().edges().stream().filter(e -> e.dependentId().equals(inspected)).count(),
+                canvas.graph().edges().stream().filter(e -> canvas.sceneEdgeStyle(e)==ResearchTreeConnectorStyle.DIRECT).count());
+        assertTrue(canvas.graph().edges().stream().anyMatch(e -> canvas.sceneEdgeStyle(e)==ResearchTreeConnectorStyle.ANCESTRY));
+        canvas.setPinnedNode(null);
         canvas.setBounds(ResearchTreeScreenLayout.ViewMode.FULLSCREEN,new ResearchTreeScreenLayout.Rect(36,48,215,184));
         canvas.viewport().setAnimated(false);
         canvas.viewport().restore(new ResearchTreeViewport.Snapshot(0,0,.05));

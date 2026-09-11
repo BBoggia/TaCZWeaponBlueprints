@@ -6,6 +6,54 @@ documentation.
 
 ## Unreleased
 
+- Help keeps keyboard focus on its own controls, preventing accidental research
+  or tree navigation underneath it.
+- Moving or scrolling after Back takes priority over a delayed preview response.
+
+- Fixed a search exception when an edited query has no matching blueprints.
+- Updated Tech Tree help to match route colors and the small-screen details controls.
+
+- AUTO minimap visibility now follows zoom and visible tree coverage, with a
+  buffer against flicker. Its panel follows the tree’s proportions and stays
+  fixed during a drag; the tracked target remains distinct from the camera.
+- First-seen weapon artwork prepares its crop in the background, reducing
+  opening stalls while keeping blueprint fallbacks available during loading.
+
+- Branch titles and Shared foundations stay readable when zoomed out. Click a
+  title to frame that region; blueprint tiles still open their details. Inspected,
+  focused, and active search targets keep readable names across zoom levels.
+- Artwork keeps a consistent size as names appear and disappear. Direct
+  requirements, earlier requirements, and verified purchase routes have distinct
+  connector emphasis, while the tracked goal keeps its cyan marker.
+- Fresh Tech Tree views prefer a tracked target or an actionable starting point.
+
+- Added Review research path to the expanded inspector. See the blueprints and
+  chosen prerequisites included in the current purchase, even when resources are
+  missing, without changing your tracked goal.
+- Updated the network protocol to 65 for purchase-bound route reviews. Clients
+  and servers must update together; saved progression is unchanged.
+
+- Zoom keeps the point under the cursor steady during animation. Inspector size
+  changes preserve the selected blueprint’s screen position where bounds allow.
+- Details and search results support fractional scrolling. The details scrollbar
+  can be dragged, and Page Up/Down scroll the focused content. Losing window focus
+  cancels pending holds and drags.
+- Resizing during zoom keeps camera motion stable. Editing a search keeps the
+  result selected for Enter visible in the result list.
+
+- Selected blueprints open compact details on small screens and a docked inspector
+  where space permits. Expanded details keep purchase information and controls
+  visible while requirements scroll.
+- Disclosed prerequisites can be inspected with mouse or keyboard. Back restores
+  the previous inspected blueprint and view without changing the tracked goal.
+
+- Research Bench messages use the active currency and show currency and material
+  shortages together. Research actions explain how many blueprints they include
+  and label costs as totals for that purchase.
+- The Tech Tree explains empty searches and unavailable data even when no
+  blueprint is selected, with actions to clear the search or close the Bench
+  before reopening it.
+
 ## 1.3.2 - 2026-09-08
 
 - Fixed production startup and crafting-screen hooks targeting development-only

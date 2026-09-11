@@ -157,6 +157,97 @@ class ResearchTreeMinimapTest {
         assertTrue(minimap.panelBounds().bottom() <= coachmark.y() - 10);
     }
 
+    @Test
+    void automaticCoverageUsesRenderedZoomWithHysteresis() {
+        ResearchTreeCanvas canvas = canvas(400, 240);
+        setContent(canvas, independentGraph(4), layout(4, 1_000, 600));
+        ResearchTreeMinimap minimap = new ResearchTreeMinimap();
+        coverage(canvas, 1.0);
+        minimap.prepare(ResearchTreeMinimapMode.AUTOMATIC, canvas, true);
+        assertFalse(minimap.visible());
+        coverage(canvas, 0.85);
+        minimap.prepare(ResearchTreeMinimapMode.AUTOMATIC, canvas, true);
+        assertFalse(minimap.visible());
+        coverage(canvas, 0.79);
+        minimap.prepare(ResearchTreeMinimapMode.AUTOMATIC, canvas, true);
+        assertTrue(minimap.visible());
+        coverage(canvas, 0.85);
+        minimap.prepare(ResearchTreeMinimapMode.AUTOMATIC, canvas, true);
+        assertTrue(minimap.visible());
+        coverage(canvas, 0.93);
+        minimap.prepare(ResearchTreeMinimapMode.AUTOMATIC, canvas, true);
+        assertFalse(minimap.visible());
+        canvas.viewport().fit();
+        canvas.viewport().finishAnimation();
+        minimap.prepare(ResearchTreeMinimapMode.AUTOMATIC, canvas, true);
+        assertFalse(minimap.visible());
+        canvas.viewport().setSafeInsets(new ResearchTreeViewport.Insets(200, 0, 0, 0));
+        minimap.prepare(ResearchTreeMinimapMode.AUTOMATIC, canvas, true);
+        assertTrue(minimap.visible());
+    }
+
+    @Test
+    void dragFreezesCoverageAndObstaclePlacementUntilRelease() {
+        ResearchTreeCanvas canvas = canvas(400, 240);
+        setContent(canvas, independentGraph(4), layout(4, 1_000, 600));
+        coverage(canvas, 0.5);
+        ResearchTreeMinimap minimap = new ResearchTreeMinimap();
+        minimap.prepare(ResearchTreeMinimapMode.AUTOMATIC, canvas, true);
+        var before = minimap.snapshot();
+        assertTrue(minimap.beginNavigation(before.panelBounds().x(), before.panelBounds().y(), 0, canvas.viewport()));
+        coverage(canvas, 1.0);
+        minimap.prepare(ResearchTreeMinimapMode.AUTOMATIC, canvas, true, List.of(before.panelBounds()));
+        assertTrue(minimap.navigating());
+        assertTrue(minimap.visible());
+        assertEquals(before.panelBounds(), minimap.panelBounds());
+        assertEquals(before.contentBounds(), minimap.snapshot().contentBounds());
+        assertTrue(minimap.dragNavigation(-100, 800, 0, canvas.viewport()));
+        assertFalse(minimap.endNavigation(1));
+        assertTrue(minimap.endNavigation(0));
+        minimap.prepare(ResearchTreeMinimapMode.AUTOMATIC, canvas, true);
+        assertFalse(minimap.visible());
+    }
+
+    @Test
+    void replacementAndExplicitHidingCancelCapturedNavigation() {
+        ResearchTreeCanvas canvas = canvas(400, 240);
+        setContent(canvas, independentGraph(4), layout(4, 1_000, 600));
+        ResearchTreeMinimap minimap = new ResearchTreeMinimap();
+        for (boolean replace : List.of(false, true)) {
+            minimap.prepare(ResearchTreeMinimapMode.ALWAYS, canvas, true);
+            var panel = minimap.panelBounds();
+            assertTrue(minimap.beginNavigation(panel.x(), panel.y(), 0, canvas.viewport()));
+            if (replace) setContent(canvas, independentGraph(1), layout(1, 200, 100));
+            minimap.prepare(replace ? ResearchTreeMinimapMode.ALWAYS : ResearchTreeMinimapMode.HIDDEN, canvas, true);
+            assertFalse(minimap.navigating());
+            assertFalse(minimap.dragNavigation(0, 0, 0, canvas.viewport()));
+        }
+    }
+
+    @Test
+    void outerPanelFollowsContentShapeAndExtremeMarkersStayInside() {
+        ResearchTreeCanvas canvas = canvas(900, 600);
+        ResearchTreeMinimap minimap = new ResearchTreeMinimap();
+        setContent(canvas, independentGraph(4), layout(4, 2_000, 120));
+        minimap.prepare(ResearchTreeMinimapMode.ALWAYS, canvas, true);
+        assertTrue(minimap.panelBounds().width() > minimap.panelBounds().height() * 3);
+        assertEquals(36, minimap.panelBounds().height());
+        setContent(canvas, independentGraph(4), layout(4, 160, 20_000));
+        minimap.prepare(ResearchTreeMinimapMode.ALWAYS, canvas, true);
+        assertTrue(minimap.panelBounds().height() > minimap.panelBounds().width() * 2);
+        var content = minimap.snapshot().contentBounds();
+        minimap.snapshot().markers().forEach(marker -> {
+            assertTrue(marker.bounds().x() >= content.x());
+            assertTrue(marker.bounds().right() <= content.right());
+            assertTrue(marker.bounds().y() >= content.y());
+            assertTrue(marker.bounds().bottom() <= content.bottom());
+        });
+    }
+
+    private static void coverage(ResearchTreeCanvas canvas, double fraction) {
+        canvas.viewport().restore(new ResearchTreeViewport.Snapshot(0, 0, 0.4 / Math.sqrt(fraction)));
+    }
+
     private static ResearchTreeCanvas canvas(int width, int height) {
         ResearchTreeCanvas canvas = new ResearchTreeCanvas(
                 new ResearchTreeViewState(),
