@@ -6,53 +6,88 @@ documentation.
 
 ## Unreleased
 
-- Help keeps keyboard focus on its own controls, preventing accidental research
-  or tree navigation underneath it.
-- Moving or scrolling after Back takes priority over a delayed preview response.
+## 1.3.3 - 2026-09-11
 
-- Fixed a search exception when an edited query has no matching blueprints.
-- Updated Tech Tree help to match route colors and the small-screen details controls.
+These notes include the 1.3.2 changes for players updating directly from 1.3.1.
+The historical 1.3.2 entry remains below.
 
-- AUTO minimap visibility now follows zoom and visible tree coverage, with a
-  buffer against flicker. Its panel follows the tree’s proportions and stays
-  fixed during a drag; the tracked target remains distinct from the camera.
+### Tech Tree and research details
+
+- Clicking a blueprint opens its details directly. The inspector gives more room
+  to scrolling content and keeps the purchase controls visible at small GUI sizes.
+- Research costs appear in one Resource / Have / Required table using the current
+  server quote, including the active currency and allocated materials. Shortages
+  describe the entire purchase, including required unlearned predecessors.
+- Prerequisite groups explain which blueprints satisfy each requirement. Inspect
+  a disclosed prerequisite with mouse or keyboard, then use Back to restore the
+  previous blueprint, view, and scroll position without changing the tracked goal.
+- The Path button reviews the blueprints and chosen prerequisites in the current
+  purchase, even when resources are missing. Inspecting a link does not choose a
+  different purchase route or enable research.
+- The View menu can focus the selected blueprint or its branch. Clicking a
+  visible branch title also frames that branch.
+- Branch labels avoid nodes, connectors, and other labels. They keep a stable
+  position while panning and zooming and hide when there is no room. The On/Off
+  toggle remembers its setting across screen openings and game restarts.
+- Weapon artwork fills the padded node interior when its name is hidden. Names
+  use only the space their rendered lines need, retain pack colors when wrapped,
+  and keep their layout when a node is selected or focused. Corner badges stay
+  clear of names, with one marker per tracked goal.
+- Direct requirements, earlier possible prerequisites, and reviewed purchase
+  paths have distinct emphasis. Earlier paths gain a modest highlight at distant
+  zoom, with capped thickness that stays lighter than immediate requirements.
+- AUTO minimap visibility follows zoom and visible tree coverage, with a buffer
+  against flicker. Its panel follows the tree's proportions and stays fixed
+  during a drag; the tracked target remains distinct from the camera.
 - First-seen weapon artwork prepares its crop in the background, reducing
   opening stalls while keeping blueprint fallbacks available during loading.
+- Fresh views prefer a tracked target or an actionable starting point. Compatible
+  saved views retain their camera position.
 
-- Branch titles and Shared foundations stay readable when zoomed out. Click a
-  title to frame that region; blueprint tiles still open their details. Inspected,
-  focused, and active search targets keep readable names across zoom levels.
-- Artwork keeps a consistent size as names appear and disappear. Direct
-  requirements, earlier requirements, and verified purchase routes have distinct
-  connector emphasis, while the tracked goal keeps its cyan marker.
-- Fresh Tech Tree views prefer a tracked target or an actionable starting point.
+### Navigation and fixes
 
-- Added Review research path to the expanded inspector. See the blueprints and
-  chosen prerequisites included in the current purchase, even when resources are
-  missing, without changing your tracked goal.
-- Updated the network protocol to 65 for purchase-bound route reviews. Clients
-  and servers must update together; saved progression is unchanged.
+- Zoom keeps the point under the cursor steady during animation. Resizing keeps
+  camera motion stable, and inspector size changes preserve the selected
+  blueprint's screen position where bounds allow.
+- Details and search results support fractional scrolling. Drag the details
+  scrollbar or use Page Up/Down in focused content. Losing window focus cancels
+  pending holds and drags.
+- Help keeps keyboard focus on its own controls, preventing research or tree
+  navigation underneath it. Help text matches the route colors and small-screen
+  controls.
+- Moving or scrolling after Back takes priority over a delayed preview response.
+- Fixed an exception when an edited search has no matching blueprints. Editing
+  a search keeps its active result visible for keyboard selection.
+- Loading, empty searches, and unavailable data have contextual messages and
+  recovery actions, including when no blueprint is selected.
 
-- Zoom keeps the point under the cursor steady during animation. Inspector size
-  changes preserve the selected blueprint’s screen position where bounds allow.
-- Details and search results support fractional scrolling. The details scrollbar
-  can be dragged, and Page Up/Down scroll the focused content. Losing window focus
-  cancels pending holds and drags.
-- Resizing during zoom keeps camera motion stable. Editing a search keeps the
-  result selected for Enter visible in the result list.
+### Included from 1.3.2
 
-- Selected blueprints open compact details on small screens and a docked inspector
-  where space permits. Expanded details keep purchase information and controls
-  visible while requirements scroll.
-- Disclosed prerequisites can be inspected with mouse or keyboard. Back restores
-  the previous inspected blueprint and view without changing the tracked goal.
+- Fixed packaged-server startup and native TaCZ crafting-screen/menu hooks that
+  incorrectly used development-only Minecraft method names.
+- Added Stations & Research Access settings for tiered or single Blueprint
+  Analyzers, tiered or single Research Benches, and Portable Research through the
+  Journal / Research key. Portable Research keeps a Journal button in the tree.
+- Single Analyzers use each weapon's same-tier reward rules. A separate setting
+  chooses Research Data reward strength without changing its target pools.
+  Existing higher-tier stations remain usable.
+- Station mode changes close open research stations and refresh bundled recipes.
+  Crafting Workbench tiers remain independent. Existing configurations retain
+  their progression-preset behavior until an operator selects a new mode.
+- Portable sessions validate the current mode on the server and become invalid
+  when access is withdrawn. Research costs and other progression requirements
+  still apply in Single Bench and Portable Research modes.
+- Research Designer captures and offline Analyzer comparisons include station
+  choices. Older projects retain their original station rules.
 
-- Research Bench messages use the active currency and show currency and material
-  shortages together. Research actions explain how many blueprints they include
-  and label costs as totals for that purchase.
-- The Tech Tree explains empty searches and unavailable data even when no
-  blueprint is selected, with actions to clear the search or close the Bench
-  before reopening it.
+### Updating
+
+- Update every client and the server together. The current network protocol is
+  65; older mod versions cannot connect to 1.3.3.
+- Saved player progression is unchanged. Existing settings migrate through the
+  station-access settings introduced in 1.3.2, retaining prior preset behavior.
+- See the [combined 1.3.3 release notes](docs/releases/1.3.3.md) for installation,
+  compatibility, and direct-upgrade guidance.
 
 ## 1.3.2 - 2026-09-08
 

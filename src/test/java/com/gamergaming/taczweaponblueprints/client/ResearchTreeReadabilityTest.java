@@ -21,14 +21,6 @@ class ResearchTreeReadabilityTest {
         assertFalse(ResearchTreeDetailPolicy.channels(empty, 74, 35).names());
         assertFalse(ResearchTreeDetailPolicy.channels(names, 70, 33).names());
     }
-    @Test void artworkAllocationDoesNotDependOnLabelVisibility() {
-        var body = new ResearchTreeScene.Bounds(10,20,96,44);
-        var art = ResearchTreeDetailPolicy.artwork(body);
-        assertTrue(body.contains(art)); assertEquals(16,art.height());
-        var fitted = ResearchTreeSceneView.fitArt(400,80,art);
-        assertEquals(5,fitted.width()/fitted.height(),1e-9);
-        assertTrue(art.contains(fitted));
-    }
     @Test void annotationsStayInsideSmallCanvasAndYieldToPriorities() {
         var view = new Rect(36,48,276,184);
         var first = ResearchTreeAnnotationPlacement.place(view,-500,900,160,18,List.of()).orElseThrow();
@@ -36,6 +28,15 @@ class ResearchTreeReadabilityTest {
         assertTrue(view.contains(first)); assertTrue(view.contains(second)); assertFalse(first.overlaps(second));
         assertTrue(ResearchTreeAnnotationPlacement.place(view,40,50,400,18,List.of()).isEmpty());
         assertTrue(ResearchTreeAnnotationPlacement.place(view,40,50,160,18,List.of(view)).isEmpty());
+    }
+    @Test void branchLabelsStayInTheirBranchAndAvoidTreeContent() {
+        var view = new Rect(0,0,400,300);
+        var branch = new Rect(20,20,160,240);
+        var node = new Rect(20,20,160,32);
+        var label = ResearchTreeAnnotationPlacement.landmark(view,branch,100,15,List.of(node)).orElseThrow();
+        assertTrue(branch.contains(label)); assertFalse(label.overlaps(node));
+        assertTrue(ResearchTreeAnnotationPlacement.landmark(view,new Rect(20,20,50,240),100,15,List.of()).isEmpty());
+        assertTrue(ResearchTreeAnnotationPlacement.landmark(view,branch,100,15,List.of(branch)).isEmpty());
     }
     @Test void partiallyOffscreenProjectionCanHaveNegativeCoordinates() {
         var box = new ResearchTreeSceneRenderer.ScreenBox(-300,-200,800,600);

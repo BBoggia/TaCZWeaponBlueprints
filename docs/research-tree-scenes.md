@@ -16,11 +16,11 @@ action row, and shared search/navigation overlay geometry. The inspector appears
 the selection returns its space to the canvas. Its hidden area does not block
 canvas clicks or scrolling. Resizing preserves the selected node’s absolute screen position when it fits the new canvas; otherwise the view moves only enough to reveal it, subject to content bounds.
 Selection opens a docked inspector when both canvas width and detail height fit.
-Smaller screens use a compact selection strip with a Details button; expanding
-it opens an overlay. The compact strip has no purchase action. Expanded details
+Selecting a node opens expanded details directly. Smaller screens use an overlay;
+the collapse control can return to a compact selection strip. The strip has no purchase action. Expanded details
 reserve at least four normal text rows at the minimum supported 320×240 GUI size.
-Identity, purchase scope, status, cost, and controls remain fixed while the body
-scrolls. Long names and summaries wrap within a measured budget, then use an
+Identity, action status, and controls remain fixed while costs and requirements
+scroll in the body. Long names and summaries wrap within a measured budget, then use an
 ellipsis; tooltips expose the full text.
 
 Requirement rows distinguish explanations, materials, groups, prerequisites,
@@ -57,7 +57,7 @@ hits take priority over neighboring hit padding, with stable distance/ID ties.
 Scene cameras use the existing `ResearchTechTreeViewState` domain and surface
 state, keyed by scene geometry. Progress refreshes reuse geometry and camera;
 changed metrics preserve a surviving focused node's screen position, subject to
-viewport bounds. Opening, Overview, Branch, and target navigation are explicit
+viewport bounds. Opening, Overview, branch-title clicks, and target navigation are explicit
 camera actions. Compatible saved views take priority over a fresh opening view.
 Preview refreshes do not reframe the target. Animated pointer zoom stores a world
 point and its screen coordinate, interpolates scale, and derives pan from that
@@ -419,25 +419,38 @@ opening path fits the target, and layout already has explicit work limits.
 
 ## Zoom detail and hover artwork
 
-Artwork, ordinary names, status marks, and junction text have independent
-screen-space thresholds with transition buffers. Artwork appears at 18×8 GUI
-pixels and remains down to 16×7. Ordinary names appear at 76×36 and remain down
-to 72×34; they render at the normal GUI font size inside the available card
-space. Status marks appear at 32×14 and remain down to 28×12. Junction text
+Each visible node resolves one `ResearchTreeNodePresentation` from its own
+projected dimensions. Artwork, names, and status marks share that result for
+painting and hover behavior. Each channel has a transition buffer. Artwork appears at 18×8 GUI
+pixels and remains down to 16×7. Names become eligible at 76×36 and remain eligible down
+to 72×34; actual text must also fit the measured line budget. Names render at
+the normal GUI font size. Status marks appear at 32×14 and remain down to 28×12. Junction text
 appears at a node height of 28 and remains down to 26. Both dimensions must fit
 where a width and height are given. Framebuffer density does not change these
 thresholds.
 
-Artwork always uses the same 16-unit-high allocation near the top of a node,
-with aspect ratio preserved by the existing crop cache. It does not expand into
-the name area when names disappear. Very small nodes retain colored overview
-markers. These choices do not change geometry, hit targets, or selection.
+Name lines and their two-GUI-pixel gap receive at most 42% of the padded
+interior's projected height, with one pixel of retention tolerance. At most two
+lines are wrapped; only the actual lines consume space. Short names leave more
+room for art, and empty or hidden names reserve no text area. Artwork fits the
+remaining interior with its cropped aspect ratio preserved. Selecting, focusing,
+and tracking never change this layout. Corner slots keep status, fragment or
+blocker, inspection, and tracking marks separate from names; small backing
+patches keep marks legible over art. Custom tiles smaller than 24×24 scene units
+omit these crowded corner marks. Wrapped lines retain legacy pack-name colors
+and formatting. Very small nodes retain colored overview
+markers. These choices do not change geometry or hit targets.
 
-The inspected node, keyboard focus, and active search result receive readable
-screen-space labels in that priority order. Labels are clipped to the canvas and
-placed around higher-priority annotations. Ordinary names yield to these labels.
+When their in-card name is absent, the inspected node, keyboard focus, and
+active search result can receive an external label in that priority order. Labels are clipped to the canvas and
+placed around visible tiles, connectors, junctions, portals, and higher-priority annotations.
 Branch titles and Shared foundations also use screen-space labels with clipping,
-collision handling, and full-name hover tooltips. Generated branches retain
+collision handling, and full-name hover tooltips. Labels must fit their branch footprint
+and avoid visible tree content; crowded views omit them. The Branch labels button
+shows On or Off and saves the client-owned `showBranchLabels` setting, including
+across game restarts. It controls branch titles and their hit targets. The same
+preference appears under Tree Appearance and returns to On when that section is
+reset. Generated branches retain
 neutral numbered titles; authored titles and translation keys are preserved.
 The shared landmark follows its direct foundation nodes, excluding child branch
 crowns from its framing bounds. Clicking a landmark frames its region. Clicking
@@ -446,8 +459,14 @@ a node at overview still inspects that node. A landmark drag only pans.
 Connector precedence is verified review route, direct inspected requirements,
 tracked route, earlier inspected requirements, then quiet context. Review lines
 are thicker gold, direct requirements are gold, ancestry is muted gold, and
-tracking is cyan. The tracked goal retains a fixed-size cyan cross even while
-another target is reviewed. Review emphasis is withdrawn whenever the
+tracking is cyan. Earlier possible prerequisites use the separate ancestry style.
+At distant zoom its stroke targets 0.75 GUI pixels, rounding down and capping
+enlargement at 12 scene units. This keeps it stronger than quiet connectors and
+lighter than immediate requirements. Direct and reviewed paths retain their
+one- and two-GUI-pixel zoom compensation, respectively. Close-up base widths are unchanged.
+The tracked goal retains one cyan cross even while another target is reviewed.
+It occupies the bottom-right corner when state marks are visible; distant
+overview uses a fixed-size marker instead. Review emphasis is withdrawn whenever the
 quote-bound review becomes non-current. Crossing gaps account for the width of
 both lines; group junctions and AND-of-OR identities are retained. Renderer state
 and labels never enter the scene geometry key. The text cache is bounded to 4,096
@@ -458,7 +477,7 @@ in its domain, then a publicly actionable frontier, then the existing structural
 fallback. It does not infer exact affordability. Ordinary publication updates,
 hovering, and review responses do not apply this opening policy.
 
-When ordinary names are hidden, hovering a disclosed node shows its readable
+When a particular node has no in-card name, hovering that disclosed node shows its readable
 name, status, progression information, and enlarged artwork without selecting
 it. The preview wraps text, stays within the screen, and uses the existing public
 artwork cache. Restricted nodes retain the normal restricted tooltip.
@@ -492,3 +511,42 @@ only small crop records remain cached. The cache retains textures referenced by
 the current bounded public graph. Missing, malformed, oversized, or unavailable
 artwork retains the blueprint fallback. PNG reads remain capped at 8 MiB and
 4,194,304 pixels.
+
+## Inspector content hierarchy
+
+The inspector footer's View menu contains Focus blueprint and Focus branch.
+Both actions use the inspected target without changing selection, tracking, or
+the purchase quote. At sizes where details cover the canvas, focusing collapses
+the details first so the resulting view is visible. Escape and outside clicks
+dismiss the menu; the dismissing click cannot activate underlying content.
+Arrow keys and Tab choose a menu action, and Enter or Space activates it.
+While the menu is open, camera shortcuts, scrolling, and research are contained.
+
+A selected node opens details immediately. The name, a short action status, and
+footer actions stay fixed. Path in the title row opens the optional research
+route review. The scrolling body has one purchase-scope heading and a
+Resource / Have / Required table, followed by Prerequisites (or Research path)
+and Progression & crafting.
+Only a matching, usable purchase quote can populate cost rows. Disabled channels
+are omitted and creative bypass is explicitly labeled. Resource names and
+translated column headers wrap within measured columns; quantity columns share
+the same alignment across all rows. Narration includes the resource and both
+amounts. Section spacing and indented links are part of the measured scroll geometry;
+pointer and keyboard navigation use those same line positions.
+
+## Branch label stability
+
+Each scene renderer keeps one branch-relative anchor per region. A label keeps
+that anchor while its complete rectangle remains inside its own visible
+footprint and clear of content. Camera motion projects the anchor into screen
+coordinates; labels do not return to an earlier candidate merely because a gap
+has reopened. An obstructed label can move to a safe candidate or disappear.
+New or returning labels need three additional GUI pixels of clearance, while
+visible labels can remain down to the normal safe margin. This reduces flicker
+near fit thresholds without permitting overlap.
+
+Geometry changes create a new placement cache. Presentation refreshes preserve
+anchors; changed label dimensions are measured again. Offscreen or disabled
+labels become hidden, and toggling either direction clears hit targets until
+the next render. Hit testing also rejects geometry from a previous camera or
+canvas rectangle.

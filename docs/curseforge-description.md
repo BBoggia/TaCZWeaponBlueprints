@@ -21,12 +21,16 @@ other progression requirements set by the server.
   (RP) instead.
 - **Plan your next weapon.** Browse a searchable Tech Tree with distinct
   branches, weapon artwork, pan and zoom, keyboard navigation, and an interactive
-  minimap. Pin a goal to track its route and required resources, or use
-  Affordable Now to find research within reach.
-- **Research a whole path.** Select a locked weapon to preview the shortest valid
-  route to it, including prerequisite research, currency, and materials. Buy the
-  route together when you meet its requirements; a failed purchase does not
-  consume a partial payment.
+  minimap. Track a goal and its required resources, or use Affordable Now to find
+  research within reach.
+- **See what you need.** Click a blueprint to open its details. A Resource / Have /
+  Required table compares your currency and materials with the full purchase
+  cost. Follow prerequisite links to inspect earlier blueprints, then use Back
+  to return to your target.
+- **Research a whole path.** Select a locked weapon and use Path to review the
+  shortest valid route included in its purchase, with the required blueprints,
+  currency, and materials. Buy the route together when you meet its requirements;
+  a failed purchase does not consume a partial payment.
 - **Build better stations.** Three Research Bench tiers support research
   progression, while three crafting Workbench levels open TaCZ's native crafting
   screen. Research and crafting requirements are configured separately. Every
@@ -38,6 +42,12 @@ other progression requirements set by the server.
 Servers can also choose a single Research Bench or enable **Portable Research**
 to open the Tech Tree through the Journal / Research key. Costs and other
 progression requirements still apply. Crafting Workbench tiers stay independent.
+
+Toggle branch labels, click a visible
+branch title to frame it, or use View in the details panel to focus your blueprint
+or branch. Weapon artwork expands when in-node names are hidden, and earlier
+prerequisites have a lighter highlight than immediate requirements. The details
+panel adapts to smaller screens while keeping purchase controls available.
 
 ## Analyze Weapons and Research Data
 
@@ -81,18 +91,14 @@ crafted guns can be processed.
 from the title or pause menu, with `/researchdesigner`, or through an assigned
 Controls key.
 
-Operators can copy the server's tree or start an empty project using its
-installed weapon catalog. Search the scrolling weapon list, add starting
-weapons, extend paths with Add next, connect existing nodes, and drag weapons
-into named branches. Nearby controls let you change costs, materials, Research
-Bench requirements, and prerequisites. Undo/Redo and recovery saves support
-editing as you go.
+Copy the server's tree or start an empty project from its weapon catalog. Add
+weapons, connect paths, organize branches, and edit costs and prerequisites.
+Undo/Redo and recovery saves support editing as you go.
 
-Test your design with simulated player progress before exporting an installable
-datapack. Share a separate editable project bundle with other pack authors.
-Capturing server data requires operator permission level 2; local editing and
-project imports remain available without it. The server operator installs the
-exported datapack and chooses when to activate its research profile.
+Test with simulated player progress, export an installable datapack, or share an
+editable project bundle. Capturing server data requires operator permission
+level 2. Local editing and imports remain available without it; operators
+control which exported trees become active.
 
 ## Getting Started
 
@@ -115,18 +121,15 @@ exemptions, and separate research and crafting tiers. Progression Gates can
 require advancements, Research Bench tiers, or custom server milestones.
 Compatible TaCZ content-pack workstations can receive their own crafting levels.
 
-Datapacks can change prerequisites, ingredients, branches, Analyzer odds for each
-weapon/station tier pair, fragment quantities, reconstruction requirements, and
-Research Data target pools. Servers can exclude learned Data targets; processing
-then stops when no valid target remains. Scrap loot, Data loot, and gameplay
-currency awards have independent controls. Legacy guaranteed analysis and fixed
-Data currency redemption remain available as options.
+Datapacks can change prerequisites, ingredients, branches, Analyzer rewards,
+fragment requirements, and Research Data target pools. Loot and gameplay currency
+awards have independent controls. See the
+[operations guide](https://github.com/BBoggia/TaCZWeaponBlueprints/blob/main/docs/operations-and-migration.md)
+for pack-author settings.
 
-The automatic Tech Tree adapts to the server's compatible TaCZ weapon catalog,
-so each added gun does not need a separate blueprint definition. Pack authors
-can instead create a tree containing only selected weapons. Weapons are the
-only Tech Tree category enabled by default; research support for ammo and
-attachments is available for packs that choose to enable it.
+The automatic Tech Tree adapts to compatible TaCZ weapon catalogs. Pack authors
+can also create trees containing selected weapons or enable optional ammo and
+attachment research.
 
 ## Requirements
 

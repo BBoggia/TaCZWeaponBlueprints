@@ -43,21 +43,34 @@ answer from the current immutable publication rather than retaining a stale ID.
 
 ## Inspection, tracking, and purchase review
 
-Clicking a disclosed blueprint opens its compact inspector and requests the
-matching server preview. Details expands costs, prerequisite groups, crafting
-requirements, and fragment information. Currency and materials describe the
-whole quoted purchase. Disabled cost channels do not appear as shortages;
+Clicking a disclosed blueprint opens expanded details and requests the
+matching server preview. Separate sections show costs, prerequisite groups,
+crafting requirements, and fragment information. One Resource / Have / Required
+table describes the whole quoted purchase.
+Currency uses the current server denomination; material Have values are the
+amounts allocated by that quote, not a fresh count of each matching inventory
+stack. Disabled cost channels do not appear as shortages;
 Research Bench access and Progression Gates remain separate blockers.
 
-Following a disclosed requirement inspects that blueprint and adds a Back entry.
+Prerequisite groups say Required for a single alternative or Any one satisfies
+this requirement for multiple alternatives, including undiscovered and external
+ones. These describe satisfaction rules, not controls for changing the purchase
+route. Following a disclosed requirement inspects that blueprint and adds a
+Back entry.
 Back restores its previous domain, rendered camera, details state, and scroll.
 Ordinary selection starts a new inspection chain. These actions do not replace
 the tracked goal; its cyan marker and route remain visible independently.
 
-Review research path displays the server-selected prerequisite route for the
+Path in the inspector header displays the server-selected prerequisite route for the
 current purchase, including learned steps. It remains useful when the player
 cannot yet afford the purchase. The review is optional and does not change the
 route, require another purchase confirmation, or replace the tracked goal.
+
+View in the inspector footer offers Focus blueprint and Focus branch. These
+frame the inspected target or its containing branch while retaining selection
+and tracking. If details cover the canvas, the focus action collapses them to
+show the result. Branch labels in the upper-right corner is a saved On/Off
+preference; labels appear only where they fit safely.
 The action reads Research blueprint for one unlock and Research N blueprints for
 a whole-path purchase; the count includes the target and unlearned prerequisites.
 

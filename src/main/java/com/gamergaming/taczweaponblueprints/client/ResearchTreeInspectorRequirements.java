@@ -23,14 +23,18 @@ final class ResearchTreeInspectorRequirements {
         return local == remote || catalog.relationships().navigationTo(local, from, remote, to)
                 .filter(n -> n.direction() == ResearchTechTreeProjection.Direction.REQUIREMENT).isPresent();
     }
+    static Component groupHeading(ResearchTreeGraph.RequirementGroup group) {
+        int alternatives = group.visibleAlternativeIds().size() + group.hiddenAlternativeCount() + group.externalAlternativeCount();
+        return Component.translatable(PREFIX + "inspector.requirement." + (alternatives == 1 ? "single" : "any"), group.ordinal() + 1);
+    }
     static List<ResearchTreeInspectorRow> rows(ResearchTreeGraph graph, ResearchTechTreeProjectionCatalog catalog,
             ResourceLocation target, Function<ResearchTreeGraph.Node, Component> name,
             Function<Domain, Component> domainName, int text, int accent, int muted, int learned) {
         var result = new ArrayList<ResearchTreeInspectorRow>();
         var groups = graph.requirementGroups().stream().filter(g -> g.dependentId().equals(target)).toList();
-        if (!groups.isEmpty()) result.add(ResearchTreeInspectorRow.text(GROUP, Component.translatable(PREFIX + "scene.all_groups"), text));
+        if (groups.size() > 1) result.add(ResearchTreeInspectorRow.text(GROUP, Component.translatable(PREFIX + "scene.all_groups"), text));
         for (var group : groups) {
-            result.add(ResearchTreeInspectorRow.text(GROUP, Component.translatable(PREFIX + "scene.group", group.ordinal() + 1), accent));
+            result.add(ResearchTreeInspectorRow.text(GROUP, groupHeading(group), accent));
             for (var id : group.visibleAlternativeIds()) graph.node(id).ifPresent(node -> {
                 boolean external = !catalog.domainOf(id).equals(catalog.domainOf(target));
                 Component label = name.apply(node);
@@ -45,6 +49,8 @@ final class ResearchTreeInspectorRequirements {
             if (group.externalAlternativeCount() > 0) result.add(ResearchTreeInspectorRow.text(EXPLANATION,
                     Component.translatable(PREFIX + "requirement.outside_view", group.externalAlternativeCount()), muted));
         }
+        if (groups.isEmpty()) result.add(ResearchTreeInspectorRow.text(EXPLANATION,
+                Component.translatable(PREFIX + "inspector.requirement.none"), muted));
         return List.copyOf(result);
     }
 }

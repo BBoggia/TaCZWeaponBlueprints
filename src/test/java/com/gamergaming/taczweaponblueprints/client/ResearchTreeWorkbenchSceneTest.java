@@ -57,7 +57,7 @@ class ResearchTreeWorkbenchSceneTest {
     @ParameterizedTest @MethodSource("sizes") void persistentPanelsAndControlsNeverCoverTheCanvas(int w, int h) {
         var l = ResearchTreeWorkbenchLayout.create(w, h);
         for (var b : List.of(l.header(), l.canvas(), l.inspector(), l.action(), l.track(), l.target(), l.branch())) assertTrue(b.inside(w, h));
-        assertFalse(l.canvas().overlaps(l.inspector())); assertFalse(l.canvas().overlaps(l.header()));
+        assertEquals(l.inspectorOverlay(), l.canvas().overlaps(l.inspector())); assertFalse(l.canvas().overlaps(l.header()));
         assertFalse(l.canvas().overlaps(l.overlays().rail())); assertFalse(l.canvas().overlaps(l.branch()));
         assertFalse(l.action().overlaps(l.target())); assertFalse(l.action().overlaps(l.track()));
         var filter = ResearchTreeFullscreenRailLayout.forLayout(l.overlays()).affordability();

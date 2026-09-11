@@ -51,6 +51,7 @@ public final class ResearchTreeClientConfig extends Config {
     public ValidatedBoolean showResearchPointNotifications = new ValidatedBoolean(true);
 
     public ConfigGroup treeAppearance = new ConfigGroup("treeAppearance");
+    public ValidatedBoolean showBranchLabels = new ValidatedBoolean(true);
     public ValidatedBoolean reduceMotion = new ValidatedBoolean(
             ResearchTreeDisplayPolicy.DEFAULT.reduceMotion());
     public ValidatedBoolean showBackgroundGrid = new ValidatedBoolean(
@@ -151,6 +152,12 @@ public final class ResearchTreeClientConfig extends Config {
         return minimap.get();
     }
 
+    /** The in-screen preference uses the same client setting as the config screen. */
+    public void toggleBranchLabels() {
+        showBranchLabels.validateAndSet(!showBranchLabels.get());
+        save();
+    }
+
     private void normalizeAndPublish() {
         if (interGroupGap.getUnconditional() < intraGroupGap.getUnconditional()) {
             interGroupGap.setAndUpdate(intraGroupGap.getUnconditional());
@@ -193,6 +200,7 @@ public final class ResearchTreeClientConfig extends Config {
         compactionSweeps.setAndUpdate(DEFAULTS.compactionSweeps());
         layoutPreset.setAndUpdate(ResearchTreeLayoutPreset.BALANCED);
         minimap.setAndUpdate(ResearchTreeMinimapMode.AUTOMATIC);
+        showBranchLabels.setAndUpdate(true);
         reduceMotion.setAndUpdate(ResearchTreeDisplayPolicy.DEFAULT.reduceMotion());
         showBackgroundGrid.setAndUpdate(ResearchTreeDisplayPolicy.DEFAULT.showBackgroundGrid());
         publishPolicies();

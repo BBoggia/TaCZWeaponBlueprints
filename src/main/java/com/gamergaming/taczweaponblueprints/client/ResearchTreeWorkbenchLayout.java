@@ -10,7 +10,7 @@ public record ResearchTreeWorkbenchLayout(ResearchTreeFullscreenLayout.Layout ov
     public enum Mode { CLOSED, COMPACT, EXPANDED }
     public static ResearchTreeWorkbenchLayout create(int width, int height) { return create(width, height, true); }
     public static ResearchTreeWorkbenchLayout create(int width, int height, boolean selected) {
-        return create(width, height, selected, null, 33, 9);
+        return create(width, height, selected, null, 11, 9);
     }
     public static int panelWidth(int width) { return Math.min(260, Math.max(218, width / 3)); }
     public static ResearchTreeWorkbenchLayout create(int width, int height, boolean selected,
@@ -19,16 +19,16 @@ public record ResearchTreeWorkbenchLayout(ResearchTreeFullscreenLayout.Layout ov
         var search = overlays.searchField();
         overlays = new ResearchTreeFullscreenLayout.Layout(width, height, overlays.canvas(),
                 overlays.edgeReveal(), overlays.edgeRevealHitTarget(), overlays.rail(), overlays.searchButton(),
-                new Rect(search.x(), search.y(), Math.min(search.width(), overlays.close().x() - 78 - search.x()), search.height()),
+                new Rect(search.x(), search.y(), Math.min(search.width(), overlays.close().x() - 152 - search.x()), search.height()),
                 overlays.close(), overlays.coachmark(), overlays.safeFocus());
         int x = overlays.rail().right() + 8, top = 48, bottom = height - 8;
         int titleHeight = Math.max(24, 2 * fontHeight + 4);
-        int minimumBody = 4 * (fontHeight + 4);
-        int summaryHeight = Math.max(fontHeight, measuredSummaryHeight);
+        int minimumBody = 6 * (fontHeight + 4);
+        int summaryHeight = fontHeight + 2;
         int iw = panelWidth(width);
         boolean canDock = width - x - iw - 16 >= 240
-                && bottom - top >= titleHeight + summaryHeight + minimumBody + 76;
-        Mode mode = !selected ? Mode.CLOSED : (expanded == null ? canDock : expanded) ? Mode.EXPANDED : Mode.COMPACT;
+                && bottom - top >= titleHeight + summaryHeight + minimumBody + 52;
+        Mode mode = !selected ? Mode.CLOSED : (expanded == null || expanded) ? Mode.EXPANDED : Mode.COMPACT;
         boolean overlay = mode == Mode.EXPANDED && !canDock;
         Rect canvas = new Rect(x, top, width - x - 8, bottom - top);
         Rect inspector;
@@ -43,22 +43,22 @@ public record ResearchTreeWorkbenchLayout(ResearchTreeFullscreenLayout.Layout ov
         Rect content = new Rect(inspector.x() + 8, inspector.y() + 8, inspector.width() - 16,
                 mode == Mode.EXPANDED ? row - inspector.y() - 12 : 24);
         int actualSummary = Math.min(summaryHeight,
-                Math.max(fontHeight, inspector.height() - titleHeight - minimumBody - 76));
+                Math.max(fontHeight, inspector.height() - titleHeight - minimumBody - 52));
         Rect summary = new Rect(content.x(), content.y() + titleHeight + 4, content.width(), actualSummary);
         Rect body = mode == Mode.EXPANDED
-                ? new Rect(content.x(), summary.bottom() + 4, content.width(), row - 28 - summary.bottom() - 4)
+                ? new Rect(content.x(), summary.bottom() + 4, content.width(), row - 4 - summary.bottom() - 4)
                 : new Rect(content.x(), content.y(), 1, 1);
-        Rect review = new Rect(content.x(), row - 24, content.width(), 20);
+        Rect review = new Rect(content.right() - 48, content.y(), 48, 20);
         Rect back = new Rect(inspector.x() + 8, row, 36, 20);
-        Rect action = new Rect(inspector.x() + 48, row, inspector.width() - 128, 20);
-        Rect track = new Rect(inspector.right() - 76, row, 20, 20);
-        Rect target = new Rect(inspector.right() - 52, row, 20, 20);
+        Rect action = new Rect(inspector.x() + 48, row, inspector.width() - 144, 20);
+        Rect track = new Rect(inspector.right() - 92, row, 20, 20);
+        Rect target = new Rect(inspector.right() - 68, row, 36, 20);
         Rect toggle = mode == Mode.EXPANDED ? new Rect(inspector.right() - 28, row, 20, 20)
                 : new Rect(inspector.right() - 78, inspector.y() + 10, 70, 20);
         if (mode != Mode.EXPANDED) back = new Rect(inspector.right() - 118, inspector.y() + 10, 36, 20);
         return new ResearchTreeWorkbenchLayout(overlays, new Rect(x, 30, width - x - 8, 14), canvas,
                 inspector, mode != Mode.CLOSED, content, action, track, target,
-                new Rect(overlays.close().x() - 50, overlays.close().y(), 46, 20), mode, overlay,
+                new Rect(overlays.close().x() - 124, overlays.close().y(), 120, 20), mode, overlay,
                 summary, body, back, toggle, review);
     }
     public Rect targetClearance() {

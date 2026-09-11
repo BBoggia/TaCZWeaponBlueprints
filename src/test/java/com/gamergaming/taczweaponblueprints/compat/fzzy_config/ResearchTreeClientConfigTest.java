@@ -26,6 +26,7 @@ class ResearchTreeClientConfigTest {
         assertEquals(com.gamergaming.taczweaponblueprints.client.ResearchTreeDisplayPolicy.DEFAULT, config.displayPolicy());
         assertEquals(ResearchTreeMinimapMode.AUTOMATIC, config.minimapMode());
         assertTrue(config.showResearchPointNotifications.get());
+        assertTrue(config.showBranchLabels.get());
     }
 
     @Test
@@ -140,10 +141,12 @@ class ResearchTreeClientConfigTest {
         config.layoutPreset.validateAndSet(ResearchTreeLayoutPreset.CUSTOM);
         config.minimap.validateAndSet(ResearchTreeMinimapMode.HIDDEN);
         config.nodeGap.validateAndSet(99);
+        config.showBranchLabels.validateAndSet(false);
 
         config.reduceMotion.setAndUpdate(!com.gamergaming.taczweaponblueprints.client.ResearchTreeDisplayPolicy.DEFAULT.reduceMotion());
         config.showBackgroundGrid.setAndUpdate(!com.gamergaming.taczweaponblueprints.client.ResearchTreeDisplayPolicy.DEFAULT.showBackgroundGrid());
         config.restoreTreeAppearanceDefaults();
+        assertTrue(config.showBranchLabels.get());
         assertEquals(com.gamergaming.taczweaponblueprints.client.ResearchTreeDisplayPolicy.DEFAULT.reduceMotion(), config.reduceMotion.get());
         assertEquals(com.gamergaming.taczweaponblueprints.client.ResearchTreeDisplayPolicy.DEFAULT.showBackgroundGrid(), config.showBackgroundGrid.get());
 

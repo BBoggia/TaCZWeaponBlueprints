@@ -11,11 +11,11 @@ import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContra
 
 class ResearchTreeInspectorTest {
     @ParameterizedTest @CsvSource({"320,240", "419,240", "420,240", "540,240", "640,300", "854,480", "1600,480"})
-    void expandedDetailsReserveFourRowsAndSeparateFixedControls(int width, int height) {
+    void expandedDetailsReserveSixRowsAndSeparateFixedControls(int width, int height) {
         for (int measured : new int[]{33, 55, 180}) {
             var layout = ResearchTreeWorkbenchLayout.create(width, height, true, true, measured, 9);
             assertEquals(ResearchTreeWorkbenchLayout.Mode.EXPANDED, layout.inspectorMode());
-            assertTrue(layout.body().height() >= 4 * 13, layout.toString());
+            assertTrue(layout.body().height() >= 6 * 13, layout.toString());
             assertTrue(layout.body().inside(width,height));
             assertFalse(layout.body().overlaps(layout.summary()));
             var controls = List.of(layout.back(), layout.action(), layout.track(), layout.target(), layout.toggle(), layout.review());
@@ -28,7 +28,8 @@ class ResearchTreeInspectorTest {
         }
     }
     @Test void compactSelectionReclaimsCanvasSpaceAndExpansionUsesAnOverlayAtMinimumSize() {
-        var compact = ResearchTreeWorkbenchLayout.create(320, 240, true);
+        var compact = ResearchTreeWorkbenchLayout.create(320, 240, true, false, 11, 9);
+        assertEquals(ResearchTreeWorkbenchLayout.Mode.EXPANDED, ResearchTreeWorkbenchLayout.create(320,240,true).inspectorMode());
         var expanded = ResearchTreeWorkbenchLayout.create(320, 240, true, true, 44, 9);
         var closed = ResearchTreeWorkbenchLayout.create(320, 240, false);
         assertEquals(ResearchTreeWorkbenchLayout.Mode.COMPACT, compact.inspectorMode());

@@ -163,7 +163,8 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     private ResearchTreeInspectorHistory.Entry inspectorReturn;
     private List<ResearchTreeInspectorRow> inspectorRows = List.of();
     private List<Component> inspectorSummary = List.of();
-    private Button sceneBranchButton;
+    private Button sceneLabelsButton;
+    private ResearchTreeViewMenu inspectorViewMenu;
     private boolean sceneBindingFailed;
     private Button canvasStatusButton;
     private ResearchTreeCanvasStatusPresenter.State canvasStatus = ResearchTreeCanvasStatusPresenter.State.NONE;
@@ -423,12 +424,14 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 : ResearchTreeDetailLayout.primaryAction(activeTreeLayout)
                         .orElseThrow();
         var branchBounds = workbenchLayout.branch();
-        sceneBranchButton = addRenderableWidget(Button.builder(
-                Component.translatable("gui.taczweaponblueprints.research_bench.tree.scene.focus_branch"),
-                ignored -> { cancelTreeInteraction(); treeCanvas.focusedId().ifPresent(treeCanvas::focusBranch); })
+        sceneLabelsButton = addRenderableWidget(Button.builder(
+                Component.translatable("gui.taczweaponblueprints.research_bench.tree.scene.labels"),
+                ignored -> { cancelTreeInteraction(); ModConfigs.RESEARCH_TREE_CLIENT.toggleBranchLabels();
+                    refreshDisplayPolicy(); updateSceneInspectorWidgets(); })
                 .bounds(branchBounds.x(), branchBounds.y(), branchBounds.width(), branchBounds.height())
-                .createNarration(ignored -> Component.translatable("gui.taczweaponblueprints.research_bench.tree.scene.focus_branch_hint"))
-                .tooltip(Tooltip.create(Component.translatable("gui.taczweaponblueprints.research_bench.tree.scene.focus_branch_hint"))).build());
+                .createNarration(ignored -> Component.translatable("gui.taczweaponblueprints.research_bench.tree.scene.labels_"
+                        + (treeCanvas.branchLabelsVisible() ? "on" : "off")))
+                .tooltip(Tooltip.create(Component.translatable("gui.taczweaponblueprints.research_bench.tree.scene.labels_hint"))).build());
         primaryResearchButton = addRenderableWidget(Button.builder(
                 Component.translatable("gui.taczweaponblueprints.research_bench.research"),
                 ignored -> requestResearch())
@@ -440,17 +443,20 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 .build());
         returnToSelectionButton = addRenderableWidget(Button.builder(
                 Component.literal("↩"),
-                ignored -> returnToPinnedNode())
+                ignored -> { if (isTechTreeView()) toggleInspectorViewMenu(); else returnToPinnedNode(); })
                 .bounds(
                         4,
                         4,
                         ResearchTreeContextCardLayout.RETURN_ACTION_SIZE,
                         ResearchTreeContextCardLayout.RETURN_ACTION_SIZE)
                 .createNarration(ignored -> Component.translatable(
-                        "gui.taczweaponblueprints.research_bench.tree.return_selection"))
+                        isTechTreeView() ? "gui.taczweaponblueprints.research_bench.tree.inspector.view.hint"
+                                : "gui.taczweaponblueprints.research_bench.tree.return_selection"))
                 .tooltip(Tooltip.create(Component.translatable(
                         "gui.taczweaponblueprints.research_bench.tree.return_selection.tooltip")))
                 .build());
+        inspectorViewMenu = addWidget(new ResearchTreeViewMenu(font,
+                () -> focusInspectorView(false), () -> focusInspectorView(true), this::closeInspectorViewMenu));
         ResearchTreeScreenLayout.Rect trackBounds = fullscreen
                 ? new ResearchTreeScreenLayout.Rect(0, 0,
                         ResearchTreeContextCardLayout.RETURN_ACTION_SIZE,
@@ -1847,6 +1853,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         var pinned = fullscreenOverlayState.pinnedNodeId().flatMap(treeCanvas.graph()::node);
         ResourceLocation target = pinned.map(ResearchTreeGraph.Node::blueprintId).orElse(null);
         if (!java.util.Objects.equals(inspectorTarget, target)) {
+            closeInspectorViewMenu();
             if (!inspectorNavigating) inspectorHistory.clear();
             inspectorTarget = target; inspectorScroll = 0; cancelTreeInteraction();
             inspectorBody.reset(); inspectorContentKey = List.of(); inspectorLines = List.of();
@@ -1855,19 +1862,20 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         }
         inspectorSummary = pinned.map(node -> {
             var details = selectedNodePresentation(node); var ui = selectedNodeUi(node, details);
-            return List.of(details.hasPurchaseQuote() ? ResearchTreePurchaseText.action(details) : Component.empty(),
-                    ui.message(), selectedNodeCostOrVisibility(node, details));
+            return List.of(ui.message());
         }).orElse(List.of());
         int summaryHeight = inspectorSummary.stream().mapToInt(text -> text.getString().isEmpty() ? 0 :
-                Math.min(2, font.split(text, ResearchTreeWorkbenchLayout.panelWidth(width) - 16).size()) * (font.lineHeight + 2)).sum();
+                Math.min(1, font.split(text, ResearchTreeWorkbenchLayout.panelWidth(width) - 16).size()) * (font.lineHeight + 2)).sum();
         var next = ResearchTreeWorkbenchLayout.create(width, height, pinned.isPresent(), inspectorExpanded, summaryHeight, font.lineHeight);
         if (!next.equals(workbenchLayout)) {
+            closeInspectorViewMenu();
             treeCanvas.setPinnedNode(target);
             workbenchLayout = next; treeCanvas.setBounds(activeTreeLayout.mode(), next.canvas()); refreshMinimap();
             inspectorContentKey = List.of();
         }
         treeCanvas.setPinnedNode(target);
         boolean expanded = pinned.isPresent() && next.inspectorMode() == ResearchTreeWorkbenchLayout.Mode.EXPANDED;
+        if (!expanded || guidanceVisible || searchBox.visible) closeInspectorViewMenu();
         primaryResearchButton.visible = expanded; trackResearchButton.visible = expanded; returnToSelectionButton.visible = expanded;
         inspectorBody.visible = expanded && !guidanceVisible;
         inspectorBody.bounds(next.body());
@@ -1876,7 +1884,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         routeReviewButton.active = routeReviewOpen || (pinned.isPresent() && menu.routeGuidanceAvailable()
                 && selectedNodePresentation(pinned.orElseThrow()).exactPreview() && menu.preview().routeFingerprint().isPresent());
         routeReviewButton.setMessage(Component.translatable("gui.taczweaponblueprints.research_bench.tree.review."
-                + (routeReviewOpen ? "close" : "open")));
+                + (routeReviewOpen ? "close_short" : "open_short")));
         routeReviewButton.setTooltip(Tooltip.create(Component.translatable("gui.taczweaponblueprints.research_bench.tree.review.tooltip")));
         setInspectorButtonBounds(routeReviewButton, next.review());
         // Keep the tracked-goal shortcut in the canvas, clear of inspector controls.
@@ -1897,10 +1905,16 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 ? "gui.taczweaponblueprints.research_bench.tree.inspector.collapse"
                 : "gui.taczweaponblueprints.research_bench.tree.inspector.details")));
         setInspectorButtonBounds(inspectorToggleButton, next.toggle()); setInspectorButtonBounds(inspectorBackButton, next.back());
-        sceneBranchButton.visible = true;
-        sceneBranchButton.active = treeCanvas.focusedId().isPresent() && treeCanvas.scene().isPresent();
+        sceneLabelsButton.visible = true;
+        sceneLabelsButton.active = treeCanvas.scene().isPresent();
+        sceneLabelsButton.setMessage(Component.translatable("gui.taczweaponblueprints.research_bench.tree.scene.labels_button_"
+                + (treeCanvas.branchLabelsVisible() ? "on" : "off")));
+        sceneLabelsButton.setTooltip(Tooltip.create(Component.translatable("gui.taczweaponblueprints.research_bench.tree.scene.labels_"
+                + (treeCanvas.branchLabelsVisible() ? "on" : "off"))));
         setInspectorButtonBounds(primaryResearchButton, next.action()); setInspectorButtonBounds(trackResearchButton, next.track());
         setInspectorButtonBounds(returnToSelectionButton, next.target()); returnToSelectionButton.active = pinned.isPresent();
+        returnToSelectionButton.setMessage(Component.translatable("gui.taczweaponblueprints.research_bench.tree.inspector.view.title"));
+        returnToSelectionButton.setTooltip(Tooltip.create(Component.translatable("gui.taczweaponblueprints.research_bench.tree.inspector.view.hint")));
         pinned.ifPresent(node -> {
             var details = selectedNodePresentation(node); var ui = selectedNodeUi(node, details);
             primaryResearchButton.setMessage(researchActionLabel(details));
@@ -2085,34 +2099,29 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     }
 
     private void updateInspectorRows(ResearchTreeGraph.Node node, ResearchTreeSelectedNodePresenter.Presentation details) {
-        var key = List.<Object>of(node, details, projectionRevision, net.minecraft.locale.Language.getInstance(), routeReviewOpen, routeReview.revision());
+        var key = List.<Object>of(node, details, projectionRevision, net.minecraft.locale.Language.getInstance(), ClientResearchCurrency.policy(), routeReviewOpen, routeReview.revision());
         if (key.equals(inspectorContentKey)) return;
         var rows = new ArrayList<ResearchTreeInspectorRow>();
         var explanation = ResearchTreeInspectorRow.Kind.EXPLANATION;
-        if (details.hasPurchaseQuote()) rows.add(ResearchTreeInspectorRow.text(explanation, selectedPurchaseScope(details), TEXT));
-        if (details.exactPreview()) {
-            rows.add(ResearchTreeInspectorRow.text(explanation, selectedPointBalanceLabel(details), details.pointsSatisfied() ? GOOD : BAD));
-            if (details.materialsEnabled() && !details.ingredients().isEmpty()) rows.add(ResearchTreeInspectorRow.text(
-                    ResearchTreeInspectorRow.Kind.GROUP, Component.translatable(details.pathPurchase()
-                            ? "gui.taczweaponblueprints.research_bench.tree.purchase.materials_path"
-                            : "gui.taczweaponblueprints.research_bench.tree.purchase.materials_single", details.unlockCount()), TEXT));
-            for (var ingredient : details.ingredients()) rows.add(ResearchTreeInspectorRow.text(ResearchTreeInspectorRow.Kind.MATERIAL,
-                    ClientResearchCurrency.text(details.costBypassed()
-                            ? "gui.taczweaponblueprints.research_bench.tree.card.ingredient_bypassed"
-                            : "gui.taczweaponblueprints.research_bench.tree.card.ingredient", ingredientName(ingredient), ingredient.inventoryAvailable(), ingredient.required()),
-                    details.costBypassed() || ingredient.inventoryAvailable() >= ingredient.required() ? GOOD : BAD));
-            if (details.additionalIngredientTypes() > 0) rows.add(ResearchTreeInspectorRow.text(explanation,
-                    Component.translatable("gui.taczweaponblueprints.research_bench.tree.path.more_materials", details.additionalIngredientTypes()), MUTED));
-        }
+        rows.addAll(ResearchTreeInspectorCosts.rows(details,
+                com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyText.name(ClientResearchCurrency.policy()),
+                this::ingredientName, TEXT, MUTED, GOOD, BAD));
+        rows.add(inspectorSection(routeReviewOpen ? "route" : "requirements"));
         if (routeReviewOpen) appendRouteReviewRows(rows);
         else rows.addAll(ResearchTreeInspectorRequirements.rows(treeProjections.publication().graph(), treeProjections.techTreeProjections(),
                 node.blueprintId(), this::nodeName, this::techTreeDomainName, TEXT, ACCENT, MUTED, GOOD));
         if (details.exactPreview()) {
+            rows.add(inspectorSection("progression"));
             selectedTierLine(node).ifPresent(text -> rows.add(ResearchTreeInspectorRow.text(explanation, text, MUTED)));
             selectedCraftingLine(node).ifPresent(text -> rows.add(ResearchTreeInspectorRow.text(explanation, text, MUTED)));
             selectedFragmentLine(node).ifPresent(text -> rows.add(ResearchTreeInspectorRow.text(explanation, text, MUTED)));
         }
         inspectorRows = List.copyOf(rows); inspectorContentKey = key;
+    }
+
+    private ResearchTreeInspectorRow inspectorSection(String section) {
+        return ResearchTreeInspectorRow.text(ResearchTreeInspectorRow.Kind.SECTION,
+                Component.translatable("gui.taczweaponblueprints.research_bench.tree.inspector.section." + section), ACCENT);
     }
 
     private void renderSceneInspector(GuiGraphics graphics) {
@@ -2122,7 +2131,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         var node = selected.orElseThrow(); var b = workbenchLayout.inspectorContent();
         boolean expanded = workbenchLayout.inspectorMode() == ResearchTreeWorkbenchLayout.Mode.EXPANDED;
         treeCanvas.renderNodeArt(graphics, node, new ResearchTreeScene.Bounds(b.x(), b.y(), 26, 24));
-        int nameWidth = expanded ? b.width() - 34 : b.width() - 34 - 116;
+        int nameWidth = expanded ? b.width() - 88 : b.width() - 34 - 116;
         var nameLines = font.split(nodeName(node), Math.max(1, nameWidth));
         for (int i = 0; i < Math.min(2, nameLines.size()); i++) {
             var line = i == 1 && nameLines.size() > 2 ? inspectorEllipsis(nameLines.get(i), nameWidth) : nameLines.get(i);
@@ -2132,11 +2141,11 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             var summary = workbenchLayout.summary();
             int y = summary.y();
             var displayed = new ArrayList<InspectorLine>();
-            // Budget lines across all three fixed summaries so the cost cannot be pushed offscreen.
+            // Keep only the immediate action status fixed; the body owns the purchase explanation.
             for (int i = 0; i < inspectorSummary.size(); i++) {
                 Component text = inspectorSummary.get(i);
                 if (text.getString().isEmpty()) continue;
-                int color = i == 1 ? selectedNodeUi(node, selectedNodePresentation(node)).color() : TEXT;
+                int color = selectedNodeUi(node, selectedNodePresentation(node)).color();
                 int remaining = inspectorSummary.size() - i - 1;
                 int linesAllowed = Math.max(1, (summary.bottom() - y) / (font.lineHeight + 2) - remaining);
                 var wrapped = font.split(text, summary.width());
@@ -2249,6 +2258,28 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
 
     private void returnToPinnedNode() {
         fullscreenOverlayState.pinnedNodeId().ifPresent(treeCanvas::focusTarget);
+        updateWidgets();
+    }
+
+    private boolean inspectorViewMenuOpen() { return inspectorViewMenu != null && inspectorViewMenu.visible; }
+    private void closeInspectorViewMenu() {
+        if (!inspectorViewMenuOpen()) return;
+        inspectorViewMenu.visible = false;
+        if (getFocused() == inspectorViewMenu) setFocused(returnToSelectionButton.visible ? returnToSelectionButton : null);
+    }
+    private void toggleInspectorViewMenu() {
+        if (inspectorViewMenuOpen()) { closeInspectorViewMenu(); return; }
+        if (guidanceVisible || inspectorTarget == null || !returnToSelectionButton.visible) return;
+        cancelTreeInteraction();
+        inspectorViewMenu.open(workbenchLayout, treeCanvas.hasBranch(inspectorTarget));
+        setFocused(inspectorViewMenu);
+    }
+    private void focusInspectorView(boolean branch) {
+        var target = fullscreenOverlayState.pinnedNodeId().filter(id -> treeCanvas.graph().node(id).isPresent());
+        closeInspectorViewMenu(); cancelTreeInteraction();
+        if (target.isEmpty()) return;
+        if (workbenchLayout.inspectorOverlay()) { inspectorExpanded = false; updateSceneInspectorWidgets(); }
+        if (branch) treeCanvas.focusBranch(target.orElseThrow()); else treeCanvas.focusTarget(target.orElseThrow());
         updateWidgets();
     }
 
@@ -2565,7 +2596,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
 
     private void requestResearch() {
         Optional<ResourceLocation> selected = menu.selectedBlueprint();
-        if (guidanceVisible || researchTreePublicationRejected
+        if (guidanceVisible || inspectorViewMenuOpen() || researchTreePublicationRejected
                 || selected.isEmpty()
                 || researchFeedback.snapshot().status()
                         == ResearchTreeFeedbackState.Status.PENDING) {
@@ -2726,6 +2757,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     }
 
     private void openFullscreenSearch(boolean focus) {
+        closeInspectorViewMenu();
         cancelTreeInteraction();
         fullscreenOverlayState.openSearch(focus);
         updateWidgets();
@@ -2954,6 +2986,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     }
 
     private void showGuidance() {
+        closeInspectorViewMenu();
         cancelTreeInteraction(); helpScroll = 0;
         guidanceVisible = true;
         fullscreenOverlayState.setGuidanceVisible(true);
@@ -2971,6 +3004,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     @Override
     public void setFocused(GuiEventListener listener) {
         if (isTechTreeView() && guidanceVisible && guidanceDismissButton != null) listener = guidanceDismissButton;
+        else if (inspectorViewMenuOpen()) listener = inspectorViewMenu;
         if (getFocused() != listener && fullscreenHoldActivation != null) fullscreenHoldActivation.cancel();
         super.setFocused(listener);
     }
@@ -3005,7 +3039,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         reconcileScenePresentation();
-        if (minecraft != null && !minecraft.isWindowActive()) cancelTreeInteraction();
+        if (minecraft != null && !minecraft.isWindowActive()) { closeInspectorViewMenu(); cancelTreeInteraction(); }
         refreshDisplayPolicy();
         long cameraFrameMillis = Util.getMillis();
         double cameraDeltaSeconds = lastCameraFrameMillis == 0L
@@ -3034,7 +3068,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         boolean searchOverlayHovered = searchOverlayContains(mouseX, mouseY);
         ResearchTreeInteractionPolicy.PointerTarget pointerTarget =
                 fullscreenPointerTarget(mouseX, mouseY);
-        boolean graphHoverAllowed = !searchOverlayHovered
+        boolean graphHoverAllowed = !inspectorViewMenuOpen() && !searchOverlayHovered
                 && !treeMinimap.contains(mouseX, mouseY)
                 && (!fullscreen
                         || ResearchTreeInteractionPolicy.allowsGraphHover(pointerTarget)
@@ -3048,17 +3082,19 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         if (!fullscreen) {
             renderBackground(graphics);
         }
-        super.render(graphics, mouseX, mouseY, partialTick);
-        renderTooltip(graphics, mouseX, mouseY);
-        renderCompactSelectedDetailsTooltip(graphics, mouseX, mouseY);
+        super.render(graphics, inspectorViewMenuOpen() ? -1 : mouseX, inspectorViewMenuOpen() ? -1 : mouseY, partialTick);
+        if (!inspectorViewMenuOpen()) {
+            renderTooltip(graphics, mouseX, mouseY);
+            renderCompactSelectedDetailsTooltip(graphics, mouseX, mouseY);
+        }
         if (!guidanceHovered
                 && graphHoverAllowed) {
             renderTreeTooltip(graphics, mouseX, mouseY);
         }
-        if (fullscreen) {
+        if (fullscreen && !inspectorViewMenuOpen()) {
             renderFullscreenContextCardTooltip(graphics, mouseX, mouseY);
         }
-        if (isTechTreeView() && workbenchLayout.inspectorVisible() && !guidanceContains(mouseX, mouseY)
+        if (isTechTreeView() && !inspectorViewMenuOpen() && workbenchLayout.inspectorVisible() && !guidanceContains(mouseX, mouseY)
                 && !searchOverlayContains(mouseX, mouseY)) {
             var b = workbenchLayout.inspectorContent();
             if (mouseX >= b.x() && mouseX < b.right() && mouseY >= b.y() && mouseY < b.y() + 26)
@@ -3070,6 +3106,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         if (isTechTreeView()) {
             graphics.pose().pushPose(); graphics.pose().translate(0,0,400);
             try {
+                if (inspectorViewMenuOpen()) inspectorViewMenu.render(graphics,mouseX,mouseY,partialTick);
                 if(searchBox != null && searchBox.visible) searchBox.render(graphics,mouseX,mouseY,partialTick);
                 for(var button:searchResultButtons) if(button.visible) button.render(graphics,mouseX,mouseY,partialTick);
                 graphics.pose().translate(0,0,200);
@@ -3083,6 +3120,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     }
 
     private void refreshDisplayPolicy() {
+        treeCanvas.setBranchLabelsVisible(ModConfigs.RESEARCH_TREE_CLIENT.showBranchLabels.get());
         ResearchTreeDisplayPolicy current = ModConfigs.RESEARCH_TREE_CLIENT.displayPolicy();
         if (!current.equals(researchDisplayPolicyIdentity)) {
             treeCanvas.setDisplayPolicy(current);
@@ -3393,7 +3431,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             return ResearchTreeInteractionPolicy.PointerTarget.NONE;
         }
         boolean guidance = guidanceContains(mouseX, mouseY);
-        boolean contextCard = canvasStatusContains(mouseX, mouseY) || (sceneBranchButton != null && sceneBranchButton.visible && sceneBranchButton.isMouseOver(mouseX, mouseY))
+        boolean contextCard = canvasStatusContains(mouseX, mouseY) || (sceneLabelsButton != null && sceneLabelsButton.visible && sceneLabelsButton.isMouseOver(mouseX, mouseY))
                 || (isTechTreeView() && workbenchLayout != null && workbenchLayout.inspectorVisible() && workbenchLayout.inspector().contains(mouseX, mouseY))
                 || (fullscreenContextCardLayout != null
                 && fullscreenContextCardLayout.card().contains(mouseX, mouseY))
@@ -4407,7 +4445,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         lines.add(nodeName(node));
         lines.add(nodeStatus(node));
         lines.addAll(selectedProgressionLines(node));
-        if (isTechTreeView() && !treeCanvas.sceneLabelsVisible() && node.visibility().revealsIcon()) {
+        if (isTechTreeView() && !treeCanvas.sceneLabelsVisible(node.blueprintId()) && node.visibility().revealsIcon()) {
             renderWeaponHoverPreview(graphics, node, lines, mouseX, mouseY);
             return;
         }
@@ -4945,6 +4983,11 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         // A newer input owns navigation; a late Back preview must not replay the old view.
         inspectorReturn = null;
         reconcileScenePresentation();
+        if (inspectorViewMenuOpen()) {
+            if (inspectorViewMenu.isMouseOver(mouseX, mouseY)) inspectorViewMenu.mouseClicked(mouseX,mouseY,button);
+            else closeInspectorViewMenu();
+            return true;
+        }
         if (journalButton != null && journalButton.visible && journalButton.isMouseOver(mouseX, mouseY)) {
             cancelTreeInteraction();
             return clickFullscreenWidget(journalButton, mouseX, mouseY, button);
@@ -5093,7 +5136,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                     if (canvasStatusButton.visible) clickFullscreenWidget(canvasStatusButton, mouseX, mouseY, button);
                     return;
                 }
-                if (sceneBranchButton != null && sceneBranchButton.visible && clickFullscreenWidget(sceneBranchButton, mouseX, mouseY, button)) return;
+                if (sceneLabelsButton != null && sceneLabelsButton.visible && clickFullscreenWidget(sceneLabelsButton, mouseX, mouseY, button)) return;
                 if (researchGoalButton.visible
                         && clickFullscreenWidget(
                                 researchGoalButton, mouseX, mouseY, button)) {
@@ -5267,6 +5310,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         // A newer input owns navigation; a late Back preview must not replay the old view.
         inspectorReturn = null;
         reconcileScenePresentation();
+        if (inspectorViewMenuOpen()) return true;
         if (inspectorBody != null && inspectorBody.draggingScrollbar()) {
             fullscreenHoldActivation.cancel();
             return inspectorBody.mouseDragged(mouseX, mouseY, button, dragX, dragY);
@@ -5294,6 +5338,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         reconcileScenePresentation();
+        if (inspectorViewMenuOpen()) return true;
         if (inspectorBody != null && inspectorBody.mouseReleased(mouseX, mouseY, button)) return true;
         if (fullscreen && treeMinimap.endNavigation(button)) {
             return true;
@@ -5419,6 +5464,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         // A newer input owns navigation; a late Back preview must not replay the old view.
         inspectorReturn = null;
         reconcileScenePresentation();
+        if (inspectorViewMenuOpen()) return true;
         var owner = fullscreenPointerTarget(mouseX, mouseY);
         if (isTechTreeView() && owner == ResearchTreeInteractionPolicy.PointerTarget.GUIDANCE) {
             cancelTreeInteraction(); helpScroll = Math.max(0, helpScroll + (delta < 0 ? 24 : delta > 0 ? -24 : 0)); return true;
@@ -5482,6 +5528,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
 
     @Override
     public boolean charTyped(char codePoint, int modifiers) {
+        if (inspectorViewMenuOpen()) return true;
         if (isTechTreeView() && guidanceVisible) return true;
         return super.charTyped(codePoint, modifiers);
     }
@@ -5491,6 +5538,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         // A newer input owns navigation; a late Back preview must not replay the old view.
         inspectorReturn = null;
         reconcileScenePresentation();
+        if (inspectorViewMenuOpen()) return inspectorViewMenu.keyPressed(keyCode,scanCode,modifiers);
         if (isTechTreeView() && guidanceVisible) {
             if (keyCode == GLFW.GLFW_KEY_UP || keyCode == GLFW.GLFW_KEY_DOWN
                     || keyCode == GLFW.GLFW_KEY_PAGE_UP || keyCode == GLFW.GLFW_KEY_PAGE_DOWN) {
@@ -5871,6 +5919,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         if (selection.isEmpty()) {
             return;
         }
+        if (!inspectorNavigating) inspectorExpanded = true;
         treeCanvas.focusNode(blueprintId);
         fullscreenOverlayState.pinNode(blueprintId);
         rememberTechTreeSelection(blueprintId);
@@ -5887,6 +5936,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         if (selection.isEmpty()) {
             return;
         }
+        if (!inspectorNavigating) inspectorExpanded = true;
         treeCanvas.setFocusedNode(blueprintId);
         fullscreenOverlayState.pinNode(blueprintId);
         rememberTechTreeSelection(blueprintId);

@@ -202,7 +202,7 @@ last working data active.
 - [Research economy supply and balance](docs/research-economy-balance.md)
 - [Research currency integration API](docs/research-currency-integrations.md)
 - [Economy release handoff and playtest checklist](docs/research-economy-release-handoff.md)
-- [Current release notes](docs/releases/1.3.2.md)
+- [Current release notes](docs/releases/1.3.3.md)
 - [CurseForge description](docs/curseforge-description.md)
 - [Operations and migration](docs/operations-and-migration.md)
 - [Research Designer workspace](docs/research-designer-workspace.md)

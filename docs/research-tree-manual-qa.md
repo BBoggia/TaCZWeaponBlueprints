@@ -606,3 +606,40 @@ or certify an unfinished release.
 ### Automated native input regression check
 
 The development Workbench probe accepts `verify-input-regressions` in its disposable QA world. Select a blueprint with a current preview and expand Details before running it. It checks Help focus containment, blocked shortcuts and research requests, scrolling and dismissal, and deferred Back restoration with and without newer pointer or keyboard input. Results are written to `input-regressions.json` in the configured probe output directory. The Back check holds a pending restoration until a widget refresh; also run the delayed-network scenario above.
+
+### Playtest refinements
+
+- [ ] A single node click opens expanded details at 320×240, 512×282, and 854×480 GUI sizes. After collapsing, selecting the same node reopens details.
+- [ ] The Path button stays in the title row without covering a long weapon name. Cost, materials, prerequisite, and progression sections remain readable and scroll independently of the action row.
+- [ ] Branch labels shows On or Off and toggles branch titles and their hit targets. Zoomed-out branches omit titles that do not fit; displayed titles avoid tiles, connectors, junctions, portals, and other labels.
+- [ ] Tiles without internal names use the full padded interior for weapon artwork. Names appear only when readable, with aspect ratio preserved in both layouts.
+- [ ] Section gaps and indented prerequisite links have correct pointer hit tests. Follow a link with mouse and keyboard, then use Back; scroll position and the tracked goal remain correct.
+
+### Inspector cost table and prerequisite wording
+
+- [ ] One purchase-scope heading precedes a Resource / Have / Required table. Physical currency names match the server denomination. Material Have values match the server quote's allocated amounts.
+- [ ] Check points-only, items-only, creative bypass, free research, stale/missing previews, planning failure, learned nodes, and quotes with additional material types beyond the preview limit. Disabled channels must not appear as shortages.
+- [ ] At 320×240, 512×282, and 854×480, resource names can wrap without moving numeric columns. Large numbers and translated headers fit their measured columns. Clicking a cost row narrates the resource and both amounts.
+- [ ] One alternative reads Required. Multiple alternatives read Any one satisfies this requirement, including when some alternatives are undiscovered or outside the current view. Clicking a linked name only inspects it. Path is the only source of verified route-choice information.
+
+### Saved labels and contextual focus
+
+- [ ] Toggle Branch labels, reopen the Research Bench, then restart the client. The state and button text agree. Tree Appearance exposes the same preference; its reset restores On.
+- [ ] Toggle while panning or zooming. Selection, tracking, camera, topology, and purchase quote remain unchanged. No invisible label click targets remain before or after the next frame.
+- [ ] Pan and zoom slowly around label-fit thresholds. A valid label stays at its branch-relative anchor. It moves or disappears only when necessary, and needs additional clearance before reappearing.
+- [ ] Open View at 854×480, 512×282, and 320×240 GUI sizes. Focus blueprint and Focus branch frame the inspected target without choosing a purchase route. If details cover the canvas, focusing reveals the canvas.
+- [ ] View contains mouse, wheel, drag, character input, and camera/research shortcuts. Tab and arrows cycle its actions; Enter/Space activate. Escape restores the View button's focus. An outside click only dismisses. Help, search, resizing, and selection changes close the menu.
+- [ ] The development probe's `verify-view-controls` checks menu input containment, Escape, outside clicks, Help, and immediate removal of hidden-label hits in the disposable QA world.
+
+### Unified node presentation
+
+- [ ] Slowly zoom through overview, artwork, one-line names, and two-line names in both directions. Tiny movements near a threshold keep the current presentation. Direct zoom jumps settle immediately.
+- [ ] At the same camera scale, inspect or keyboard-focus a visible node and move search focus to it. Its artwork rectangle and in-card name stay unchanged. External names appear only when the in-card name is absent and a safe location fits.
+- [ ] Compare short and long names at maximum zoom. A short name reserves one line. Longer names can use two; remaining overflow has an ellipsis and the hover tooltip exposes the full published name.
+- [ ] Track A and inspect B. Each has separate corner marks; A has exactly one cyan goal cross. Check the overview marker too. Status, fragments, and blocker marks stay readable against weapon artwork.
+- [ ] At 854×480, 512×282, and 320×240 GUI sizes, repeat node selection, cost inspection, View focus, label toggling, Help, and Back. Small-screen overlays fully occlude node art and names underneath them.
+- [ ] Use custom scenes with different tile sizes, unavailable textures, restricted nodes, and resource reload. Each node's detail follows its own projected dimensions; missing art uses its blueprint fallback, and restricted identity stays undisclosed.
+
+Development probe snapshots include `node_presentations`: each visible node's
+actual art/name rectangles, name lines, channels, and decoration flags. Compare
+these with screenshots when checking selection stability and zoom thresholds.

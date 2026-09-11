@@ -172,6 +172,7 @@ public final class ResearchTreeCanvas {
         if (sceneView == null) return false;
         return sceneView.branch(id).map(b -> { viewport().fitReadable(b.x(), b.y(), b.width(), b.height(), .6); return true; }).orElse(false);
     }
+    public boolean hasBranch(ResourceLocation id) { return sceneView != null && sceneView.branch(id).isPresent(); }
     public void focusTarget(ResourceLocation id) {
         if (sceneView != null) viewport().restore(new ResearchTreeViewport.Snapshot(viewport().panX(), viewport().panY(), 1));
         focusNode(id);
@@ -200,6 +201,14 @@ public final class ResearchTreeCanvas {
         return sceneRenderer == null || !contains(x,y) ? Optional.empty()
                 : sceneRenderer.landmarkAt(this,x,y);
     }
+    private boolean branchLabelsVisible = true;
+    public boolean branchLabelsVisible() { return branchLabelsVisible; }
+    public void setBranchLabelsVisible(boolean visible) {
+        if (branchLabelsVisible == visible) return;
+        branchLabelsVisible = visible;
+        if (sceneRenderer != null) sceneRenderer.clearLandmarkHits();
+    }
+
     public Optional<Component> landmarkTitleAt(double x, double y) {
         return sceneRenderer == null ? Optional.empty() : landmarkAt(x,y).map(sceneRenderer::regionTitle);
     }
@@ -231,8 +240,8 @@ public final class ResearchTreeCanvas {
         setFocusedNode(first.nodeId());
         viewport().fitReadable(opening.x(), opening.y(), opening.width(), opening.height(), .6);
     }
-    public boolean sceneLabelsVisible() {
-        return sceneRenderer == null || sceneRenderer.labelsVisible();
+    public boolean sceneLabelsVisible(ResourceLocation id) {
+        return sceneRenderer == null || sceneRenderer.labelsVisible(id);
     }
 
     public void renderNodeArt(GuiGraphics graphics, ResearchTreeGraph.Node node, ResearchTreeScene.Bounds box) {

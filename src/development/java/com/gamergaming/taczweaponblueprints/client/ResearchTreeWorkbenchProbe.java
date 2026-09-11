@@ -138,6 +138,18 @@ public final class ResearchTreeWorkbenchProbe {
                 var canvas = (ResearchTreeCanvas) field(screen, "treeCanvas");
                 switch (action) {
                     case "verify-input-regressions" -> verifyInputRegressions(screen);
+                    case "verify-view-controls" -> verifyViewControls(screen);
+                    case "close-bench" -> screen.onClose();
+                    case "view-menu" -> invoke(screen,"toggleInspectorViewMenu",null,null);
+                    case "view-menu-action" -> {
+                        int index = data.get("value").getAsInt();
+                        if (index < 0 || index > 1) throw new IllegalArgumentException("invalid view action");
+                        var popup = (ResearchTreeViewMenu) field(screen,"inspectorViewMenu");
+                        if (!popup.visible) throw new IllegalStateException("View must be open");
+                        screen.mouseClicked(popup.getX()+8,popup.getY()+8+index*20,0);
+                        screen.mouseReleased(popup.getX()+8,popup.getY()+8+index*20,0);
+                    }
+                    case "pan-small" -> canvas.viewport().panByScreenDelta(3,2);
                     case "world-time" -> {
                         var server=mc.getSingleplayerServer();
                         if(originalDayTime==null)originalDayTime=server.overworld().getDayTime();
@@ -204,6 +216,11 @@ public final class ResearchTreeWorkbenchProbe {
                     case "track" -> invoke(screen,"toggleTrackedResearch",null,null);
                     case "affordable" -> invoke(screen,"toggleAffordableNow",null,null);
                     case "help" -> invoke(screen,"showGuidance",null,null);
+                    case "labels-toggle" -> {
+                        var button = (net.minecraft.client.gui.components.Button) field(screen, "sceneLabelsButton");
+                        screen.mouseClicked(button.getX()+3,button.getY()+3,0);
+                        screen.mouseReleased(button.getX()+3,button.getY()+3,0);
+                    }
                     case "domain" -> invoke(screen,"selectTechTreeDomain",com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain.class,
                             com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain.valueOf(data.get("value").getAsString()));
                     case "escape" -> screen.keyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE,0,0);
@@ -277,8 +294,9 @@ public final class ResearchTreeWorkbenchProbe {
                             if (body.rows().get(row).target().filter(id::equals).isPresent()) { first = i; break; }
                         }
                         if (first < 0) throw new IllegalStateException("requirement link is not disclosed");
-                        body.scrollTo(first * lineHeight);
-                        double x = body.getX()+3, y = body.getY()+first*lineHeight-body.scroll()+3;
+                        int lineY = (Integer) field(lines.get(first), "y");
+                        body.scrollTo(lineY);
+                        double x = body.getX()+10, y = body.getY()+lineY-body.scroll()+3;
                         screen.mouseClicked(x,y,0); screen.mouseReleased(x,y,0);
                     }
                     case "inspector-page-down" -> screen.keyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_PAGE_DOWN,0,0);
@@ -410,6 +428,55 @@ public final class ResearchTreeWorkbenchProbe {
         }
     }
     /** Exercises real screen dispatch while holding a deferred Back restoration until the next refresh. */
+    private static void verifyViewControls(ResearchBenchScreen screen) throws Exception {
+        var canvas = (ResearchTreeCanvas) field(screen,"treeCanvas");
+        var button = (net.minecraft.client.gui.components.Button) field(screen,"returnToSelectionButton");
+        var popup = (ResearchTreeViewMenu) field(screen,"inspectorViewMenu");
+        if (!button.visible || popup.visible) throw new IllegalStateException("Select a node with expanded details first");
+        var before = canvas.viewport().renderedSnapshot(); var selected = screen.getMenu().selectedBlueprint();
+        var request = field(screen,"nextActionRequestId");
+        var passed = new ArrayList<String>();
+        screen.mouseClicked(button.getX()+3,button.getY()+3,0); screen.mouseReleased(button.getX()+3,button.getY()+3,0);
+        if (!popup.visible || screen.getFocused()!=popup) throw new IllegalStateException("View did not own focus");
+        for (int key : new int[]{org.lwjgl.glfw.GLFW.GLFW_KEY_F,org.lwjgl.glfw.GLFW.GLFW_KEY_EQUAL,
+                org.lwjgl.glfw.GLFW.GLFW_KEY_MINUS,org.lwjgl.glfw.GLFW.GLFW_KEY_SLASH,org.lwjgl.glfw.GLFW.GLFW_KEY_TAB})
+            screen.keyPressed(key,0,0);
+        screen.charTyped('x',0);
+        screen.mouseScrolled(canvas.bounds().x()+8,canvas.bounds().y()+8,-1);
+        screen.mouseDragged(-10,-10,0,30,20);
+        invoke(screen,"requestResearch",null,null);
+        if (!before.equals(canvas.viewport().renderedSnapshot()) || !selected.equals(screen.getMenu().selectedBlueprint())
+                || !request.equals(field(screen,"nextActionRequestId"))) throw new IllegalStateException("View leaked underlying input");
+        passed.add("view_contains_shortcuts_wheel_drag_and_research");
+        screen.keyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE,0,0);
+        if (popup.visible || screen.getFocused()!=button) throw new IllegalStateException("Escape did not return focus");
+        passed.add("escape_restores_view_button_focus");
+        invoke(screen,"toggleInspectorViewMenu",null,null);
+        screen.mouseClicked(canvas.bounds().x()+8,canvas.bounds().y()+8,0);
+        if (popup.visible || !selected.equals(screen.getMenu().selectedBlueprint())) throw new IllegalStateException("outside click fell through");
+        passed.add("outside_click_only_dismisses");
+        invoke(screen,"toggleInspectorViewMenu",null,null);
+        invoke(screen,"showGuidance",null,null);
+        if (popup.visible) throw new IllegalStateException("Help retained View");
+        invoke(screen,"dismissGuidance",null,null);
+        passed.add("help_closes_view");
+        var labels = (net.minecraft.client.gui.components.Button) field(screen,"sceneLabelsButton");
+        var renderer = field(canvas,"sceneRenderer");
+        var previousLabels = List.copyOf((List<ResearchTreeSceneRenderer.Landmark>)field(renderer,"landmarks"));
+        boolean original = canvas.branchLabelsVisible();
+        try {
+            if (original) labels.onPress();
+            for (var l : previousLabels) if (canvas.landmarkAt(l.bounds().x()+1,l.bounds().y()+1).isPresent())
+                throw new IllegalStateException("hidden label retained a hit target");
+            if (canvas.branchLabelsVisible() || com.gamergaming.taczweaponblueprints.init.ModConfigs.RESEARCH_TREE_CLIENT.showBranchLabels.get())
+                throw new IllegalStateException("label preference disagrees with canvas");
+            if (!before.equals(canvas.viewport().renderedSnapshot())) throw new IllegalStateException("toggle moved camera");
+            passed.add("hidden_labels_have_no_hits_or_camera_change");
+        } finally { if (canvas.branchLabelsVisible()!=original) labels.onPress(); }
+        Files.writeString(Path.of(OUTPUT).resolve("view-controls.json"),ResearchTreeBaselineInput.JSON.toJson(Map.of("passed",passed))+"\n");
+    }
+
+    /** Exercises real screen dispatch while holding a deferred Back restoration until the next refresh. */
     private static void verifyInputRegressions(ResearchBenchScreen screen) throws Exception {
         var canvas = (ResearchTreeCanvas) field(screen, "treeCanvas");
         var body = (ResearchTreeInspectorBody) field(screen, "inspectorBody");
@@ -511,12 +578,20 @@ public final class ResearchTreeWorkbenchProbe {
         var mc = Minecraft.getInstance(); var canvas = (ResearchTreeCanvas) field(screen, "treeCanvas");
         var result = new JsonObject();
         var inspector = (ResearchTreeInspectorBody) field(screen, "inspectorBody");
+        var popup = (ResearchTreeViewMenu) field(screen,"inspectorViewMenu");
+        result.addProperty("view_menu_open",popup.visible);
+        result.addProperty("view_menu_focused",screen.getFocused()==popup);
+        result.addProperty("branch_labels_preference",com.gamergaming.taczweaponblueprints.init.ModConfigs.RESEARCH_TREE_CLIENT.showBranchLabels.get());
+        result.addProperty("branch_labels_button",((net.minecraft.client.gui.components.Button)field(screen,"sceneLabelsButton")).getMessage().getString());
         var review=(ResearchTreeRouteReviewState)field(screen,"routeReview");
         result.addProperty("review_status",review.status().name());
         var renderer=(ResearchTreeSceneRenderer)field(canvas,"sceneRenderer");
         if(renderer!=null) {
-            result.add("detail_channels",ResearchTreeBaselineInput.JSON.toJsonTree(field(renderer,"channels")));
-            result.add("landmarks",ResearchTreeBaselineInput.JSON.toJsonTree(field(renderer,"landmarks")));
+            result.add("node_presentations",ResearchTreeBaselineInput.JSON.toJsonTree(renderer.presentationEvidence()));
+            result.addProperty("branch_labels_enabled", canvas.branchLabelsVisible());
+            result.add("landmarks",ResearchTreeBaselineInput.JSON.toJsonTree(
+                    ((List<ResearchTreeSceneRenderer.Landmark>)field(renderer,"landmarks")).stream()
+                            .map(l -> java.util.Map.of("region",l.region().seed().id(),"bounds",l.bounds(),"title",l.title().getString())).toList()));
             result.add("connector_styles",ResearchTreeBaselineInput.JSON.toJsonTree(canvas.graph().edges().stream()
                     .collect(java.util.stream.Collectors.groupingBy(e -> canvas.sceneEdgeStyle(e).name(),java.util.stream.Collectors.counting()))));
         }
@@ -547,7 +622,9 @@ public final class ResearchTreeWorkbenchProbe {
         result.addProperty("inspector_history", ((ResearchTreeInspectorHistory) field(screen,"inspectorHistory")).size());
         result.addProperty("inspector_back_active", ((net.minecraft.client.gui.components.Button) field(screen,"inspectorBackButton")).active);
         result.add("inspector_rows", ResearchTreeBaselineInput.JSON.toJsonTree(inspector.rows().stream().map(row -> Map.of(
-                "kind", row.kind().name(), "text", row.text().getString(), "target", row.target().map(Object::toString).orElse(""))).toList()));
+                "kind", row.kind().name(), "text", row.text().getString(), "target", row.target().map(Object::toString).orElse(""),
+                "have", row.costCells().map(c -> c.have().getString()).orElse(""),
+                "required", row.costCells().map(c -> c.required().getString()).orElse(""))).toList()));
         result.addProperty("research_action_visible", ((net.minecraft.client.gui.components.Button) field(screen,"primaryResearchButton")).visible);
         result.addProperty("canvas_status", field(screen, "canvasStatus").toString());
         var statusButton = (net.minecraft.client.gui.components.Button) field(screen, "canvasStatusButton");

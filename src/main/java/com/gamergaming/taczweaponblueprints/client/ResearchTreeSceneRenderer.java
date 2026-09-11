@@ -1,7 +1,7 @@
 package com.gamergaming.taczweaponblueprints.client;
 
 import java.util.*;
-import com.gamergaming.taczweaponblueprints.client.ResearchTreeDetailPolicy.Detail;
+import net.minecraft.resources.ResourceLocation;
 import java.util.function.*;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
 import net.minecraft.client.gui.Font;
@@ -12,10 +12,20 @@ import net.minecraft.network.chat.Component;
 final class ResearchTreeSceneRenderer {
     private static final int PANEL = 0xff18232e, BORDER = 0xff354653, TEXT = 0xffe3e9e8, MUTED = 0xff99a9b4, ACCENT = 0xffecc76e;
     private record SegmentKey(int connection, int segment) { }
-    private Detail detail = Detail.BROWSE;
-    private ResearchTreeDetailPolicy.Channels channels = ResearchTreeDetailPolicy.Channels.EMPTY;
-    private final double minimumNodeWidth, minimumNodeHeight;
-    boolean labelsVisible() { return channels.names(); }
+    private boolean junctionLabels;
+    private final double minimumNodeHeight;
+    private final Map<ResourceLocation, ResearchTreeNodePresentation.State> presentations = new HashMap<>();
+    private record NodeFrame(ResearchTreeScene.Node node, ResearchTreeGraph.Node publicNode,
+            ResearchTreeCanvas.SceneDecoration decoration, ResearchTreeNodePresentation presentation) { }
+    private List<NodeFrame> frames = List.of();
+    boolean labelsVisible(ResourceLocation id) {
+        return frames.stream().anyMatch(f -> f.node().id().equals(id) && f.presentation().named());
+    }
+    record PresentationEvidence(ResourceLocation id, ResearchTreeScene.Bounds body,
+            ResearchTreeNodePresentation presentation, ResearchTreeCanvas.SceneDecoration decoration) { }
+    List<PresentationEvidence> presentationEvidence() {
+        return frames.stream().map(f -> new PresentationEvidence(f.node().id(),f.node().body(),f.presentation(),f.decoration())).toList();
+    }
     java.util.function.LongConsumer timingObserver;
     private final ResearchTreeSceneView geometry;
     private final ResearchTreeScene scene;
@@ -31,7 +41,6 @@ final class ResearchTreeSceneRenderer {
     private long artGeneration = -1;
     ResearchTreeSceneRenderer(ResearchTreeSceneView geometry) {
         this.geometry = geometry; scene = geometry.scene;
-        minimumNodeWidth = scene.nodes().stream().mapToDouble(n -> n.body().width()).min().orElse(0);
         minimumNodeHeight = scene.nodes().stream().mapToDouble(n -> n.body().height()).min().orElse(0);
         routes = new ResearchTreeRoutingIndex(scene.routing().orElseThrow());
         for (var group : scene.key().topology().groups()) groupEdges.put(group.id(), group.alternatives().stream()
@@ -47,7 +56,7 @@ final class ResearchTreeSceneRenderer {
                         .orElseGet(() -> groupEdges.getOrDefault(id,List.of()))).orElse(List.of())).toList();
         routeStyles = new ResearchTreeConnectorStyle[connectionEdges.size()];
     }
-    void bind(ResearchTechTreeProjection projection) { this.projection = projection; art.clearPresentation(); artGeneration = -1; labels.clear(); landmarks = List.of(); annotationCamera = null; }
+    void bind(ResearchTechTreeProjection projection) { this.projection = projection; art.clearPresentation(); artGeneration = -1; labels.clear(); landmarks = List.of(); annotationCamera = null; frames = List.of(); }
     private void prepareArt() {
         if (artGeneration != ResearchTreeNodeArt.reloadGeneration()) {
             art.prepare(projection); artGeneration = ResearchTreeNodeArt.reloadGeneration(); labels.clear();
@@ -57,19 +66,31 @@ final class ResearchTreeSceneRenderer {
     private final Map<String, List<String>> labels = new LinkedHashMap<>(128, .75f, true) {
         @Override protected boolean removeEldestEntry(Map.Entry<String,List<String>> entry) { return size() > 4096; }
     };
-    private List<String> label(Font font, Component name, int width) {
-        String value = name.getString();
-        return labels.computeIfAbsent(width + ":" + value, ignored -> {
+    private List<String> label(Font font, Component name, int width, int capacity) {
+        String value = name.getString().strip();
+        return labels.computeIfAbsent(width + ":" + capacity + ":" + value, ignored -> {
             var lines = new ArrayList<String>(); String rest = value;
-            for (int i = 0; i < 2 && !rest.isEmpty(); i++) {
-                String line = font.plainSubstrByWidth(rest, i == 1 && font.width(rest) > width ? width - font.width("...") : width);
-                if (line.isEmpty()) break;
+            for (int i = 0; i < capacity && !rest.isEmpty(); i++) {
+                String line = font.plainSubstrByWidth(rest, i == capacity-1 && font.width(rest) > width ? width - font.width("...") : width);
+                if (line.isEmpty() || font.width(line)==0) break;
                 if (line.length() < rest.length() && line.lastIndexOf(' ') > line.length() / 2) line = line.substring(0, line.lastIndexOf(' '));
                 rest = rest.substring(line.length()).stripLeading();
-                lines.add(line + (i == 1 && !rest.isEmpty() ? "..." : ""));
+                lines.add(line + (i == capacity-1 && !rest.isEmpty() ? "..." : ""));
+                if (!rest.isEmpty()) rest = continuationFormat(line)+rest;
             }
             return List.copyOf(lines);
         });
+    }
+    /** Legacy formatting in pack names must survive an independently drawn wrapped line. */
+    static String continuationFormat(String line) {
+        var result = new StringBuilder();
+        for (int i=0;i+1<line.length();i++) if (line.charAt(i)=='\u00a7') {
+            var format = net.minecraft.ChatFormatting.getByCode(line.charAt(++i));
+            if (format == null) continue;
+            if (format.isColor() || format == net.minecraft.ChatFormatting.RESET) result.setLength(0);
+            if (format != net.minecraft.ChatFormatting.RESET) result.append(format);
+        }
+        return result.toString();
     }
     Component regionTitle(ResearchTreeScene.Region region) {
         var authored = projection.presentation().branches().stream()
@@ -91,13 +112,20 @@ final class ResearchTreeSceneRenderer {
         long cpuStart = timingObserver == null ? 0 : System.nanoTime();
         prepareArt();
         var camera = canvas.viewport();
-        detail = ResearchTreeDetailPolicy.resolve(detail,
-                minimumNodeWidth * camera.scale(), minimumNodeHeight * camera.scale());
-        channels = ResearchTreeDetailPolicy.channels(channels,
-                minimumNodeWidth * camera.scale(), minimumNodeHeight * camera.scale());
+        junctionLabels = minimumNodeHeight*camera.scale() >= (junctionLabels ? 26 : 28);
         var view = canvas.bounds();
         var cb = camera.visibleCanvasBounds();
         var visible = new ResearchTreeScene.Bounds(cb.x() - geometry.offsetX, cb.y() - geometry.offsetY, cb.width(), cb.height());
+        var nextFrames = new ArrayList<NodeFrame>();
+        for (var node : geometry.query(visible.x(), visible.y(), visible.right(), visible.bottom())) {
+            if (!ResearchTreeRoutingIndex.intersects(node.paint(), visible)) continue;
+            var publicNode = projection.graph().node(node.id()).orElseThrow();
+            var presentation = ResearchTreeNodePresentation.resolve(presentations.get(node.id()), node.body(),
+                    camera.scale(), font.lineHeight, (width, capacity) -> label(font,names.apply(publicNode),width,capacity));
+            presentations.put(node.id(), presentation.state());
+            nextFrames.add(new NodeFrame(node,publicNode,canvas.sceneDecoration(node.id()),presentation));
+        }
+        frames = List.copyOf(nextFrames);
         g.enableScissor(view.x(), view.y(), view.right(), view.bottom());
         g.pose().pushPose();
         g.pose().translate(view.x() + (geometry.offsetX - camera.panX()) * camera.scale(), view.y() + (geometry.offsetY - camera.panY()) * camera.scale(), 0);
@@ -142,7 +170,7 @@ final class ResearchTreeSceneRenderer {
             for (var junction : routing.junctions()) {
                 if (!ResearchTreeRoutingIndex.intersects(junction.bounds(), visible)) continue;
                 fill(g, junction.bounds(), PANEL); border(g, junction.bounds(), 0xff73939a, 1);
-                if (channels.junctions()) {
+                if (junctionLabels) {
                     String text = junction.group().alternatives().size() + junction.group().hiddenCount() + junction.group().externalCount() > 1 ? "OR" : "+";
                     g.pose().pushPose(); g.pose().translate(junction.bounds().centerX(), junction.bounds().y() + 1, 0); g.pose().scale(0.6f, 0.6f, 1);
                     g.drawString(font, text, -font.width(text) / 2, 0, MUTED, false); g.pose().popPose();
@@ -151,55 +179,67 @@ final class ResearchTreeSceneRenderer {
             for (var marker : scene.boundaries()) {
                 if (!ResearchTreeRoutingIndex.intersects(marker.bounds(), visible)) continue;
                 fill(g, marker.bounds(), PANEL); border(g, marker.bounds(), 0xff78b9ca, 1);
-                if (channels.junctions()) g.drawString(font,
+                if (junctionLabels) g.drawString(font,
                         marker.links().get(0).direction() == ResearchTechTreeProjection.Direction.REQUIREMENT ? "<" : ">", (int) marker.bounds().x() + 3,
                         (int) marker.bounds().y() + 2, TEXT, false);
             }
             });
-            if (detail == Detail.OVERVIEW) g.drawManaged(() -> drawNodes(g,font,canvas,names,colors,symbols,visible));
-            else drawNodes(g,font,canvas,names,colors,symbols,visible);
+            if (frames.stream().noneMatch(f -> f.presentation().channels().artwork()))
+                g.drawManaged(() -> drawNodes(g,font,colors,symbols));
+            else drawNodes(g,font,colors,symbols);
             g.flush();
         } finally { g.pose().popPose(); g.disableScissor(); }
         renderAnnotations(g, font, canvas, names);
         if (timingObserver != null) timingObserver.accept(System.nanoTime() - cpuStart);
     }
 
-    private void drawNodes(GuiGraphics g, Font font, ResearchTreeCanvas canvas,
-            Function<ResearchTreeGraph.Node, Component> names, ToIntFunction<ResearchTreeGraph.Node> colors,
-            Function<ResearchTreeGraph.Node, ResearchTreePresentationContract.StatusSymbol> symbols,
-            ResearchTreeScene.Bounds visible) {
-            for (var node : geometry.query(visible.x(), visible.y(), visible.right(), visible.bottom())) {
-                if (!ResearchTreeRoutingIndex.intersects(node.paint(), visible)) continue;
-                var publicNode = projection.graph().node(node.id()).orElseThrow();
-                var b = node.body(); var decoration = canvas.sceneDecoration(node.id()); boolean chosen = decoration.focused();
-                fill(g, b, detail == Detail.OVERVIEW ? colors.applyAsInt(publicNode)
-                        : detail == Detail.BROWSE && publicNode.learned() ? 0xff1b3733 : PANEL);
-                if (channels.artwork()) art.render(g, publicNode, ResearchTreeDetailPolicy.artwork(b));
-                border(g, b, chosen ? ACCENT : canvas.searchMatches().contains(node.id()) ? 0xff62c7d9 : BORDER, chosen ? 2 : 1);
-                if (decoration.hovered()) border(g, b, TEXT, 1);
+    private void drawNodes(GuiGraphics g, Font font, ToIntFunction<ResearchTreeGraph.Node> colors,
+            Function<ResearchTreeGraph.Node, ResearchTreePresentationContract.StatusSymbol> symbols) {
+        for (var frame : frames) {
+            var node = frame.node(); var publicNode = frame.publicNode(); var b = node.body();
+            var decoration = frame.decoration(); var presentation = frame.presentation();
+            var marks = presentation.marks(); boolean chosen = decoration.focused();
+            int statusColor = colors.applyAsInt(publicNode);
+            fill(g,b,!presentation.channels().artwork() ? statusColor : publicNode.learned() ? 0xff1b3733 : PANEL);
+            if (presentation.channels().artwork()) art.render(g,publicNode,presentation.artwork());
+            border(g,b,chosen ? ACCENT : decoration.search() ? 0xff62c7d9 : BORDER,chosen ? 2 : 1);
+            if (decoration.hovered()) border(g,b,TEXT,1);
+            if (decoration.activeSearch()) border(g,node.paint(),0xff62c7d9,2);
+            if (decoration.trackedPath()) g.fill((int)b.x(),(int)b.bottom()-2,(int)b.right(),(int)b.bottom(),0xff62c7d9);
+            g.fill((int)b.x()+1,(int)b.y()+1,(int)b.right()-1,(int)b.y()+3,statusColor);
+            if (presentation.channels().stateMarks()) {
+                var status = marks.status(); fill(g,status.inflate(1),PANEL);
+                ResearchTreeStatusGlyph.render(g,(int)status.x(),(int)status.y(),statusColor,ResearchTreeStatusGlyph.forSymbol(symbols.apply(publicNode)));
+                if (decoration.fragments() || decoration.blocker()) {
+                    var progress = marks.progression(); fill(g,progress,PANEL);
+                    g.drawString(font,decoration.blocker() ? "!" : "+",(int)progress.x()+1,(int)progress.y(),
+                            decoration.blocker() ? 0xffffa45c : 0xff62c7d9,false);
+                }
                 if (decoration.pinned()) {
-                    g.fill((int)b.x()+2,(int)b.bottom()-8,(int)b.x()+4,(int)b.bottom()-2,TEXT);
-                    g.fill((int)b.x()+2,(int)b.bottom()-4,(int)b.x()+10,(int)b.bottom()-2,TEXT);
+                    var pin = marks.inspected(); fill(g,pin.inflate(1),PANEL);
+                    g.fill((int)pin.x(),(int)pin.y(),(int)pin.x()+2,(int)pin.bottom(),TEXT);
+                    g.fill((int)pin.x(),(int)pin.bottom()-2,(int)pin.right(),(int)pin.bottom(),TEXT);
                 }
-                if (decoration.activeSearch()) border(g, node.paint(), 0xff62c7d9, 2);
                 if (decoration.trackedTarget()) {
-                    int x=(int)b.right()-9, y=(int)b.bottom()-7;
-                    g.fill(x,y,x+5,y+5,0xff62c7d9); g.fill(x+2,y-2,x+3,y+7,0xff62c7d9);
+                    var target = marks.tracked(); fill(g,target.inflate(1),PANEL);
+                    int x=(int)target.x()+3,y=(int)target.y()+3;
+                    g.fill(x-3,y-1,x+4,y+2,0xff62c7d9); g.fill(x-1,y-3,x+2,y+4,0xff62c7d9);
                 }
-                if (canvas.isTrackedPathNode(node.id())) g.fill((int) b.x(), (int) b.bottom() - 2, (int) b.right(), (int) b.bottom(), 0xff62c7d9);
-                g.fill((int) b.x() + 1, (int) b.y() + 1, (int) b.right() - 1, (int) b.y() + 3, colors.applyAsInt(publicNode));
-                if (channels.stateMarks()) {
-                    ResearchTreeStatusGlyph.render(g, (int) b.right() - 10, (int) b.y() + 4, colors.applyAsInt(publicNode), ResearchTreeStatusGlyph.forSymbol(symbols.apply(publicNode)));
-                    if (decoration.fragments() || decoration.blocker()) g.drawString(font, decoration.blocker() ? "!" : "+",
-                            (int)b.x()+5,(int)b.y()+5,decoration.blocker()?0xffffa45c:0xff62c7d9,false);
-                }
-                if (decoration.dimmed()) fill(g,b,0x99101923);
             }
+            if (decoration.dimmed()) fill(g,b,0x99101923);
+        }
     }
 
     private static int lineThickness(ResearchTreeConnectorStyle style,double scale) {
-        return Math.max(style.thickness,style == ResearchTreeConnectorStyle.REVIEW ? (int)Math.ceil(2/scale)
-                : style == ResearchTreeConnectorStyle.DIRECT ? (int)Math.ceil(1/scale) : 1);
+        // Earlier possible prerequisites need modest emphasis of their own.
+        // Round down so they stay thinner than direct requirements at distant zoom.
+        int zoomBoost = switch (style) {
+            case ANCESTRY -> (int)Math.min(12,Math.floor(.75/scale));
+            case DIRECT -> (int)Math.ceil(1/scale);
+            case REVIEW -> (int)Math.ceil(2/scale);
+            default -> 1;
+        };
+        return Math.max(style.thickness,zoomBoost);
     }
     private ResearchTreeConnectorStyle connectionStyle(List<ResearchTreeGraph.Edge> edges, ResearchTreeCanvas canvas) {
         var style = ResearchTreeConnectorStyle.QUIET;
@@ -209,10 +249,12 @@ final class ResearchTreeSceneRenderer {
 
     record Landmark(ResearchTreeScene.Region region, ResearchTreeScreenLayout.Rect bounds, Component title) { }
     private List<Landmark> landmarks = List.of();
+    private final ResearchTreeLandmarkPlacement landmarkPlacement = new ResearchTreeLandmarkPlacement();
+    void clearLandmarkHits() { landmarks = List.of(); annotationCamera = null; landmarkPlacement.hideAll(); }
     private ResearchTreeViewport.Snapshot annotationCamera;
     private ResearchTreeScreenLayout.Rect annotationView;
     Optional<ResearchTreeScene.Region> landmarkAt(ResearchTreeCanvas canvas, double x, double y) {
-        if (!canvas.viewport().renderedSnapshot().equals(annotationCamera) || !canvas.bounds().equals(annotationView)) return Optional.empty();
+        if (!canvas.branchLabelsVisible() || !canvas.viewport().renderedSnapshot().equals(annotationCamera) || !canvas.bounds().equals(annotationView)) return Optional.empty();
         return landmarks.stream().filter(l -> l.bounds().contains(x,y)).map(Landmark::region).findFirst();
     }
     record ScreenBox(int x, int y, int width, int height) {
@@ -231,15 +273,38 @@ final class ResearchTreeSceneRenderer {
             Function<ResearchTreeGraph.Node, Component> names) {
         var view = canvas.bounds(); var camera = canvas.viewport();
         var occupied = new ArrayList<ResearchTreeScreenLayout.Rect>();
+        // Labels never cover visible tiles, connectors, junctions or portals.
+        var cb = camera.visibleCanvasBounds();
+        var visible = new ResearchTreeScene.Bounds(cb.x()-geometry.offsetX, cb.y()-geometry.offsetY, cb.width(), cb.height());
+        for (var node : geometry.query(visible.x(), visible.y(), visible.right(), visible.bottom()))
+            annotationObstacle(canvas, node.paint(), occupied);
+        for (var segment : routes.query(visible)) {
+            double x = Math.min(segment.from().x(), segment.to().x());
+            double y = Math.min(segment.from().y(), segment.to().y());
+            annotationObstacle(canvas, new ResearchTreeScene.Bounds(x, y,
+                    Math.max(1, Math.abs(segment.to().x()-segment.from().x())),
+                    Math.max(1, Math.abs(segment.to().y()-segment.from().y()))), occupied);
+        }
+        scene.boundaries().forEach(b -> annotationObstacle(canvas, b.bounds(), occupied));
+        scene.routing().orElseThrow().junctions().forEach(j -> annotationObstacle(canvas, j.bounds(), occupied));
         var priorities = new LinkedHashSet<net.minecraft.resources.ResourceLocation>();
         // Inspected target, keyboard focus, then active search result win collisions.
         scene.nodes().stream().filter(n -> canvas.sceneDecoration(n.id()).pinned()).findFirst().ifPresent(n -> priorities.add(n.id()));
         canvas.focusedId().ifPresent(priorities::add); canvas.activeSearchMatch().ifPresent(priorities::add);
         g.enableScissor(view.x(),view.y(),view.right(),view.bottom());
         try {
+            frames.stream().filter(f -> f.decoration().trackedTarget() && !f.presentation().channels().stateMarks()).findFirst().ifPresent(frame -> {
+                var b = screen(canvas,frame.node().body());
+                if (b.overlaps(view)) {
+                    int x = Math.max(view.x()+4,Math.min(b.right()-3,view.right()-5));
+                    int y = Math.max(view.y()+4,Math.min(b.y()+3,view.bottom()-5));
+                    g.fill(x-4,y-1,x+5,y+2,0xff62c7d9); g.fill(x-1,y-4,x+2,y+5,0xff62c7d9);
+                    occupied.add(new ResearchTreeScreenLayout.Rect(x-4,y-4,9,9));
+                }
+            });
             for (var id : priorities) {
                 var node = scene.nodes().stream().filter(n -> n.id().equals(id)).findFirst().orElse(null);
-                if (node == null) continue;
+                if (node == null || labelsVisible(id)) continue;
                 var body = screen(canvas,node.body());
                 if (!body.overlaps(view)) continue;
                 var text = names.apply(projection.graph().node(id).orElseThrow());
@@ -253,51 +318,46 @@ final class ResearchTreeSceneRenderer {
                 g.fill(b.x(),b.y(),b.right(),b.bottom(),PANEL); g.renderOutline(b.x(),b.y(),b.width(),b.height(),color);
                 g.drawString(font, clipped(font,text.getString(),b.width()-8),b.x()+4,b.y()+3,color,false);
             }
-            canvas.trackedTargetId().flatMap(id -> scene.nodes().stream().filter(n -> n.id().equals(id)).findFirst()).ifPresent(node -> {
-                var b = screen(canvas,node.body());
-                if (b.overlaps(view)) {
-                    int x = Math.max(view.x()+4,Math.min(b.right()-3,view.right()-5));
-                    int y = Math.max(view.y()+4,Math.min(b.y()+3,view.bottom()-5));
-                    g.fill(x-4,y-1,x+5,y+2,0xff62c7d9); g.fill(x-1,y-4,x+2,y+5,0xff62c7d9);
-                    occupied.add(new ResearchTreeScreenLayout.Rect(x-4,y-4,9,9));
-                }
-            });
             // These headers stay at readable GUI size, even at very distant overview.
             var next = new ArrayList<Landmark>();
             for (var region : regionOrder) {
                 var body = screen(canvas,landmarkBounds.get(region));
-                if (!body.overlaps(view)) continue;
+                if (!canvas.branchLabelsVisible() || !body.overlaps(view)) { landmarkPlacement.hide(region.seed().id()); continue; }
                 var title = regionTitle(region);
-                int w = Math.min(Math.min(180,view.width()-8),font.width(title)+16);
-                if (w < 48) continue;
-                var box = ResearchTreeAnnotationPlacement.place(view,Math.max(view.x(),body.x())+4,
-                        Math.max(view.y(),body.y())+4,w,font.lineHeight+8,occupied);
+                int w = Math.min(Math.min(180,view.width()-8),Math.max(48,font.width(title)+16));
+                if (w < 48) { landmarkPlacement.hide(region.seed().id()); continue; }
+                int left = Math.max(view.x(), body.x()), top = Math.max(view.y(), body.y());
+                var footprint = new ResearchTreeScreenLayout.Rect(left, top,
+                        Math.min(view.right(), body.right()) - left, Math.min(view.bottom(), body.bottom()) - top);
+                var box = landmarkPlacement.place(region.seed().id(), view, footprint, body.x(), body.y(),
+                        camera.scale(), w, font.lineHeight+6, occupied);
                 if (box.isEmpty()) continue;
                 var b = box.orElseThrow(); occupied.add(b); next.add(new Landmark(region,b,title));
                 g.fill(b.x(),b.y(),b.right(),b.bottom(),0xf018232e);
                 g.renderOutline(b.x(),b.y(),b.width(),b.height(),0xff85a2a5);
-                g.drawString(font,clipped(font,title.getString(),w-16)+" ›",b.x()+4,b.y()+4,TEXT,false);
+                g.drawString(font,clipped(font,title.getString(),w-16)+" ›",b.x()+4,b.y()+3,TEXT,false);
             }
             landmarks = List.copyOf(next); annotationCamera = camera.renderedSnapshot(); annotationView = view;
-            if (channels.names()) {
-                var cb = camera.visibleCanvasBounds();
-                for (var node : geometry.query(cb.x()-geometry.offsetX,cb.y()-geometry.offsetY,cb.x()+cb.width()-geometry.offsetX,cb.y()+cb.height()-geometry.offsetY)) {
-                    if (priorities.contains(node.id())) continue;
-                    var b = screen(canvas,node.body());
-                    var textBox = new ScreenBox(b.x()+3,b.y()+(int)Math.ceil(23*camera.scale()),Math.max(1,b.width()-6),Math.max(1,b.height()-(int)Math.ceil(23*camera.scale())-2));
-                    if (occupied.stream().anyMatch(textBox::overlaps)) continue;
-                    int y=textBox.y();
-                    var name = names.apply(projection.graph().node(node.id()).orElseThrow());
-                    var nodeLines = textBox.height() < 2*font.lineHeight
-                            ? List.of(clipped(font,name.getString(),textBox.width())) : label(font,name,textBox.width());
-                    for (var line : nodeLines) {
-                        if(y+font.lineHeight>textBox.bottom()) break;
-                        g.drawString(font,line,b.x()+(b.width()-font.width(line))/2,y,TEXT,false); y+=font.lineHeight;
-                    }
+            for (var frame : frames) {
+                var presentation = frame.presentation();
+                if (!presentation.named()) continue;
+                var textBox = screen(canvas,presentation.nameBounds());
+                int y = textBox.y();
+                for (var line : presentation.nameLines()) {
+                    g.drawString(font,line,textBox.x()+(textBox.width()-font.width(line))/2,y,
+                            frame.decoration().dimmed() ? MUTED : TEXT,false);
+                    y += font.lineHeight;
                 }
             }
             g.flush();
         } finally { g.disableScissor(); }
+    }
+    private void annotationObstacle(ResearchTreeCanvas canvas, ResearchTreeScene.Bounds world,
+            List<ResearchTreeScreenLayout.Rect> occupied) {
+        var b = screen(canvas, world); var view = canvas.bounds();
+        int x = Math.max(view.x(), b.x()-2), y = Math.max(view.y(), b.y()-2);
+        int right = Math.min(view.right(), b.right()+2), bottom = Math.min(view.bottom(), b.bottom()+2);
+        if (right > x && bottom > y) occupied.add(new ResearchTreeScreenLayout.Rect(x,y,right-x,bottom-y));
     }
     private static String clipped(Font font,String text,int width) {
         return font.width(text)<=width ? text : font.plainSubstrByWidth(text,Math.max(1,width-font.width("…")))+"…";
