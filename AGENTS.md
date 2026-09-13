@@ -49,6 +49,7 @@ If this repository is checked out separately, apply the rules summarized here.
 
 ## Branch names
 
+- Name release branches `v<version>` (for example, `v1.3.4`) to match the existing version branches.
 - Do not include `codex` in branch names.
 
 ## Commit examples
