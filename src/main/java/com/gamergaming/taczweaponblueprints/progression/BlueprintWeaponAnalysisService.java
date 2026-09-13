@@ -1,5 +1,6 @@
 package com.gamergaming.taczweaponblueprints.progression;
 
+import com.gamergaming.taczweaponblueprints.compat.magazines.InsertedMagazineGuard;
 import com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy;
 import com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPayments;
 
@@ -67,7 +68,8 @@ public final class BlueprintWeaponAnalysisService {
                 station.outputStack().isEmpty(), context.research(), context.catalog(), config.activeProfileId(), data.orElseThrow(),
                 ModConfigs.BLUEPRINT::isItemBlacklisted, BlueprintProgressionAccess::isProgressionExempt,
                 config.blueprintsEnabled(), config.pointCap(), null, false, quote.attempt().orElse(null), station.currencyPolicy());
-        if (quote.status() != AnalyzerPolicyQuote.Status.CONFIGURED) {
+        if (quote.status() != AnalyzerPolicyQuote.Status.CONFIGURED
+                && evaluation.status() != Status.MAGAZINE_INSERTED) {
             evaluation = evaluation.withStatus(switch (quote.status()) {
                 case STALE_PROGRESSION -> Status.STALE_POLICY;
                 case CONTENT_UNAVAILABLE -> Status.CONTENT_UNAVAILABLE;
@@ -148,6 +150,8 @@ public final class BlueprintWeaponAnalysisService {
         prepared.used = true;
         var e = prepared.evaluation;
         if (!e.ready()) return failure(e.status(), prepared, data);
+        if (InsertedMagazineGuard.hasInsertedMagazine(station.physicalInput()))
+            return failure(Status.MAGAZINE_INSERTED, prepared, data);
         if (prepared.quote.status() != AnalyzerPolicyQuote.Status.CONFIGURED
                 || !prepared.quote.blueprintId().equals(e.blueprintId().orElse(null))
                 || !prepared.quote.attempt().equals(e.base().reversePolicy())) return failure(Status.STALE_POLICY, prepared, data);

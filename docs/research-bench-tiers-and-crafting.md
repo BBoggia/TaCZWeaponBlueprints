@@ -190,6 +190,18 @@ higher-priority datapack can deliberately restore or replace that recipe.
 
 ## Reload and multiplayer behavior
 
+All three native crafting Workbenches share the `workbench_all` TaCZ recipe
+filter. Its explicit wildcard whitelist preserves the full candidate catalog
+when TaCZ synchronizes gun-pack data. Do not replace it with `{}`: TaCZ
+1.1.8-hotfix serializes that into an empty whitelist that rejects every recipe
+on remote clients. The server's blueprint, tier, and gate checks still determine
+which candidates a player can see and craft.
+
+Workbench tab definitions include the bundled TaCZ gun, ammo, and attachment
+categories explicitly. TaCZ's default fallback tab list omits its newer ammo
+groups. Pack authors adding custom recipe groups must include matching tabs in
+their Workbench data overrides.
+
 Research, crafting, fragment completion, and Progression Gate checks use
 separate action-specific policy projections built from one revision-matched
 publication. A valid `/reload` replaces both projections as one unit. Crafting

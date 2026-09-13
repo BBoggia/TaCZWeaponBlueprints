@@ -27,6 +27,7 @@ import com.gamergaming.taczweaponblueprints.progression.BlueprintFragmentPreset;
 import com.gamergaming.taczweaponblueprints.progression.AmmoCraftingStrategy;
 import com.gamergaming.taczweaponblueprints.progression.AttachmentCraftingStrategy;
 import com.gamergaming.taczweaponblueprints.progression.CraftingAccessOverride;
+import com.gamergaming.taczweaponblueprints.compat.magazines.MagazineProgressionSettings;
 import com.gamergaming.taczweaponblueprints.progression.ResearchFeatureConfigSnapshot;
 import com.gamergaming.taczweaponblueprints.progression.ResearchProgressionPreset;
 import com.gamergaming.taczweaponblueprints.progression.StartingBlueprintGrantService;
@@ -414,6 +415,26 @@ public class BlueprintConfig extends Config {
                     blueprintIdAutocomplete(),
                     new ValidatedEnum<>(CraftingAccessOverride.TIER_1));
 
+    public ConfigGroup magazineCrafting = new ConfigGroup("magazineCrafting", true);
+    @WithPerms(opLevel = 2)
+    public ValidatedEnum<MagazineProgressionSettings.Mode> magazineProgressionMode =
+            new ValidatedEnum<>(MagazineProgressionSettings.Mode.COMPATIBILITY);
+
+    @WithPerms(opLevel = 2)
+    public ValidatedCondition<Boolean> magazineKeepBasicCrafting = uiCondition(
+            new ValidatedBoolean(true),
+            () -> magazineProgressionMode.get() == MagazineProgressionSettings.Mode.LINKED_WEAPON,
+            TRANSLATION_PREFIX + "condition.linkedMagazines");
+
+    @WithPerms(opLevel = 2)
+    public ValidatedEnum<ResearchWorkbenchTier> magazineBasicWorkbenchTier =
+            new ValidatedEnum<>(ResearchWorkbenchTier.TIER_1);
+
+    @ConfigGroup.Pop
+    @WithPerms(opLevel = 2)
+    public ValidatedEnum<ResearchWorkbenchTier> magazineExtendedWorkbenchTier =
+            new ValidatedEnum<>(ResearchWorkbenchTier.TIER_1);
+
     public ConfigGroup ordinaryFragments = new ConfigGroup("ordinaryFragments", true);
     @WithPerms(opLevel = 2)
     public ValidatedStringMap<Integer> exactFragmentThresholds = new ValidatedStringMap<>(
@@ -462,6 +483,7 @@ public class BlueprintConfig extends Config {
     private transient volatile BlueprintAccessConfigSnapshot accessSnapshot;
     private transient volatile ResearchPointAwardConfigSnapshot awardSnapshot;
     private transient volatile ResearchFeatureConfigSnapshot researchFeatureSnapshot;
+    private transient volatile MagazineProgressionSettings magazineSettings;
     private transient volatile ResearchCurrencyPolicy currencyPolicy;
     private transient volatile com.gamergaming.taczweaponblueprints.progression.ResearchDataSettings dataSettings;
     public com.gamergaming.taczweaponblueprints.progression.ResearchDataSettings dataSettings() { return dataSettings; }
@@ -579,6 +601,10 @@ public class BlueprintConfig extends Config {
 
     public BlueprintAccessConfigSnapshot accessSnapshot() {
         return accessSnapshot;
+    }
+
+    public MagazineProgressionSettings magazineSettings() {
+        return magazineSettings;
     }
 
     public ResearchFeatureConfigSnapshot researchFeatureSnapshot() {
@@ -759,6 +785,7 @@ public class BlueprintConfig extends Config {
         accessSnapshot = BlueprintAccessConfigSnapshot.from(this);
         awardSnapshot = ResearchPointAwardConfigSnapshot.from(this, progressionSnapshot);
         researchFeatureSnapshot = ResearchFeatureConfigSnapshot.from(this);
+        magazineSettings = MagazineProgressionSettings.from(this);
     }
 
     public record BalancePresetApplication(

@@ -49,6 +49,11 @@ retry handling.
 
 ## Loaded weapon ammunition
 
+Guns containing a TaCZ Magazines magazine must have it ejected first, even when
+the magazine is empty. A read-only guard blocks preview and final consumption
+before any payment, outcome selection, or ammunition refund. See the
+[magazine integration contract](tacz-magazines-integration.md#blueprint-analyzer-protection).
+
 The production analysis and direct-recovery entry points use
 `AnalyzerAmmoRecovery` around their existing transactions. The server resolves
 ammunition from TaCZ gun data and stack state without modifying the input during

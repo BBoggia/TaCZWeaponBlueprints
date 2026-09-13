@@ -65,7 +65,7 @@ public final class BlueprintRecyclerActionContract {
         RECOVERY_DISABLED,
         ROLLBACK_FAILED,
         DELIVERY_FULL,
-        STATION_REQUIRED, STATION_TIER_REQUIRED, DATA_DISABLED, ALL_LEARNED, EMPTY_POOL;
+        STATION_REQUIRED, STATION_TIER_REQUIRED, DATA_DISABLED, ALL_LEARNED, EMPTY_POOL, MAGAZINE_INSERTED;
 
         public static ResultCode from(BlueprintFragmentAnalysisService.Status status) {
             if (status == null) {
@@ -157,6 +157,7 @@ public final class BlueprintRecyclerActionContract {
                 case REVERSE_ENGINEERING_DISABLED -> REVERSE_ENGINEERING_DISABLED;
                 case ALREADY_KNOWN -> ALREADY_KNOWN;
                 case LOADED_GUN -> LOADED_GUN;
+                case MAGAZINE_INSERTED -> MAGAZINE_INSERTED;
                 case GUN_HAS_ATTACHMENTS -> GUN_HAS_ATTACHMENTS;
                 case MODIFIED_ITEM_NOT_ALLOWED -> MODIFIED_ITEM_NOT_ALLOWED;
                 case INSUFFICIENT_INPUT_COUNT -> INSUFFICIENT_INPUT_COUNT;
@@ -184,6 +185,7 @@ public final class BlueprintRecyclerActionContract {
                 case INVALID_PLAYER -> INVALID_PLAYER;
                 case PLAYER_DATA_UNAVAILABLE -> PLAYER_DATA_UNAVAILABLE;
                 case REVERSE_ENGINEERING_INELIGIBLE -> POLICY_INELIGIBLE;
+                case MAGAZINE_INSERTED -> MAGAZINE_INSERTED;
                 case NOT_A_WEAPON -> NOT_A_WEAPON;
                 case VERIFIED_LOOT_REQUIRED -> VERIFIED_LOOT_REQUIRED;
                 case RECOVERY_DISABLED -> RECOVERY_DISABLED;

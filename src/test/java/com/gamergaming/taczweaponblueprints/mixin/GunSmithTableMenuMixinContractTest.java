@@ -34,6 +34,89 @@ import net.minecraftforge.items.IItemHandler;
 
 /** Pins the third-party TaCZ bytecode surface used to mark crafted guns. */
 class GunSmithTableMenuMixinContractTest {
+    @Test
+    void namespaceScaffoldOnlyFeedsTheNativeFilterWidgetConstructor() throws Exception {
+        var handler = GunSmithTableScreenMixin.class.getDeclaredMethod("taczweaponblueprints$magazineNamespace", java.util.Map.class);
+        var modify = handler.getAnnotation(org.spongepowered.asm.mixin.injection.ModifyArg.class);
+        assertArrayEquals(new String[] {"init"}, modify.method());
+        assertTrue(modify.remap(), "init is a Minecraft override");
+        assertFalse(modify.at().remap());
+        assertEquals(6, modify.index());
+        assertEquals(1, modify.require());
+        assertEquals(1, modify.allow());
+        var constructor = com.tacz.guns.client.gui.components.GunPackList.class.getConstructor(
+                net.minecraft.client.Minecraft.class, int.class, int.class, int.class, int.class, int.class,
+                java.util.Map.class, com.tacz.guns.client.gui.GunSmithTableScreen.class);
+        assertEquals("Lcom/tacz/guns/client/gui/components/GunPackList;<init>"
+                + org.objectweb.asm.Type.getConstructorDescriptor(constructor), modify.at().target());
+    }
+
+    @Test
+    void nativeMagazineTabMembershipRunsInsideRecipeLookupAfterTheCraftAuthority() throws Exception {
+        String name = "lambda$getRecipe$2";
+        String descriptor = "(Lcom/tacz/guns/crafting/GunSmithTableRecipe;Lcom/tacz/guns/resource/index/CommonBlockIndex;)Ljava/lang/Boolean;";
+        var handler = GunSmithTableMenuMixin.class.getDeclaredMethod("taczweaponblueprints$acceptMagazineTab",
+                GunSmithTableRecipe.class, com.tacz.guns.resource.index.CommonBlockIndex.class, CallbackInfoReturnable.class);
+        var inject = handler.getAnnotation(Inject.class);
+        assertArrayEquals(new String[] {name + descriptor}, inject.method());
+        assertEquals("RETURN", inject.at()[0].value());
+        assertTrue(inject.cancellable());
+        assertFalse(inject.remap());
+        assertEquals(1, inject.require());
+        assertEquals(1, inject.allow());
+        var predicate = GunSmithTableMenu.class.getDeclaredMethod(name,
+                GunSmithTableRecipe.class, com.tacz.guns.resource.index.CommonBlockIndex.class);
+        assertEquals(Boolean.class, predicate.getReturnType());
+        assertTrue(java.lang.reflect.Modifier.isStatic(predicate.getModifiers()));
+        assertTrue(relatedMethodCalls(GunSmithTableMenu.class, "doCraft").stream()
+                .anyMatch(call -> call.endsWith("GunSmithTableMenu.getRecipe")));
+        assertTrue(relatedMethodCalls(GunSmithTableMenuMixin.class, "taczweaponblueprints$acceptMagazineTab").stream()
+                .anyMatch(call -> call.endsWith("MagazineCraftingAccess.hasMagazineTab")));
+    }
+
+    @Test
+    void magazineTabRedirectMatchesTheSingleNativeBlockTabRead() throws Exception {
+        String name = "lambda$classifyRecipes$0";
+        String descriptor = "(Lnet/minecraft/resources/ResourceLocation;Ljava/util/Map;Ljava/util/Map;Lcom/tacz/guns/resource/index/CommonBlockIndex;)V";
+        var handler = GunSmithTableScreenMixin.class.getDeclaredMethod("taczweaponblueprints$magazineTabs",
+                com.tacz.guns.resource.pojo.data.block.BlockData.class, ResourceLocation.class,
+                java.util.Map.class, java.util.Map.class, com.tacz.guns.resource.index.CommonBlockIndex.class);
+        var redirect = handler.getAnnotation(Redirect.class);
+        assertArrayEquals(new String[] {name + descriptor}, redirect.method());
+        assertFalse(redirect.remap());
+        assertFalse(redirect.at().remap());
+        assertEquals(1, redirect.require());
+        assertEquals(1, redirect.allow());
+        AtomicInteger reads = new AtomicInteger();
+        try (var bytes = com.tacz.guns.client.gui.GunSmithTableScreen.class.getResourceAsStream(
+                "/com/tacz/guns/client/gui/GunSmithTableScreen.class")) {
+            assertNotNull(bytes);
+            new ClassReader(bytes).accept(new ClassVisitor(Opcodes.ASM9) {
+                @Override public MethodVisitor visitMethod(int access, String method, String desc, String signature, String[] exceptions) {
+                    if (!name.equals(method) || !descriptor.equals(desc)) return null;
+                    assertTrue((access & Opcodes.ACC_STATIC) != 0);
+                    return new MethodVisitor(Opcodes.ASM9) {
+                        @Override public void visitMethodInsn(int opcode, String owner, String method, String desc, boolean itf) {
+                            if ("com/tacz/guns/resource/pojo/data/block/BlockData".equals(owner)
+                                    && "getTabs".equals(method) && "()Ljava/util/List;".equals(desc)) reads.incrementAndGet();
+                        }
+                    };
+                }
+            }, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+        }
+        assertEquals(1, reads.get(), "TaCZ tab assembly callback changed");
+        var filter = GunSmithTableScreenMixin.class.getDeclaredMethod("filterRecipesByLearnedBlueprints", CallbackInfo.class);
+        var inject = filter.getAnnotation(Inject.class);
+        assertArrayEquals(new String[] {"updateSelectedRecipeAfterFiltering"}, inject.method());
+        assertEquals("HEAD", inject.at()[0].value());
+        var calls = relatedMethodCalls(com.tacz.guns.client.gui.GunSmithTableScreen.class, "init");
+        int classification = indexEndingWith(calls, "GunSmithTableScreen.classifyRecipes");
+        int selection = indexEndingWith(calls, "GunSmithTableScreen.updateSelectedRecipeAfterFiltering");
+        int buttons = indexEndingWith(calls, "GunSmithTableScreen.addTypeButtons");
+        assertTrue(classification >= 0 && selection > classification && buttons > selection,
+                "access filtering must follow all classification callbacks and precede native tab buttons");
+    }
+
     private static final String CRAFT_LAMBDA = "lambda$doCraft$3";
     private static final String CRAFT_LAMBDA_DESCRIPTOR =
             "(Lnet/minecraft/world/entity/player/Player;"

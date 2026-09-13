@@ -151,6 +151,8 @@ public record BlueprintRecyclerScreenModel(
 
     /** Preserve the precise policy reason separately from a ready alternative action. */
     public static String analysisStatusKey(BlueprintRecyclerPreview preview) {
+        if (preview.reverseEngineeringStatus().filter(s -> s == BlueprintReverseEngineeringService.Status.MAGAZINE_INSERTED).isPresent())
+            return PREFIX + "reverse.status.magazine_inserted";
         return preview.presentation().weapon().filter(w ->
                         w.status() != com.gamergaming.taczweaponblueprints.resource.research.AnalyzerPolicyQuote.Status.CONFIGURED
                         && w.status() != com.gamergaming.taczweaponblueprints.resource.research.AnalyzerPolicyQuote.Status.DIRECT_RECOVERY_ONLY)

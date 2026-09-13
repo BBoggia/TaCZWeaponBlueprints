@@ -131,6 +131,13 @@ The automatic Tech Tree adapts to compatible TaCZ weapon catalogs. Pack authors
 can also create trees containing selected weapons or enable optional ammo and
 attachment research.
 
+With **TaCZ Magazines 0.2.0-Beta** installed, craft empty magazines at the three
+Workbench levels or TaCZ's ammo Workbench using the add-on's material costs.
+Servers can link magazine access to learned compatible weapons and set minimum
+Workbench levels for basic and extended magazines. Basic magazines can remain
+available for found or traded guns. Eject any inserted magazine before using
+the gun at a Blueprint Analyzer.
+
 ## Requirements
 
 - **Minecraft 1.20.1** with **Forge 47.x**; built with Forge 47.3.0.

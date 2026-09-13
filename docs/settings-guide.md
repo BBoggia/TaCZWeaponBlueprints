@@ -24,6 +24,7 @@ saves these shared settings locally; Personal Settings is a separate file.
 | Datapacks and Exclusions | Select a profile and exclude specific blueprint IDs. |
 | Advanced Tier Settings | Tune automatic tier boundaries, custom tier switches, and other workstations. |
 | Advanced Crafting Rules | Allow or block crafting for categories, subgroups, or individual items. |
+| TaCZ Magazines | Choose optional magazine access and minimum crafting Workbench tiers. |
 | Ordinary Loot Fragments | Customize ordinary fragment set sizes and research discounts. |
 
 The advanced sections start collapsed. Personal Settings keeps legacy layout
@@ -72,6 +73,28 @@ ordinary loot fragments. Fragments earned from weapon or Research Data analysis
 use the shared reconstruction rules in datapacks. See
 [Research Data policies](research-data-policies.md) and
 [analysis fragment storage](analysis-fragment-storage.md).
+
+## Optional magazine crafting
+
+With **TaCZ Magazines 0.2.0-Beta** installed, the default **Materials Only**
+setting allows empty magazines at all three Workbench tiers and TaCZ's ammo
+Workbench, using the add-on's recipe costs.
+
+Choose **Linked to Weapons** to require a learned or progression-exempt
+compatible gun. Learning any gun in a shared magazine family qualifies; matching
+caliber alone does not. **Keep Basic Magazines Available** starts enabled so
+players can supply found or traded guns. Turn it off to require a compatible
+learned gun for basic magazines too.
+
+**Basic Magazine Workbench Tier** and **Extended Magazine Workbench Tier** set
+separate minimums in either mode. Both default to Tier 1. The original ammo
+Workbench counts as Tier 1 unless explicitly mapped in Advanced Tier Settings.
+These controls apply while blueprint progression is enabled; they do not change
+the add-on's loading or attachment requirements. Eject an inserted magazine
+before using its gun at the Blueprint Analyzer.
+
+See the [magazine integration guide](tacz-magazines-integration.md) for exact
+setting keys and pack-author behavior.
 
 ## Currency and Research Data
 

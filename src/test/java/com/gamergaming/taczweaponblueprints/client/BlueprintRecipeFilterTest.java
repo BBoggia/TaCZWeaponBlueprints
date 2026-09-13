@@ -17,6 +17,34 @@ import org.junit.jupiter.api.Test;
 import net.minecraft.resources.ResourceLocation;
 
 class BlueprintRecipeFilterTest {
+    @Test
+    void missingMagazineTabMetadataDuringReloadCannotLeaveNativeTabIndexesOutOfBounds() {
+        var magazine = id("taczmagazines:magazines");
+        var ammo = id("tacz:ammo");
+        var stale = id("tacz:removed_tab");
+        var recipe = id("tacz:ammo/9mm");
+        for (boolean received : List.of(false, true)) {
+            for (boolean unrestricted : List.of(false, true)) {
+                Map<ResourceLocation, List<ResourceLocation>> recipes = new LinkedHashMap<>();
+                recipes.put(magazine, new ArrayList<>());
+                recipes.put(ammo, new ArrayList<>(List.of(recipe)));
+                var tabs = tabs(ammo, stale);
+                var result = BlueprintRecipeFilter.filterForCraftingAccessState(recipes, tabs, Set.of(),
+                        received, Set.of(recipe.toString()), unrestricted, magazine);
+                assertEquals(Set.of(ammo), recipes.keySet());
+                assertEquals(recipes.keySet(), tabs.keySet());
+                assertEquals(ammo, result.selectedType());
+                assertEquals(received ? List.of(recipe) : List.of(), result.selectedRecipeList());
+            }
+        }
+        Map<ResourceLocation, List<ResourceLocation>> recipes = new LinkedHashMap<>();
+        recipes.put(magazine, new ArrayList<>());
+        var result = BlueprintRecipeFilter.filterForCraftingAccessState(recipes, new LinkedHashMap<>(),
+                Set.of(), false, Set.of(), false, magazine);
+        assertTrue(recipes.isEmpty());
+        assertNull(result.selectedType());
+    }
+
 
     @Test
     void intersectsLearnedRecipesWithTaCZNativeFilteringWithoutReordering() {

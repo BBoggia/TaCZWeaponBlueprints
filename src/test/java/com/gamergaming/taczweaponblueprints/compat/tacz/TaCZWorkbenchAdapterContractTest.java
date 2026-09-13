@@ -14,6 +14,11 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.jar.JarFile;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -21,6 +26,7 @@ import org.junit.jupiter.api.Test;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.gamergaming.taczweaponblueprints.client.BlueprintRecipeFilter;
 import com.tacz.guns.client.gui.GunSmithTableScreen;
 import com.tacz.guns.block.AbstractGunSmithTableBlock;
 import com.tacz.guns.block.entity.GunSmithTableBlockEntity;
@@ -157,13 +163,81 @@ class TaCZWorkbenchAdapterContractTest {
             assertEquals(
                     "taczweaponblueprints:workbench_all",
                     data.get("filter").getAsString());
-            assertTrue(data.getAsJsonArray("tabs").isEmpty());
             assertEquals("taczweaponblueprints:" + path, index.get("id").getAsString());
             assertEquals("taczweaponblueprints:" + path, index.get("data").getAsString());
         }
-        assertTrue(classpathJson(
-                "/data/taczweaponblueprints/recipe_filters/workbench_all.json")
-                .entrySet().isEmpty());
+    }
+
+    @Test
+    void productionWorkbenchesIncludeEveryBundledTaCZCraftingTab() throws IOException {
+        Set<String> bundledTabs = new java.util.HashSet<>();
+        for (String table : List.of("gun_smith_table", "ammo_workbench", "attachment_workbench")) {
+            classpathJson("/assets/tacz/custom/tacz_default_gun/data/tacz/data/blocks/"
+                    + table + ".json").getAsJsonArray("tabs").forEach(tab ->
+                    bundledTabs.add(tab.getAsJsonObject().get("id").getAsString()));
+        }
+        assertTrue(bundledTabs.contains("tacz:ifp_rifle_cartridges"));
+        for (int tier = 1; tier <= 3; tier++) {
+            Set<String> configuredTabs = new java.util.HashSet<>();
+            classpathJson("/data/taczweaponblueprints/data/blocks/workbench_lvl"
+                    + tier + ".json").getAsJsonArray("tabs").forEach(tab -> {
+                        JsonObject value = tab.getAsJsonObject();
+                        assertTrue(configuredTabs.add(value.get("id").getAsString()),
+                                "Workbench tabs must not have duplicate IDs");
+                        assertNotNull(value.getAsJsonObject("icon").get("item"));
+                        assertNotNull(value.get("name"));
+                    });
+            assertTrue(configuredTabs.containsAll(bundledTabs),
+                    "Workbench " + tier + " must include the bundled gun, ammo and attachment tabs");
+        }
+    }
+
+    @Test
+    void productionWorkbenchFilterPreservesRecipesAcrossGunPackSynchronization()
+            throws IOException {
+        RecipeFilter filter = CommonAssetsManager.GSON.fromJson(classpathJson(
+                "/data/taczweaponblueprints/recipe_filters/workbench_all.json"),
+                RecipeFilter.class);
+        List<ResourceLocation> candidates = List.of(
+                id("tacz:gun/ak47"),
+                id("tacz:ammo/556x45"),
+                id("tacz:ammo/762x39"),
+                id("tacz:attachments/scope_acog"),
+                id("thirdparty:gun/example"));
+
+        // TaCZ serializes parsed RecipeFilter objects when sending gun-pack
+        // data. An empty JSON object permits everything locally, but becomes
+        // an empty whitelist that rejects everything after deserialization.
+        for (int sync = 0; sync <= 2; sync++) {
+            assertEquals(candidates, filter.filter(candidates),
+                    "workbench candidates must survive local loading, login and reload sync " + sync);
+            filter = CommonAssetsManager.GSON.fromJson(
+                    CommonAssetsManager.GSON.toJson(filter), RecipeFilter.class);
+        }
+    }
+
+    @Test
+    void synchronizedWorkbenchFilterStillRequiresServerCraftingPermission()
+            throws IOException {
+        RecipeFilter serverFilter = CommonAssetsManager.GSON.fromJson(classpathJson(
+                "/data/taczweaponblueprints/recipe_filters/workbench_all.json"),
+                RecipeFilter.class);
+        RecipeFilter clientFilter = CommonAssetsManager.GSON.fromJson(
+                CommonAssetsManager.GSON.toJson(serverFilter), RecipeFilter.class);
+        ResourceLocation group = id("tacz:rifle");
+        ResourceLocation allowed = id("tacz:gun/ak47");
+        ResourceLocation blocked = id("tacz:gun/m4a1");
+        Map<ResourceLocation, List<ResourceLocation>> recipes = new LinkedHashMap<>();
+        recipes.put(group, new ArrayList<>(clientFilter.filter(List.of(allowed, blocked))));
+        Map<ResourceLocation, String> tabs = new LinkedHashMap<>();
+        tabs.put(group, "Rifles");
+
+        BlueprintRecipeFilter.Result result = BlueprintRecipeFilter.filterForCraftingAccessState(
+                recipes, tabs, Set.of(allowed.toString(), blocked.toString()),
+                true, Set.of(allowed.toString()), false, group);
+
+        assertEquals(List.of(allowed), result.selectedRecipeList(),
+                "a learned recipe denied by the server must remain hidden");
     }
 
     @Test

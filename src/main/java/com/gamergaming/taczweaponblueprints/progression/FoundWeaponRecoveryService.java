@@ -1,5 +1,6 @@
 package com.gamergaming.taczweaponblueprints.progression;
 
+import com.gamergaming.taczweaponblueprints.compat.magazines.InsertedMagazineGuard;
 import com.gamergaming.taczweaponblueprints.progression.currency.*;
 
 import java.util.LinkedHashSet;
@@ -80,6 +81,9 @@ public final class FoundWeaponRecoveryService {
         if (reverse == null || reverse.blueprintId().isEmpty()) {
             return Evaluation.failure(Status.INVALID_INPUT, reverse, 0, balance, pointCap);
         }
+        if (InsertedMagazineGuard.hasInsertedMagazine(input)) {
+            return Evaluation.failure(Status.MAGAZINE_INSERTED, reverse, 0, balance, pointCap);
+        }
         if (!reverse.ready()) {
             return Evaluation.failure(
                     Status.REVERSE_ENGINEERING_INELIGIBLE,
@@ -159,7 +163,8 @@ public final class FoundWeaponRecoveryService {
         Result result = AnalyzerAmmoRecovery.execute(player, transaction, playerData,
                 () -> ResearchCurrencyPayments.physical(transaction.currencyPolicy())
                         ? commitPhysical(player, evaluation, playerData, transaction) : commit(evaluation, playerData, transaction),
-                Result::successful, failure -> Result.failure(failure == AnalyzerAmmoRecovery.Failure.ROLLBACK_FAILED
+                Result::successful, failure -> Result.failure(failure == AnalyzerAmmoRecovery.Failure.MAGAZINE_INSERTED ? Status.MAGAZINE_INSERTED
+                        : failure == AnalyzerAmmoRecovery.Failure.ROLLBACK_FAILED
                         ? Status.ROLLBACK_FAILED : Status.TRANSACTION_FAILED, Optional.empty(), playerData.getResearchPoints()));
         if (!result.successful()) {
             return result;
@@ -197,6 +202,8 @@ public final class FoundWeaponRecoveryService {
             BlueprintReverseEngineeringService.WorkstationTransaction station) {
         var target = evaluation.reverse() == null ? Optional.<ResourceLocation>empty() : evaluation.reverse().blueprintId();
         if (!evaluation.ready()) return Result.failure(evaluation.status(), target, evaluation.pointBalance());
+        if (InsertedMagazineGuard.hasInsertedMagazine(station.physicalInput()))
+            return Result.failure(Status.MAGAZINE_INSERTED, target, evaluation.pointBalance());
         var reverse = evaluation.reverse();
         var context = ResearchCurrencyManual.context(player, data);
         var plan = ResearchCurrencyManual.prepareInput(context, player, station.physicalInput(), reverse.requiredInputCount(), reverse.cost().points(), ResearchCurrencyPayments.materials(reverse.cost()), evaluation.pointValue());
@@ -227,6 +234,9 @@ public final class FoundWeaponRecoveryService {
             return Result.failure(evaluation.status(), target, currentBalance);
         }
 
+        if (InsertedMagazineGuard.hasInsertedMagazine(transaction.physicalInput())) {
+            return Result.failure(Status.MAGAZINE_INSERTED, target, currentBalance);
+        }
         ResourceLocation blueprintId = target.orElseThrow();
         ItemStack originalInput;
         List<ItemStack> originalInventory;
@@ -358,7 +368,8 @@ public final class FoundWeaponRecoveryService {
         STALE_INPUT,
         TRANSACTION_FAILED,
         ROLLBACK_FAILED,
-        DELIVERY_FULL
+        DELIVERY_FULL,
+        MAGAZINE_INSERTED
     }
 
     public record Evaluation(

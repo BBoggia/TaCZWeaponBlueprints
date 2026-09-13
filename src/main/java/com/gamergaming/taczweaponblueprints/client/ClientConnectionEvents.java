@@ -28,6 +28,11 @@ public final class ClientConnectionEvents {
     private ClientConnectionEvents() {
     }
 
+    @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.LOWEST)
+    public static void onRecipesUpdated(net.minecraftforge.client.event.RecipesUpdatedEvent event) {
+        ClientBlueprintCatalog.refreshOpenGunSmithScreen();
+    }
+
     @SubscribeEvent
     public static void onItemTooltip(net.minecraftforge.event.entity.player.ItemTooltipEvent event) {
         var stack=event.getItemStack();

@@ -74,10 +74,10 @@ Add next connects new weapons in one action. Open it from the title or pause men
 | Component | Version |
 | --- | --- |
 | Minecraft | 1.20.1 |
-| Forge | 47.x; validated with 47.3.0 |
+| Forge | 47.x; built with 47.3.0 and runtime tested with 47.4.10 |
 | Timeless and Classics Zero | 1.1.8-hotfix (`[1.1.8,1.2)`) |
 | Fzzy Config | 0.7.6 for Forge (`[0.7.6,0.8)`) |
-| Kotlin for Forge | 4.11.x, required by Fzzy Config |
+| Kotlin for Forge | Required by Fzzy Config; tested with 4.12.0 |
 
 JEI 15.x and EMI 1.1.x are optional client-side integrations.
 
@@ -114,6 +114,11 @@ Server controls include:
 - Creative-mode cost bypass;
 - starting blueprints and progression exemptions; and
 - the active research profile.
+
+Optional [TaCZ Magazines support](docs/tacz-magazines-integration.md) adds empty
+magazine crafting at all three Workbench tiers and TaCZ's ammo Workbench.
+Servers can keep material-only access or link magazines to learned compatible
+weapons, with separate minimum tiers for basic and extended magazines.
 
 Each player also has Personal Settings for research confirmation, currency
 notifications, reduced motion, the optional background grid, and Compact,
@@ -202,7 +207,7 @@ last working data active.
 - [Research economy supply and balance](docs/research-economy-balance.md)
 - [Research currency integration API](docs/research-currency-integrations.md)
 - [Economy release handoff and playtest checklist](docs/research-economy-release-handoff.md)
-- [Current release notes](docs/releases/1.3.3.md)
+- [Current release notes](docs/releases/1.3.4.md)
 - [CurseForge description](docs/curseforge-description.md)
 - [Operations and migration](docs/operations-and-migration.md)
 - [Research Designer workspace](docs/research-designer-workspace.md)

@@ -31,6 +31,18 @@ class BlueprintRecyclerScreenModelTest {
     private static final ResourceLocation DATA = new ResourceLocation("minecraft:paper");
 
     @Test
+    void insertedMagazineBlocksBothActionsAndKeepsItsSpecificReason() {
+        var preview = physicalRecovery(BlueprintReverseEngineeringService.Status.MAGAZINE_INSERTED,
+                FoundWeaponRecoveryService.Status.MAGAZINE_INSERTED);
+        for (boolean pending : new boolean[]{false, true}) {
+            var model = BlueprintRecyclerScreenModel.from(preview, pending);
+            assertTrue(model.statusKey().endsWith("reverse.status.magazine_inserted"));
+            assertTrue(model.primaryAction().isEmpty());
+            assertTrue(model.secondaryAction().isEmpty());
+        }
+    }
+
+    @Test
     void emptyAndInvalidInputsNeverOfferActions() {
         BlueprintRecyclerScreenModel empty = BlueprintRecyclerScreenModel.from(
                 BlueprintRecyclerPreview.empty(4, 100), false);

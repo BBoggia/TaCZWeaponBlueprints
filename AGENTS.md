@@ -47,6 +47,10 @@ If this repository is checked out separately, apply the rules summarized here.
 - Verify public dependency and compatibility statements against build metadata
   and `META-INF/mods.toml`.
 
+## Branch names
+
+- Do not include `codex` in branch names.
+
 ## Commit examples
 
 ```text

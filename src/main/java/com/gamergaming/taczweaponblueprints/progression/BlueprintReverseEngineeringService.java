@@ -1,5 +1,6 @@
 package com.gamergaming.taczweaponblueprints.progression;
 
+import com.gamergaming.taczweaponblueprints.compat.magazines.InsertedMagazineGuard;
 import com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy;
 import com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPayments;
 
@@ -163,7 +164,8 @@ public final class BlueprintReverseEngineeringService {
                     : Optional.<com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable.Result>empty();
             return new Execution(result, outcome);
         }, execution -> execution.transaction().successful(), failure -> new Execution(
-                Result.failure(failure == AnalyzerAmmoRecovery.Failure.INVALID_AMMO ? Status.LOADED_GUN
+                Result.failure(failure == AnalyzerAmmoRecovery.Failure.MAGAZINE_INSERTED ? Status.MAGAZINE_INSERTED
+                        : failure == AnalyzerAmmoRecovery.Failure.INVALID_AMMO ? Status.LOADED_GUN
                         : failure == AnalyzerAmmoRecovery.Failure.ROLLBACK_FAILED ? Status.ROLLBACK_FAILED : Status.TRANSACTION_FAILED,
                         Optional.empty(), playerData.getResearchPoints()), Optional.empty()));
         Result result = committed.transaction();
@@ -359,6 +361,9 @@ public final class BlueprintReverseEngineeringService {
             return Result.failure(evaluation.status(), target, balance);
         }
 
+        if (InsertedMagazineGuard.hasInsertedMagazine(transaction.physicalInput())) {
+            return Result.failure(Status.MAGAZINE_INSERTED, target, balance);
+        }
         ResourceLocation blueprintId = target.orElseThrow();
         BlueprintReverseEngineeringPolicy policy = evaluation.base()
                 .reversePolicy().orElseThrow();
@@ -513,6 +518,7 @@ public final class BlueprintReverseEngineeringService {
             case PLAYER_DATA_UNAVAILABLE -> Status.PLAYER_DATA_UNAVAILABLE;
             case ALREADY_KNOWN -> Status.ALREADY_KNOWN;
             case LOADED_GUN -> Status.LOADED_GUN;
+            case MAGAZINE_INSERTED -> Status.MAGAZINE_INSERTED;
             case GUN_HAS_ATTACHMENTS -> Status.GUN_HAS_ATTACHMENTS;
             case MODIFIED_ITEM_NOT_ALLOWED -> Status.MODIFIED_ITEM_NOT_ALLOWED;
             case INSUFFICIENT_INPUT_COUNT -> Status.INSUFFICIENT_INPUT_COUNT;
@@ -549,7 +555,8 @@ public final class BlueprintReverseEngineeringService {
         STALE_INPUT,
         STALE_POLICY,
         TRANSACTION_FAILED,
-        ROLLBACK_FAILED
+        ROLLBACK_FAILED,
+        MAGAZINE_INSERTED
     }
 
     public record Evaluation(

@@ -1,4 +1,26 @@
 {
   "filter": "taczweaponblueprints:workbench_all",
-  "tabs": []
+  "tabs": [
+    {"id": "tacz:ammo", "name": "tacz.type.ammo.name", "icon": {"item": "tacz:ammo", "nbt": {"AmmoId": "tacz:762x39"}}},
+    {"id": "tacz:pd_cartridges", "name": "tacz.type.pd_cartridges.name", "icon": {"item": "tacz:ammo", "nbt": {"AmmoId": "tacz:9mm"}}},
+    {"id": "tacz:ifp_rifle_cartridges", "name": "tacz.type.ifp_rifle_cartridges.name", "icon": {"item": "tacz:ammo", "nbt": {"AmmoId": "tacz:556x45"}}},
+    {"id": "tacz:lc_specialized", "name": "tacz.type.lc_specialized.name", "icon": {"item": "tacz:ammo", "nbt": {"AmmoId": "tacz:50bmg"}}},
+    {"id": "tacz:explosives", "name": "tacz.type.explosives.name", "icon": {"item": "tacz:ammo", "nbt": {"AmmoId": "tacz:rpg_rocket"}}},
+    {"id": "tacz:shotgun_shells", "name": "tacz.type.shotgun_shells.name", "icon": {"item": "tacz:ammo", "nbt": {"AmmoId": "tacz:12g"}}},
+    {"id": "tacz:alternative_proj", "name": "tacz.type.alternative_proj.name", "icon": {"item": "minecraft:arrow"}},
+    {"id": "tacz:pistol", "name": "tacz.type.pistol.name", "icon": {"item": "tacz:modern_kinetic_gun", "nbt": {"GunId": "tacz:glock_17"}}},
+    {"id": "tacz:sniper", "name": "tacz.type.sniper.name", "icon": {"item": "tacz:modern_kinetic_gun", "nbt": {"GunId": "tacz:ai_awp"}}},
+    {"id": "tacz:rifle", "name": "tacz.type.rifle.name", "icon": {"item": "tacz:modern_kinetic_gun", "nbt": {"GunId": "tacz:ak47"}}},
+    {"id": "tacz:shotgun", "name": "tacz.type.shotgun.name", "icon": {"item": "tacz:modern_kinetic_gun", "nbt": {"GunId": "tacz:db_short"}}},
+    {"id": "tacz:smg", "name": "tacz.type.smg.name", "icon": {"item": "tacz:modern_kinetic_gun", "nbt": {"GunId": "tacz:hk_mp5a5"}}},
+    {"id": "tacz:rpg", "name": "tacz.type.rpg.name", "icon": {"item": "tacz:modern_kinetic_gun", "nbt": {"GunId": "tacz:rpg7"}}},
+    {"id": "tacz:mg", "name": "tacz.type.mg.name", "icon": {"item": "tacz:modern_kinetic_gun", "nbt": {"GunId": "tacz:m249"}}},
+    {"id": "tacz:misc", "name": "tacz.type.misc.name", "icon": {"item": "tacz:gun_smith_table"}},
+    {"id": "tacz:scope", "name": "tacz.type.scope.name", "icon": {"item": "tacz:attachment", "nbt": {"AttachmentId": "tacz:scope_acog_ta31"}}},
+    {"id": "tacz:muzzle", "name": "tacz.type.muzzle.name", "icon": {"item": "tacz:attachment", "nbt": {"AttachmentId": "tacz:muzzle_compensator_trident"}}},
+    {"id": "tacz:stock", "name": "tacz.type.stock.name", "icon": {"item": "tacz:attachment", "nbt": {"AttachmentId": "tacz:stock_militech_b5"}}},
+    {"id": "tacz:grip", "name": "tacz.type.grip.name", "icon": {"item": "tacz:attachment", "nbt": {"AttachmentId": "tacz:grip_magpul_afg_2"}}},
+    {"id": "tacz:extended_mag", "name": "tacz.type.extended_mag.name", "icon": {"item": "tacz:attachment", "nbt": {"AttachmentId": "tacz:extended_mag_3"}}},
+    {"id": "tacz:laser", "name": "tacz.type.laser.name", "icon": {"item": "tacz:attachment", "nbt": {"AttachmentId": "tacz:laser_compact"}}}
+  ]
 }

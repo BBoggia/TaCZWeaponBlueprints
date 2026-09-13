@@ -29,6 +29,29 @@ class BlueprintRecyclerPacketTest {
             new ResourceLocation("taczweaponblueprints:research_note");
 
     @Test
+    void insertedMagazinePreviewAndActionFeedbackRoundTrip() {
+        var preview = new BlueprintRecyclerPreview(BlueprintRecyclerPreview.InputKind.PHYSICAL_ITEM,
+                Optional.of(BLUEPRINT), 1, 0, 9, 20, Optional.empty(), Optional.empty(), 91L,
+                Optional.of(BLUEPRINT), 1, 4, true, true, false, true,
+                Optional.of(BlueprintReverseEngineeringService.Status.MAGAZINE_INSERTED), List.of(),
+                BlueprintRecyclerPreview.WeaponOrigin.LOOT_GENERATED, 0,
+                Optional.of(FoundWeaponRecoveryService.Status.MAGAZINE_INSERTED));
+        var buffer = buffer();
+        try {
+            new SyncBlueprintRecyclerPreviewPacket(9, preview).toBytes(buffer);
+            assertEquals(preview, new SyncBlueprintRecyclerPreviewPacket(buffer).preview());
+            for (var action : List.of(BlueprintRecyclerActionContract.Action.REVERSE_ENGINEER,
+                    BlueprintRecyclerActionContract.Action.RECOVER_POINTS)) {
+                buffer.clear();
+                var result = new BlueprintRecyclerActionContract.ActionResult(action, Optional.of(BLUEPRINT),
+                        BlueprintRecyclerActionContract.ResultCode.MAGAZINE_INSERTED).withStateToken(91L);
+                new BlueprintRecyclerActionResultPacket(9, 1, result).toBytes(buffer);
+                assertEquals(result, new BlueprintRecyclerActionResultPacket(buffer).result());
+            }
+        } finally { buffer.release(); }
+    }
+
+    @Test
     void dataAnalysisPreviewAndOutcomeRoundTripWithoutTargetLeakage() {
         var preview = new BlueprintRecyclerPreview(BlueprintRecyclerPreview.InputKind.DATA_ANALYSIS,
                 Optional.of(RESEARCH_NOTE), 3, 0, 8, 100, Optional.empty(),

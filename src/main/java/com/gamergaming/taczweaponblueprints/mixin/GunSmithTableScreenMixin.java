@@ -8,11 +8,14 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.spongepowered.asm.mixin.Final;
+import org.spongepowered.asm.mixin.Dynamic;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -20,6 +23,7 @@ import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.client.BlueprintRecipeFilter;
 import com.gamergaming.taczweaponblueprints.client.ClientCraftingAccessState;
 import com.gamergaming.taczweaponblueprints.client.IBlueprintRecipeScreen;
+import com.gamergaming.taczweaponblueprints.client.MagazineWorkbenchTabs;
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.network.CraftingAccessRequestPacket;
@@ -27,6 +31,8 @@ import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.tacz.guns.client.gui.GunSmithTableScreen;
 import com.tacz.guns.crafting.GunSmithTableRecipe;
 import com.tacz.guns.resource.pojo.data.block.TabConfig;
+import com.tacz.guns.resource.pojo.data.block.BlockData;
+import com.tacz.guns.resource.index.CommonBlockIndex;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -92,6 +98,25 @@ public abstract class GunSmithTableScreenMixin
     @Shadow(remap = false)
     private ResourceLocation selectedType;
 
+    @ModifyArg(method = "init", at = @At(value = "INVOKE",
+            target = "Lcom/tacz/guns/client/gui/components/GunPackList;<init>(Lnet/minecraft/client/Minecraft;IIIIILjava/util/Map;Lcom/tacz/guns/client/gui/GunSmithTableScreen;)V", remap = false),
+            index = 6, require = 1, allow = 1)
+    private Map<ResourceLocation, List<ResourceLocation>> taczweaponblueprints$magazineNamespace(
+            Map<ResourceLocation, List<ResourceLocation>> recipes) {
+        return MagazineWorkbenchTabs.namespaceScaffold(this.menu.getBlockId(), recipes);
+    }
+
+    @Dynamic("TaCZ 1.1.8 classifyRecipes block-index callback")
+    @SuppressWarnings("target")
+    @Redirect(method = "lambda$classifyRecipes$0(Lnet/minecraft/resources/ResourceLocation;Ljava/util/Map;Ljava/util/Map;Lcom/tacz/guns/resource/index/CommonBlockIndex;)V",
+            at = @At(value = "INVOKE", target = "Lcom/tacz/guns/resource/pojo/data/block/BlockData;getTabs()Ljava/util/List;", remap = false),
+            require = 1, allow = 1, remap = false)
+    private static List<TabConfig> taczweaponblueprints$magazineTabs(BlockData data,
+            ResourceLocation blockId, Map<ResourceLocation, List<ResourceLocation>> recipes,
+            Map<ResourceLocation, TabConfig> recipeKeys, CommonBlockIndex index) {
+        return MagazineWorkbenchTabs.forWorkbench(blockId, data.getTabs());
+    }
+
     @Override
     public void taczweaponblueprints$refreshRecipes() {
         // Drop the selected output immediately. The widget rebuild is deferred
@@ -102,7 +127,9 @@ public abstract class GunSmithTableScreenMixin
         this.taczweaponblueprints$recipeRefreshQueued = true;
     }
 
-    @Inject(method = "classifyRecipes", at = @At("RETURN"), remap = false)
+    // This native call follows classifyRecipes, including every add-on callback.
+    // Filtering here does not depend on ordering between injections at its RETURN.
+    @Inject(method = "updateSelectedRecipeAfterFiltering", at = @At("HEAD"), remap = false)
     private void filterRecipesByLearnedBlueprints(CallbackInfo ci) {
         boolean enabled = ModConfigs.BLUEPRINT.enableBlueprints.get();
         Set<String> learnedRecipes = taczweaponblueprints$getLearnedRecipes();
@@ -289,9 +316,16 @@ public abstract class GunSmithTableScreenMixin
             ClientCraftingAccessState.Snapshot access = ClientCraftingAccessState.snapshot(
                     menu.containerId, menu);
             boolean enabled = ModConfigs.BLUEPRINT.enableBlueprints.get();
+            LocalPlayer player = Minecraft.getInstance().player;
+            boolean heldGunMagazines = com.gamergaming.taczweaponblueprints.compat.magazines
+                    .MagazineCraftingAccess.AMMO_WORKBENCH.equals(this.menu.getBlockId())
+                    && MagazineWorkbenchTabs.supported(this.menu.getBlockId()) && player != null
+                    && player.getMainHandItem().getItem() instanceof com.tacz.guns.api.item.IGun;
             graphics.drawCenteredString(
                     font,
-                    Component.translatable(taczweaponblueprints$emptyStateKey(access, enabled)),
+                    Component.translatable(heldGunMagazines && access.availableForMode(enabled)
+                            ? "gui.taczweaponblueprints.gun_smith_table.no_compatible_magazines"
+                            : taczweaponblueprints$emptyStateKey(access, enabled)),
                     xPos,
                     yPos,
                     0xFF5555);
@@ -299,7 +333,10 @@ public abstract class GunSmithTableScreenMixin
                 graphics.drawCenteredString(
                         font,
                         Component.translatable(
-                                "gui.taczweaponblueprints.gun_smith_table.access_hint"),
+                                heldGunMagazines ? enabled
+                                        ? "gui.taczweaponblueprints.gun_smith_table.magazine_access_hint"
+                                        : "gui.taczweaponblueprints.gun_smith_table.magazine_filter_hint"
+                                        : "gui.taczweaponblueprints.gun_smith_table.access_hint"),
                         xPos,
                         yPos + font.lineHeight,
                         0xFF5555);

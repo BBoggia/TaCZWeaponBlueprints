@@ -1,5 +1,6 @@
 package com.gamergaming.taczweaponblueprints.progression;
 
+import com.gamergaming.taczweaponblueprints.compat.magazines.InsertedMagazineGuard;
 import java.util.*;
 import java.util.function.*;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
@@ -21,9 +22,10 @@ public final class AnalyzerAmmoRecovery {
     public record Plan(ResourceLocation ammoId, int count, ItemStack ammunition) {
         public List<ItemStack> stacks() { return count == 0 ? List.of() : split(ammunition, count); }
     }
-    enum Failure { INVALID_AMMO, TRANSACTION_FAILED, ROLLBACK_FAILED }
+    enum Failure { INVALID_AMMO, TRANSACTION_FAILED, ROLLBACK_FAILED, MAGAZINE_INSERTED }
 
     public static Optional<Plan> plan(ItemStack input) {
+        if (InsertedMagazineGuard.hasInsertedMagazine(input)) return Optional.empty();
         try {
             var copy = input.copy(); var gun = IGun.getIGunOrNull(copy);
             if (gun == null) return Optional.of(new Plan(null, 0, ItemStack.EMPTY));
@@ -69,6 +71,7 @@ public final class AnalyzerAmmoRecovery {
 
     static <T> T execute(ServerPlayer player, BlueprintReverseEngineeringService.WorkstationTransaction station,
             IPlayerRecipeData data, Supplier<T> action, Predicate<T> success, Function<Failure,T> failure) {
+        if (InsertedMagazineGuard.hasInsertedMagazine(station.physicalInput())) return failure.apply(Failure.MAGAZINE_INSERTED);
         var plan = plan(station.physicalInput());
         if (plan.isEmpty()) return failure.apply(Failure.INVALID_AMMO);
         if (plan.orElseThrow().count() == 0) return action.get();
@@ -106,6 +109,7 @@ public final class AnalyzerAmmoRecovery {
     interface Delivery { void give(List<ItemStack> stacks); void rollback(); }
     static <T> T execute(Plan plan, BlueprintReverseEngineeringService.WorkstationTransaction station,
             IPlayerRecipeData data, Supplier<T> action, Predicate<T> success, Function<Failure,T> failure, Delivery delivery) {
+        if (InsertedMagazineGuard.hasInsertedMagazine(station.physicalInput())) return failure.apply(Failure.MAGAZINE_INSERTED);
         var input = station.physicalInput().copy(); var output = station.outputStack().copy();
         var inventory = station.inventoryStacks().stream().map(ItemStack::copy).toList();
         var progression = data.serializeNBT().copy();

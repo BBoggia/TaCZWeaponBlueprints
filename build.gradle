@@ -36,7 +36,7 @@ def removeStaleModArchives = tasks.register('removeStaleModArchives') {
 // Deliberate changes must update runtime constants, release gates, and
 // migration documentation together.
 def certifiedAutomaticPlacementVersion = 'tacz-gun-placement-v13'
-def certifiedResearchTreeProtocol = '65'
+def certifiedResearchTreeProtocol = '66'
 def certifiedResearchTreeSceneLayout = 'branches-v2'
 def certifiedResearchTreeProtocolNumber = certifiedResearchTreeProtocol as int
 def certifiedResearchCatalogExportFormat = 22

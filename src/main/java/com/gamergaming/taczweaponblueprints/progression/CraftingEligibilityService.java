@@ -12,6 +12,12 @@ import java.util.TreeSet;
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
+import com.gamergaming.taczweaponblueprints.compat.magazines.MagazineCatalog;
+import com.gamergaming.taczweaponblueprints.compat.magazines.MagazineDescriptor;
+import com.gamergaming.taczweaponblueprints.compat.magazines.MagazineProgressionSettings;
+import com.gamergaming.taczweaponblueprints.item.BlueprintKind;
+import com.gamergaming.taczweaponblueprints.compat.magazines.MagazineCraftingAccess;
+import com.gamergaming.taczweaponblueprints.compat.magazines.TaCZMagazinesAdapter;
 import com.gamergaming.taczweaponblueprints.compat.tacz.TaCZWorkbenchMenuBridge;
 import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
@@ -52,12 +58,24 @@ public final class CraftingEligibilityService {
         boolean blueprintsEnabled = ModConfigs.BLUEPRINT.enableBlueprints.get();
         boolean nativeWorkbench = CraftingWorkbenchTierResolver
                 .isNativeCraftingWorkbench(menu.getBlockId());
+        boolean magazineRecipe = TaCZMagazinesAdapter.isGeneratedRecipe(requestedRecipeId);
         ResearchWorkbenchContext workbench = null;
-        if (blueprintsEnabled || nativeWorkbench) {
+        if (blueprintsEnabled || nativeWorkbench || magazineRecipe) {
             workbench = authenticatedWorkbench(player, menu);
             if (workbench == null) {
                 return Evaluation.blocked(Status.INVALID_WORKSTATION);
             }
+        }
+        if (magazineRecipe) {
+            var magazine = MagazineCraftingAccess.validatedRecipe(MagazineCatalog.INSTANCE.publication().catalog(),
+                    menu.getBlockId(), requestedRecipeId,
+                    id -> player.server.getRecipeManager().byKey(id).orElse(null),
+                    BlueprintDataManager.SERVER.catalogPublication().blueprints().size()).orElse(null);
+            if (magazine == null) return Evaluation.blocked(Status.UNKNOWN_RECIPE);
+            if (!blueprintsEnabled) return Evaluation.permitted();
+            var context = preparePolicyContext(player, workbench);
+            return context == null ? Evaluation.blocked(Status.POLICY_UNAVAILABLE)
+                    : magazineEvaluation(player, magazine, context);
         }
         if (!blueprintsEnabled) {
             return Evaluation.permitted();
@@ -85,7 +103,7 @@ public final class CraftingEligibilityService {
                 : evaluatePolicy(player, blueprintId, policyContext);
     }
 
-    /** Returns only already-known recipe IDs that this exact open menu may craft. */
+    /** Returns the learned, exempt, and permitted magazine recipes this exact menu may craft. */
     public static Snapshot snapshot(ServerPlayer player, GunSmithTableMenu menu) {
         if (player == null || menu == null || player.containerMenu != menu) {
             TaCZWeaponBlueprints.LOGGER.info(
@@ -170,6 +188,11 @@ public final class CraftingEligibilityService {
                 .filter(java.util.Objects::nonNull)
                 .forEach(exemptCandidates::add);
         candidates.addAll(exemptCandidates);
+        Set<ResourceLocation> magazineRecipes = MagazineCraftingAccess.allowedRecipes(
+                MagazineCatalog.INSTANCE.publication().catalog(), menu.getBlockId(),
+                id -> player.server.getRecipeManager().byKey(id).orElse(null), catalog.size(),
+                magazine -> magazineEvaluation(player, magazine, policyContext).status() == Status.ALLOWED);
+        candidates.addAll(magazineRecipes);
         if (candidates.isEmpty()) {
             logSnapshotDiagnostics(
                     player,
@@ -193,7 +216,8 @@ public final class CraftingEligibilityService {
         for (ResourceLocation recipeId : candidates) {
             ResourceLocation blueprintId = BlueprintDataManager.SERVER
                     .getBlueprintIdForRecipe(recipeId);
-            Evaluation evaluation = blueprintId == null
+            Evaluation evaluation = magazineRecipes.contains(recipeId)
+                    ? Evaluation.permitted() : blueprintId == null
                     ? Evaluation.blocked(Status.UNKNOWN_RECIPE)
                     : evaluatePolicy(player, blueprintId, policyContext);
             if (evaluation.status() == Status.POLICY_UNAVAILABLE
@@ -254,6 +278,21 @@ public final class CraftingEligibilityService {
         return context != null && CraftingWorkbenchAuthority.valid(player, menu, context)
                 ? context
                 : null;
+    }
+
+    private static Evaluation magazineEvaluation(ServerPlayer player, MagazineDescriptor magazine, PolicyContext context) {
+        var playerData = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElse(null);
+        var settings = ModConfigs.BLUEPRINT.magazineSettings();
+        Status result = settings.evaluate(magazine,
+                MagazineProgressionSettings.workstationTier(context.workbench().workstationId(), context.config()),
+                context.bypassTier(), id -> {
+                    var gun = context.catalog().get(id);
+                    return gun != null && gun.getKind() == BlueprintKind.GUN
+                            && !ModConfigs.BLUEPRINT.isItemBlacklisted(id.toString())
+                            && (BlueprintProgressionAccess.isProgressionExempt(id)
+                                    || learned(playerData, id, gun.getRecipeId()));
+                });
+        return result == Status.ALLOWED ? Evaluation.permitted() : Evaluation.blocked(result);
     }
 
     private static boolean learned(

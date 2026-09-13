@@ -5,6 +5,8 @@ import java.util.Optional;
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.compat.tacz.TaCZWorkbenchMenuBridge;
+import com.gamergaming.taczweaponblueprints.compat.magazines.MagazineCatalog;
+import com.gamergaming.taczweaponblueprints.compat.magazines.MagazineCraftingAccess;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.item.PhysicalWeaponProvenance;
 import com.gamergaming.taczweaponblueprints.progression.CraftingEligibilityService;
@@ -28,6 +30,21 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(GunSmithTableMenu.class)
 public abstract class GunSmithTableMenuMixin implements TaCZWorkbenchMenuBridge {
+
+    @Dynamic("TaCZ 1.1.8 getRecipe tab-membership callback")
+    @SuppressWarnings("target")
+    @Inject(method = "lambda$getRecipe$2(Lcom/tacz/guns/crafting/GunSmithTableRecipe;Lcom/tacz/guns/resource/index/CommonBlockIndex;)Ljava/lang/Boolean;",
+            at = @At("RETURN"), cancellable = true, require = 1, allow = 1, remap = false)
+    private static void taczweaponblueprints$acceptMagazineTab(GunSmithTableRecipe recipe,
+            com.tacz.guns.resource.index.CommonBlockIndex index,
+            org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable<Boolean> cir) {
+        // This callback only tests tab membership. Native recipe filters remain intact,
+        // and the doCraft HEAD authority checks the exact physical supported Workbench.
+        if (Boolean.TRUE.equals(cir.getReturnValue())
+                && MagazineCraftingAccess.hasMagazineTab(MagazineCatalog.INSTANCE.publication().catalog(), recipe)) {
+            cir.setReturnValue(false);
+        }
+    }
 
     @Unique
     private ResearchWorkbenchContext taczweaponblueprints$workbenchContext;

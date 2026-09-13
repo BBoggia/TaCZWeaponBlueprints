@@ -6,6 +6,29 @@ documentation.
 
 ## Unreleased
 
+## 1.3.4 - 2026-09-13
+
+- The Blueprint Analyzer now asks players to eject inserted TaCZ Magazines
+  magazines, including empty ones, before analyzing a gun or recovering its
+  value. Clients and servers must update together.
+- Added optional TaCZ Magazines 0.2.0-Beta crafting support at all three
+  Workbench tiers and TaCZ's ammo Workbench. Empty magazines use the add-on's
+  recipe costs without requiring a learned magazine blueprint; recipe changes
+  refresh open Workbenches after reload.
+- Added optional weapon-linked magazine access and separate minimum Workbench
+  tiers for basic and extended magazines. Material-only crafting remains the
+  default. Servers can keep basic magazines available for found or traded guns
+  while requiring learned compatible weapons for extended variants.
+- Fixed magazine recipe synchronization for players already online when discovery
+  recovers during another player's login. Empty magazine lists now also point
+  players toward weapon learning and Workbench requirements when progression is enabled.
+- Fixed learned recipes disappearing from all three crafting Workbench tiers
+  on dedicated servers. Workbench recipe filters now retain their behavior
+  during multiplayer synchronization; blueprint and progression requirements
+  still apply.
+- Added TaCZ's ammo categories to all three crafting Workbench tiers so learned
+  ammo recipes can appear alongside guns and attachments.
+
 ## 1.3.3 - 2026-09-11
 
 These notes include the 1.3.2 changes for players updating directly from 1.3.1.

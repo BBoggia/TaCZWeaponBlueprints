@@ -35,7 +35,7 @@ public final class BlueprintRecipeFilter {
         recipes.values().forEach(recipeIds ->
                 recipeIds.removeIf(recipeId -> !learnedRecipes.contains(recipeId.toString())
                         || !craftingAllowedRecipes.contains(recipeId.toString())));
-        recipes.entrySet().removeIf(entry -> entry.getValue().isEmpty());
+        recipes.entrySet().removeIf(entry -> entry.getValue().isEmpty() || !recipeKeys.containsKey(entry.getKey()));
         recipeKeys.keySet().removeIf(recipeType -> !recipes.containsKey(recipeType));
 
         ResourceLocation visibleType = selectedType;
@@ -69,8 +69,12 @@ public final class BlueprintRecipeFilter {
                 || craftingAllowedRecipes == null) {
             throw new IllegalArgumentException("crafting recipe filter inputs cannot be null");
         }
+        // Optional held-gun filters may publish an empty recipe group before its
+        // tab metadata has reloaded. TaCZ indexes tabs using recipes.size(), so
+        // both maps must agree even while access is pending or unrestricted.
+        recipes.keySet().removeIf(type -> !recipeKeys.containsKey(type));
+        recipeKeys.keySet().removeIf(type -> !recipes.containsKey(type));
         if (!craftingAccessReceived) {
-            recipeKeys.keySet().removeIf(recipeType -> !recipes.containsKey(recipeType));
             ResourceLocation scaffoldType = selectedType;
             if (scaffoldType == null || !recipeKeys.containsKey(scaffoldType)) {
                 scaffoldType = recipeKeys.keySet().stream().findFirst().orElse(null);

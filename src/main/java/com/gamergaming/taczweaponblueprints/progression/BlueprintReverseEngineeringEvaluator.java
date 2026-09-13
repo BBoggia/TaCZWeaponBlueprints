@@ -1,5 +1,6 @@
 package com.gamergaming.taczweaponblueprints.progression;
 
+import com.gamergaming.taczweaponblueprints.compat.magazines.InsertedMagazineGuard;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
@@ -108,7 +109,9 @@ public final class BlueprintReverseEngineeringEvaluator {
         int requiredCount = requiredInputCount(physical.data().orElseThrow(), reversePolicy);
 
         Status status;
-        if (!researchPolicy.available()) {
+        if (InsertedMagazineGuard.hasInsertedMagazine(stack)) {
+            status = Status.MAGAZINE_INSERTED;
+        } else if (!researchPolicy.available()) {
             status = Status.CONTENT_UNAVAILABLE;
         } else if (researchPolicy.blocked()) {
             status = Status.BLOCKED;
@@ -182,7 +185,8 @@ public final class BlueprintReverseEngineeringEvaluator {
         GUN_HAS_ATTACHMENTS,
         MODIFIED_ITEM_NOT_ALLOWED,
         INSUFFICIENT_INPUT_COUNT,
-        READY
+        READY,
+        MAGAZINE_INSERTED
     }
 
     public record Evaluation(

@@ -36,7 +36,7 @@ class ResearchRouteReviewPacketTest {
             request().toBytes(b);b.writeVarInt(Integer.MAX_VALUE);
             assertThrows(IllegalArgumentException.class,()->new ResearchRouteReviewResultPacket(b));
         } finally {b.release();}
-        assertEquals("65",NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("66",NetworkHandler.PROTOCOL_VERSION);
     }
     @Test void oversizedMaterialPayloadIsRejectedBeforeAllocation() {
         var b=new FriendlyByteBuf(Unpooled.buffer());try {
