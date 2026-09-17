@@ -13,6 +13,10 @@ final class ResearchPreviewCommitGuard {
             boolean directPathResearch,
             ResearchSelectionPreview current,
             Optional<ResearchRouteFingerprint> requested) {
+        if (current == null || current.blueprintId().isEmpty()
+                || current.pathPlanningState() != ResearchSelectionPreview.PathPlanningState.NONE) {
+            return false;
+        }
         if (!directPathResearch) {
             // CREATE_BLUEPRINT has no route fingerprint. Reject a fingerprint
             // from a DIRECT_LEARN preview so a live result-mode change cannot

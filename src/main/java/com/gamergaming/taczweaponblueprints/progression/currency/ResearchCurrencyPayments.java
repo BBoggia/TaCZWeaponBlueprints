@@ -23,6 +23,40 @@ public final class ResearchCurrencyPayments {
     public static List<ResearchIngredientPlanner.Requirement> materials(BlueprintResearchCost cost) {
         return cost.ingredients().stream().map(i -> new ResearchIngredientPlanner.Requirement(i.items(), i.tag(), i.count())).toList();
     }
+
+    /**
+     * Counts materials after reserving physical currency on inventory copies.
+     * Currency shortages are reported by the balance, not by falsifying the
+     * material-completion flag. Reserving even a partial debit prevents the same
+     * units being displayed as available for both costs. Currency matches only
+     * item identity, so choosing its slots cannot remove a distinct material alternative.
+     */
+    public static Optional<ResearchIngredientPlanner.Allocation> previewMaterials(
+            ResearchCurrencyPolicy policy, List<ItemStack> inventory, int debit,
+            List<ResearchIngredientPlanner.Requirement> materials) {
+        if (debit < 0 || inventory == null || inventory.stream().anyMatch(java.util.Objects::isNull)) {
+            return Optional.empty();
+        }
+        if (!physical(policy)) {
+            return ResearchIngredientPlanner.allocation(inventory, materials);
+        }
+        var unit = policy.physicalUnit();
+        if (unit.isEmpty() || inventory.size() != ResearchCurrencyState.INVENTORY_SLOTS) {
+            return Optional.empty();
+        }
+        var remaining = inventory.stream().map(ItemStack::copy).toList();
+        int toReserve = debit;
+        for (ItemStack stack : remaining) {
+            if (toReserve == 0) break;
+            if (!stack.isEmpty() && stack.is(unit.orElseThrow().getItem())) {
+                int reserved = Math.min(toReserve, stack.getCount());
+                stack.shrink(reserved);
+                toReserve -= reserved;
+            }
+        }
+        return ResearchIngredientPlanner.allocation(remaining, materials);
+    }
+
     public static Optional<ResearchIngredientPlanner.Plan> plan(ResearchCurrencyPolicy policy,
             List<ItemStack> inventory, IPlayerRecipeData data, int debit, BlueprintResearchCost cost) {
         return plan(policy, inventory, data, debit, materials(cost));

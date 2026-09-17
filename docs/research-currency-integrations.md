@@ -14,6 +14,12 @@ Bundled physical supply comes from exploration chests and player kills; see [eco
 
 Single research, whole-path research, deterministic reverse engineering, and tiered weapon analysis combine physical currency and material requirements in one allocation. Only main inventory and hotbar slots can pay. Ordinary fragment discounts and per-node Creative bypass apply before allocation. Inventory changes affect readiness without selecting a different prerequisite route.
 
+Research Bench previews report currency and material shortages separately.
+Material counts reserve the physical currency cost first, so an item used for
+both costs cannot be counted twice. The reservation uses inventory copies;
+selecting research never consumes items. The server checks the combined payment
+again before completing research.
+
 Blueprint recycling, direct found-weapon recovery, completed ordinary fragment returns, and legacy Research Data redemption deliver physical rewards through the Analyzer output first, then main inventory. Incompatible output blocks the action even if inventory has space. The complete result must fit; manual actions do not drop overflow. Data bulk redemption commits complete items one at a time and stops before the next item cannot fit. An inventory-only deterministic turn-in can use the slot freed by its consumed input.
 
 Found-weapon recovery reserves its complete gross payment before adding its reward. Found/crafted origin rules, known-target restrictions, blueprint protection, and weapon outcome probabilities are unchanged. New rewards never finance their own initial price. Physical analysis fragments still reconstruct blueprints and do not become currency.
@@ -39,7 +45,7 @@ Banked mode retains cancellable `ResearchPointAwardEvent.Pre` and committed `Pos
 
 ## Synchronization and compatibility
 
-Protocol 62 requires matching client and server versions. A separate currency packet carries the server policy revision and active main-inventory amount. Saved RP synchronization remains separate. Reward feedback identifies the actual delivered denomination. Research route fingerprints include currency identity and revision; Analyzer state tokens include the currency configuration through the progression snapshot and the independent Research Data settings.
+Protocol 66 requires matching client and server versions. A separate currency packet carries the server policy revision and active main-inventory amount. Saved RP synchronization remains separate. Reward feedback identifies the actual delivered denomination. Research route fingerprints include currency identity and revision; Analyzer state tokens include the currency configuration through the progression snapshot and the independent Research Data settings.
 
 The existing player save shape remains version 5, and configuration remains readable from version 4. Existing Analyzer preview/result fields and enum ordinals are preserved, with new failure values appended. Numeric fields retaining `point` names in those compatibility records describe the active currency on live physical-mode paths. Client currency labels use the connection’s server publication. Inventory changes refresh active balances and affordability without requiring a new selection. Disconnect clears the publication, and older policy revisions cannot replace a newer one. The currency packet also carries the independent Data mode and default eligibility settings.
 

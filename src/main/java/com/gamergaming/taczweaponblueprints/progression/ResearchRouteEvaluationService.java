@@ -125,16 +125,16 @@ public final class ResearchRouteEvaluationService {
                 }
             }
 
-            ResearchIngredientPlanner.Allocation allocation = path == null
-                    ? ResearchIngredientPlanner.allocation(
-                            request.inventoryStacks(), requirements).orElseThrow()
-                    : ResearchPathUnlockPlanner.allocateInventory(
-                            path, request.inventoryStacks()).orElseThrow().allocation();
             var currency = request.fingerprintContext().progressionConfig().currencyPolicy();
             int availableCurrency = ResearchCurrencyPayments.balance(currency, request.inventoryStacks(), request.playerData());
-            boolean ingredientsSatisfied = bypass || (allocation.complete()
-                    && (!ResearchCurrencyPayments.physical(currency)
-                        || ResearchCurrencyPayments.plan(currency, request.inventoryStacks(), request.playerData(), pointCost, requirements).isPresent()));
+            ResearchIngredientPlanner.Allocation allocation = (bypass
+                    ? ResearchIngredientPlanner.allocation(request.inventoryStacks(), requirements)
+                    : ResearchCurrencyPayments.previewMaterials(
+                            currency, request.inventoryStacks(), pointCost, requirements)).orElseThrow();
+            boolean ingredientsSatisfied = bypass || allocation.complete();
+            boolean paymentReady = bypass || (availableCurrency >= pointCost && ingredientsSatisfied
+                    && ResearchCurrencyPayments.plan(currency, request.inventoryStacks(),
+                            request.playerData(), pointCost, requirements).isPresent());
             boolean transactionCapacityAvailable = true;
             if (policyEligible && path != null) {
                 transactionCapacityAvailable = pathCapacityAvailable(
@@ -163,7 +163,7 @@ public final class ResearchRouteEvaluationService {
                 }
             }
             boolean ready = policyEligible
-                    && (bypass || availableCurrency >= pointCost)
+                    && paymentReady
                     && ingredientsSatisfied
                     && transactionCapacityAvailable;
             return Optional.of(new Evaluation(

@@ -6,6 +6,19 @@ documentation.
 
 ## Unreleased
 
+## 1.3.5 - 2026-09-16
+
+### Fixed
+
+- Fixed a Research Bench server crash when selecting research with enough
+  materials but insufficient Scrap, including Scrap-only costs and paths with
+  learned prerequisites.
+- Research previews now reserve physical currency before counting materials
+  when the same item is used for both costs. Unexpected preview failures disable
+  the selection safely instead of crashing the server.
+- Research that creates a physical blueprint now previews the configured
+  currency balance instead of treating saved Research Points as available Scrap.
+
 ## 1.3.4 - 2026-09-13
 
 - The Blueprint Analyzer now asks players to eject inserted TaCZ Magazines

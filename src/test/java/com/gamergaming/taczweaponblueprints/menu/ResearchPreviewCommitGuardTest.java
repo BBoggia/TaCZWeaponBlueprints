@@ -36,9 +36,22 @@ class ResearchPreviewCommitGuardTest {
     @Test
     void legacySingleBlueprintResearchDoesNotRequireAPathFingerprint() {
         assertTrue(ResearchPreviewCommitGuard.accepts(
-                false, ResearchSelectionPreview.EMPTY, Optional.empty()));
+                false, preview(null), Optional.empty()));
         assertFalse(ResearchPreviewCommitGuard.accepts(
-                false, ResearchSelectionPreview.EMPTY, Optional.of(CURRENT)));
+                false, preview(null), Optional.of(CURRENT)));
+    }
+
+    @Test
+    void missingOrFailedPreviewsCannotAuthorizeEitherResultMode() {
+        for (boolean direct : new boolean[]{false, true}) {
+            assertFalse(ResearchPreviewCommitGuard.accepts(direct, null, Optional.empty()));
+            assertFalse(ResearchPreviewCommitGuard.accepts(
+                    direct, ResearchSelectionPreview.EMPTY, Optional.empty()));
+            assertFalse(ResearchPreviewCommitGuard.accepts(direct,
+                    ResearchSelectionPreviewFactory.unavailable(
+                            new ResourceLocation("test:target"), ResearchCostMode.POINTS_ONLY),
+                    Optional.of(CURRENT)));
+        }
     }
 
     private static ResearchSelectionPreview preview(ResearchRouteFingerprint fingerprint) {
@@ -56,6 +69,6 @@ class ResearchPreviewCommitGuardTest {
                 0,
                 ResearchSelectionPreview.PathPlanningState.NONE,
                 ResearchCostMode.POINTS_AND_ITEMS,
-                Optional.of(fingerprint));
+                Optional.ofNullable(fingerprint));
     }
 }

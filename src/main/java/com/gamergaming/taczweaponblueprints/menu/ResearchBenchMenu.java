@@ -15,7 +15,6 @@ import com.gamergaming.taczweaponblueprints.progression.BlueprintResearchService
 import com.gamergaming.taczweaponblueprints.progression.ResearchAffordabilitySnapshot;
 import com.gamergaming.taczweaponblueprints.progression.ResearchCostMode;
 import com.gamergaming.taczweaponblueprints.progression.ResearchGuidanceSnapshot;
-import com.gamergaming.taczweaponblueprints.progression.ResearchIngredientPlanner;
 import com.gamergaming.taczweaponblueprints.progression.ResearchPathAuthority;
 import com.gamergaming.taczweaponblueprints.progression.ResearchPathUnlockPlanner;
 import com.gamergaming.taczweaponblueprints.progression.ResearchRouteEvaluationService;
@@ -557,71 +556,39 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
     }
 
     private PreparedPreview buildPreparedPreview(ServerPlayer player) {
-        boolean directPathResearch = ModConfigs.BLUEPRINT.progressionSnapshot()
-                .treeResearchResultMode().learnsDirectly();
-        if (selectedBlueprint == null) {
-            return PreparedPreview.empty(directPathResearch);
-        }
-        PreparedRouteEvaluation prepared = prepareRouteEvaluation(
-                player, selectedBlueprint).orElse(null);
-        if (prepared == null) {
-            return PreparedPreview.empty(directPathResearch);
-        }
-        ResearchRouteEvaluationService.Evaluation evaluation = prepared.evaluation();
-        List<ResearchIngredientPlanner.Requirement> combinedIngredients =
-                evaluation.requirements();
-        ResearchIngredientPlanner.Allocation inventoryAllocation = evaluation.allocation();
-        List<ResearchSelectionPreview.IngredientPreview> ingredients = new ArrayList<>();
-        for (int ingredientIndex = 0;
-                ingredientIndex < Math.min(
-                        combinedIngredients.size(),
-                        com.gamergaming.taczweaponblueprints.resource.research
-                                .BlueprintResearchCost.MAX_INGREDIENT_TYPES);
-                ingredientIndex++) {
-            ResearchIngredientPlanner.Requirement ingredient =
-                    combinedIngredients.get(ingredientIndex);
-            List<ResourceLocation> items = ingredient.items();
-            if (items.isEmpty() && ingredient.tag().isPresent()) {
-                items = ForgeRegistries.ITEMS.tags()
-                        .getTag(TagKey.create(
-                                Registries.ITEM, ingredient.tag().orElseThrow()))
-                        .stream()
-                        .map(ForgeRegistries.ITEMS::getKey)
-                        .filter(java.util.Objects::nonNull)
-                        .limit(BlueprintResearchIngredient.MAX_ITEMS)
-                        .toList();
+        boolean directPathResearch = true;
+        try {
+            directPathResearch = ModConfigs.BLUEPRINT.progressionSnapshot()
+                    .treeResearchResultMode().learnsDirectly();
+            if (selectedBlueprint == null) {
+                return PreparedPreview.empty(directPathResearch);
             }
-            ingredients.add(new ResearchSelectionPreview.IngredientPreview(
-                    items,
-                    ingredient.tag(),
-                    ingredient.count(),
-                    inventoryAllocation.allocatedForIngredient(ingredientIndex)));
+            PreparedRouteEvaluation prepared = prepareRouteEvaluation(
+                    player, selectedBlueprint).orElse(null);
+            if (prepared == null) {
+                return new PreparedPreview(ResearchSelectionPreviewFactory.unavailable(
+                        selectedBlueprint, null), directPathResearch, Optional.empty());
+            }
+            var evaluation = prepared.evaluation();
+            var next = ResearchSelectionPreviewFactory.create(
+                    evaluation,
+                    prepared.costMode(),
+                    tag -> ForgeRegistries.ITEMS.tags()
+                            .getTag(TagKey.create(Registries.ITEM, tag)).stream()
+                            .map(ForgeRegistries.ITEMS::getKey)
+                            .filter(java.util.Objects::nonNull)
+                            .limit(BlueprintResearchIngredient.MAX_ITEMS)
+                            .toList(),
+                    () -> progressionPreview(selectedBlueprint, evaluation,
+                            prepared.playerData(), prepared.workbenchContext()));
+            return new PreparedPreview(next, directPathResearch,
+                    next.pathPlanningState() == ResearchSelectionPreview.PathPlanningState.NONE
+                            ? evaluation.path() : Optional.empty());
+        } catch (RuntimeException exception) {
+            ResearchRouteFailureReporter.report("Bench preview preparation", exception);
+            return new PreparedPreview(ResearchSelectionPreviewFactory.unavailable(
+                    selectedBlueprint, null), directPathResearch, Optional.empty());
         }
-        return new PreparedPreview(
-                new ResearchSelectionPreview(
-                        Optional.of(selectedBlueprint),
-                        evaluation.pointCost(),
-                        evaluation.pointBalance(),
-                        evaluation.policyEligible(),
-                        evaluation.ingredientsSatisfied(),
-                        evaluation.transactionCapacityAvailable(),
-                        evaluation.ready(),
-                        evaluation.costBypassed(),
-                        ingredients,
-                        evaluation.unlockCount(),
-                        combinedIngredients.size(),
-                        ResearchSelectionPreview.PathPlanningState.fromStatus(
-                                evaluation.planningStatus()),
-                        prepared.costMode(),
-                        evaluation.routeFingerprint(),
-                        evaluation.accessSummary(),
-                        progressionPreview(
-                                selectedBlueprint,
-                                evaluation,
-                                prepared.playerData(),
-                                prepared.workbenchContext())),
-                directPathResearch,
-                evaluation.path());
     }
 
     private ResearchSelectionProgressionPreview progressionPreview(
@@ -792,7 +759,9 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
                                             ? ResearchPathAuthority.authored()
                                             : planningAccess.authority(),
                                     planningAccess == null
-                                            ? ResearchRouteFingerprint.Context.EMPTY
+                                            ? new ResearchRouteFingerprint.Context(0L, 0L, 0L, config,
+                                                    com.gamergaming.taczweaponblueprints.progression
+                                                            .BlueprintAccessConfigSnapshot.EMPTY)
                                             : planningAccess.fingerprintContext(),
                                     id -> BlueprintLearningService.targetFromCatalog(
                                             BlueprintDataManager.SERVER, id),
