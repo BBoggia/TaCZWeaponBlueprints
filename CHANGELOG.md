@@ -49,11 +49,27 @@ documentation.
 - Kept rapid mouse-wheel and zoom-button input from being lost during camera animation.
 - Made Page Up and Page Down select visible search results. Enter no longer opens a result hidden by scrolling.
 - Added Previous/Next material pages to research details so long paths expose every requirement and its allocated inventory count.
+- Fixed research-path review rejecting a matching preview when viewing later
+  material pages, including paths with more than 32 material types.
 - Restored native magazine crafting when blueprint progression is disabled, including catalogs beyond the restricted recipe-list limit.
 
 ### Compatibility
 
 - Updated the network protocol to 69 for material-page previews, purchased-weapon Analyzer origins, and villager trade status. Clients and servers must update together.
+
+### Included from 1.3.5
+
+Players updating from 1.3.4 or earlier also receive these fixes, originally
+released in 1.3.5:
+
+- Fixed the Research Bench server crash when a player has the required materials
+  but insufficient Scrap, including Scrap-only research and paths with already
+  learned prerequisites.
+- Fixed research previews counting the same physical items toward both currency
+  and material costs. Unexpected preview failures disable the selection safely
+  instead of crashing the server.
+- Fixed physical-blueprint research showing saved Research Points as the
+  available balance when the server requires Scrap or another physical currency.
 
 ## 1.3.5 - 2026-09-16
 
