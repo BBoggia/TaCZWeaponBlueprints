@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "profession": "taczweaponblueprints:ballistics_researcher",
+  "level": 2,
+  "slot": "taczweaponblueprints:ballistics_researcher/fragments_2",
+  "role": "core",
+  "output": {
+    "kind": "analysis_fragments",
+    "count": 2,
+    "tier": 1,
+    "selection": "study_t1",
+    "candidates": [
+      {
+        "id": "tacz:m1911",
+        "weight": 1
+      },
+      {
+        "id": "tacz:glock_17",
+        "weight": 1
+      },
+      {
+        "id": "tacz:cz75",
+        "weight": 1
+      },
+      {
+        "id": "tacz:p320",
+        "weight": 1
+      },
+      {
+        "id": "tacz:m9a4",
+        "weight": 1
+      },
+      {
+        "id": "tacz:hk_mk23",
+        "weight": 1
+      },
+      {
+        "id": "tacz:uzi",
+        "weight": 1
+      },
+      {
+        "id": "tacz:hk_mp5a5",
+        "weight": 1
+      },
+      {
+        "id": "tacz:ump45",
+        "weight": 1
+      },
+      {
+        "id": "tacz:db_short",
+        "weight": 1
+      },
+      {
+        "id": "tacz:db_long",
+        "weight": 1
+      },
+      {
+        "id": "tacz:m870",
+        "weight": 1
+      }
+    ]
+  },
+  "price": {
+    "item": "currency",
+    "count": 8
+  },
+  "uses": 3,
+  "xp": 5,
+  "demand_multiplier": 0.05,
+  "fallbacks": [
+    "taczweaponblueprints:ballistics_researcher/fallback_data_2"
+  ]
+}

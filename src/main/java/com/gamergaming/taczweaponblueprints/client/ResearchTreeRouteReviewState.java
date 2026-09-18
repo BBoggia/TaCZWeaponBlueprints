@@ -63,9 +63,12 @@ final class ResearchTreeRouteReviewState {
                         != (snapshot.missingMaterialTypes() == 0)) return false;
         if (snapshot.materials().size() != Math.min(snapshot.totalMaterialTypes(),
                 ResearchGuidanceSnapshot.MAX_MATERIAL_PROGRESS)) return false;
-        int common = Math.min(snapshot.materials().size(), preview.ingredients().size());
+        // Guidance carries only a bounded prefix; a material page may start
+        // inside that prefix, straddle it, or lie entirely beyond it.
+        int offset = preview.ingredientOffset();
+        int common = Math.min(Math.max(0, snapshot.materials().size() - offset), preview.ingredients().size());
         for (int i = 0; i < common; i++) {
-            var route = snapshot.materials().get(i); var quote = preview.ingredients().get(i);
+            var route = snapshot.materials().get(offset + i); var quote = preview.ingredients().get(i);
             // The preview expands tags into example items for icons; guidance retains the tag itself.
             if (!route.tag().equals(quote.tag()) || route.tag().isEmpty() && !route.items().equals(quote.items())
                     || route.required() != quote.required() || route.allocated() != quote.inventoryAvailable()) return false;

@@ -43,7 +43,8 @@ public record BlueprintOnboardingPlan(List<Step> steps, List<HelpEntry> earningH
                                 ? State.COMPLETE
                                 : State.LATER),
                         new Step(mode == com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPolicy.Behavior.ANALYSIS ? "analyzer_analysis"
-                                : mode == com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPolicy.Behavior.DISABLED ? "analyzer_disabled" : "analyzer", State.OPTIONAL)),
+                                : mode == com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPolicy.Behavior.DISABLED ? "analyzer_disabled" : "analyzer", State.OPTIONAL),
+                        new Step("villagers", State.OPTIONAL)),
                 stableHelp.entries());
     }
 

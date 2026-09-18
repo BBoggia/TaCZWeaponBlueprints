@@ -183,7 +183,7 @@ class BlueprintAnalyzerPolicyTest {
         var snapshot = snapshot(profileJson(), Map.of());
         var exported = BlueprintAnalyzerDiagnostics.export(context(snapshot), PROFILE, TARGET, FoundWeaponRecoveryMode.PROTECTED_BLUEPRINT_ONLY);
         assertTrue(exported.get("gameplay_enabled").getAsBoolean());
-        assertEquals(9, exported.getAsJsonArray("quotes").size());
+        assertEquals(12, exported.getAsJsonArray("quotes").size());
         var first = exported.getAsJsonArray("quotes").get(0).getAsJsonObject();
         assertEquals(0.3, first.get("blueprint_probability").getAsDouble());
         assertEquals(10, first.get("fragment_threshold").getAsInt());
@@ -203,7 +203,7 @@ class BlueprintAnalyzerPolicyTest {
         assertTrue(BlueprintResearchProfile.CODEC.parse(JsonOps.INSTANCE, json).error().isPresent());
     }
 
-    @Test void canonicalCodecRoundTripAndCatalogExportRetainAllNinePairings() {
+    @Test void canonicalCodecRoundTripAndCatalogExportRetainAllTwelveOriginPairings() {
         var profile = decode(BlueprintResearchProfile.CODEC, profileJson());
         var encoded = BlueprintResearchProfile.CODEC.encodeStart(JsonOps.INSTANCE, profile).getOrThrow(false, ignored -> {});
         assertEquals(profile, decode(BlueprintResearchProfile.CODEC, encoded));
@@ -211,7 +211,7 @@ class BlueprintAnalyzerPolicyTest {
         var exported = JsonParser.parseString(BlueprintResearchCatalogExporter.export(snapshot, CATALOG, PROFILE)).getAsJsonObject();
         assertEquals(22, exported.get("format").getAsInt());
         var analyzer = exported.getAsJsonArray("entries").get(0).getAsJsonObject().getAsJsonObject("analyzer_policy");
-        assertEquals(9, analyzer.getAsJsonArray("quotes").size());
+        assertEquals(12, analyzer.getAsJsonArray("quotes").size());
         assertEquals("protected_mode_baseline", analyzer.get("recovery_mode_scope").getAsString());
     }
 
@@ -248,6 +248,36 @@ class BlueprintAnalyzerPolicyTest {
         }
         json.getAsJsonObject("analyzer").add("allowed_origins", JsonParser.parseString("[\"found\"]"));
         assertDoesNotThrow(() -> snapshot(json, Map.of(id("test:found"), rule("{\"attempt\":{\"output_recyclable\":true}}"))));
+    }
+
+    @Test void explicitOldOriginListsDoNotAcquireTradedWeaponsInEitherMode() {
+        for(String mode:List.of("tiered","legacy")) {
+            var json=profileJson();var analyzer=json.getAsJsonObject("analyzer");
+            analyzer.add("allowed_origins",JsonParser.parseString("[\"found\",\"crafted\",\"unknown\"]"));
+            if(mode.equals("legacy")){analyzer.addProperty("mode",mode);analyzer.remove("tiers");analyzer.remove("reconstruction");}
+            var old=snapshot(json,Map.of());
+            assertEquals(AnalyzerPolicyQuote.Status.ORIGIN_DISABLED,BlueprintAnalyzerPolicyResolver.resolve(context(old),PROFILE,TARGET,
+                    AnalyzerTier.TIER_3,BlueprintAnalyzerPolicy.Origin.TRADED,FoundWeaponRecoveryMode.PLAYER_CHOICE).status());
+            analyzer.getAsJsonArray("allowed_origins").add("traded");var current=snapshot(json,Map.of());
+            var quote=BlueprintAnalyzerPolicyResolver.resolve(context(current),PROFILE,TARGET,AnalyzerTier.TIER_3,
+                    BlueprintAnalyzerPolicy.Origin.TRADED,FoundWeaponRecoveryMode.PLAYER_CHOICE);
+            assertEquals(mode.equals("legacy")?AnalyzerPolicyQuote.Status.LEGACY:AnalyzerPolicyQuote.Status.CONFIGURED,quote.status());
+            assertFalse(quote.attempt().orElseThrow().outputRecyclable());
+            assertEquals(PhysicalBlueprintLearningMode.REQUIRE_TREE_PREREQUISITES,quote.attempt().orElseThrow().physicalBlueprintLearningMode());
+        }
+    }
+    @Test void tradedRestrictionsPreserveCostsDisabledLearningAndExplicitExpertOverrides() {
+        var legacy=new BlueprintReverseEngineeringPolicy(true,Optional.of(2),new BlueprintResearchCost(7,List.of()),false,true,
+                PhysicalBlueprintLearningMode.BYPASS_TREE_PREREQUISITES,true,false);
+        var protectedPolicy=legacy.forTradedWeapon();assertEquals(legacy.cost(),protectedPolicy.cost());assertEquals(legacy.inputCount(),protectedPolicy.inputCount());
+        assertFalse(protectedPolicy.outputRecyclable());assertEquals(PhysicalBlueprintLearningMode.REQUIRE_TREE_PREREQUISITES,protectedPolicy.physicalBlueprintLearningMode());
+        var disabled=new BlueprintReverseEngineeringPolicy(true,Optional.empty(),legacy.cost(),false,true,PhysicalBlueprintLearningMode.DISABLED,false,false);
+        assertEquals(PhysicalBlueprintLearningMode.DISABLED,disabled.forTradedWeapon().physicalBlueprintLearningMode());
+        var expert=new BlueprintReverseEngineeringPolicy(true,legacy.inputCount(),legacy.cost(),true,true,PhysicalBlueprintLearningMode.BYPASS_TREE_PREREQUISITES,true,true);
+        assertSame(expert,expert.forTradedWeapon());
+        var json=profileJson();json.getAsJsonObject("analyzer").add("allowed_origins",JsonParser.parseString("[\"traded\"]"));
+        assertThrows(IllegalArgumentException.class,()->snapshot(json,Map.of(id("test:unsafe"),rule("{\"attempt\":{\"output_recyclable\":true}}"))));
+        assertDoesNotThrow(()->snapshot(json,Map.of(id("test:expert"),rule("{\"attempt\":{\"output_recyclable\":true,\"expert_allow_economy_loop\":true}}"))));
     }
 
     static JsonObject profileJson() {

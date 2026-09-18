@@ -35,6 +35,7 @@ public class TaCZWeaponBlueprints {
 
         ModBlocks.register(modEventBus);
         ModItems.register(modEventBus);
+        com.gamergaming.taczweaponblueprints.init.ModVillagers.register(modEventBus);
         ModMenus.register(modEventBus);
         ModCreativeTabs.register(modEventBus);
         ModLootModifier.register(modEventBus);

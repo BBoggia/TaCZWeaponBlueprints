@@ -438,7 +438,8 @@ public record BlueprintRecyclerPreview(
     public enum WeaponOrigin {
         UNKNOWN,
         CRAFTED_SURVIVAL,
-        LOOT_GENERATED;
+        LOOT_GENERATED,
+        TRADED;
 
         public static WeaponOrigin from(ItemStack stack) {
             return PhysicalWeaponProvenance.from(stack)
@@ -446,6 +447,7 @@ public record BlueprintRecyclerPreview(
                     .map(origin -> switch (origin) {
                         case CRAFTED_SURVIVAL -> CRAFTED_SURVIVAL;
                         case LOOT_GENERATED -> LOOT_GENERATED;
+                        case TRADED -> TRADED;
                     })
                     .orElse(UNKNOWN);
         }

@@ -29,7 +29,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public class NetworkHandler {
-    public static final String PROTOCOL_VERSION = "66";
+    public static final String PROTOCOL_VERSION = "69";
     // A random per-server seed prevents a partial chunk set from an earlier
     // connection being mistaken for a new sync after reconnecting.
     private static final AtomicLong SYNC_SEQUENCE =
@@ -192,6 +192,12 @@ public class NetworkHandler {
         INSTANCE.registerMessage(id++, DesignerCaptureReplyPacket.class,
                 DesignerCaptureReplyPacket::toBytes, DesignerCaptureReplyPacket::new,
                 DesignerCaptureReplyPacket::handle, java.util.Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        INSTANCE.registerMessage(id++, ResearchMaterialPageRequestPacket.class,
+                ResearchMaterialPageRequestPacket::toBytes, ResearchMaterialPageRequestPacket::new,
+                ResearchMaterialPageRequestPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        INSTANCE.registerMessage(id++, SyncVillagerTradeStatusPacket.class,
+                SyncVillagerTradeStatusPacket::toBytes, SyncVillagerTradeStatusPacket::new,
+                SyncVillagerTradeStatusPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     public static void syncBalancePreset(

@@ -32,6 +32,7 @@ do not remove release guards to obtain a successful certification report.
 | Delayed replies, disconnect, partial publications | `ResearchTreeFeedbackStateTest`, `ClientResearchStateTest`, publication packet suites |
 | Inspector navigation, scrolling and camera | `ResearchTreeInspectorTest`, `ResearchTreeCameraInputTest` |
 | Search editing, no matches and recovery | `ResearchTreeSearchControllerTest` |
+| Full material list, page bounds and allocated counts | `ResearchMaterialPagePacketTest`, `ResearchSelectionCurrencyPreviewTest`, `ResearchTreeInspectorCostsTest` |
 | Detail levels, labels and connector emphasis | `ResearchTreeReadabilityTest`, `ResearchTreeSceneMigrationTest` |
 | Minimap coverage, placement and captured dragging | `ResearchTreeMinimapTest` |
 | Bounded artwork work and reload cancellation | `ResearchTreeArtPreparationTest` |
@@ -45,6 +46,12 @@ keyboard search, no matches, fractional scrolling, help, minimap dragging,
 resource reload, and close/reopen. Exercise 320×240 GUI pixels, 419 and 420 GUI
 pixels of width, ordinary desktop sizes, and long names. Distinguish logical GUI
 size from framebuffer resolution when selecting display and GUI scale settings.
+
+In portable research, verify that the Journal and branch-label buttons have
+separate hit targets. Search a large result set, press Page Down then Enter,
+and verify that the selected result was visible. Test a path with more than six
+material types: browse all pages by mouse and keyboard, change inventory, and
+confirm that the Have counts and whole-purchase readiness update together.
 
 For fault injection, record whether a publication, response, inventory change,
 or failure message was injected rather than produced by ordinary gameplay.

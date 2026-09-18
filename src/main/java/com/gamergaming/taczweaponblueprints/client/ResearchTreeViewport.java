@@ -66,7 +66,7 @@ public final class ResearchTreeViewport {
         validateFinite(wheelDelta, x); validateFinite(y, 0);
         if (wheelDelta == 0) return;
         double anchorX = canvasX(x), anchorY = canvasY(y);
-        cancelAnimation();
+        if (zoomAnchor == null) cancelAnimation();
         zoomAnchor = new ZoomAnchor(anchorX, anchorY, x, y);
         targetScale = nextZoomScale(wheelDelta, true);
         targetPanX = anchorX - x / targetScale; targetPanY = anchorY - y / targetScale;
@@ -183,7 +183,7 @@ public final class ResearchTreeViewport {
         }
         double anchorX = canvasX(viewportX);
         double anchorY = canvasY(viewportY);
-        cancelAnimation();
+        if (zoomAnchor == null) cancelAnimation();
         zoomAnchor = new ZoomAnchor(anchorX, anchorY, viewportX, viewportY);
         targetScale = nextZoomScale(wheelDelta, false);
         targetPanX = anchorX - viewportX / targetScale;

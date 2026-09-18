@@ -81,6 +81,12 @@ public final class ResearchPointAwardDataManager
                 summary.targetBindingCount());
     }
 
+    /** Republish committed data and diagnostics after an aborted reload. */
+    public void restoreAfterAbortedReload(ResearchPointAwardSnapshot committed, Optional<Failure> failure) {
+        apply(Prepared.success(committed), null, net.minecraft.util.profiling.InactiveProfiler.INSTANCE);
+        lastFailure = failure;
+    }
+
     public ResearchPointAwardSnapshot snapshot() {
         return publication.snapshot();
     }

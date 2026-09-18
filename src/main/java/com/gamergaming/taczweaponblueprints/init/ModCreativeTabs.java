@@ -98,6 +98,8 @@ public class ModCreativeTabs {
             event.accept(ModItems.SCRAP.get());
         }
         if (event.getTabKey() == net.minecraft.world.item.CreativeModeTabs.FUNCTIONAL_BLOCKS) {
+            event.accept(ModItems.GUNSMITH_STATION.get());
+            event.accept(ModItems.BALLISTICS_DESK.get());
             event.accept(ModItems.RESEARCH_BENCH_ITEM.get());
             event.accept(ModItems.ADVANCED_RESEARCH_BENCH_ITEM.get());
             event.accept(ModItems.EXPERIMENTAL_RESEARCH_BENCH_ITEM.get());

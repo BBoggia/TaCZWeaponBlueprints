@@ -6,6 +6,55 @@ documentation.
 
 ## Unreleased
 
+## 1.3.6 - 2026-09-18
+
+### Added
+
+- Added the Gunsmith and Ballistics Researcher professions, each with five
+  trading levels and craftable job sites that work in existing worlds.
+- Gunsmith stock includes entry weapons, standard Expert rifles, and costlier
+  Master rifles, with prices based on their TaCZ recipes.
+- Added distinct Gunsmith Station and Ballistics Desk models, recipe-book
+  unlocks, and job-site tooltips. Gunsmiths wear charcoal workwear with copper
+  accents and ear defenders; Ballistics Researchers wear blue coats and an
+  inspection lens. Both outfits include zombie variants.
+- Added village-trading guidance and examples for custom gun pools, physical currencies, and a strict economy without material purchases.
+- Added availability and research-restriction hints to native villager trades,
+  including empty-magazine family and capacity information.
+- Villager trades now wait for settled reload data, preserve unchanged menus
+  when another player joins, and retain unavailable addon items across saves.
+  Disabled professions cannot be newly assigned; existing professions remain.
+- Purchased villager weapons now retain their origin through transfers and use protected, prerequisite-bound analysis rewards. They cannot recover currency as found loot.
+- Added opt-in protected blueprint trades and conservative checks for legacy Research Data exchanges. Currency changes update material payouts without replenishing stock.
+- Added versioned villager trade definitions, server-side economy settings, and
+  `/gg villager_trades` inspection/export commands for pack authors. Bundled
+  Gunsmith and Ballistics Researcher tables support native trading. See
+  [villager trading](docs/villager-trading.md).
+- Added persistent Gunsmith gun/ammo choices and Ballistics Researcher study
+  targets across leveling, restocking, world reloads, and curing. Gunsmiths add
+  compatible basic magazines when supported TaCZ Magazines content is available.
+- Saved villager offers now suspend when their content or required supplies
+  become unavailable. Price changes preserve spent stock and selected items.
+
+### Fixed
+
+- Getting Started guidance includes villager trading and scrolls with the mouse wheel or Page Up/Page Down on small screens.
+- Trade hints wrap on smaller screens and display readable magazine and ammo names. Empty custom-villager stock explains that no trades are available under the current server rules.
+- Villager trades recover after an aborted datapack reload without consuming held payment or replacing saved stock, including failures from late synchronization handlers.
+- Disabled trade fallbacks no longer expose their descendants through that branch.
+- Ballistics Researcher stock now selects compatible shared study targets from available fallback trades, including when a preferred attachment cannot be stocked.
+- Custom fallback guns now receive automatic matching magazine support.
+- Villager currency settings accept the same namespaced ID lengths as research currency settings, including saved trade stock.
+- Separated the portable Tech Tree's Journal button from the branch-label toggle.
+- Kept rapid mouse-wheel and zoom-button input from being lost during camera animation.
+- Made Page Up and Page Down select visible search results. Enter no longer opens a result hidden by scrolling.
+- Added Previous/Next material pages to research details so long paths expose every requirement and its allocated inventory count.
+- Restored native magazine crafting when blueprint progression is disabled, including catalogs beyond the restricted recipe-list limit.
+
+### Compatibility
+
+- Updated the network protocol to 69 for material-page previews, purchased-weapon Analyzer origins, and villager trade status. Clients and servers must update together.
+
 ## 1.3.5 - 2026-09-16
 
 ### Fixed

@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "profession": "taczweaponblueprints:gunsmith",
+  "level": 3,
+  "slot": "taczweaponblueprints:gunsmith/basic_attachment",
+  "role": "core",
+  "output": {
+    "kind": "attachment",
+    "count": 1,
+    "tier": 0,
+    "selection": "stocked",
+    "candidates": [
+      {
+        "id": "tacz:sight_t1",
+        "weight": 1
+      },
+      {
+        "id": "tacz:sight_sro",
+        "weight": 1
+      },
+      {
+        "id": "tacz:sight_srs_02",
+        "weight": 1
+      },
+      {
+        "id": "tacz:grip_rk6",
+        "weight": 1
+      },
+      {
+        "id": "tacz:oem_stock_light",
+        "weight": 1
+      },
+      {
+        "id": "tacz:laser_compact",
+        "weight": 1
+      }
+    ]
+  },
+  "price": {
+    "item": "currency",
+    "count": 12
+  },
+  "uses": 3,
+  "xp": 10,
+  "demand_multiplier": 0.05,
+  "secondary": {
+    "item": "minecraft:iron_ingot",
+    "count": 2
+  },
+  "fallbacks": [
+    "taczweaponblueprints:gunsmith/fallback_ammo_3"
+  ]
+}

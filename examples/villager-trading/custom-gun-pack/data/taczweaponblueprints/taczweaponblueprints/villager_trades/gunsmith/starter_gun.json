@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "profession": "taczweaponblueprints:gunsmith",
+  "level": 2,
+  "slot": "taczweaponblueprints:gunsmith/starter_gun",
+  "role": "core",
+  "output": {
+    "kind": "gun",
+    "count": 1,
+    "tier": 1,
+    "selection": "starter",
+    "candidates": [
+      {
+        "id": "exampleguns:field_carbine",
+        "weight": 1
+      }
+    ]
+  },
+  "price": {
+    "item": "currency",
+    "count": 32
+  },
+  "uses": 2,
+  "xp": 5,
+  "demand_multiplier": 0.05,
+  "secondary": {
+    "item": "minecraft:iron_ingot",
+    "count": 6
+  },
+  "fallbacks": [
+    "taczweaponblueprints:gunsmith/fallback_ammo_2"
+  ]
+}

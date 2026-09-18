@@ -96,7 +96,7 @@ class AnalyzerPresetTest {
     @Test void realCatalogExportFeedsReportAndPreservesSelectedCosts() throws Exception {
         var catalog=JsonParser.parseString(BlueprintResearchCatalogExporter.export(overrides(),CATALOG,PROFILE)).getAsJsonObject();
         var report=AnalyzerBalanceReport.create(catalog,Optional.empty());
-        assertEquals(18,report.getAsJsonArray("rows").size());
+        assertEquals(24,report.getAsJsonArray("rows").size());
         var row=report.getAsJsonArray("rows").asList().stream().map(JsonElement::getAsJsonObject)
                 .filter(r->r.get("blueprint").getAsString().equals(AK.toString()) && r.getAsJsonObject("quote").get("analyzer_tier").getAsString().equals("tier_2")
                         && r.getAsJsonObject("quote").get("origin").getAsString().equals("found")).findFirst().orElseThrow();

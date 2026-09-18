@@ -6,157 +6,118 @@ system: find weapon blueprints, collect Scrap, analyze recovered guns, and work
 through a Tech Tree toward the weapons you want.
 
 Learning a blueprint permanently unlocks its matching recipe for your player.
-Your knowledge stays with you through death, dimension changes, logout, and
-server restarts. Crafting can also require an appropriate Workbench level or
-other progression requirements set by the server.
+Knowledge stays with you through death, dimension changes, logout, and server
+restarts. Crafting can also require a Workbench level or other server-defined
+progression requirements.
 
 ## Explore, Research, and Craft
 
-- **Find blueprints while exploring.** Configurable world loot rewards you with
-  blueprints, Scrap, and Research Data. Use a blueprint to learn its recipe, or
-  recycle supported duplicates at a Blueprint Analyzer.
-- **Spend physical Scrap.** Scrap is the default research currency. Carry it to
-  pay research costs, trade it with other players, or save it in storage. It
-  follows normal inventory death drops. Servers can use banked Research Points
-  (RP) instead.
-- **Plan your next weapon.** Browse a searchable Tech Tree with distinct
-  branches, weapon artwork, pan and zoom, keyboard navigation, and an interactive
-  minimap. Track a goal and its required resources, or use Affordable Now to find
-  research within reach.
-- **See what you need.** Click a blueprint to open its details. A Resource / Have /
-  Required table compares your currency and materials with the full purchase
-  cost. Follow prerequisite links to inspect earlier blueprints, then use Back
-  to return to your target.
-- **Research a whole path.** Select a locked weapon and use Path to review the
-  shortest valid route included in its purchase, with the required blueprints,
-  currency, and materials. Buy the route together when you meet its requirements;
-  a failed purchase does not consume a partial payment.
-- **Build better stations.** Three Research Bench tiers support research
-  progression, while three crafting Workbench levels open TaCZ's native crafting
-  screen. Research and crafting requirements are configured separately. Every
-  station tier has a direct crafting recipe and its own model.
+- **Find blueprints while exploring.** Configurable loot rewards you with
+  blueprints, Scrap, and Research Data. Learn recipes from blueprints or recycle
+  supported duplicates at a Blueprint Analyzer.
+- **Collect physical Scrap.** Earn it through exploration and player kills,
+  carry it to pay research costs, or trade it with other players. Scrap follows
+  normal inventory death drops. Servers can choose banked Research Points (RP).
+- **Plan your next weapon.** Browse a searchable Tech Tree with weapon artwork,
+  branches, pan, zoom, keyboard navigation, and an interactive minimap. Track a
+  target and its requirements, or filter to research you can afford.
+- **See the full cost.** Select a blueprint to compare the resources you have
+  with those needed for its prerequisite path. Review and buy a whole path
+  together; a failed purchase does not consume a partial payment.
+- **Build better stations.** Three Research Bench tiers support research, and
+  three crafting Workbench levels open TaCZ's native crafting screen. Each
+  station tier has its own recipe and model. Servers configure research and
+  crafting requirements separately.
 - **Keep a Blueprint Journal.** Review discoveries, learned recipes, recent
-  unlocks, and completion. Getting Started guidance explains the progression
-  loop and the server's available ways to earn research currency.
+  unlocks, and completion. Getting Started guidance explains progression and
+  the server's available ways to earn research currency.
 
-Servers can also choose a single Research Bench or enable **Portable Research**
-to open the Tech Tree through the Journal / Research key. Costs and other
-progression requirements still apply. Crafting Workbench tiers stay independent.
-
-Toggle branch labels, click a visible
-branch title to frame it, or use View in the details panel to focus your blueprint
-or branch. Weapon artwork expands when in-node names are hidden, and earlier
-prerequisites have a lighter highlight than immediate requirements. The details
-panel adapts to smaller screens while keeping purchase controls available.
+Servers can use a single Research Bench or enable **Portable Research** through
+the Journal / Research key. Costs and other progression requirements still apply.
+Toggle branch labels or use the details panel to focus the tree on a blueprint
+or branch. The panel adapts to smaller screens while keeping purchase controls
+available.
 
 ## Analyze Weapons and Research Data
 
-Bring supported weapons to a **Blueprint Analyzer** to recover research rewards.
-The Basic, Advanced, and Experimental Analyzers use both the weapon's tier and
-the station's tier to determine the result: a full blueprint, matching Blueprint
-Fragments, or a configured chance of no reward.
+Bring supported equipment to a **Blueprint Analyzer** to recover research
+rewards. The Basic, Advanced, and Experimental Analyzers compare weapon and
+station tiers to determine blueprint or fragment rewards. Higher-tier weapon
+attempts can produce nothing; same-tier and lower-tier attempts produce a
+blueprint or fragments. The screen shows outcomes, costs, and saved progress.
+Single Analyzer mode lets the basic station handle all weapon tiers under each
+weapon's same-tier rules.
 
-Prefer one Analyzer? **Single Analyzer** mode lets the basic station handle all
-weapon tiers using each weapon's same-tier reward rules. A separate setting
-chooses Research Data reward strength without changing its target pools.
+Research Data supplies another route to blueprints. By default, **Research
+Notes** target Tier 1 weapons, **Research Reports** target Tiers 1–2, and
+**Research Dossiers** target Tiers 1–3. Higher Analyzer tiers improve Data
+outcomes. Archive matching analysis fragments to reconstruct a blueprint;
+already learned targets can still produce duplicate rewards.
 
-With the default tiered rules, weapons at or below the Analyzer's tier always
-produce a blueprint or fragments. Attempting a higher-tier weapon can produce
-nothing. Better Analyzers improve the odds for lower-tier weapons. The screen
-shows the possible outcomes, costs, and saved fragment progress before you act.
-Loaded weapons return their ammo to your inventory after a successful analysis
-or recycling action, with overflow dropped at your feet.
+Ordinary fragments found through loot have separate progress and settings.
+Completed sets can discount research, reconstruct a blueprint, or return currency
+for a learned weapon. Servers also control weapon recovery and recycling.
+Successful processing returns loaded ammo, with overflow dropped at your feet.
 
-Research Data offers another way to build your collection. By default:
+## Establish Village Traders
 
-- **Research Notes** target Tier 1 weapons.
-- **Research Reports** target Tier 1 or Tier 2 weapons.
-- **Research Dossiers** target Tier 1, Tier 2, or Tier 3 weapons.
+Place a **Gunsmith Station** or **Ballistics Desk** near an unemployed adult
+villager. The **Gunsmith** sells selected guns, matching ammo, and attachments.
+With supported TaCZ Magazines content, a gun that needs a magazine also has a
+matching empty basic-magazine offer at the same level.
 
-Reports and Dossiers can also produce a full blueprint, and higher-tier
-Analyzers improve fragment quantities and blueprint chances. Archive matching
-analysis fragments to complete a set and reconstruct a blueprint. Already
-learned weapons can still be selected by default, so duplicate rewards remain
-possible.
+The **Ballistics Researcher** sells Research Data and targeted analysis fragments.
+Later fragment bundles continue the villager's study targets. Bring those
+supplies to the Blueprint Analyzer. Buying a gun or research item does not
+learn a recipe automatically; protected reconstructed blueprints respect
+prerequisites and cannot be recycled for currency under the default rules.
 
-Ordinary fragments found through blueprint loot have separate settings and
-progress. Depending on the server's rules, completed sets can discount matching
-research, reconstruct a blueprint, or return currency for a learned weapon.
-Servers can also configure weapon recovery and recycling, including whether
-crafted guns can be processed.
+Both professions use the familiar trading screen and five villager levels.
+Products stay selected through restocking; stock is shared between players.
+They accept physical research currency, or Emeralds in banked RP mode. Pack
+authors can change stock and currency or disable material purchases. More
+villagers multiply renewable supply. Craftable job sites work in existing worlds.
 
-## Create Your Own Tech Trees
+## Design and Configure Progression
 
-**Research Designer** lets you build and share custom Tech Trees in game. Open it
-from the title or pause menu, with `/researchdesigner`, or through an assigned
-Controls key.
+**Research Designer** lets you build custom Tech Trees in game. Copy the server's
+tree or start an empty project, add weapons, connect paths, and edit costs and
+prerequisites. Test with simulated progress, export an installable datapack, or
+share an editable project. Open it from the title or pause menu,
+`/researchdesigner`, or an assigned Controls key. Capturing server data requires
+operator permission level 2; local editing does not.
 
-Copy the server's tree or start an empty project from its weapon catalog. Add
-weapons, connect paths, organize branches, and edit costs and prerequisites.
-Undo/Redo and recovery saves support editing as you go.
+Configure loot, starting blueprints, discovery visibility, progression exemptions,
+and separate research and crafting tiers. Datapacks can change tree branches,
+requirements, Analyzer rewards, fragments, Data pools, and villager trades.
+Progression Gates support advancements, Bench tiers, and custom milestones.
+The automatic tree adapts to compatible TaCZ catalogs; pack authors can instead
+select exact weapons and optionally enable ammo or attachment research.
+See the [operations guide](https://github.com/BBoggia/TaCZWeaponBlueprints/blob/main/docs/operations-and-migration.md).
 
-Test with simulated player progress, export an installable datapack, or share an
-editable project bundle. Capturing server data requires operator permission
-level 2. Local editing and imports remain available without it; operators
-control which exported trees become active.
+With **TaCZ Magazines 0.2.0-Beta**, craft empty magazines at the three Workbench
+levels or TaCZ's ammo Workbench. Servers can require learned compatible weapons
+and minimum Workbench levels. Eject inserted magazines before analyzing a gun.
 
 ## Getting Started
 
-1. Install the mod and its required dependencies on the client and server.
-2. Explore configured loot locations for blueprints, Scrap, and Research Data.
-3. Use a blueprint to learn a recipe, then check your Blueprint Journal.
-4. Craft a Research Bench to browse and purchase research. Use the appropriate
-   crafting Workbench level to make your learned weapons.
-5. Build a Blueprint Analyzer to process Research Data, analyze supported guns,
-   archive fragments, and recycle supported duplicates.
-
-Allow two adjacent blocks of space for a Blueprint Analyzer. Either half opens
-it. Optional JEI and EMI integrations explain items and stations without
-revealing hidden research targets.
-
-## Servers and Modpacks
-
-Configure loot, costs, starting blueprints, discovery visibility, progression
-exemptions, and separate research and crafting tiers. Progression Gates can
-require advancements, Research Bench tiers, or custom server milestones.
-Compatible TaCZ content-pack workstations can receive their own crafting levels.
-
-Datapacks can change prerequisites, ingredients, branches, Analyzer rewards,
-fragment requirements, and Research Data target pools. Loot and gameplay currency
-awards have independent controls. See the
-[operations guide](https://github.com/BBoggia/TaCZWeaponBlueprints/blob/main/docs/operations-and-migration.md)
-for pack-author settings.
-
-The automatic Tech Tree adapts to compatible TaCZ weapon catalogs. Pack authors
-can also create trees containing selected weapons or enable optional ammo and
-attachment research.
-
-With **TaCZ Magazines 0.2.0-Beta** installed, craft empty magazines at the three
-Workbench levels or TaCZ's ammo Workbench using the add-on's material costs.
-Servers can link magazine access to learned compatible weapons and set minimum
-Workbench levels for basic and extended magazines. Basic magazines can remain
-available for found or traded guns. Eject any inserted magazine before using
-the gun at a Blueprint Analyzer.
+1. Install matching mod versions on the client and server, with required dependencies.
+2. Explore for blueprints, Scrap, and Data; use blueprints to learn recipes.
+3. Open the Journal, then craft a Research Bench and the appropriate crafting Workbench.
+4. Build an Analyzer to process equipment and Data or archive fragments. Leave
+   two adjacent blocks of space; either half opens it.
+5. Establish village traders for equipment and research supplies.
 
 ## Requirements
 
-- **Minecraft 1.20.1** with **Forge 47.x**; built with Forge 47.3.0.
-- **Timeless and Classics Zero (TaCZ) 1.1.8 or later in the 1.1 series**;
-  development testing uses 1.1.8-hotfix.
-- **Fzzy Config 0.7.6 or later in the 0.7 series**, with its required dependencies,
-  including Kotlin for Forge.
-- **Java 17.** JEI 15.x and EMI 1.1.x are optional client-side integrations.
+Requires **Minecraft 1.20.1**, **Forge 47.x**, **TaCZ 1.1.8 or later in the 1.1
+series**, **Fzzy Config 0.7.6 or later in the 0.7 series** with Kotlin for Forge,
+and **Java 17**. Built with Forge 47.3.0; development uses TaCZ 1.1.8-hotfix.
+JEI 15.x and EMI 1.1.x are optional; follow their own compatibility requirements
+when installing both.
 
-Install matching versions of [TaCZ] Weapon Research & Blueprints on every client
-and the server, with only one version in each `mods` folder. Unlock and crafting
-checks are server-authoritative.
-
-Back up existing worlds before updating. Supported player data migrates while
-preserving learned blueprints, discoveries, fragment archives, and saved RP.
-Changing currency modes never automatically turns saved RP into items. See the
-[currency migration guide](https://github.com/BBoggia/TaCZWeaponBlueprints/blob/main/docs/research-currency-migration.md)
-for keeping the banked economy or withdrawing saved RP into physical currency.
-
-For help, [report an issue](https://github.com/BBoggia/TaCZWeaponBlueprints/issues)
-with your mod and dependency versions, installed TaCZ content packs, and the
-relevant `latest.log`.
+Back up worlds before updating. Supported migration preserves learned recipes,
+discoveries, fragment archives, and saved RP. Changing currency modes does not
+turn RP into items automatically; see the [currency migration guide](https://github.com/BBoggia/TaCZWeaponBlueprints/blob/main/docs/research-currency-migration.md).
+[Report issues](https://github.com/BBoggia/TaCZWeaponBlueprints/issues) with mod and
+dependency versions, installed content packs, and the relevant `latest.log`.

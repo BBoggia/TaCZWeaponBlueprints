@@ -30,6 +30,13 @@ class MagazineCraftingAccessTest {
         Bootstrap.bootStrap();
     }
 
+    @Test void semanticCaptureDetectsCompatibilityWithoutStackIdentityNoise() {
+        var first=capture(recipe());var copy=capture(recipe());assertTrue(MagazineCatalog.sameContent(first,copy));
+        var old=first.families().values().iterator().next();
+        var changed=new MagazineDescriptor(old.familyKey(),old.upstreamFamily(),old.ammoId(),old.capacity()+1,old.extensionLevel(),old.compatibleGuns(),old.recipeId(),old.output(),old.ingredients());
+        var after=new TaCZMagazinesAdapter.Capture(first.status(),java.util.Map.of(old.familyKey(),changed),first.familyByRecipe(),first.rejected());
+        assertFalse(MagazineCatalog.sameContent(first,after));
+    }
     @Test
     void allThreeTiersAndOriginalAmmoWorkbenchAllowValidRecipesWithoutMagazineKnowledge() {
         var recipe = recipe();

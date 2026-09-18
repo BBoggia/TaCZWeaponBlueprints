@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "profession": "taczweaponblueprints:gunsmith",
+  "level": 5,
+  "slot": "taczweaponblueprints:gunsmith/magazine_support_5",
+  "role": "support",
+  "output": {
+    "kind": "magazine",
+    "count": 1,
+    "tier": 0,
+    "selection": "stocked",
+    "candidates": []
+  },
+  "price": {
+    "item": "currency",
+    "count": 6
+  },
+  "uses": 4,
+  "xp": 30,
+  "demand_multiplier": 0.05,
+  "secondary": {
+    "item": "minecraft:iron_ingot",
+    "count": 2
+  },
+  "required_mods": [
+    "taczmagazines"
+  ]
+}

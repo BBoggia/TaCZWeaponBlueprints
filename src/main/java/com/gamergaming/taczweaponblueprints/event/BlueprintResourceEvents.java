@@ -22,6 +22,7 @@ public final class BlueprintResourceEvents {
 
     @SubscribeEvent
     public static void onAddReloadListeners(AddReloadListenerEvent event) {
+        event.addListener(com.gamergaming.taczweaponblueprints.villager.trade.TradeDataManager.INSTANCE);
         event.addListener(BlueprintLootDataManager.INSTANCE);
         event.addListener(BlueprintResearchDataManager.INSTANCE);
         event.addListener(ResearchPointAwardDataManager.INSTANCE);

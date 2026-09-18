@@ -120,6 +120,29 @@ class ResearchSelectionCurrencyPreviewTest {
         var preview = ResearchSelectionPreviewFactory.create(e, f.mode, tag -> List.of(), () -> ResearchSelectionProgressionPreview.EMPTY);
         assertEquals(BlueprintResearchCost.MAX_INGREDIENT_TYPES, preview.ingredients().size());
         assertEquals(8, preview.ingredientTypeCount());
+        var page = ResearchSelectionPreviewFactory.create(e, f.mode, tag -> List.of(),
+                () -> ResearchSelectionProgressionPreview.EMPTY, 6);
+        assertEquals(6, page.ingredientOffset()); assertEquals(2, page.ingredients().size());
+        assertEquals(preview.researchable(), page.researchable());
+        assertEquals(preview.ingredientsSatisfied(), page.ingredientsSatisfied());
+        assertEquals(preview.routeFingerprint(), page.routeFingerprint());
+        var combined = new ArrayList<>(preview.ingredients()); combined.addAll(page.ingredients());
+        assertEquals(e.requirements().stream().map(ResearchIngredientPlanner.Requirement::items).toList(),
+                combined.stream().map(ResearchSelectionPreview.IngredientPreview::items).toList());
+        for (int i = 0; i < combined.size(); i++) assertEquals(e.allocation().allocatedForIngredient(i),
+                combined.get(i).inventoryAvailable());
+        assertTrue(preview.acceptsMaterialPage(TARGET, 0, 6));
+        assertTrue(page.acceptsMaterialPage(TARGET, 6, 0));
+        assertFalse(page.acceptsMaterialPage(TARGET, 0, 6));
+        assertFalse(page.acceptsMaterialPage(ROOT, 6, 0));
+        assertFalse(page.acceptsMaterialPage(TARGET, 6, 12));
+        assertFalse(page.acceptsMaterialPage(TARGET, 6, Integer.MIN_VALUE));
+        roundTrip(page);
+        // A shorter current route clamps the old page rather than leaking old costs.
+        f.rootMaterials = List.of(); f.materials = List.of(all.get(0));
+        var refreshed = ResearchSelectionPreviewFactory.create(f.evaluate(), f.mode, tag -> List.of(),
+                () -> ResearchSelectionProgressionPreview.EMPTY, 6);
+        assertEquals(0, refreshed.ingredientOffset()); assertEquals(1, refreshed.ingredientTypeCount());
     }
     @Test void previewAndCombinedPaymentAgreeAcrossOverlappingAlternatives() {
         var currency = ResearchCurrencyPolicy.physical(id("minecraft:iron_ingot"), 1);

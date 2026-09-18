@@ -24,7 +24,18 @@ final class ResearchTreeSearchController {
         windowStart = Math.max(0, Math.min(Math.max(0, matches.size() - windowSize),
                 windowStart + wheel.consume(-delta)));
     }
-    void page(int direction, int visible) { scroll(-direction * Math.max(1, visible), visible); }
+    void page(int direction, int visible) {
+        if (direction == 0 || matches.isEmpty()) return;
+        var ordered = List.copyOf(matches);
+        window(visible);
+        int index = ordered.indexOf(activeMatch);
+        int row = Math.max(0, Math.min(windowSize - 1, index - windowStart));
+        windowStart = Math.max(0, Math.min(ordered.size() - windowSize,
+                windowStart + Integer.signum(direction) * windowSize));
+        activeMatch = ordered.get(windowStart + row);
+        followActive = false;
+        wheel.reset();
+    }
     private void revealActive() {
         followActive = true;
         if (activeMatch == null) { windowStart = 0; return; }
@@ -118,7 +129,13 @@ final class ResearchTreeSearchController {
     }
 
     Optional<ResourceLocation> commit() {
-        return Optional.ofNullable(activeMatch).filter(matches::contains);
+        if (activeMatch == null) return Optional.empty();
+        // Wheel browsing may leave the cursor behind, but Enter must never
+        // navigate to a result that is no longer visible in the dropdown.
+        if (followActive) window(windowSize);
+        int index = List.copyOf(matches).indexOf(activeMatch);
+        return index >= windowStart && index < windowStart + windowSize
+                ? Optional.ofNullable(activeMatch) : Optional.empty();
     }
 
     List<Result> window(int maximumVisible) {

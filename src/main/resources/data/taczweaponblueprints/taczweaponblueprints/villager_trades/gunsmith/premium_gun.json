@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "profession": "taczweaponblueprints:gunsmith",
+  "level": 5,
+  "slot": "taczweaponblueprints:gunsmith/premium_gun",
+  "role": "core",
+  "output": {
+    "kind": "gun",
+    "count": 1,
+    "tier": 2,
+    "selection": "stocked",
+    "candidates": [
+      {
+        "id": "tacz:hk416d",
+        "weight": 1
+      },
+      {
+        "id": "tacz:aug",
+        "weight": 1
+      },
+      {
+        "id": "tacz:scar_l",
+        "weight": 1
+      }
+    ]
+  },
+  "price": {
+    "item": "currency",
+    "count": 64
+  },
+  "uses": 1,
+  "xp": 30,
+  "demand_multiplier": 0.05,
+  "secondary": {
+    "item": "minecraft:iron_ingot",
+    "count": 12
+  },
+  "fallbacks": [
+    "taczweaponblueprints:gunsmith/fallback_ammo_5"
+  ]
+}

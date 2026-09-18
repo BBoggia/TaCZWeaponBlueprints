@@ -45,7 +45,7 @@ Banked mode retains cancellable `ResearchPointAwardEvent.Pre` and committed `Pos
 
 ## Synchronization and compatibility
 
-Protocol 66 requires matching client and server versions. A separate currency packet carries the server policy revision and active main-inventory amount. Saved RP synchronization remains separate. Reward feedback identifies the actual delivered denomination. Research route fingerprints include currency identity and revision; Analyzer state tokens include the currency configuration through the progression snapshot and the independent Research Data settings.
+Protocol 69 requires matching client and server versions. A separate currency packet carries the server policy revision and active main-inventory amount. Saved RP synchronization remains separate. Reward feedback identifies the actual delivered denomination. Research route fingerprints include currency identity and revision; Analyzer state tokens include the currency configuration through the progression snapshot and the independent Research Data settings.
 
 The existing player save shape remains version 5, and configuration remains readable from version 4. Existing Analyzer preview/result fields and enum ordinals are preserved, with new failure values appended. Numeric fields retaining `point` names in those compatibility records describe the active currency on live physical-mode paths. Client currency labels use the connection’s server publication. Inventory changes refresh active balances and affordability without requiring a new selection. Disconnect clears the publication, and older policy revisions cannot replace a newer one. The currency packet also carries the independent Data mode and default eligibility settings.
 

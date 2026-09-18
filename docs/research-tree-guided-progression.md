@@ -52,6 +52,16 @@ amounts allocated by that quote, not a fresh count of each matching inventory
 stack. Disabled cost channels do not appear as shortages;
 Research Bench access and Progression Gates remain separate blockers.
 
+Paths with more than six material types expose Previous/Next links above the
+cost table. Each page contains at most six requirements; the currency row and
+readiness status still describe the entire purchase. Mouse clicks and the
+inspector's arrow-key/Enter navigation operate these links. The server accepts
+only an adjacent page for the current selection and publication, then queues a
+fresh quote under the shared planning limit. It recalculates inventory allocation
+and clamps the page if the current route has fewer requirements. No cached page
+can authorize a purchase. Protocol 69 carries the page offset without increasing
+the existing per-packet material or alternative limits.
+
 Prerequisite groups say Required for a single alternative or Any one satisfies
 this requirement for multiple alternatives, including undiscovered and external
 ones. These describe satisfaction rules, not controls for changing the purchase

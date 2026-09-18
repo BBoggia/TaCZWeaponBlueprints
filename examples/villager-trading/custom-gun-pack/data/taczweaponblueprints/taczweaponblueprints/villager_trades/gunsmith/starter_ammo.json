@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "profession": "taczweaponblueprints:gunsmith",
+  "level": 1,
+  "slot": "taczweaponblueprints:gunsmith/starter_ammo",
+  "role": "core",
+  "output": {
+    "kind": "ammo",
+    "count": 16,
+    "tier": 0,
+    "selection": "starter",
+    "candidates": [
+      {
+        "id": "exampleguns:light_round",
+        "weight": 1
+      }
+    ]
+  },
+  "price": {
+    "item": "currency",
+    "count": 4
+  },
+  "uses": 12,
+  "xp": 1,
+  "demand_multiplier": 0.05
+}

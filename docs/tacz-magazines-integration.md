@@ -131,11 +131,19 @@ existing clients also receive the new recipes before their access refresh.
 This includes recovery from unavailable discovery during a later login.
 Recipe updates invalidate the screen's selected output and queue a rebuild.
 
-The existing Workbench access protocol holds at most 4,096 recipe IDs. Magazine
-crafting is disabled with a server log warning if the complete blueprint catalog
+The existing Workbench access protocol holds at most 4,096 recipe IDs. With
+blueprint progression enabled, magazine crafting is disabled with a server log warning if the complete blueprint catalog
 plus discovered magazines exceeds that limit; ordinary blueprint crafting
 remains available. Reserving space for the full blueprint catalog avoids
 evicting magazine recipes as players learn more blueprints.
+
+When `enableBlueprints=false`, the access snapshot grants the native recipe view
+and crafting bypasses the progression adapter and its collection limit. The
+physical workstation is still authenticated. TaCZ still resolves the live recipe,
+applies its native filters, and consumes the native ingredient cost; an
+unrestricted progression grant does not manufacture a recipe or waive payment.
+An unavailable adapter cannot add tab membership, but it no longer vetoes
+recipes already supported by the native workstation.
 
 ## Blueprint Analyzer protection
 
@@ -156,7 +164,7 @@ items are unaffected. For a save retaining the marker without the add-on,
 restore the add-on and eject the magazine before using the Analyzer.
 
 The Analyzer does not automatically eject, return, or analyze magazines.
-The new preview/action status requires matching protocol-66 clients and servers;
+The new preview/action status requires matching protocol-69 clients and servers;
 player save formats are unchanged.
 
 ## Scope

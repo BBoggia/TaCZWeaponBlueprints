@@ -36,7 +36,7 @@ def removeStaleModArchives = tasks.register('removeStaleModArchives') {
 // Deliberate changes must update runtime constants, release gates, and
 // migration documentation together.
 def certifiedAutomaticPlacementVersion = 'tacz-gun-placement-v13'
-def certifiedResearchTreeProtocol = '66'
+def certifiedResearchTreeProtocol = '69'
 def certifiedResearchTreeSceneLayout = 'branches-v2'
 def certifiedResearchTreeProtocolNumber = certifiedResearchTreeProtocol as int
 def certifiedResearchCatalogExportFormat = 22
@@ -3187,6 +3187,7 @@ tasks.register('verifyReleaseArtifact') {
                         || it.startsWith('com/gamergaming/taczweaponblueprints/client/ResearchTreePrototype')
                         || it.startsWith('com/gamergaming/taczweaponblueprints/client/ResearchTreeWorkbenchProbe')
                         || it.startsWith('com/gamergaming/taczweaponblueprints/acceptance/')
+                        || it.startsWith('com/gamergaming/taczweaponblueprints/villagerqa/')
                         || it.startsWith('com/gamergaming/taczweaponblueprints/client/designer/DesignerWorkspaceClientProbe')
                         || it.startsWith(
                                 'com/gamergaming/taczweaponblueprints/research/tree/authoring/')
@@ -3349,6 +3350,13 @@ tasks.register('verifyReleaseArtifact') {
                     'com/gamergaming/taczweaponblueprints/item/PhysicalWeaponProvenance.class',
                     'com/gamergaming/taczweaponblueprints/mixin/GunSmithTableMenuMixin.class',
                     'com/gamergaming/taczweaponblueprints/mixin/TaCZLootTableInjectorModifierMixin.class',
+                    'com/gamergaming/taczweaponblueprints/mixin/VillagerMerchantOfferMixin.class',
+                    'com/gamergaming/taczweaponblueprints/mixin/VillagerMerchantMenuMixin.class',
+                    'com/gamergaming/taczweaponblueprints/init/ModVillagers.class',
+                    'com/gamergaming/taczweaponblueprints/villager/VillagerMerchantSession.class',
+                    'com/gamergaming/taczweaponblueprints/villager/trade/TradeDataManager.class',
+                    'com/gamergaming/taczweaponblueprints/villager/trade/TradeRuntime.class',
+                    'com/gamergaming/taczweaponblueprints/command/sub/VillagerTradesCommand.class',
                     'com/gamergaming/taczweaponblueprints/resource/research/BlueprintReverseEngineeringPolicy.class',
                     'com/gamergaming/taczweaponblueprints/resource/research/BlueprintReverseEngineeringOverride.class',
                     'com/gamergaming/taczweaponblueprints/progression/BlueprintResearchService.class',
@@ -3507,6 +3515,26 @@ tasks.register('verifyReleaseArtifact') {
                         "data/taczweaponblueprints/advancements/recipes/misc/${id}.json".toString(),
                         "data/taczweaponblueprints/loot_tables/blocks/${id}.json".toString()
                 ])
+            }
+            ['gunsmith_station', 'ballistics_desk'].each { id ->
+                required.addAll([
+                        "assets/taczweaponblueprints/blockstates/${id}.json".toString(),
+                        "assets/taczweaponblueprints/models/block/${id}.json".toString(),
+                        "assets/taczweaponblueprints/models/item/${id}.json".toString(),
+                        "data/taczweaponblueprints/recipes/${id}.json".toString(),
+                        "data/taczweaponblueprints/advancements/recipes/decorations/${id}.json".toString(),
+                        "data/taczweaponblueprints/loot_tables/blocks/${id}.json".toString()
+                ])
+            }
+            ['villager', 'zombie_villager'].each { entity ->
+                ['gunsmith', 'ballistics_researcher'].each { profession ->
+                    def texture = "assets/taczweaponblueprints/textures/entity/${entity}/profession/${profession}.png".toString()
+                    required.addAll([texture, texture + '.mcmeta'])
+                }
+            }
+            ['villager_oak', 'villager_steel', 'villager_brass', 'villager_blueprint',
+             'villager_paper', 'gunsmith_drawer', 'ballistics_tray'].each { texture ->
+                required.add("assets/taczweaponblueprints/textures/block/${texture}.png".toString())
             }
             def missing = required.findAll { !names.contains(it) }
             if (!missing.isEmpty()) {
@@ -4522,6 +4550,8 @@ tasks.register('verifyReleaseArtifact') {
                 jsonParser.parse(stream, 'UTF-8')
             }
             def expectedCommonMixins = [
+                    'VillagerStockMixin', 'AbstractVillagerStockMixin', 'MerchantOffersStockMixin', 'VillagerMerchantOfferMixin',
+                    'VillagerMerchantMenuMixin', 'VillagerProfessionAcquisitionMixin', 'VillagerServerReloadMixin',
                     'IGunSmithTableRecipeAccessor',
                     'GunSmithTableBlockEntityMixin',
                     'GunSmithTableMenuMixin',
@@ -4536,7 +4566,7 @@ tasks.register('verifyReleaseArtifact') {
                     'EmiScreenBaseMixin',
                     'GunSmithTableScreenMixin',
                     'ICreativeModeTabsAccessor',
-                    'IAbstractContainerScreenAccessor'
+                    'IAbstractContainerScreenAccessor', 'VillagerMerchantScreenMixin'
             ] as Set
             if (!(mixinConfig.client instanceof List) || mixinConfig.client.toSet() != expectedClientMixins) {
                 throw new GradleException("Packaged client mixin surface does not match ${expectedClientMixins}")
@@ -4783,9 +4813,10 @@ tasks.register('verifyRuntimeSmokeLog') {
                     it.getText('UTF-8')
                 }
                 : logFile.getText('UTF-8')
+        def expectedForge = providers.gradleProperty('smokeForgeVersion').getOrElse(forge_version)
         def requiredMarkers = kind == 'client'
                 ? [
-                        "Forge mod loading, version ${forge_version}, for MC ${minecraft_version}",
+                        "Forge mod loading, version ${expectedForge}, for MC ${minecraft_version}",
                         'Loaded config taczweaponblueprints:blueprint',
                         'Sound engine started'
                 ]
@@ -5316,6 +5347,18 @@ if (providers.gradleProperty('designerWorkspaceQA').isPresent()) {
 }
 
 // Explicit disposable dedicated-server authority check, excluded from normal runs.
+if (providers.gradleProperty('reviewFixesQA').isPresent()) {
+    def reviewQaRoot = file(providers.gradleProperty('reviewFixesQA').get())
+    if (!new File(reviewQaRoot, '.disposable-review-qa').isFile())
+        throw new GradleException('Review QA requires a marked disposable directory')
+    minecraft.runs.server {
+        workingDirectory reviewQaRoot
+        mods { "${mod_id}" { source sourceSets.development } }
+        property 'tacz.reviewFixesQA', new File(reviewQaRoot, 'result.txt').absolutePath
+        args '--nogui'
+    }
+}
+
 if (providers.gradleProperty('stationAccessQA').isPresent()) {
     def stationQaRoot = file(providers.gradleProperty('stationAccessQA').get())
     if (!new File(stationQaRoot, '.disposable-station-qa').isFile())
@@ -5325,5 +5368,56 @@ if (providers.gradleProperty('stationAccessQA').isPresent()) {
         mods { "${mod_id}" { source sourceSets.development } }
         property 'tacz.stationAccessQA', new File(stationQaRoot, 'result.txt').absolutePath
         args '--nogui'
+    }
+}
+
+// Native villager acceptance is opt-in and confined to a marked disposable directory.
+if (providers.gradleProperty('villagerQA').isPresent()) {
+    def villagerQaRoot = file(providers.gradleProperty('villagerQA').get())
+    if (!new File(villagerQaRoot, '.disposable-villager-qa').isFile())
+        throw new GradleException('Villager QA requires a marked disposable directory')
+    minecraft.runs.server {
+        workingDirectory villagerQaRoot
+        mods { "${mod_id}" { source sourceSets.development } }
+        property 'tacz.villagerQA.root', villagerQaRoot.absolutePath
+        property 'tacz.villagerQA.probe', 'true'
+        property 'tacz.villagerQA.economy', providers.gradleProperty('villagerEconomyQA').orElse('false').get()
+        property 'tacz.villagerQA.stock', providers.gradleProperty('villagerStockQA').orElse('false').get()
+        property 'tacz.villagerQA.trades', providers.gradleProperty('villagerTradeQA').orElse('false').get()
+        args '--nogui'
+    }
+    tasks.register('villagerPrototypeJar', Jar) {
+        dependsOn classes, developmentClasses
+        archiveFileName = 'villager-prototype-qa.jar'
+        destinationDirectory = layout.buildDirectory.dir('villager-prototype')
+        from sourceSets.main.output
+        from(sourceSets.development.output) { include 'com/gamergaming/taczweaponblueprints/villagerqa/**' }
+        manifest { attributes(['MixinConfigs': "${mod_id}.mixins.json"]) }
+    }
+    reobf { villagerPrototypeJar {} }
+}
+
+// A companion mod exercises the exact distributable without embedding probes in it.
+// Requires the same explicit disposable-directory opt-in as the prototype harness.
+if (providers.gradleProperty('villagerQA').isPresent()) {
+    tasks.register('villagerAcceptanceJar', Jar) {
+        dependsOn developmentClasses
+        archiveFileName = 'villager-acceptance-qa.jar'
+        destinationDirectory = layout.buildDirectory.dir('villager-acceptance')
+        from(sourceSets.development.output) {
+            include 'com/gamergaming/taczweaponblueprints/villagerqa/**'
+            include 'com/gamergaming/taczweaponblueprints/acceptance/villager/**'
+        }
+        from 'src/development/villager-acceptance'
+        exclude 'META-INF/*.refmap.json'
+        doFirst { manifest.attributes.remove('MixinConfigs') }
+    }
+    // MixinGradle otherwise adds the production refmap/manifest to every Jar task.
+    tasks.matching { it.name == 'addMixinsToVillagerAcceptanceJar' }.configureEach {
+        enabled = false
+    }
+    reobf { villagerAcceptanceJar {} }
+    tasks.named('reobfVillagerAcceptanceJar').configure {
+        libraries.from(sourceSets.main.output)
     }
 }

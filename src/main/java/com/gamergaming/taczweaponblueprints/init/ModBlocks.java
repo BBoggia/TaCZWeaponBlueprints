@@ -20,6 +20,13 @@ public final class ModBlocks {
     public static final DeferredRegister<Block> BLOCKS =
             DeferredRegister.create(Registries.BLOCK, TaCZWeaponBlueprints.MODID);
 
+    public static final RegistryObject<com.gamergaming.taczweaponblueprints.block.VillagerJobSiteBlock> GUNSMITH_STATION =
+            BLOCKS.register("gunsmith_station", () -> new com.gamergaming.taczweaponblueprints.block.VillagerJobSiteBlock(
+                    BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5F).sound(SoundType.WOOD).noOcclusion()));
+    public static final RegistryObject<com.gamergaming.taczweaponblueprints.block.VillagerJobSiteBlock> BALLISTICS_DESK =
+            BLOCKS.register("ballistics_desk", () -> new com.gamergaming.taczweaponblueprints.block.VillagerJobSiteBlock(
+                    BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5F).sound(SoundType.WOOD).noOcclusion()));
+
     public static final RegistryObject<ResearchBenchBlock> RESEARCH_BENCH = BLOCKS.register(
             "research_bench",
             () -> researchBench(ResearchWorkbenchTier.TIER_1));

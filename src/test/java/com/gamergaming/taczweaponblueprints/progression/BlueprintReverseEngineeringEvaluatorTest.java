@@ -320,6 +320,19 @@ class BlueprintReverseEngineeringEvaluatorTest {
                 ignored -> identity(blueprintId, kind, false, false, false));
     }
 
+    @Test void legacyTradedGunCannotInheritBypassLearningFromUnmarkedWeaponDefaults() {
+        var gunId=id("test:traded");var input=new ItemStack(Items.IRON_INGOT);
+        input.getOrCreateTag().put(com.gamergaming.taczweaponblueprints.item.PhysicalWeaponProvenance.TAG_KEY,
+                new com.gamergaming.taczweaponblueprints.item.PhysicalWeaponProvenance(1,
+                        com.gamergaming.taczweaponblueprints.item.PhysicalWeaponProvenance.Origin.TRADED,id("test:shop")).toTag());
+        var eval=BlueprintReverseEngineeringEvaluator.evaluate(input,snapshot(BlueprintReverseEngineeringPolicy.DEFAULT),
+                Map.of(gunId,data(gunId,BlueprintKind.GUN,"pistol",1)),PROFILE,new PlayerRecipeData(),ignored->false,ignored->false,
+                ignored->identity(gunId,BlueprintKind.GUN,false,false,false));
+        assertTrue(eval.ready());assertFalse(eval.reversePolicy().orElseThrow().outputRecyclable());
+        assertEquals(PhysicalBlueprintLearningMode.REQUIRE_TREE_PREREQUISITES,eval.reversePolicy().orElseThrow().physicalBlueprintLearningMode());
+        assertEquals(com.gamergaming.taczweaponblueprints.resource.research.BlueprintAnalyzerPolicy.Origin.TRADED,BlueprintWeaponAnalysisService.origin(input));
+    }
+
     private static BlueprintResearchSnapshot snapshot(BlueprintReverseEngineeringPolicy reverse) {
         BlueprintResearchProfile profile = new BlueprintResearchProfile(
                 1,

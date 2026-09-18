@@ -21,6 +21,7 @@ public class RootCommand {
         root.then(BlueprintLootCommand.get());
         root.then(BlueprintProgressionCommand.get());
         root.then(BlueprintResearchCommand.get());
+        root.then(com.gamergaming.taczweaponblueprints.command.sub.VillagerTradesCommand.get());
 
         dispatcher.register(root);
     }

@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "profession": "taczweaponblueprints:gunsmith",
+  "level": 5,
+  "slot": "taczweaponblueprints:gunsmith/specialist_attachment",
+  "role": "core",
+  "output": {
+    "kind": "attachment",
+    "count": 1,
+    "tier": 0,
+    "selection": "stocked",
+    "candidates": [
+      {
+        "id": "tacz:scope_acog_ta31",
+        "weight": 1
+      },
+      {
+        "id": "tacz:scope_elcan_4x",
+        "weight": 1
+      },
+      {
+        "id": "tacz:scope_lpvo_1_6",
+        "weight": 1
+      },
+      {
+        "id": "tacz:grip_rk1_b25u",
+        "weight": 1
+      },
+      {
+        "id": "tacz:laser_peq6",
+        "weight": 1
+      },
+      {
+        "id": "tacz:muzzle_silencer_phantom_s1",
+        "weight": 1
+      }
+    ]
+  },
+  "price": {
+    "item": "currency",
+    "count": 24
+  },
+  "uses": 2,
+  "xp": 30,
+  "demand_multiplier": 0.05,
+  "secondary": {
+    "item": "minecraft:iron_ingot",
+    "count": 4
+  },
+  "fallbacks": [
+    "taczweaponblueprints:gunsmith/fallback_ammo_5"
+  ]
+}

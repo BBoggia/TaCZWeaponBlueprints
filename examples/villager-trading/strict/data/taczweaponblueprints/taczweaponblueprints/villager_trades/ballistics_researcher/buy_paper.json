@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "profession": "taczweaponblueprints:ballistics_researcher",
+  "level": 1,
+  "slot": "taczweaponblueprints:ballistics_researcher/buy_paper",
+  "role": "core",
+  "output": {
+    "kind": "currency",
+    "count": 1,
+    "tier": 0,
+    "selection": "none",
+    "candidates": []
+  },
+  "price": {
+    "item": "minecraft:paper",
+    "count": 24
+  },
+  "uses": 4,
+  "xp": 2,
+  "demand_multiplier": 0.05,
+  "enabled": false
+}

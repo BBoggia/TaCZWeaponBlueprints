@@ -19,6 +19,11 @@ public class ModItems {
         public static final DeferredRegister<Item> ITEMS =
                 DeferredRegister.create(Registries.ITEM, TaCZWeaponBlueprints.MODID);
 
+        public static final RegistryObject<Item> GUNSMITH_STATION = ITEMS.register("gunsmith_station",
+                () -> new net.minecraft.world.item.BlockItem(ModBlocks.GUNSMITH_STATION.get(), new Item.Properties()));
+        public static final RegistryObject<Item> BALLISTICS_DESK = ITEMS.register("ballistics_desk",
+                () -> new net.minecraft.world.item.BlockItem(ModBlocks.BALLISTICS_DESK.get(), new Item.Properties()));
+
         public static final RegistryObject<Item> BLUEPRINT_ITEM =
                 ITEMS.register("blueprint", () -> new BlueprintItem(
                         new Item.Properties()

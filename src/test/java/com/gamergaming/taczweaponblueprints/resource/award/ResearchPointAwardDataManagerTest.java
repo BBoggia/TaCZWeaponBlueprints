@@ -52,6 +52,21 @@ class ResearchPointAwardDataManagerTest {
                 .map(value -> value.binding().definitionId()).toList());
     }
 
+    @Test void abortedReloadRestoresCommittedAwardsAndDiagnostics() {
+        var manager=new ResearchPointAwardDataManager();
+        var valid=resourceManager(Map.of(resourceId("discovery"),resource(validDefinition())));
+        manager.apply(manager.prepare(valid,InactiveProfiler.INSTANCE),valid,InactiveProfiler.INSTANCE);
+        var invalid=resourceManager(Map.of(resourceId("invalid"),resource("{bad")));
+        manager.apply(manager.prepare(invalid,InactiveProfiler.INSTANCE),invalid,InactiveProfiler.INSTANCE);
+        var committed=manager.publication();var failure=manager.lastFailure();
+        var empty=resourceManager(Map.of());
+        manager.apply(manager.prepare(empty,InactiveProfiler.INSTANCE),empty,InactiveProfiler.INSTANCE);
+        long partialRevision=manager.revision();
+        manager.restoreAfterAbortedReload(committed.snapshot(),failure);
+        assertSame(committed.snapshot(),manager.snapshot());assertEquals(failure,manager.lastFailure());
+        assertTrue(manager.revision()>partialRevision);
+    }
+
     @Test
     void rejectedReloadPreservesTheExactLastKnownGoodPublication() {
         ResearchPointAwardDataManager manager = new ResearchPointAwardDataManager();

@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "profession": "taczweaponblueprints:ballistics_researcher",
+  "level": 1,
+  "slot": "taczweaponblueprints:ballistics_researcher/note",
+  "role": "core",
+  "output": {
+    "kind": "research_data",
+    "count": 1,
+    "tier": 0,
+    "selection": "none",
+    "candidates": [
+      {
+        "id": "taczweaponblueprints:research_note",
+        "weight": 1
+      }
+    ],
+    "allow_legacy_exchange": true
+  },
+  "price": {
+    "item": "currency",
+    "count": 4
+  },
+  "uses": 4,
+  "xp": 1,
+  "demand_multiplier": 0.05
+}

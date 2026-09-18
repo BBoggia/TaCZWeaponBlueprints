@@ -31,7 +31,8 @@ public record ResearchSelectionPreview(
         ResearchCostMode costMode,
         Optional<ResearchRouteFingerprint> routeFingerprint,
         ResearchAccessSummary accessSummary,
-        ResearchSelectionProgressionPreview progression) {
+        ResearchSelectionProgressionPreview progression,
+        int ingredientOffset) {
     public static final ResearchSelectionPreview EMPTY = new ResearchSelectionPreview(
             Optional.empty(), 0, 0, false, false, false, false, false,
             List.of(), 0, 0, PathPlanningState.NONE, ResearchCostMode.POINTS_AND_ITEMS,
@@ -227,6 +228,18 @@ public record ResearchSelectionPreview(
                 ResearchSelectionProgressionPreview.EMPTY);
     }
 
+    /** Compatibility constructor for the first material page. */
+    public ResearchSelectionPreview(Optional<ResourceLocation> blueprintId, int pointCost, int pointBalance,
+            boolean policyEligible, boolean ingredientsSatisfied, boolean outputSpace, boolean researchable,
+            boolean creativeBypass, List<IngredientPreview> ingredients, int unlockCount, int ingredientTypeCount,
+            PathPlanningState pathPlanningState, ResearchCostMode costMode,
+            Optional<ResearchRouteFingerprint> routeFingerprint, ResearchAccessSummary accessSummary,
+            ResearchSelectionProgressionPreview progression) {
+        this(blueprintId, pointCost, pointBalance, policyEligible, ingredientsSatisfied, outputSpace, researchable,
+                creativeBypass, ingredients, unlockCount, ingredientTypeCount, pathPlanningState, costMode,
+                routeFingerprint, accessSummary, progression, 0);
+    }
+
     public ResearchSelectionPreview {
         blueprintId = blueprintId == null ? Optional.empty() : blueprintId;
         ingredients = ingredients == null ? List.of() : List.copyOf(ingredients);
@@ -245,6 +258,10 @@ public record ResearchSelectionPreview(
                 || unlockCount < 0
                 || unlockCount > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION
                 || ingredientTypeCount < ingredients.size()
+                || ingredientOffset < 0 || ingredientOffset % BlueprintResearchCost.MAX_INGREDIENT_TYPES != 0
+                || ingredientOffset > Math.max(0, ingredientTypeCount - 1)
+                || (long) ingredientOffset + ingredients.size() > ingredientTypeCount
+                || ingredientOffset > 0 && ingredients.isEmpty()
                 || ingredientTypeCount > PlayerProgressionLimits.MAX_IDS_PER_COLLECTION
                         * BlueprintResearchCost.MAX_INGREDIENT_TYPES) {
             throw new IllegalArgumentException("invalid research selection preview");
@@ -328,6 +345,12 @@ public record ResearchSelectionPreview(
 
     public int additionalIngredientTypes() {
         return ingredientTypeCount - ingredients.size();
+    }
+
+    public boolean acceptsMaterialPage(ResourceLocation target, int fromOffset, int toOffset) {
+        return blueprintId.filter(id -> id.equals(target)).isPresent()
+                && fromOffset == ingredientOffset && toOffset >= 0 && toOffset < ingredientTypeCount
+                && Math.abs((long) toOffset - fromOffset) == BlueprintResearchCost.MAX_INGREDIENT_TYPES;
     }
 
     public enum PathPlanningState {

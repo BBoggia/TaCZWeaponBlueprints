@@ -24,11 +24,19 @@ final class ResearchSelectionPreviewFactory {
             ResearchCostMode costMode,
             Function<ResourceLocation, List<ResourceLocation>> tagItems,
             Supplier<ResearchSelectionProgressionPreview> progression) {
+        return create(evaluation, costMode, tagItems, progression, 0);
+    }
+
+    static ResearchSelectionPreview create(ResearchRouteEvaluationService.Evaluation evaluation,
+            ResearchCostMode costMode, Function<ResourceLocation, List<ResourceLocation>> tagItems,
+            Supplier<ResearchSelectionProgressionPreview> progression, int requestedOffset) {
         try {
             var requirements = evaluation.requirements();
+            int pageSize = BlueprintResearchCost.MAX_INGREDIENT_TYPES;
+            int offset = Math.min(Math.max(0, requestedOffset / pageSize),
+                    Math.max(0, (requirements.size() - 1) / pageSize)) * pageSize;
             List<ResearchSelectionPreview.IngredientPreview> ingredients = new ArrayList<>();
-            for (int index = 0; index < Math.min(
-                    requirements.size(), BlueprintResearchCost.MAX_INGREDIENT_TYPES); index++) {
+            for (int index = offset; index < Math.min(requirements.size(), offset + pageSize); index++) {
                 var requirement = requirements.get(index);
                 List<ResourceLocation> items = requirement.items();
                 if (items.isEmpty() && requirement.tag().isPresent()) {
@@ -47,7 +55,7 @@ final class ResearchSelectionPreviewFactory {
                     evaluation.transactionCapacityAvailable(), evaluation.ready(), evaluation.costBypassed(),
                     ingredients, evaluation.unlockCount(), requirements.size(),
                     ResearchSelectionPreview.PathPlanningState.fromStatus(evaluation.planningStatus()),
-                    costMode, evaluation.routeFingerprint(), evaluation.accessSummary(), progression.get());
+                    costMode, evaluation.routeFingerprint(), evaluation.accessSummary(), progression.get(), offset);
         } catch (RuntimeException exception) {
             ResearchRouteFailureReporter.report("Bench selection preview construction", exception);
             return unavailable(evaluation == null ? null : evaluation.targetId(), costMode);

@@ -84,8 +84,10 @@ public final class BlueprintAnalyzerPolicyResolver {
         if (profile == null || data == null) {
             status = AnalyzerPolicyQuote.Status.CONTENT_UNAVAILABLE;
         } else if (data.getKind() != BlueprintKind.GUN || policy.mode() == BlueprintAnalyzerPolicy.Mode.LEGACY) {
-            status = AnalyzerPolicyQuote.Status.LEGACY;
-            attempt = Optional.of(BlueprintResearchPolicyResolver.reverseEngineeringPolicyFor(context.research(), context.catalog(), profileId, target));
+            status = data.getKind() == BlueprintKind.GUN && origin == BlueprintAnalyzerPolicy.Origin.TRADED && !policy.allowedOrigins().contains(origin)
+                    ? AnalyzerPolicyQuote.Status.ORIGIN_DISABLED : AnalyzerPolicyQuote.Status.LEGACY;
+            var legacy = BlueprintResearchPolicyResolver.reverseEngineeringPolicyFor(context.research(), context.catalog(), profileId, target);
+            attempt = Optional.of(origin == BlueprintAnalyzerPolicy.Origin.TRADED ? legacy.forTradedWeapon() : legacy);
             outcomes = Optional.of(AnalyzerOutcomeTable.GUARANTEED_BLUEPRINT);
             source = "legacy";
         } else if (policy.mode() == BlueprintAnalyzerPolicy.Mode.DISABLED) {
@@ -118,6 +120,7 @@ public final class BlueprintAnalyzerPolicyResolver {
                     effective = new BlueprintReverseEngineeringPolicy(effective.enabled(), effective.inputCount(), effective.cost(),
                             effective.allowKnown(), effective.allowModified(), effective.physicalBlueprintLearningMode(), recovery.foundBlueprintRecyclable(), effective.expertAllowEconomyLoop());
                 }
+                if (origin == BlueprintAnalyzerPolicy.Origin.TRADED) effective = effective.forTradedWeapon();
                 attempt = Optional.of(effective); outcomes = Optional.of(row.outcomes());
                 if (policy.reconstruction().isPresent()) {
                     var reconstruction = policy.reconstruction().orElseThrow();

@@ -74,6 +74,11 @@ public final class BlueprintLootDataManager extends SimplePreparableReloadListen
                 prepared.selectorBindings().size());
     }
 
+    /** Republish the last committed resource snapshot after an aborted reload. */
+    public void restoreAfterAbortedReload(BlueprintLootSnapshot committed) {
+        apply(committed, null, net.minecraft.util.profiling.InactiveProfiler.INSTANCE);
+    }
+
     public BlueprintLootSnapshot snapshot() {
         return publication.snapshot();
     }

@@ -86,6 +86,21 @@ class ResearchTreeInspectorCostsTest {
             assertTrue(columns.requiredX() + columns.requiredWidth() <= width - 10);
         }
     }
+    @Test void materialPagesExposeOnlyValidNavigationAndPreserveTheCurrencyRow() {
+        for (int offset : new int[]{0, 6, 12}) {
+            var quote = new ResearchSelectionPreview(Optional.of(ID), 62, 7, true, false, true, false, false,
+                    java.util.Collections.nCopies(offset == 12 ? 2 : 6, INGREDIENT), 8, 14,
+                    ResearchSelectionPreview.PathPlanningState.NONE, ResearchCostMode.POINTS_AND_ITEMS,
+                    Optional.empty(), com.gamergaming.taczweaponblueprints.progression.eligibility.ResearchAccessSummary.NONE,
+                    com.gamergaming.taczweaponblueprints.menu.ResearchSelectionProgressionPreview.EMPTY, offset);
+            var rows = ResearchTreeInspectorCosts.rows(details(quote, true, false), quote, Component.literal("Scrap"),
+                    i -> Component.literal("Iron"), TEXT, MUTED, GOOD, BAD);
+            assertEquals(offset > 0, rows.stream().anyMatch(r -> r.materialPageDirection() == -1));
+            assertEquals(offset < 12, rows.stream().anyMatch(r -> r.materialPageDirection() == 1));
+            assertTrue(rows.stream().filter(r -> r.materialPageDirection() != 0).allMatch(ResearchTreeInspectorRow::interactive));
+            assertEquals(1 + quote.ingredients().size(), rows.stream().filter(r -> r.kind() == ResearchTreeInspectorRow.Kind.COST).count());
+        }
+    }
     @Test void hiddenAndExternalAlternativesDoNotImplyASingleRequiredBlueprint() {
         var other = new ResourceLocation("test:other");
         for (int[] counts : new int[][]{{0,0},{1,0},{0,1}}) {

@@ -6,7 +6,7 @@ import com.gamergaming.taczweaponblueprints.client.ResearchTreeScreenLayout.Rect
 public record ResearchTreeWorkbenchLayout(ResearchTreeFullscreenLayout.Layout overlays, Rect header,
         Rect canvas, Rect inspector, boolean inspectorVisible, Rect inspectorContent, Rect action, Rect track,
         Rect target, Rect branch, Mode inspectorMode, boolean inspectorOverlay, Rect summary, Rect body,
-        Rect back, Rect toggle, Rect review) {
+        Rect back, Rect toggle, Rect review, java.util.Optional<Rect> journal) {
     public enum Mode { CLOSED, COMPACT, EXPANDED }
     public static ResearchTreeWorkbenchLayout create(int width, int height) { return create(width, height, true); }
     public static ResearchTreeWorkbenchLayout create(int width, int height, boolean selected) {
@@ -15,11 +15,18 @@ public record ResearchTreeWorkbenchLayout(ResearchTreeFullscreenLayout.Layout ov
     public static int panelWidth(int width) { return Math.min(260, Math.max(218, width / 3)); }
     public static ResearchTreeWorkbenchLayout create(int width, int height, boolean selected,
             Boolean expanded, int measuredSummaryHeight, int fontHeight) {
+        return create(width, height, selected, expanded, measuredSummaryHeight, fontHeight, false);
+    }
+    public static ResearchTreeWorkbenchLayout create(int width, int height, boolean selected,
+            Boolean expanded, int measuredSummaryHeight, int fontHeight, boolean portable) {
         var overlays = ResearchTreeFullscreenLayout.forScreen(width, height);
+        int journalSpace = portable ? 24 : 0;
+        var journal = portable ? java.util.Optional.of(new Rect(overlays.close().x() - 24,
+                overlays.close().y(), 20, 20)) : java.util.Optional.<Rect>empty();
         var search = overlays.searchField();
         overlays = new ResearchTreeFullscreenLayout.Layout(width, height, overlays.canvas(),
                 overlays.edgeReveal(), overlays.edgeRevealHitTarget(), overlays.rail(), overlays.searchButton(),
-                new Rect(search.x(), search.y(), Math.min(search.width(), overlays.close().x() - 152 - search.x()), search.height()),
+                new Rect(search.x(), search.y(), Math.min(search.width(), overlays.close().x() - 152 - journalSpace - search.x()), search.height()),
                 overlays.close(), overlays.coachmark(), overlays.safeFocus());
         int x = overlays.rail().right() + 8, top = 48, bottom = height - 8;
         int titleHeight = Math.max(24, 2 * fontHeight + 4);
@@ -58,15 +65,18 @@ public record ResearchTreeWorkbenchLayout(ResearchTreeFullscreenLayout.Layout ov
         if (mode != Mode.EXPANDED) back = new Rect(inspector.right() - 118, inspector.y() + 10, 36, 20);
         return new ResearchTreeWorkbenchLayout(overlays, new Rect(x, 30, width - x - 8, 14), canvas,
                 inspector, mode != Mode.CLOSED, content, action, track, target,
-                new Rect(overlays.close().x() - 124, overlays.close().y(), 120, 20), mode, overlay,
-                summary, body, back, toggle, review);
+                new Rect(overlays.close().x() - 124 - journalSpace, overlays.close().y(), 120, 20), mode, overlay,
+                summary, body, back, toggle, review, journal);
     }
     public Rect targetClearance() {
         int w = Math.min(canvas.width(), 104), h = Math.min(canvas.height(), 52);
         return new Rect(canvas.x() + (canvas.width() - w) / 2, canvas.y() + (canvas.height() - h) / 2, w, h);
     }
     public ResearchTreeWorkbenchLayout {
-        if (canvas.overlaps(header) || inspector.overlaps(header)
+        if (journal == null || branch.overlaps(overlays.close()) || branch.overlaps(overlays.searchField())
+                || journal.filter(j -> j.overlaps(branch) || j.overlaps(overlays.close())
+                    || j.overlaps(overlays.searchField())).isPresent()
+                || canvas.overlaps(header) || inspector.overlaps(header)
                 || inspectorVisible && !inspectorOverlay && canvas.overlaps(inspector)
                 || !inspector.contains(inspectorContent) || !inspector.contains(back) || !inspector.contains(toggle)
                 || inspectorMode == Mode.EXPANDED && (!inspector.contains(body) || !inspector.contains(summary)

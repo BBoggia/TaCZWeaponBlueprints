@@ -21,7 +21,8 @@ public final class MagazineCatalog {
 
     Publication rebuild(TaCZMagazinesAdapter adapter, Collection<? extends Recipe<?>> recipes) {
         var captured = adapter.capture(recipes);
-        publication = new Publication(Math.incrementExact(publication.revision()), captured);
+        if (!sameContent(publication.catalog(), captured))
+            publication = new Publication(Math.incrementExact(publication.revision()), captured);
         return publication;
     }
 
@@ -40,6 +41,17 @@ public final class MagazineCatalog {
                     || !ItemStack.matches(old.output(), current.output())) return false;
         }
         return before.families().size() == after.families().size();
+    }
+
+    public static boolean sameContent(TaCZMagazinesAdapter.Capture before, TaCZMagazinesAdapter.Capture after) {
+        if (!sameRecipes(before,after) || !before.rejected().equals(after.rejected())) return false;
+        for(var entry:before.families().entrySet()) {
+            var a=entry.getValue();var b=after.families().get(entry.getKey());
+            if(!a.familyKey().equals(b.familyKey()) || !a.upstreamFamily().equals(b.upstreamFamily())
+                    || !a.ammoId().equals(b.ammoId()) || a.capacity()!=b.capacity() || a.extensionLevel()!=b.extensionLevel()
+                    || !a.compatibleGuns().equals(b.compatibleGuns()) || !a.recipeId().equals(b.recipeId())) return false;
+        }
+        return true;
     }
 
     public record Publication(long revision, TaCZMagazinesAdapter.Capture catalog) { }

@@ -190,7 +190,8 @@
     "allowed_origins": [
       "found",
       "crafted",
-      "unknown"
+      "unknown",
+      "traded"
     ],
     "attempt": {
       "enabled": true,

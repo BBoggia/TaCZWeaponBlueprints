@@ -246,7 +246,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         super.init();
         activeTreeLayout = ResearchTreeScreenLayout.fullscreen(width, height, false);
         workbenchLayout = ResearchTreeWorkbenchLayout.create(width, height,
-                fullscreenOverlayState.pinnedNodeId().isPresent());
+                fullscreenOverlayState.pinnedNodeId().isPresent(), null, 11, font.lineHeight, menu.portable());
         fullscreenOverlayLayout = workbenchLayout.overlays();
         fullscreenRailLayout = ResearchTreeFullscreenRailLayout.forLayout(fullscreenOverlayLayout);
         if (!guidanceInitialized) {
@@ -279,15 +279,18 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 : activeTreeLayout.expand();
 
         journalButton = null;
-        if (menu.portable()) journalButton = addRenderableWidget(Button.builder(
+        if (menu.portable()) {
+            var journalBounds = workbenchLayout.journal().orElseThrow();
+            journalButton = addRenderableWidget(Button.builder(
                 Component.literal("J"), ignored -> {
                     minecraft.player.closeContainer();
                     minecraft.setScreen(new BlueprintJournalScreen());
-                }).bounds(leftPos + closeBounds.x() - 24, topPos + closeBounds.y(), 20, closeBounds.height())
+                }).bounds(journalBounds.x(), journalBounds.y(), journalBounds.width(), journalBounds.height())
                 .tooltip(Tooltip.create(Component.translatable("key.taczweaponblueprints.open_journal"))).build());
+        }
 
         inspectorBody = addRenderableWidget(new ResearchTreeInspectorBody(font, this::followInspectorRequirement,
-                value -> inspectorScroll = value));
+                value -> inspectorScroll = value, this::requestMaterialPage));
         inspectorBody.visible = false;
         inspectorToggleButton = addRenderableWidget(Button.builder(Component.empty(), ignored -> toggleInspectorDetails())
                 .bounds(0, 0, 70, 20).build());
@@ -1866,7 +1869,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         }).orElse(List.of());
         int summaryHeight = inspectorSummary.stream().mapToInt(text -> text.getString().isEmpty() ? 0 :
                 Math.min(1, font.split(text, ResearchTreeWorkbenchLayout.panelWidth(width) - 16).size()) * (font.lineHeight + 2)).sum();
-        var next = ResearchTreeWorkbenchLayout.create(width, height, pinned.isPresent(), inspectorExpanded, summaryHeight, font.lineHeight);
+        var next = ResearchTreeWorkbenchLayout.create(width, height, pinned.isPresent(), inspectorExpanded, summaryHeight, font.lineHeight, menu.portable());
         if (!next.equals(workbenchLayout)) {
             closeInspectorViewMenu();
             treeCanvas.setPinnedNode(target);
@@ -2099,11 +2102,11 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     }
 
     private void updateInspectorRows(ResearchTreeGraph.Node node, ResearchTreeSelectedNodePresenter.Presentation details) {
-        var key = List.<Object>of(node, details, projectionRevision, net.minecraft.locale.Language.getInstance(), ClientResearchCurrency.policy(), routeReviewOpen, routeReview.revision());
+        var key = List.<Object>of(node, details, currentPreview().ingredientOffset(), projectionRevision, net.minecraft.locale.Language.getInstance(), ClientResearchCurrency.policy(), routeReviewOpen, routeReview.revision());
         if (key.equals(inspectorContentKey)) return;
         var rows = new ArrayList<ResearchTreeInspectorRow>();
         var explanation = ResearchTreeInspectorRow.Kind.EXPLANATION;
-        rows.addAll(ResearchTreeInspectorCosts.rows(details,
+        rows.addAll(ResearchTreeInspectorCosts.rows(details, details.exactPreview() ? currentPreview() : null,
                 com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyText.name(ClientResearchCurrency.policy()),
                 this::ingredientName, TEXT, MUTED, GOOD, BAD));
         rows.add(inspectorSection(routeReviewOpen ? "route" : "requirements"));
@@ -2117,6 +2120,16 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             selectedFragmentLine(node).ifPresent(text -> rows.add(ResearchTreeInspectorRow.text(explanation, text, MUTED)));
         }
         inspectorRows = List.copyOf(rows); inspectorContentKey = key;
+    }
+
+    private void requestMaterialPage(int direction) {
+        var preview = currentPreview();
+        var target = fullscreenOverlayState.pinnedNodeId().orElse(null);
+        int next = preview.ingredientOffset() + direction
+                * com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCost.MAX_INGREDIENT_TYPES;
+        if (!preview.acceptsMaterialPage(target, preview.ingredientOffset(), next)) return;
+        NetworkHandler.INSTANCE.sendToServer(new com.gamergaming.taczweaponblueprints.network.ResearchMaterialPageRequestPacket(
+                menu.containerId, ClientResearchState.publication().generation(), target, preview.ingredientOffset(), next));
     }
 
     private ResearchTreeInspectorRow inspectorSection(String section) {
@@ -5560,6 +5573,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 && workbenchLayout.inspectorOverlay()) { toggleInspectorDetails(); return true; }
         if (searchKeyboardFocused && (keyCode == GLFW.GLFW_KEY_PAGE_UP || keyCode == GLFW.GLFW_KEY_PAGE_DOWN)) {
             cancelTreeInteraction(); treeSearch.page(keyCode == GLFW.GLFW_KEY_PAGE_UP ? -1 : 1, searchResultButtons.size());
+            setFocused(searchBox); searchBox.setFocused(true);
             updateSearchResultButtons(true); return true;
         }
         if (!searchKeyboardFocused) {

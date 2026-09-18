@@ -19,6 +19,7 @@ final class ResearchTreeInspectorBody extends AbstractWidget {
     private final Font font;
     private final Consumer<ResourceLocation> follow;
     private final IntConsumer scrollChanged;
+    private final IntConsumer materialPage;
     private List<ResearchTreeInspectorRow> rows = List.of();
     private List<Line> lines = List.of();
     private final ResearchTreeScrollAccumulator wheel = new ResearchTreeScrollAccumulator();
@@ -27,15 +28,18 @@ final class ResearchTreeInspectorBody extends AbstractWidget {
     private ResearchTreeCostColumns costColumns;
     private int contentHeight;
     private int scroll, activeRow = -1, wrappedWidth = -1;
-    ResearchTreeInspectorBody(Font font, Consumer<ResourceLocation> follow, IntConsumer scrollChanged) {
+    ResearchTreeInspectorBody(Font font, Consumer<ResourceLocation> follow, IntConsumer scrollChanged, IntConsumer materialPage) {
         super(0, 0, 1, 1, Component.translatable("gui.taczweaponblueprints.research_bench.tree.inspector.details"));
         this.font = font; this.follow = follow; this.scrollChanged = scrollChanged;
+        this.materialPage = materialPage;
     }
     void content(List<ResearchTreeInspectorRow> rows, int scroll) {
         if (!this.rows.equals(rows) || wrappedWidth != width) {
             var previousTarget = activeRow >= 0 && activeRow < this.rows.size() ? this.rows.get(activeRow).target() : java.util.Optional.<ResourceLocation>empty();
+            int previousPage = activeRow >= 0 && activeRow < this.rows.size() ? this.rows.get(activeRow).materialPageDirection() : 0;
             this.rows = List.copyOf(rows); wrappedWidth = width; activeRow = -1;
             for (int i = 0; i < rows.size(); i++) if (previousTarget.isPresent() && rows.get(i).target().equals(previousTarget)) { activeRow = i; break; }
+            if (previousPage != 0) for (int i = 0; i < rows.size(); i++) if (rows.get(i).materialPageDirection() == previousPage) { activeRow = i; break; }
             costColumns = ResearchTreeCostColumns.measure(width, rows, font::width);
             var next = new ArrayList<Line>();
             int y = 0;
@@ -59,7 +63,7 @@ final class ResearchTreeInspectorBody extends AbstractWidget {
             }
             contentHeight = y;
             lines = List.copyOf(next);
-            if (activeRow >= rows.size() || activeRow >= 0 && rows.get(activeRow).target().isEmpty()) activeRow = -1;
+            if (activeRow >= rows.size() || activeRow >= 0 && !rows.get(activeRow).interactive()) activeRow = -1;
         }
         scrollTo(scroll);
     }
@@ -112,12 +116,16 @@ final class ResearchTreeInspectorBody extends AbstractWidget {
             return;
         }
         int row = rowAt(y);
-        if (row >= 0) { activeRow = row; rows.get(row).target().ifPresent(follow); }
+        if (row >= 0) { activeRow = row; activate(rows.get(row)); }
+    }
+    private void activate(ResearchTreeInspectorRow row) {
+        row.target().ifPresent(follow);
+        if (row.materialPageDirection() != 0) materialPage.accept(row.materialPageDirection());
     }
     @Override public boolean keyPressed(int key, int scan, int modifiers) {
         if (!visible || !isFocused()) return false;
         if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER || key == GLFW.GLFW_KEY_SPACE) {
-            if (activeRow >= 0) rows.get(activeRow).target().ifPresent(follow);
+            if (activeRow >= 0) activate(rows.get(activeRow));
             return true;
         }
         if (key == GLFW.GLFW_KEY_PAGE_UP || key == GLFW.GLFW_KEY_PAGE_DOWN) {
@@ -128,7 +136,7 @@ final class ResearchTreeInspectorBody extends AbstractWidget {
             int direction = key == GLFW.GLFW_KEY_UP ? -1 : 1;
             int start = activeRow < 0 ? (direction > 0 ? -1 : rows.size()) : activeRow;
             for (int i = start + direction; i >= 0 && i < rows.size(); i += direction) {
-                if (rows.get(i).target().isEmpty()) continue;
+                if (!rows.get(i).interactive()) continue;
                 activeRow = i;
                 for (int line = 0; line < lines.size(); line++) if (lines.get(line).row() == i) {
                     int y = lines.get(line).y();
@@ -149,7 +157,7 @@ final class ResearchTreeInspectorBody extends AbstractWidget {
                 int y = getY() + lines.get(i).y() - scroll;
                 if (y >= getY() + height) break;
                 var line = lines.get(i); var row = rows.get(line.row());
-                if (row.target().isPresent() && (line.row() == hovered || isFocused() && line.row() == activeRow))
+                if (row.interactive() && (line.row() == hovered || isFocused() && line.row() == activeRow))
                     g.fill(getX(), y - 1, getX() + width - 7, y + lineHeight() - 1, 0xFF34495C);
                 if (row.kind() == ResearchTreeInspectorRow.Kind.COST_HEADER)
                     g.fill(getX(), y - 1, getX() + width - 8, y + lineHeight() - 1, 0xFF243541);
@@ -161,7 +169,7 @@ final class ResearchTreeInspectorBody extends AbstractWidget {
                             y, row.color(), false);
                 }
                 g.drawString(font, line.text(), getX() + line.indent(), y, row.color(), false);
-                if (row.target().isPresent()) g.fill(getX() + line.indent(), y + font.lineHeight, getX() + line.indent() + font.width(line.text()), y + font.lineHeight + 1, row.color());
+                if (row.interactive()) g.fill(getX() + line.indent(), y + font.lineHeight, getX() + line.indent() + font.width(line.text()), y + font.lineHeight + 1, row.color());
             }
             g.flush();
         } finally { g.disableScissor(); }

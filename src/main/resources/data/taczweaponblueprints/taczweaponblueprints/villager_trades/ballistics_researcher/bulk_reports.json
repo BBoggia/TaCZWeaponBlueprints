@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "profession": "taczweaponblueprints:ballistics_researcher",
+  "level": 4,
+  "slot": "taczweaponblueprints:ballistics_researcher/bulk_reports",
+  "role": "core",
+  "output": {
+    "kind": "research_data",
+    "count": 2,
+    "tier": 0,
+    "selection": "none",
+    "candidates": [
+      {
+        "id": "taczweaponblueprints:research_report",
+        "weight": 1
+      }
+    ]
+  },
+  "price": {
+    "item": "currency",
+    "count": 22
+  },
+  "uses": 2,
+  "xp": 15,
+  "demand_multiplier": 0.05
+}

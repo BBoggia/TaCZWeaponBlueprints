@@ -43,6 +43,11 @@ public final class TaCZMagazinesAdapter {
         }
     }
 
+    public java.util.Optional<ResourceLocation> familyForGun(ResourceLocation gun) {
+        if (status != Status.READY) throw new IllegalStateException("Magazine adapter is not ready");
+        String family = source.familyForGun(gun);
+        return family == null || family.isBlank() ? java.util.Optional.empty() : java.util.Optional.of(familyKey(family));
+    }
     public Status status() {
         return status;
     }
@@ -146,6 +151,7 @@ public final class TaCZMagazinesAdapter {
     /** Only this boundary can refer to the optional add-on. Fake sources exercise lifecycle failures. */
     interface Source {
         Set<String> families();
+        default String familyForGun(ResourceLocation gun) { throw new UnsupportedOperationException("Gun-family lookup unavailable"); }
         boolean isMagazine(ItemStack stack);
         String family(ItemStack stack);
         int capacity(ItemStack stack);

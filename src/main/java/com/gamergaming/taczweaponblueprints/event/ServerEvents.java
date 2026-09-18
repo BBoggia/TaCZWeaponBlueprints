@@ -77,6 +77,7 @@ public final class ServerEvents {
         BlueprintResearchDataManager.INSTANCE.clear();
         BlueprintLootDataManager.INSTANCE.clear();
         ResearchPointAwardDataManager.INSTANCE.clear();
+        com.gamergaming.taczweaponblueprints.villager.trade.TradeDataManager.INSTANCE.clear();
         BlueprintAmmoAssociationManager.INSTANCE.clear();
         AutomaticWeaponEvidenceManager.INSTANCE.clear();
         com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencySyncTracker.clear();

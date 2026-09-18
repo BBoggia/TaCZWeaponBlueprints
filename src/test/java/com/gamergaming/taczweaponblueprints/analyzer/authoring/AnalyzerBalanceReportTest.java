@@ -27,6 +27,17 @@ class AnalyzerBalanceReportTest {
     }
     private static JsonArray quotes(JsonObject root) {return root.getAsJsonArray("entries").get(0).getAsJsonObject().getAsJsonObject("analyzer_policy").getAsJsonArray("quotes");}
     private static JsonObject row(JsonObject root) {return AnalyzerBalanceReport.create(root,Optional.empty()).getAsJsonArray("rows").get(0).getAsJsonObject();}
+    @Test void currentTradedQuotesAndLegacyThreeOriginExportsRemainComplete() {
+        var current=catalog();
+        assertEquals(9,AnalyzerBalanceReport.create(current,Optional.empty()).getAsJsonArray("rows").size());
+        for(int tier=1;tier<=3;tier++) {
+            var quote=quotes(current).get(0).deepCopy().getAsJsonObject();
+            quote.addProperty("analyzer_tier","tier_"+tier);quote.addProperty("origin","traded");quotes(current).add(quote);
+        }
+        assertEquals(12,AnalyzerBalanceReport.create(current,Optional.empty()).getAsJsonArray("rows").size());
+        quotes(current).remove(11);
+        assertThrows(IllegalArgumentException.class,()->AnalyzerBalanceReport.create(current,Optional.empty()));
+    }
     @Test void costsMultiplyPaidAttemptsAndAlternativeIngredientsStayOneTerm() {
         var input=catalog();var original=input.deepCopy();var r=row(input);
         assertEquals(1.5,r.get("expected_attempts").getAsDouble());

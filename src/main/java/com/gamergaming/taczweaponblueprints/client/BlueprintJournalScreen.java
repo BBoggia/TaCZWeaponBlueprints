@@ -61,6 +61,8 @@ public final class BlueprintJournalScreen extends Screen {
     private BlueprintJournalSnapshot.HistoryEntry selectedHistory;
     private BlueprintJournalSnapshot.RecentUnlockBatch selectedRecent;
     private boolean onboardingView;
+    private int onboardingScroll;
+    private int onboardingScrollMax;
     private boolean onboardingInitialized;
 
     private int panelX;
@@ -409,7 +411,7 @@ public final class BlueprintJournalScreen extends Screen {
 
         int textX = x + 10;
         int textWidth = contentWidth - 20;
-        int line = y + 9;
+        int line = y + 9 - onboardingScroll;
         Component heading = Component.translatable(
                 "gui.taczweaponblueprints.journal.onboarding.title");
         graphics.drawString(font, heading, textX, line, 0xFFE4C56A);
@@ -431,7 +433,7 @@ public final class BlueprintJournalScreen extends Screen {
             line += Math.max(1, font.split(rendered, textWidth).size()) * font.lineHeight + 2;
         }
 
-        if (!plan.earningHelp().isEmpty() && line + font.lineHeight * 2 < contentBottom) {
+        if (!plan.earningHelp().isEmpty()) {
             line += 3;
             graphics.drawString(font, ClientResearchCurrency.text(
                     "gui.taczweaponblueprints.journal.onboarding.earning_title"),
@@ -443,12 +445,18 @@ public final class BlueprintJournalScreen extends Screen {
                         ClientResearchCurrency.text(help.nameKey()), help.points());
                 graphics.drawWordWrap(font, earning, textX + 6, line, textWidth - 6, 0xFFCCCCCC);
                 line += Math.max(1, font.split(earning, textWidth - 6).size()) * font.lineHeight + 3;
-                if (line >= contentBottom) {
-                    break;
-                }
             }
         }
+        onboardingScrollMax = Math.max(0, line + onboardingScroll + 8 - contentBottom);
+        onboardingScroll = Math.min(onboardingScroll, onboardingScrollMax);
         graphics.disableScissor();
+        if (onboardingScrollMax > 0) {
+            int track = contentBottom - y - 8;
+            int thumb = Math.max(12, track * track / (track + onboardingScrollMax));
+            int thumbY = y + 4 + (track - thumb) * onboardingScroll / onboardingScrollMax;
+            graphics.fill(x + contentWidth - 4, y + 4, x + contentWidth - 2, contentBottom - 4, 0xFF394A56);
+            graphics.fill(x + contentWidth - 4, thumbY, x + contentWidth - 2, thumbY + thumb, 0xFFB4C5CC);
+        }
     }
 
     private static String onboardingPrefix(BlueprintOnboardingPlan.State state) {
@@ -933,6 +941,11 @@ public final class BlueprintJournalScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        if (onboardingView && mouseX >= panelX && mouseX <= panelX + panelWidth
+                && mouseY >= panelY + 39 && mouseY <= panelBottom - 38 && delta != 0) {
+            onboardingScroll = net.minecraft.util.Mth.clamp(onboardingScroll - (int)Math.signum(delta) * 24, 0, onboardingScrollMax);
+            return true;
+        }
         if (!compactDetailsOpen()
                 && mouseX >= panelX + PANEL_PADDING
                 && mouseX <= panelX + PANEL_PADDING + listWidth
@@ -947,6 +960,12 @@ public final class BlueprintJournalScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (onboardingView && (keyCode == 266 || keyCode == 267 || keyCode == 268 || keyCode == 269)) {
+            int page = Math.max(24, panelBottom - panelY - 96);
+            onboardingScroll = keyCode == 268 ? 0 : keyCode == 269 ? onboardingScrollMax
+                    : net.minecraft.util.Mth.clamp(onboardingScroll + (keyCode == 266 ? -page : page), 0, onboardingScrollMax);
+            return true;
+        }
         if (keyCode == 256 && onboardingView) {
             onboardingView = false;
             updateControlState();
@@ -975,6 +994,7 @@ public final class BlueprintJournalScreen extends Screen {
 
     private void toggleOnboarding() {
         onboardingView = !onboardingView;
+        onboardingScroll = 0;
         updateControlState();
         setInitialFocus(onboardingView ? onboardingDismissButton : searchBox);
         triggerImmediateNarration(true);

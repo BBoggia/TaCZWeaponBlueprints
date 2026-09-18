@@ -23,6 +23,11 @@ public final class MagazineDiscoveryEvents {
     private static boolean resendRecipes;
 
     private MagazineDiscoveryEvents() { }
+    /** Resolves the actual base-family requirement even when its recipe has been disabled. */
+    public static java.util.Optional<net.minecraft.resources.ResourceLocation> requiredFamily(net.minecraft.resources.ResourceLocation gun) {
+        if (adapter == null) throw new IllegalStateException("Magazine discovery has not started");
+        return adapter.familyForGun(gun);
+    }
 
     @SubscribeEvent
     public static void starting(ServerAboutToStartEvent event) {

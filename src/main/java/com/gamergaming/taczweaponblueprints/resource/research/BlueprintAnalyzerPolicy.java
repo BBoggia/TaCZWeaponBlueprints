@@ -17,7 +17,7 @@ public record BlueprintAnalyzerPolicy(Mode mode, Optional<AnalyzerTier> fallback
         Set<Origin> allowedOrigins, Optional<Reconstruction> reconstruction,
         Map<AnalyzerTier, Map<AnalyzerTier, Row>> tiers) {
     public enum Mode { LEGACY, TIERED, DISABLED }
-    public enum Origin { FOUND, CRAFTED, UNKNOWN }
+    public enum Origin { FOUND, CRAFTED, UNKNOWN, TRADED }
     public static final BlueprintReverseEngineeringOverride NO_OVERRIDE = new BlueprintReverseEngineeringOverride(
             Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
             Optional.empty(), Optional.empty(), Optional.empty());
@@ -109,8 +109,8 @@ public record BlueprintAnalyzerPolicy(Mode mode, Optional<AnalyzerTier> fallback
                 throw new IllegalArgumentException("partial Analyzer outcomes require permitted blueprint learning");
             }
             if (effective.outputRecyclable() && !effective.expertAllowEconomyLoop()
-                    && (allowedOrigins.contains(Origin.CRAFTED) || allowedOrigins.contains(Origin.UNKNOWN))) {
-                throw new IllegalArgumentException("recyclable crafted/unknown Analyzer rewards require expert_allow_economy_loop");
+                    && (allowedOrigins.contains(Origin.CRAFTED) || allowedOrigins.contains(Origin.UNKNOWN) || allowedOrigins.contains(Origin.TRADED))) {
+                throw new IllegalArgumentException("recyclable crafted/unknown/traded Analyzer rewards require expert_allow_economy_loop");
             }
         }
     }

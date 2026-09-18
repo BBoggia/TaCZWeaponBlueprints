@@ -29,6 +29,22 @@ class BlueprintRecyclerPacketTest {
             new ResourceLocation("taczweaponblueprints:research_note");
 
     @Test
+    void purchasedOriginRoundTripsWithoutFoundRecovery() {
+        var preview = new BlueprintRecyclerPreview(BlueprintRecyclerPreview.InputKind.PHYSICAL_ITEM,
+                Optional.of(BLUEPRINT), 1, 0, 9, 20, Optional.empty(), Optional.empty(), 91L,
+                Optional.of(BLUEPRINT), 1, 4, true, true, false, false,
+                Optional.of(BlueprintReverseEngineeringService.Status.SUCCESS), List.of(),
+                BlueprintRecyclerPreview.WeaponOrigin.TRADED, 0,
+                Optional.of(FoundWeaponRecoveryService.Status.VERIFIED_LOOT_REQUIRED));
+        var buffer = buffer();
+        try {
+            new SyncBlueprintRecyclerPreviewPacket(9, preview).toBytes(buffer);
+            assertEquals(preview, new SyncBlueprintRecyclerPreviewPacket(buffer).preview());
+            assertEquals(0, buffer.readableBytes());
+        } finally { buffer.release(); }
+    }
+
+    @Test
     void insertedMagazinePreviewAndActionFeedbackRoundTrip() {
         var preview = new BlueprintRecyclerPreview(BlueprintRecyclerPreview.InputKind.PHYSICAL_ITEM,
                 Optional.of(BLUEPRINT), 1, 0, 9, 20, Optional.empty(), Optional.empty(), 91L,

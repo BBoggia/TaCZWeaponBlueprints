@@ -33,6 +33,11 @@ public record PhysicalWeaponProvenance(
                 CURRENT_FORMAT, Origin.CRAFTED_SURVIVAL, recipeId), true);
     }
 
+    /** New market copies only. Existing player-owned stacks must not be restamped. */
+    public static boolean stampTraded(ItemStack stack, ResourceLocation definitionId) {
+        return stamp(stack, new PhysicalWeaponProvenance(CURRENT_FORMAT, Origin.TRADED, definitionId), true);
+    }
+
     public static boolean stampLootGenerated(
             ItemStack stack,
             ResourceLocation lootTableId) {
@@ -101,7 +106,8 @@ public record PhysicalWeaponProvenance(
 
     public enum Origin {
         CRAFTED_SURVIVAL("crafted_survival"),
-        LOOT_GENERATED("loot_generated");
+        LOOT_GENERATED("loot_generated"),
+        TRADED("traded");
 
         private final String serializedName;
 

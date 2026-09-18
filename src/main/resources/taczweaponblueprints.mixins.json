@@ -5,16 +5,24 @@
   "package": "com.gamergaming.taczweaponblueprints.mixin",
   "refmap": "/META-INF/taczweaponblueprints.refmap.json",
   "mixins": [
+    "VillagerStockMixin",
+    "AbstractVillagerStockMixin",
+    "MerchantOffersStockMixin",
+    "VillagerMerchantOfferMixin",
+    "VillagerMerchantMenuMixin",
     "IGunSmithTableRecipeAccessor",
     "GunSmithTableBlockEntityMixin",
     "GunSmithTableMenuMixin",
-    "TaCZLootTableInjectorModifierMixin"
-    ],
+    "TaCZLootTableInjectorModifierMixin",
+    "VillagerProfessionAcquisitionMixin",
+    "VillagerServerReloadMixin"
+  ],
   "client": [
     "EmiScreenBaseMixin",
     "GunSmithTableScreenMixin",
     "ICreativeModeTabsAccessor",
-    "IAbstractContainerScreenAccessor"
+    "IAbstractContainerScreenAccessor",
+    "VillagerMerchantScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1,

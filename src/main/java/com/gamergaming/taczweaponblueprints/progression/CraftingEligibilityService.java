@@ -66,21 +66,23 @@ public final class CraftingEligibilityService {
                 return Evaluation.blocked(Status.INVALID_WORKSTATION);
             }
         }
+        // This is the same unrestricted grant published by snapshot(). TaCZ
+        // still resolves the current recipe, checks its native filters and
+        // charges its ingredients in doCraft. Adapter readiness and snapshot
+        // capacity only constrain our optional progression policy.
+        if (!blueprintsEnabled) {
+            return Evaluation.permitted();
+        }
         if (magazineRecipe) {
             var magazine = MagazineCraftingAccess.validatedRecipe(MagazineCatalog.INSTANCE.publication().catalog(),
                     menu.getBlockId(), requestedRecipeId,
                     id -> player.server.getRecipeManager().byKey(id).orElse(null),
                     BlueprintDataManager.SERVER.catalogPublication().blueprints().size()).orElse(null);
             if (magazine == null) return Evaluation.blocked(Status.UNKNOWN_RECIPE);
-            if (!blueprintsEnabled) return Evaluation.permitted();
             var context = preparePolicyContext(player, workbench);
             return context == null ? Evaluation.blocked(Status.POLICY_UNAVAILABLE)
                     : magazineEvaluation(player, magazine, context);
         }
-        if (!blueprintsEnabled) {
-            return Evaluation.permitted();
-        }
-
         ResourceLocation canonicalRecipe = BlueprintDataManager.SERVER
                 .getCanonicalRecipeId(requestedRecipeId);
         ResourceLocation blueprintId = BlueprintDataManager.SERVER

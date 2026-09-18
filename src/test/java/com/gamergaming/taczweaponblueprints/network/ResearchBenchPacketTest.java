@@ -319,8 +319,8 @@ class ResearchBenchPacketTest {
         try {
             new SyncResearchBenchPreviewPacket(9, preview).toBytes(invalid);
             // The empty route, access summary, progression tier/fragment fields,
-            // and disclosed crafting-access marker occupy nine trailing bytes.
-            invalid.setByte(invalid.writerIndex() - 10, ResearchCostMode.values().length);
+            // disclosed crafting-access marker, and page offset occupy ten trailing bytes.
+            invalid.setByte(invalid.writerIndex() - 11, ResearchCostMode.values().length);
             assertThrows(
                     IllegalArgumentException.class,
                     () -> new SyncResearchBenchPreviewPacket(invalid));

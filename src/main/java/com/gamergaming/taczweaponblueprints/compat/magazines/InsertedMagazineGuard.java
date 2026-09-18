@@ -3,7 +3,7 @@ package com.gamergaming.taczweaponblueprints.compat.magazines;
 import com.tacz.guns.api.item.IGun;
 import net.minecraft.world.item.ItemStack;
 
-/** Read-only protection for the magazine embedded in a TaCZ gun by TaCZ Magazines. */
+/** Detects inserted magazines; removal is restricted to constructing a new market output. */
 public final class InsertedMagazineGuard {
     private static final String STORED_MAGAZINE = "TaCZMag_StoredMagazine";
 
@@ -15,5 +15,9 @@ public final class InsertedMagazineGuard {
                 && stack.getTag() != null && stack.getTag().contains(STORED_MAGAZINE);
     }
 
+    /** Only use on a newly constructed market output; never deletes a player's magazine. */
+    public static void clearNewOutput(ItemStack stack) {
+        if (stack != null && !stack.isEmpty()) stack.removeTagKey(STORED_MAGAZINE);
+    }
     private InsertedMagazineGuard() { }
 }

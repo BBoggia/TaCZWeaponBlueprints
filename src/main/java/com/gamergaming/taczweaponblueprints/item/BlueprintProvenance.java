@@ -33,6 +33,11 @@ public record BlueprintProvenance(
                 learningMode);
     }
 
+    public static BlueprintProvenance traded() {
+        return new BlueprintProvenance(CURRENT_FORMAT, Source.TRADED, false,
+                PhysicalBlueprintLearningMode.REQUIRE_TREE_PREREQUISITES);
+    }
+
     /** Ordinary fragments reconstruct protected blueprints requiring prerequisites. */
     public static BlueprintProvenance fragmentReconstructed() {
         return new BlueprintProvenance(
@@ -99,6 +104,7 @@ public record BlueprintProvenance(
 
     public enum Source {
         REVERSE_ENGINEERING,
-        FRAGMENT_RECONSTRUCTION
+        FRAGMENT_RECONSTRUCTION,
+        TRADED
     }
 }

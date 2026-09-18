@@ -62,6 +62,9 @@ and production-install playtest results with the exact artifact digest. Review
 servers. A development handoff and adapted-artifact run do not mark the final
 production-install checklist complete.
 
+For villager changes, complete the [villager release matrix](villager-release-validation.md)
+and retain its artifact-bound native results with the candidate.
+
 ## Publish
 
 - Create an annotated `v<version>` tag on the validated commit. The tag must

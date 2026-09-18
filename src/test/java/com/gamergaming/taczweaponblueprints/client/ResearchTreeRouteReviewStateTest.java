@@ -115,6 +115,30 @@ class ResearchTreeRouteReviewStateTest {
                 java.util.Collections.nCopies(32,material),List.of(B),List.of(B),List.of(),Optional.of(B));
         assertReviewStatus(preview, value, ResearchTreeRouteReviewState.Status.CURRENT);
     }
+    @Test void materialPagesCompareAgainstTheirActualGuidanceOffset() {
+        var materials = java.util.stream.IntStream.range(0, 40)
+                .mapToObj(i -> new ResearchGuidanceSnapshot.MaterialProgress(
+                        List.of(new ResourceLocation("test:material_" + i)), Optional.empty(), 1, 0)).toList();
+        var value = new ResearchGuidanceSnapshot(B, ResearchGuidanceSnapshot.State.MISSING_POINTS_AND_MATERIALS,
+                3, 0, ResearchCostMode.POINTS_AND_ITEMS, false, true, 40, 40, 0, 40,
+                materials.subList(0, 32), List.of(B), List.of(B), List.of(), Optional.of(B));
+        for (int offset : new int[]{0, 6, 30, 36}) {
+            var rows = materials.subList(offset, Math.min(40, offset + 6)).stream()
+                    .map(m -> new ResearchSelectionPreview.IngredientPreview(m.items(), m.tag(), m.required(), m.allocated())).toList();
+            var preview = new ResearchSelectionPreview(Optional.of(B), 3, 0, true, false, true, false, false,
+                    rows, 1, 40, ResearchSelectionPreview.PathPlanningState.NONE, ResearchCostMode.POINTS_AND_ITEMS,
+                    Optional.of(FP), ResearchAccessSummary.NONE, ResearchSelectionProgressionPreview.EMPTY, offset);
+            assertReviewStatus(preview, value, ResearchTreeRouteReviewState.Status.CURRENT);
+            if (offset < 32) {
+                var stale = new java.util.ArrayList<>(rows);
+                stale.set(0, new ResearchSelectionPreview.IngredientPreview(rows.get(0).items(), Optional.empty(), 1, 1));
+                var changed = new ResearchSelectionPreview(Optional.of(B), 3, 0, true, false, true, false, false,
+                        stale, 1, 40, ResearchSelectionPreview.PathPlanningState.NONE, ResearchCostMode.POINTS_AND_ITEMS,
+                        Optional.of(FP), ResearchAccessSummary.NONE, ResearchSelectionProgressionPreview.EMPTY, offset);
+                assertReviewStatus(changed, value, ResearchTreeRouteReviewState.Status.UNAVAILABLE);
+            }
+        }
+    }
     private void assertReviewStatus(ResearchSelectionPreview preview, ResearchGuidanceSnapshot value,
             ResearchTreeRouteReviewState.Status expected) {
         var state = new ResearchTreeRouteReviewState();

@@ -46,6 +46,6 @@ class ResearchWorkstationsPhaseFourTest {
 
     @Test
     void presentationOnlyCutoverDoesNotChangeTheWireContract() {
-        assertEquals("66", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("69", NetworkHandler.PROTOCOL_VERSION);
     }
 }

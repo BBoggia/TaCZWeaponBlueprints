@@ -48,6 +48,15 @@ class PhysicalWeaponProvenanceTest {
         assertFalse(crafted.verifiedLoot());
     }
 
+    @Test void tradedSaveMarkersAreAdditiveAndPurchasedBlueprintPermissionsAreExplicit() {
+        var root=new CompoundTag();var traded=new PhysicalWeaponProvenance(1,PhysicalWeaponProvenance.Origin.TRADED,RECIPE);
+        root.put(PhysicalWeaponProvenance.TAG_KEY,traded.toTag());assertEquals(traded,PhysicalWeaponProvenance.fromTag(root).orElseThrow());assertFalse(traded.verifiedLoot());
+        var blueprint=BlueprintProvenance.traded();root.put(BlueprintProvenance.TAG_KEY,blueprint.toTag());
+        assertEquals(blueprint,BlueprintProvenance.fromTag(root).orElseThrow());assertFalse(BlueprintProvenance.allowsRecycling(root));
+        assertEquals(com.gamergaming.taczweaponblueprints.progression.PhysicalBlueprintLearningMode.REQUIRE_TREE_PREREQUISITES,
+                BlueprintProvenance.learningMode(root,com.gamergaming.taczweaponblueprints.progression.PhysicalBlueprintLearningMode.BYPASS_TREE_PREREQUISITES));
+    }
+
     @Test
     void malformedUnknownAndNonWeaponStacksFailClosed() {
         CompoundTag root = new CompoundTag();

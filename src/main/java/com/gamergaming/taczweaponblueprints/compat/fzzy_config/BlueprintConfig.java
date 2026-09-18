@@ -479,6 +479,47 @@ public class BlueprintConfig extends Config {
     @WithPerms(opLevel = 2)
     public ValidatedInt fragmentLootReplacementPercent = new ValidatedInt(20, 100, 0);
 
+    public ConfigGroup villagerTrading = new ConfigGroup("villagerTrading");
+    @WithPerms(opLevel = 2)
+    public ValidatedBoolean enableGunsmith = new ValidatedBoolean(true);
+    @WithPerms(opLevel = 2)
+    public ValidatedBoolean enableBallisticsResearcher = new ValidatedBoolean(true);
+    @WithPerms(opLevel = 2)
+    public ValidatedBoolean villagerMaterialPurchases = new ValidatedBoolean(true);
+    @WithPerms(opLevel = 2)
+    public ValidatedBoolean villagerGunSales = new ValidatedBoolean(true);
+    @WithPerms(opLevel = 2)
+    public ValidatedBoolean villagerAmmoSales = new ValidatedBoolean(true);
+    @WithPerms(opLevel = 2)
+    public ValidatedBoolean villagerAttachmentSales = new ValidatedBoolean(true);
+    @WithPerms(opLevel = 2)
+    public ValidatedBoolean villagerDataSales = new ValidatedBoolean(true);
+    @WithPerms(opLevel = 2)
+    public ValidatedBoolean villagerFragmentSales = new ValidatedBoolean(true);
+    @WithPerms(opLevel = 2)
+    public ValidatedBoolean villagerBlueprintSales = new ValidatedBoolean(false);
+    @WithPerms(opLevel = 2)
+    public ValidatedBoolean villagerMagazineSales = new ValidatedBoolean(true);
+    @WithPerms(opLevel = 2)
+    public ValidatedBoolean villagerExtendedMagazines = new ValidatedBoolean(false);
+    @WithPerms(opLevel = 2)
+    public ValidatedEnum<com.gamergaming.taczweaponblueprints.villager.trade.TradeSettings.CurrencyMode> villagerCurrencyMode =
+            new ValidatedEnum<>(com.gamergaming.taczweaponblueprints.villager.trade.TradeSettings.CurrencyMode.FOLLOW_RESEARCH_ITEM);
+    @WithPerms(opLevel = 2)
+    public ValidatedString villagerFixedCurrency = currencyItemSetting();
+    @WithPerms(opLevel = 2)
+    public ValidatedInt villagerPricePercent = new ValidatedInt(100, 1000, 1);
+    @WithPerms(opLevel = 2)
+    public ValidatedInt villagerStockPercent = new ValidatedInt(100, 1000, 1);
+    @WithPerms(opLevel = 2)
+    public ValidatedInt villagerMinimumPricePercent = new ValidatedInt(75, 100, 0);
+    @ConfigGroup.Pop
+    @WithPerms(opLevel = 2)
+    public ValidatedInt villagerMaximumGunTier = new ValidatedInt(2, 3, 1);
+
+    private transient volatile com.gamergaming.taczweaponblueprints.villager.trade.TradeSettings villagerSettings;
+    public com.gamergaming.taczweaponblueprints.villager.trade.TradeSettings villagerSettings() { return villagerSettings; }
+
     private transient volatile BlueprintProgressionConfigSnapshot progressionSnapshot;
     private transient volatile BlueprintAccessConfigSnapshot accessSnapshot;
     private transient volatile ResearchPointAwardConfigSnapshot awardSnapshot;
@@ -786,6 +827,7 @@ public class BlueprintConfig extends Config {
         awardSnapshot = ResearchPointAwardConfigSnapshot.from(this, progressionSnapshot);
         researchFeatureSnapshot = ResearchFeatureConfigSnapshot.from(this);
         magazineSettings = MagazineProgressionSettings.from(this);
+        villagerSettings = com.gamergaming.taczweaponblueprints.villager.trade.TradeSettings.from(this);
     }
 
     public record BalancePresetApplication(

@@ -36,7 +36,7 @@ compatibility suites. It opens the exact reobfuscated JAR, verifies the runtime
 classes and recipes for all three Bench tiers, fragments, native
 crafting enforcement, public criterion API, and supplemental packets, and
 writes `build/reports/tiered-progression-release.json`. Confirm the report pins
-`tiered-progression-fragments-gates-v1`, protocol 66, player-data version 5,
+`tiered-progression-fragments-gates-v1`, protocol 69, player-data version 5,
 server-config version 5, the default presets and thresholds, and the same JAR
 SHA-256 used by the final candidate report. A passing report remains marked
 `requires_runtime_matrix`; it is not evidence that multiplayer and in-game
@@ -74,7 +74,7 @@ It binds 21 named route, allocation, lifecycle, packet, persistence, rollback,
 scale, input, migration, cost-mode, compatibility, navigation, paging, and
 lost-response invariants to exact clean JUnit cases and writes
 `build/reports/research-guidance-release.json`. Confirm the report pins
-`research-guidance-qol-v1`, protocol 66, player-data version 5, client-settings
+`research-guidance-qol-v1`, protocol 69, player-data version 5, client-settings
 version 3, 16 packaged feature classes, the 4,096-node public limit, and
 eight-target affordability batches. The release-candidate report must
 reference the same contract and report.
@@ -110,7 +110,7 @@ policy. Packaged-artifact verification separately requires every kernel and
 configuration class plus all twelve localized setting surfaces.
 
 The build also runs `verifyTaperedAutomaticTopologyContract`. It pins automatic
-topology `tacz-gun-placement-v13`, Research Tree protocol 66, export format 22,
+topology `tacz-gun-placement-v13`, Research Tree protocol 69, export format 22,
 and the canonical-coordinate/decision/finalized-rank publication contract;
 requires clean server planning, finalization, diagnostics, client layout,
 network, and packaged-data suites; and writes
@@ -128,7 +128,7 @@ The build also runs `verifyGroupedPrerequisiteAcceptanceContract`. It requires
 all 20 named Phase 7 semantic and integration invariants to resolve to exact,
 clean JUnit cases and writes
 `build/reports/grouped-prerequisite-acceptance.json`. Confirm the report pins
-`truth-tables-integration-v1`, protocol 66, export format 22, and
+`truth-tables-integration-v1`, protocol 69, export format 22, and
 `grouped_routes_v1`, and that the JAR manifest and release-candidate report
 contain the same acceptance contract.
 
@@ -235,7 +235,7 @@ bounded four-point score tolerance, and explicit truncation diagnostics,
 family-preserving responsive row boundaries and bounded ten-pixel lanes for
 additional any-of junctions,
 tree-owned optional/dynamic/configured presentation bands, the 4,096-candidate
-ceiling, protocol 66, export format 22, and packaged automatic prerequisite
+ceiling, protocol 69, export format 22, and packaged automatic prerequisite
 strategy `grouped_routes_v1`. Confirm canonical branch coordinates
 round-trip for every automatic member, two-family layouts receive a visible
 gutter, planned and published ranks are reported separately, and complete
@@ -394,3 +394,10 @@ Run the full build from a source-only copy without local notes or existing build
 outputs. The release checks reject acceptance probes in the JAR. Graph timing
 comparisons are development measurements, not portable performance guarantees;
 record hardware and separate CPU scene preparation from native rendering.
+
+## Villager trading acceptance
+
+For changes to the Gunsmith, Ballistics Researcher, or purchased-item analysis,
+complete the [villager release matrix](villager-release-validation.md). Retain
+the native acceptance record with the exact candidate SHA-256 alongside the
+normal release-candidate report.

@@ -96,7 +96,7 @@ public final class SyncResearchBenchPreviewPacket {
                 policyEligible, ingredientsSatisfied, outputSpace,
                 researchable, creativeBypass, ingredients,
                 unlockCount, totalIngredientTypes, pathPlanningState,
-                costModes[costModeOrdinal], routeFingerprint, accessSummary, progression);
+                costModes[costModeOrdinal], routeFingerprint, accessSummary, progression, buffer.readVarInt());
     }
 
     public void toBytes(FriendlyByteBuf buffer) {
@@ -128,6 +128,7 @@ public final class SyncResearchBenchPreviewPacket {
         });
         writeAccessSummary(buffer, preview.accessSummary());
         writeProgression(buffer, preview.progression());
+        buffer.writeVarInt(preview.ingredientOffset());
     }
 
     public void handle(Supplier<NetworkEvent.Context> contextSupplier) {

@@ -45,8 +45,11 @@ public final class BlueprintWeaponAnalysisService {
     }
 
     public static BlueprintAnalyzerPolicy.Origin origin(ItemStack stack) {
-        return PhysicalWeaponProvenance.from(stack).map(p -> p.verifiedLoot()
-                ? BlueprintAnalyzerPolicy.Origin.FOUND : BlueprintAnalyzerPolicy.Origin.CRAFTED)
+        return PhysicalWeaponProvenance.from(stack).map(p -> switch (p.origin()) {
+                    case LOOT_GENERATED -> BlueprintAnalyzerPolicy.Origin.FOUND;
+                    case CRAFTED_SURVIVAL -> BlueprintAnalyzerPolicy.Origin.CRAFTED;
+                    case TRADED -> BlueprintAnalyzerPolicy.Origin.TRADED;
+                })
                 .orElse(BlueprintAnalyzerPolicy.Origin.UNKNOWN);
     }
 

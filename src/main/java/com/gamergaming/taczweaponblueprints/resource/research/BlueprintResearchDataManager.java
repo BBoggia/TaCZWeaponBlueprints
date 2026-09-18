@@ -360,6 +360,11 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
         }
     }
 
+    /** Republish the last committed resource snapshot after an aborted reload. */
+    public void restoreAfterAbortedReload(BlueprintResearchSnapshot committed) {
+        apply(committed, null, net.minecraft.util.profiling.InactiveProfiler.INSTANCE);
+    }
+
     public BlueprintResearchSnapshot snapshot() {
         return publication.snapshot();
     }

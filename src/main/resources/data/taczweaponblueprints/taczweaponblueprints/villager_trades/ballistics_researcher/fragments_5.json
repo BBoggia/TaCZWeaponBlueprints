@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "profession": "taczweaponblueprints:ballistics_researcher",
+  "level": 5,
+  "slot": "taczweaponblueprints:ballistics_researcher/fragments_5",
+  "role": "core",
+  "output": {
+    "kind": "analysis_fragments",
+    "count": 5,
+    "tier": 2,
+    "selection": "study_t2",
+    "candidates": [
+      {
+        "id": "tacz:m4a1",
+        "weight": 1
+      },
+      {
+        "id": "tacz:ak47",
+        "weight": 1
+      },
+      {
+        "id": "tacz:m16a4",
+        "weight": 1
+      },
+      {
+        "id": "tacz:m16a1",
+        "weight": 1
+      },
+      {
+        "id": "tacz:aug",
+        "weight": 1
+      },
+      {
+        "id": "tacz:g36k",
+        "weight": 1
+      },
+      {
+        "id": "tacz:hk416d",
+        "weight": 1
+      },
+      {
+        "id": "tacz:scar_l",
+        "weight": 1
+      },
+      {
+        "id": "tacz:qbz_95",
+        "weight": 1
+      },
+      {
+        "id": "tacz:type_81",
+        "weight": 1
+      },
+      {
+        "id": "tacz:sks_tactical",
+        "weight": 1
+      }
+    ]
+  },
+  "price": {
+    "item": "currency",
+    "count": 36
+  },
+  "uses": 1,
+  "xp": 30,
+  "demand_multiplier": 0.05,
+  "fallbacks": [
+    "taczweaponblueprints:ballistics_researcher/fallback_data_5"
+  ]
+}

@@ -54,14 +54,17 @@ public final class AnalyzerBalanceReport {
             if (!"policy_only".equals(string(policy, "scope"))) throw new IllegalArgumentException("unsupported Analyzer quote scope");
             if (policy.has("mode") && "legacy".equals(string(policy, "mode"))) { legacy++; continue; }
             var quotes = policy.getAsJsonArray("quotes");
-            if (quotes == null || quotes.size() != 9) throw new IllegalArgumentException("expected nine resolved station/origin quotes");
+            if (quotes == null || (quotes.size() != 9 && quotes.size() != 12))
+                throw new IllegalArgumentException("expected nine legacy or twelve current station/origin quotes");
+            var origins = quotes.size() == 9 ? Set.of("found", "crafted", "unknown")
+                    : Set.of("found", "crafted", "unknown", "traded");
             var sorted = new TreeMap<String, JsonObject>();
             for (var value : quotes) {
                 var quote = value.getAsJsonObject();
                 var tier = string(quote, "analyzer_tier");
                 var origin = string(quote, "origin");
                 if (!Set.of("tier_1", "tier_2", "tier_3").contains(tier)
-                        || !Set.of("found", "crafted", "unknown").contains(origin)
+                        || !origins.contains(origin)
                         || sorted.put(tier + ":" + origin, quote) != null)
                     throw new IllegalArgumentException("invalid or duplicate station/origin quote");
             }

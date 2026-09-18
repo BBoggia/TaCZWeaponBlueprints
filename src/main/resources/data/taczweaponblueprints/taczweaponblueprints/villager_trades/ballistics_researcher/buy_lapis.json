@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "profession": "taczweaponblueprints:ballistics_researcher",
+  "level": 2,
+  "slot": "taczweaponblueprints:ballistics_researcher/buy_lapis",
+  "role": "core",
+  "output": {
+    "kind": "currency",
+    "count": 1,
+    "tier": 0,
+    "selection": "none",
+    "candidates": []
+  },
+  "price": {
+    "item": "minecraft:lapis_lazuli",
+    "count": 12
+  },
+  "uses": 4,
+  "xp": 5,
+  "demand_multiplier": 0.05
+}

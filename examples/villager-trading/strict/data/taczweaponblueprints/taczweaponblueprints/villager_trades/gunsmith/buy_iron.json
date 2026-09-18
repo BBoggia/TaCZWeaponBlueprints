@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "profession": "taczweaponblueprints:gunsmith",
+  "level": 1,
+  "slot": "taczweaponblueprints:gunsmith/buy_iron",
+  "role": "core",
+  "output": {
+    "kind": "currency",
+    "count": 1,
+    "tier": 0,
+    "selection": "none",
+    "candidates": []
+  },
+  "price": {
+    "item": "minecraft:iron_ingot",
+    "count": 8
+  },
+  "uses": 4,
+  "xp": 2,
+  "demand_multiplier": 0.05,
+  "enabled": false
+}

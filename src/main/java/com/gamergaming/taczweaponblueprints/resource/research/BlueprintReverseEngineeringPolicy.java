@@ -110,6 +110,15 @@ public record BlueprintReverseEngineeringPolicy(
         });
     }
 
+    /** A renewable market input cannot acquire bypass/recycling permissions by legacy defaults. */
+    public BlueprintReverseEngineeringPolicy forTradedWeapon() {
+        if (expertAllowEconomyLoop) return this;
+        return new BlueprintReverseEngineeringPolicy(enabled, inputCount, cost, allowKnown, allowModified,
+                physicalBlueprintLearningMode.learningPermitted()
+                        ? PhysicalBlueprintLearningMode.REQUIRE_TREE_PREREQUISITES : PhysicalBlueprintLearningMode.DISABLED,
+                false, false);
+    }
+
     public BlueprintReverseEngineeringPolicy apply(BlueprintReverseEngineeringOverride override) {
         if (override == null) {
             return this;

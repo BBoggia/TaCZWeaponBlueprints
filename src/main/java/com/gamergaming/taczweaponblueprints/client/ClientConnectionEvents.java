@@ -36,6 +36,12 @@ public final class ClientConnectionEvents {
     @SubscribeEvent
     public static void onItemTooltip(net.minecraftforge.event.entity.player.ItemTooltipEvent event) {
         var stack=event.getItemStack();
+        if (com.gamergaming.taczweaponblueprints.item.PhysicalWeaponProvenance.from(stack)
+                .filter(p -> p.origin() == com.gamergaming.taczweaponblueprints.item.PhysicalWeaponProvenance.Origin.TRADED).isPresent())
+            event.getToolTip().add(net.minecraft.network.chat.Component.translatable("tooltip.taczweaponblueprints.traded_weapon").withStyle(net.minecraft.ChatFormatting.GRAY));
+        if (com.gamergaming.taczweaponblueprints.item.BlueprintItem.getProvenance(stack)
+                .filter(p -> p.source() == com.gamergaming.taczweaponblueprints.item.BlueprintProvenance.Source.TRADED).isPresent())
+            event.getToolTip().add(net.minecraft.network.chat.Component.translatable("tooltip.taczweaponblueprints.traded_blueprint").withStyle(net.minecraft.ChatFormatting.GRAY));
         if(stack.is(com.gamergaming.taczweaponblueprints.init.ModItems.RESEARCH_NOTE.get())
                 ||stack.is(com.gamergaming.taczweaponblueprints.init.ModItems.RESEARCH_REPORT.get())
                 ||stack.is(com.gamergaming.taczweaponblueprints.init.ModItems.RESEARCH_DOSSIER.get())) {

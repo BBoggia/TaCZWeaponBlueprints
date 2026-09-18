@@ -58,6 +58,7 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
     private final Inventory playerInventory;
     private ResourceLocation selectedBlueprint;
     private ResearchSelectionPreview preview = ResearchSelectionPreview.EMPTY;
+    private int materialOffset;
     private ResearchInventorySnapshot previewInventory = ResearchInventorySnapshot.EMPTY;
     private final ResearchBenchRequestLimiter requestLimiter =
             new ResearchBenchRequestLimiter();
@@ -148,6 +149,16 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
     public void acceptPreview(ResearchSelectionPreview preview) {
         this.preview = preview == null ? ResearchSelectionPreview.EMPTY : preview;
         this.selectedBlueprint = this.preview.blueprintId().orElse(null);
+    }
+
+    /** Queue a fresh bounded quote; page requests never bypass planner admission. */
+    public void requestMaterialPage(ServerPlayer player, ResourceLocation target, int fromOffset, int toOffset) {
+        if (player == null || player.containerMenu != this || !stillValid(player)
+                || !java.util.Objects.equals(selectedBlueprint, target)
+                || !preview.acceptsMaterialPage(target, fromOffset, toOffset)
+                || requestLimiter.admitGuidance(serverTick(player)) == ResearchBenchRequestLimiter.Decision.THROTTLE) return;
+        materialOffset = toOffset;
+        authoritativePreviewRefreshPending = true;
     }
 
     public void refreshAuthoritativePreview(ServerPlayer player) {
@@ -245,6 +256,7 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
                     ? blueprintId
                     : null;
         }
+        materialOffset = 0;
         refreshPreview(player);
         boolean accepted = blueprintId == null
                 ? selectedBlueprint == null
@@ -544,6 +556,7 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
 
     private void publishPreview(ServerPlayer player, ResearchSelectionPreview next) {
         preview = next;
+        materialOffset = next.ingredientOffset();
         authoritativePreviewRefreshPending = false;
         previewInventory = ResearchInventorySnapshot.capture(playerInventory.items);
         super.broadcastChanges();
@@ -580,7 +593,7 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
                             .limit(BlueprintResearchIngredient.MAX_ITEMS)
                             .toList(),
                     () -> progressionPreview(selectedBlueprint, evaluation,
-                            prepared.playerData(), prepared.workbenchContext()));
+                            prepared.playerData(), prepared.workbenchContext()), materialOffset);
             return new PreparedPreview(next, directPathResearch,
                     next.pathPlanningState() == ResearchSelectionPreview.PathPlanningState.NONE
                             ? evaluation.path() : Optional.empty());

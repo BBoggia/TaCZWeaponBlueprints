@@ -15,7 +15,7 @@ final class ReflectiveMagazineSource implements TaCZMagazinesAdapter.Source {
     private static final String ROOT = "com.raiiiden.taczmagazines.";
     private static final ResourceLocation ITEM_ID = new ResourceLocation(TaCZMagazinesAdapter.MOD_ID, "magazine");
     private final Class<?> magazine;
-    private final Method families, family, capacity, familyCapacity, ammo, guns, extended, extension, override, enabled;
+    private final Method families, family, capacity, familyCapacity, ammo, guns, extended, extension, override, enabled, familyForGun;
 
     ReflectiveMagazineSource() {
         try {
@@ -24,6 +24,7 @@ final class ReflectiveMagazineSource implements TaCZMagazinesAdapter.Source {
             Class<?> system = Class.forName(ROOT + "magazine.MagazineFamilySystem", false, loader);
             Class<?> overrides = Class.forName(ROOT + "crafting.MagazineRecipeOverrides", false, loader);
             families = system.getMethod("getAllFamilies");
+            familyForGun = system.getMethod("getFamilyForGun", ResourceLocation.class);
             family = magazine.getMethod("getMagazineFamilyId", ItemStack.class);
             capacity = magazine.getMethod("getMaxCapacity", ItemStack.class);
             familyCapacity = system.getMethod("getCapacityForFamily", String.class);
@@ -50,6 +51,7 @@ final class ReflectiveMagazineSource implements TaCZMagazinesAdapter.Source {
                 && ITEM_ID.equals(ForgeRegistries.ITEMS.getKey(stack.getItem()));
     }
 
+    @Override public String familyForGun(ResourceLocation gun) { return (String) call(familyForGun, null, gun); }
     @Override public String family(ItemStack stack) { return (String) call(family, null, stack); }
     @Override public int capacity(ItemStack stack) { return (int) call(capacity, null, stack); }
     @Override public int ammoCount(ItemStack stack) { return ((IAmmoBox) stack.getItem()).getAmmoCount(stack); }

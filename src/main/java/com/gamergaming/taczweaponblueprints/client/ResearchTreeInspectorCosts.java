@@ -13,10 +13,25 @@ final class ResearchTreeInspectorCosts {
     static List<ResearchTreeInspectorRow> rows(ResearchTreeSelectedNodePresenter.Presentation details,
             Component currency, Function<ResearchSelectionPreview.IngredientPreview, Component> ingredientName,
             int text, int muted, int good, int bad) {
+        return rows(details, null, currency, ingredientName, text, muted, good, bad);
+    }
+    static List<ResearchTreeInspectorRow> rows(ResearchTreeSelectedNodePresenter.Presentation details,
+            ResearchSelectionPreview preview, Component currency,
+            Function<ResearchSelectionPreview.IngredientPreview, Component> ingredientName,
+            int text, int muted, int good, int bad) {
         if (!details.hasPurchaseQuote()) return List.of();
         var rows = new ArrayList<ResearchTreeInspectorRow>();
         rows.add(ResearchTreeInspectorRow.text(SECTION, Component.translatable(PREFIX
                 + (details.pathPurchase() ? "path" : "single"), details.unlockCount()), text));
+        if (preview != null && details.additionalIngredientTypes() > 0) {
+            rows.add(ResearchTreeInspectorRow.text(EXPLANATION, Component.translatable(PREFIX + "page",
+                    preview.ingredientOffset() + 1, preview.ingredientOffset() + preview.ingredients().size(),
+                    preview.ingredientTypeCount()), muted));
+            if (preview.ingredientOffset() > 0) rows.add(ResearchTreeInspectorRow.materialPage(
+                    Component.translatable(PREFIX + "previous"), -1, text));
+            if (preview.ingredientOffset() + preview.ingredients().size() < preview.ingredientTypeCount())
+                rows.add(ResearchTreeInspectorRow.materialPage(Component.translatable(PREFIX + "next"), 1, text));
+        }
         if (details.costBypassed()) rows.add(ResearchTreeInspectorRow.text(EXPLANATION,
                 Component.translatable("gui.taczweaponblueprints.research_bench.tree.cost_bypassed"), muted));
         boolean hasResources = details.pointsEnabled() || !details.ingredients().isEmpty();
@@ -30,7 +45,7 @@ final class ResearchTreeInspectorCosts {
         } else if (details.additionalIngredientTypes() == 0) {
             rows.add(ResearchTreeInspectorRow.text(EXPLANATION, Component.translatable(PREFIX + "free"), good));
         }
-        if (details.additionalIngredientTypes() > 0) rows.add(ResearchTreeInspectorRow.text(EXPLANATION,
+        if (preview == null && details.additionalIngredientTypes() > 0) rows.add(ResearchTreeInspectorRow.text(EXPLANATION,
                 Component.translatable("gui.taczweaponblueprints.research_bench.tree.path.more_materials",
                         details.additionalIngredientTypes()), muted));
         return List.copyOf(rows);

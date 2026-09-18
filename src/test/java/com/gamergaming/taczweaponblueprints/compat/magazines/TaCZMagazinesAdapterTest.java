@@ -220,6 +220,13 @@ class TaCZMagazinesAdapterTest {
     }
 
     private static ResourceLocation id(String value) { return new ResourceLocation(value); }
+    @Test void gunRequirementsRemainVisibleWhenFamilyRecipesAreDisabled() {
+        var source=base();source.disabled.add("9mm_17");
+        var adapter=adapter(source);
+        assertEquals(java.util.Optional.of(key("9mm_17")),adapter.familyForGun(id("pack:pistol_a")));
+        assertTrue(adapter.familyForGun(id("pack:unmanaged")).isEmpty());
+        assertThrows(IllegalStateException.class,()->TaCZMagazinesAdapter.create(null,()->source).familyForGun(id("pack:pistol_a")));
+    }
     private static ResourceLocation key(String family) { return TaCZMagazinesAdapter.familyKey(family); }
 
     private static class FakeSource implements TaCZMagazinesAdapter.Source {
@@ -231,6 +238,7 @@ class TaCZMagazinesAdapterTest {
             facts.put(family, new TaCZMagazinesAdapter.Family(id("pack:9mm"), capacity, extension,
                     java.util.Arrays.stream(guns).map(TaCZMagazinesAdapterTest::id).collect(Collectors.toSet())));
         }
+        @Override public String familyForGun(ResourceLocation gun) {return facts.entrySet().stream().filter(e->e.getValue().compatibleGuns().contains(gun)).map(Map.Entry::getKey).findFirst().orElse(null);}
         @Override public Set<String> families() {
             if (broken) throw new NoSuchMethodError("changed API");
             return extraFamilies.isEmpty() ? facts.keySet() : extraFamilies;

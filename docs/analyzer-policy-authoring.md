@@ -13,7 +13,7 @@ Set the research profile's `format` to `5` and add `analyzer` alongside its exis
 | `mode` | Required: `legacy`, `tiered`, or `disabled`. Missing the entire extension means `legacy`. These modes describe weapon analysis; ammo and attachment conversion keep their existing policy. |
 | `fallback_weapon_tier` | Optional `tier_1`, `tier_2`, or `tier_3`, used only when no progression assignment exists. Omit it to report an unavailable tier. |
 | `minimum_analyzer_tier` | Optional station minimum, default `tier_1`. Higher weapon tiers do not themselves block a lower station. |
-| `allowed_origins` | Optional list of `found`, `crafted`, and `unknown`; defaults to all three. An empty list blocks every origin; duplicates are invalid. Found means verified loot provenance. |
+| `allowed_origins` | Optional list of `found`, `crafted`, `unknown`, and `traded`; defaults to all four. An empty list blocks every origin; duplicates are invalid. Found means verified loot provenance. |
 | `attempt` | Optional overrides described below. |
 | `reconstruction` | Required when any row has a positive fragment weight. Contains complete weapon-tier `thresholds` and `retained_progress_cap`. |
 | `tiers` | Required in tiered mode: outer keys are Analyzer tiers, inner keys are weapon tiers. All nine rows must exist. |
@@ -26,7 +26,7 @@ The following is a complete `analyzer` object, to insert into an otherwise valid
 {
   "mode": "tiered",
   "minimum_analyzer_tier": "tier_1",
-  "allowed_origins": ["found", "crafted", "unknown"],
+  "allowed_origins": ["found", "crafted", "unknown", "traded"],
   "attempt": {
     "allow_known": false,
     "physical_blueprint_learning": "require_tree_prerequisites",
@@ -126,8 +126,14 @@ Disabling Tech Tree display does not disable an explicitly assigned Analyzer tie
 
 All profile policies and individual rule overlays are validated before publication, including shadowed rules. Invalid data retains the previous research snapshot. Successful reloads replace the snapshot and revision together. Quote consumers must acquire a new context after reload rather than retaining old policy data.
 
-`/gg research export` now writes catalog format 22. Gun entries contain `analyzer_policy`. Legacy entries without an extension stay compact. Configured entries include nine quotes: three station tiers times three input origins for that weapon's resolved tier. Quotes expose the selected rule, tier source/review flag, configuration status, effective attempt cost and permissions, weights, probabilities, fragment range, threshold, and retention cap. Probabilities use fractions from 0 to 1.
+`/gg research export` now writes catalog format 22. Gun entries contain `analyzer_policy`. Legacy entries without an extension stay compact. Configured entries include twelve quotes: three station tiers times four input origins for that weapon's resolved tier. Quotes expose the selected rule, tier source/review flag, configuration status, effective attempt cost and permissions, weights, probabilities, fragment range, threshold, and retention cap. Probabilities use fractions from 0 to 1.
 
 The catalog export uses `recovery_mode_scope: "protected_mode_baseline"`; it does not claim to report the server's current found-weapon recovery mode. The diagnostics API accepts an explicit recovery mode for callers that need that projection. All results carry `scope: "policy_only"`, `gameplay_enabled: true`, and `player_eligibility_checked: false`. The gameplay flag records that this build implements Analyzer transactions; it does not assert that a particular player can perform the exported action. `configured` means that the configuration permits this combination, not that the player's inventory, knowledge, or resources permit an action. Exports never draw randomness or expose a future result.
 
 Strict catalog consumers must accept format 22 explicitly. Existing format-21 fields retain their meanings. No network or player-data format change is required by this data-only extension.
+
+Purchased (`traded`) guns require protected, prerequisite-bound analysis rewards
+unless the effective attempt explicitly enables `expert_allow_economy_loop`.
+An explicit origin list from an older pack does not gain `traded` automatically.
+Current catalog exports contain twelve station/origin quotes; the balance-report
+tool also accepts older format-22 exports with nine complete quotes.

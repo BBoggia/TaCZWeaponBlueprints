@@ -106,6 +106,18 @@ public final class BlueprintReverseEngineeringEvaluator {
                         stableCatalog,
                         profileId,
                         blueprintId);
+        boolean traded = com.gamergaming.taczweaponblueprints.item.PhysicalWeaponProvenance.from(stack)
+                .filter(p -> p.origin() == com.gamergaming.taczweaponblueprints.item.PhysicalWeaponProvenance.Origin.TRADED).isPresent();
+        boolean tradedAllowed = true;
+        if (traded) {
+            reversePolicy = reversePolicy.forTradedWeapon();
+            var profile = snapshot.profiles().get(profileId);
+            var selection = BlueprintResearchPolicyResolver.analyzerRuleSelection(snapshot, profileId, blueprintId, physical.data().orElseThrow());
+            var override = selection.selectedRuleId().flatMap(id -> snapshot.rules().get(id).analyzer());
+            var analyzer = profile == null ? com.gamergaming.taczweaponblueprints.resource.research.BlueprintAnalyzerPolicy.LEGACY
+                    : profile.analyzer().orElse(com.gamergaming.taczweaponblueprints.resource.research.BlueprintAnalyzerPolicy.LEGACY).apply(override.orElse(null));
+            tradedAllowed = analyzer.allowedOrigins().contains(com.gamergaming.taczweaponblueprints.resource.research.BlueprintAnalyzerPolicy.Origin.TRADED);
+        }
         int requiredCount = requiredInputCount(physical.data().orElseThrow(), reversePolicy);
 
         Status status;
@@ -117,7 +129,7 @@ public final class BlueprintReverseEngineeringEvaluator {
             status = Status.BLOCKED;
         } else if (stableExempt.test(blueprintId)) {
             status = Status.PROGRESSION_EXEMPT;
-        } else if (!reversePolicy.enabled()
+        } else if (!tradedAllowed || !reversePolicy.enabled()
                 || (!reversePolicy.physicalBlueprintLearningMode().learningPermitted()
                         && !reversePolicy.outputRecyclable()
                         && !nonLearningResultPermitted)) {

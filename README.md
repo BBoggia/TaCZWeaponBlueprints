@@ -40,6 +40,8 @@ an optional server setting.
   for blueprints or fragments. Higher Analyzer tiers improve Data outcomes
   and weapon-analysis odds. Above-tier weapon attempts can produce no reward;
   same-tier and lower-tier attempts produce blueprints or fragments.
+- Gunsmith and Ballistics Researcher villagers with craftable job sites, stable
+  equipment and study choices, and configurable trades for physical currency.
 - Optional JEI and EMI information pages that explain the progression
   workstations without exposing hidden research targets or enabling recipe
   transfer bypasses.
@@ -68,6 +70,12 @@ Add next connects new weapons in one action. Open it from the title or pause men
 7. Use the Analyzer to reverse engineer equipment or recycle supported
    duplicates for research currency. Collect Input and Output when finished;
    closing the menu returns them to your inventory or drops them if it is full.
+
+Place a **Gunsmith Station** or **Ballistics Desk** near an unemployed adult
+villager to establish a trader. Gunsmiths supply equipment; Ballistics Researchers
+supply Research Data and targeted analysis fragments. Buying a gun does not
+learn its blueprint. See [villager trading](docs/villager-trading.md) for recipes,
+stock, research restrictions, and modpack examples.
 
 ## Requirements
 
@@ -207,7 +215,7 @@ last working data active.
 - [Research economy supply and balance](docs/research-economy-balance.md)
 - [Research currency integration API](docs/research-currency-integrations.md)
 - [Economy release handoff and playtest checklist](docs/research-economy-release-handoff.md)
-- [Current release notes](docs/releases/1.3.5.md)
+- [Current release notes](docs/releases/1.3.6.md)
 - [CurseForge description](docs/curseforge-description.md)
 - [Operations and migration](docs/operations-and-migration.md)
 - [Research Designer workspace](docs/research-designer-workspace.md)

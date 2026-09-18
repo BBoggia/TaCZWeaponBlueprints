@@ -49,6 +49,7 @@ class ResearchWorkstationsPhaseFiveTest {
                 "ingredients",
                 "unlockCount",
                 "ingredientTypeCount",
+                "ingredientOffset",
                 "pathPlanningState",
                 "costMode",
                 "routeFingerprint",
@@ -72,6 +73,6 @@ class ResearchWorkstationsPhaseFiveTest {
 
     @Test
     void destructiveWireCleanupUsesANewExactProtocol() {
-        assertEquals("66", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("69", NetworkHandler.PROTOCOL_VERSION);
     }
 }

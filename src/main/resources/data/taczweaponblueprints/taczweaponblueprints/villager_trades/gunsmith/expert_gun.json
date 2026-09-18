@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "profession": "taczweaponblueprints:gunsmith",
+  "level": 4,
+  "slot": "taczweaponblueprints:gunsmith/expert_gun",
+  "role": "core",
+  "output": {
+    "kind": "gun",
+    "count": 1,
+    "tier": 2,
+    "selection": "expert",
+    "candidates": [
+      {
+        "id": "tacz:m4a1",
+        "weight": 1
+      },
+      {
+        "id": "tacz:ak47",
+        "weight": 1
+      },
+      {
+        "id": "tacz:m16a4",
+        "weight": 1
+      },
+      {
+        "id": "tacz:m16a1",
+        "weight": 1
+      },
+      {
+        "id": "tacz:g36k",
+        "weight": 1
+      },
+      {
+        "id": "tacz:qbz_95",
+        "weight": 1
+      },
+      {
+        "id": "tacz:sks_tactical",
+        "weight": 1
+      }
+    ]
+  },
+  "price": {
+    "item": "currency",
+    "count": 48
+  },
+  "uses": 1,
+  "xp": 15,
+  "demand_multiplier": 0.05,
+  "secondary": {
+    "item": "minecraft:iron_ingot",
+    "count": 8
+  },
+  "fallbacks": [
+    "taczweaponblueprints:gunsmith/fallback_ammo_4"
+  ]
+}

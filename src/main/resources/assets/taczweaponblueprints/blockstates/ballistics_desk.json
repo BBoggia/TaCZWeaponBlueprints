@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "taczweaponblueprints:block/ballistics_desk"
+    },
+    "facing=east": {
+      "model": "taczweaponblueprints:block/ballistics_desk",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "taczweaponblueprints:block/ballistics_desk",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "taczweaponblueprints:block/ballistics_desk",
+      "y": 270
+    }
+  }
+}

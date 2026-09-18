@@ -16,7 +16,7 @@ class ResearchTreeCameraInputTest {
             var v = viewport();
             for (double direction : new double[]{1, 1, -.25, -1, 2, -2}) {
                 double x = v.canvasX(137.25), y = v.canvasY(91.75);
-                double before = v.scale();
+                double before = v.snapshot().scale();
                 v.zoomProportional(direction, 137.25, 91.75);
                 assertEquals(before * Math.pow(1.18, direction), v.snapshot().scale(), 1e-9);
                 for (int frame = 0; frame < 7; frame++) {
@@ -71,13 +71,50 @@ class ResearchTreeCameraInputTest {
         assertEquals(selected, search.commit());
         assertTrue(search.window(3).stream().anyMatch(ResearchTreeSearchController.Result::active));
     }
-    @Test void scrollingSearchWindowDoesNotChangeCommittedTarget() {
+    @Test void wheelBrowsingCannotCommitHiddenResultsAndKeyboardPagingSelectsVisibleResults() {
         var search = new ResearchTreeSearchController();
         search.update("node", ResearchTreeUxPhaseZeroFixture.everyAvailability().nodes(), n -> "node");
         var target = search.commit(); search.window(3);
         for(int i=0;i<4;i++) search.scroll(-.25,3);
-        assertEquals(1,search.window(3).get(0).index()); assertEquals(target,search.commit());
-        search.page(1,3); assertEquals(target,search.commit());
-        search.page(-1,3); assertEquals(1,search.window(3).get(0).index());
+        assertEquals(1,search.window(3).get(0).index());
+        assertEquals(target, search.activeMatch()); assertTrue(search.commit().isEmpty());
+        search.page(1,3);
+        assertEquals(search.window(3).get(0).blueprintId(), search.commit().orElseThrow());
+        search.page(-1,3);
+        assertEquals(search.window(3).get(0).blueprintId(), search.commit().orElseThrow());
+    }
+
+    @Test void rapidZoomAccumulatesIndependentOfRenderFramesAndStopsAtLimits() {
+        for (boolean proportional : new boolean[]{true, false}) {
+            var burst = viewport(); var spaced = viewport();
+            for (int i = 0; i < 3; i++) {
+                if (proportional) {
+                    burst.zoomProportional(.5, 137, 91); spaced.zoomProportional(.5, 137, 91);
+                } else { burst.zoomAt(1, 137, 91); spaced.zoomAt(1, 137, 91); }
+                spaced.tick(.04);
+            }
+            assertEquals(spaced.snapshot().scale(), burst.snapshot().scale(), 1e-9);
+            assertEquals(proportional ? .8 * Math.pow(1.18, 1.5) : 1.5, burst.snapshot().scale(), 1e-9);
+            for (int i = 0; i < 100; i++) {
+                if (proportional) burst.zoomProportional(1, 137, 91); else burst.zoomAt(1, 137, 91);
+            }
+            assertEquals(ResearchTreeViewport.MAX_SCALE, burst.snapshot().scale());
+            assertFalse(burst.canZoom(1, proportional));
+        }
+    }
+
+    @Test void portableHeaderControlsHaveDistinctHitTargetsAtEverySupportedSize() {
+        for (int width : new int[]{320, 427, 550, 960, 1920}) {
+            for (boolean selected : new boolean[]{false, true}) {
+                var layout = ResearchTreeWorkbenchLayout.create(width, 240, selected, null, 11, 9, true);
+                var journal = layout.journal().orElseThrow();
+                assertTrue(journal.inside(width, 240));
+                assertFalse(journal.overlaps(layout.branch()));
+                assertFalse(journal.overlaps(layout.overlays().searchField()));
+                assertFalse(journal.overlaps(layout.overlays().close()));
+                assertTrue(layout.overlays().searchField().width() > 0);
+                assertTrue(ResearchTreeWorkbenchLayout.create(width, 240, selected).journal().isEmpty());
+            }
+        }
     }
 }

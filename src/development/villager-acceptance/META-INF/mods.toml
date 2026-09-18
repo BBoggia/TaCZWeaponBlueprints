@@ -1,0 +1,14 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="All Rights Reserved"
+[[mods]]
+modId="taczblueprintsqa"
+version="1.0"
+displayName="Disposable Villager Acceptance Harness"
+description="Development-only native checks; never distribute with the release."
+[[dependencies.taczblueprintsqa]]
+modId="taczweaponblueprints"
+mandatory=true
+versionRange="[1.3.5,)"
+ordering="AFTER"
+side="BOTH"
