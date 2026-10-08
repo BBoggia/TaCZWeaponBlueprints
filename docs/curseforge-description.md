@@ -110,9 +110,11 @@ and minimum Workbench levels. Eject inserted magazines before analyzing a gun.
 
 ## Requirements
 
-Requires **Minecraft 1.20.1**, **Forge 47.x**, **TaCZ 1.1.8 or later in the 1.1
-series**, **Fzzy Config 0.7.6 or later in the 0.7 series** with Kotlin for Forge,
+Requires **Minecraft 1.20.1**, **Forge 47.x**, **TaCZ 1.1.8 or newer**,
+**Fzzy Config 0.7.6 or later in the 0.7 series** with Kotlin for Forge,
 and **Java 17**. Built with Forge 47.3.0; development uses TaCZ 1.1.8-hotfix.
+TaCZ has no upper version limit in the dependency requirement, but future API
+changes can still require a compatibility update.
 JEI 15.x and EMI 1.1.x are optional; follow their own compatibility requirements
 when installing both.
 

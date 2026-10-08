@@ -6,6 +6,14 @@ documentation.
 
 ## Unreleased
 
+## 1.3.7 - 2026-10-07
+
+### Compatibility
+
+- TaCZ now requires version 1.1.8 or newer without an upper version limit.
+  Future versions are no longer blocked solely by the dependency range;
+  compatibility still depends on their APIs and supported Minecraft version.
+
 ## 1.3.6 - 2026-09-18
 
 ### Added

@@ -117,7 +117,7 @@ relevant native acceptance and production checks with the final release build.
 | --- | --- | --- |
 | Minecraft | `[1.20.1,1.20.2)` | 1.20.1 |
 | Forge / FML | `[47,48)` | 47.3.0 |
-| Timeless and Classics Zero (TaCZ) | `[1.1.8,1.2)` | 1.1.8-hotfix |
+| Timeless and Classics Zero (TaCZ) | `[1.1.8,)` | 1.1.8-hotfix |
 | Fzzy Config, Forge build | `[0.7.6,0.8)` | 0.7.6+1.20.1 |
 | Kotlin for Forge, required by Fzzy Config | `[4.11.0,4.99.0]` in Fzzy 0.7.6 metadata | 4.11.0 |
 | Java | JDK 17 for development and validation | 17.0.12 |

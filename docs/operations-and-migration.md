@@ -13,8 +13,9 @@ settings before first startup or preview a deliberate one-way withdrawal.
 ## Supported runtime
 
 The current build targets Minecraft 1.20.1, Forge 47.x, TaCZ 1.1.8-hotfix,
-and Fzzy Config 0.7.6. Declared dependency ranges intentionally stop before
-TaCZ 1.2 and Fzzy Config 0.8 because those API lines have not been validated.
+and Fzzy Config 0.7.6. TaCZ requires 1.1.8 or newer without an upper version
+limit; 1.1.8-hotfix2 also passed targeted runtime compatibility checks. Newer
+TaCZ APIs still need validation. The Fzzy Config range stops before 0.8.
 
 TaCZ 1.1.8 can inject a Model 943 revolver and ammunition into a world's optional bonus chest, but does not provide a gun-smithing recipe for that weapon. It is therefore not part of the recipe-backed blueprint tree. The automatic generator selects the live foundation from the complete recipe-backed weapon catalog.
 

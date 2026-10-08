@@ -83,11 +83,15 @@ stock, research restrictions, and modpack examples.
 | --- | --- |
 | Minecraft | 1.20.1 |
 | Forge | 47.x; built with 47.3.0 and runtime tested with 47.4.10 |
-| Timeless and Classics Zero | 1.1.8-hotfix (`[1.1.8,1.2)`) |
+| Timeless and Classics Zero | 1.1.8 or newer (`[1.1.8,)`); compiled against 1.1.8-hotfix |
 | Fzzy Config | 0.7.6 for Forge (`[0.7.6,0.8)`) |
 | Kotlin for Forge | Required by Fzzy Config; tested with 4.12.0 |
 
 JEI 15.x and EMI 1.1.x are optional client-side integrations.
+
+TaCZ 1.1.8-hotfix and 1.1.8-hotfix2 have passed runtime checks. Newer versions
+are accepted by the dependency requirement; API changes can still require a
+compatibility update.
 
 Install matching [TaCZ] Weapon Research & Blueprints versions on both the client and server.
 TaCZ content packs can be added or removed independently; the available
@@ -215,7 +219,7 @@ last working data active.
 - [Research economy supply and balance](docs/research-economy-balance.md)
 - [Research currency integration API](docs/research-currency-integrations.md)
 - [Economy release handoff and playtest checklist](docs/research-economy-release-handoff.md)
-- [Current release notes](docs/releases/1.3.6.md)
+- [Current release notes](docs/releases/1.3.7.md)
 - [CurseForge description](docs/curseforge-description.md)
 - [Operations and migration](docs/operations-and-migration.md)
 - [Research Designer workspace](docs/research-designer-workspace.md)
