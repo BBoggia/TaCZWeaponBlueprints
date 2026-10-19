@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.AfterEach;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import com.gamergaming.taczweaponblueprints.journal.BlueprintJournalSnapshot;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchDomainAvailability;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePresentation;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePublication;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain;
@@ -65,6 +67,23 @@ class ClientResearchStateTest {
         assertEquals(stateOnlyGraph, ClientResearchState.publication().graph());
         assertEquals(originalPresentation, ClientResearchState.publication().presentation());
         assertEquals(originalTechTree, ClientResearchState.publication().techTree());
+    }
+
+    @Test
+    void categoryStatusesSurviveJournalOnlyUpdatesAndClearWithANewTree() {
+        var base = publication(graph(ResearchTreeGraph.Availability.AVAILABLE));
+        var statuses = Map.of(Domain.AMMO, ResearchDomainAvailability.PROFILE_DISABLED);
+        var tree = new ResearchTreePublication(base.graph(), base.presentation(), base.techTree(), statuses);
+        ClientResearchState.acceptJournal(1L, journal(1), false);
+        ClientResearchState.acceptTree(1L, tree);
+        assertEquals(statuses, ClientResearchState.publication().domainAvailability());
+        ClientResearchState.acceptJournal(2L, journal(2), true);
+        assertEquals(statuses, ClientResearchState.publication().domainAvailability());
+        ClientResearchState.publishJournalOnly(journal(3));
+        assertEquals(statuses, ClientResearchState.publication().domainAvailability());
+        ClientResearchState.acceptTree(3L, base);
+        ClientResearchState.acceptJournal(3L, journal(4), false);
+        assertEquals(Map.of(), ClientResearchState.publication().domainAvailability());
     }
 
     @Test

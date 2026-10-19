@@ -63,7 +63,8 @@ public final class DesignerCapturedContext {
                 revisions(facts.getAsJsonObject("automatic_prerequisite_plan"), "catalogRevision", "researchRevision")));
     }
     public BlueprintProgressionPolicySnapshot progression(BlueprintResearchSnapshot snapshot) {
-        return BlueprintProgressionPolicyResolver.resolve(snapshot, catalog, 1, 1,
+        return BlueprintProgressionPolicyResolver.resolve(snapshot.withDomainSettings(
+                        DesignerCapturedSettings.progression(capture, profile()).domainSettings()), catalog, 1, 1,
                 snapshot == source ? automatic() : Map.of(), DesignerCapturedSettings.features(capture));
     }
     public BlueprintCraftingPolicySnapshot crafting(BlueprintResearchSnapshot snapshot) {
@@ -74,7 +75,9 @@ public final class DesignerCapturedContext {
                 revisions(facts.getAsJsonObject("weapon_evidence"), "catalogRevision"));
         var ammo = (BlueprintAmmoAssociationSnapshot) DesignerCapturedSettings.read(BlueprintAmmoAssociationSnapshot.class,
                 revisions(facts.getAsJsonObject("ammo_associations"), "catalogRevision", "sourceRevision"));
-        return BlueprintCraftingPolicyResolver.resolve(snapshot, catalog, 1, 1, 1, snapshot == source ? automatic() : Map.of(),
+        return BlueprintCraftingPolicyResolver.resolve(snapshot.withDomainSettings(
+                        DesignerCapturedSettings.progression(capture, profile()).domainSettings()),
+                catalog, 1, 1, 1, snapshot == source ? automatic() : Map.of(),
                 new AutomaticWeaponEvidenceManager.Publication(evidence, 1, AutomaticWeaponEvidenceManager.PublicationState.READY),
                 new BlueprintAmmoAssociationManager.Publication(ammo, 1, 1, BlueprintAmmoAssociationManager.PublicationState.READY),
                 DesignerCapturedSettings.features(capture));

@@ -420,7 +420,7 @@ public final class BlueprintResearchPolicyResolver {
                         selection.specificity());
         return blueprintData == null
                 ? resolved
-                : resolved.applyDomainPolicy(profile.domainPolicy(Domain.forKind(blueprintData.getKind())));
+                : resolved.applyDomainPolicy(snapshot.domainPolicy(profileId, Domain.forKind(blueprintData.getKind())));
     }
 
     private static BlueprintResearchPolicyDefinition disabledDefinition() {

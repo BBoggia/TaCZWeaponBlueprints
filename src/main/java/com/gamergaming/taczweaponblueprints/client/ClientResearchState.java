@@ -1,5 +1,8 @@
 package com.gamergaming.taczweaponblueprints.client;
 
+import java.util.Map;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchDomainAvailability;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain;
 import com.gamergaming.taczweaponblueprints.journal.BlueprintJournalSnapshot;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePresentation;
@@ -43,7 +46,7 @@ public final class ClientResearchState {
                     && Long.compare(pendingTreeGeneration, generation) <= 0
                     ? pendingTree
                     : new ResearchTreePublication(
-                            publication.graph(), publication.presentation(), publication.techTree());
+                            publication.graph(), publication.presentation(), publication.techTree(), publication.domainAvailability());
             publish(generation, journal, reusableTree);
             discardPendingThrough(generation);
             return;
@@ -74,7 +77,7 @@ public final class ClientResearchState {
 
     static synchronized void publishJournalOnly(BlueprintJournalSnapshot journal) {
         publish(publication.generation(), journal, new ResearchTreePublication(
-                publication.graph(), publication.presentation(), publication.techTree()));
+                publication.graph(), publication.presentation(), publication.techTree(), publication.domainAvailability()));
     }
 
     static synchronized void publishTreeOnly(ResearchTreePublication tree) {
@@ -109,7 +112,7 @@ public final class ClientResearchState {
                 journal,
                 tree.graph(),
                 tree.presentation(),
-                tree.techTree());
+                tree.techTree(), tree.domainAvailability());
     }
 
     private static void clearPending() {
@@ -141,7 +144,13 @@ public final class ClientResearchState {
             BlueprintJournalSnapshot journal,
             ResearchTreeGraph graph,
             ResearchTreePresentation presentation,
-            ResearchTechTreePresentation techTree) {
+            ResearchTechTreePresentation techTree,
+            Map<Domain, ResearchDomainAvailability> domainAvailability) {
+        public Publication(long generation, BlueprintJournalSnapshot journal, ResearchTreeGraph graph,
+                ResearchTreePresentation presentation, ResearchTechTreePresentation techTree) {
+            this(generation, journal, graph, presentation, techTree, Map.of());
+        }
+
         private static final Publication EMPTY = new Publication(
                 Long.MIN_VALUE,
                 BlueprintJournalSnapshot.EMPTY,
@@ -158,10 +167,11 @@ public final class ClientResearchState {
         }
 
         public Publication {
+            domainAvailability = Map.copyOf(domainAvailability);
             if (journal == null || graph == null || presentation == null || techTree == null) {
                 throw new IllegalArgumentException("invalid combined research publication");
             }
-            new ResearchTreePublication(graph, presentation, techTree);
+            new ResearchTreePublication(graph, presentation, techTree, domainAvailability);
         }
     }
 }

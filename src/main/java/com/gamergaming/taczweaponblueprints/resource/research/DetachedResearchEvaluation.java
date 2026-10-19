@@ -17,14 +17,15 @@ public final class DetachedResearchEvaluation {
             ResourceLocation profile, IPlayerRecipeData knowledge, Predicate<String> blocked,
             Predicate<ResourceLocation> exempt, AutomaticWeaponPrerequisitePlan automatic) {
         Objects.requireNonNull(snapshot); Objects.requireNonNull(config);
-        var entries = BlueprintResearchPolicyResolver.entryPointReplacements(snapshot, catalog, profile, blocked, exempt);
+        var effectiveSnapshot = snapshot.withDomainSettings(config.domainSettings());
+        var entries = BlueprintResearchPolicyResolver.entryPointReplacements(effectiveSnapshot, catalog, profile, blocked, exempt);
         Map<ResourceLocation, BlueprintResearchPolicy> structural = new HashMap<>();
         Function<ResourceLocation, BlueprintResearchPolicy> structuralResolver = id -> structural.computeIfAbsent(id, key -> {
-            var policy = BlueprintResearchPolicyResolver.resolve(snapshot, catalog, profile, key, knowledge, blocked, exempt);
+            var policy = BlueprintResearchPolicyResolver.resolve(effectiveSnapshot, catalog, profile, key, knowledge, blocked, exempt);
             var data = catalog.get(key);
             return AutomaticWeaponPrerequisiteOverlay.apply(config.apply(policy), automatic, knowledge, blocked,
                     config.maximumUndiscoveredVisibility().allowsServerSelection(), catalog::containsKey,
-                    exempt, entries, snapshot.usesAutomaticWeaponPlacement(profile)
+                    exempt, entries, effectiveSnapshot.usesAutomaticWeaponPlacement(profile)
                             && data != null && data.getKind() == BlueprintKind.GUN);
         });
         if (knowledge == null) return new Resolution(structuralResolver, structuralResolver, entries);

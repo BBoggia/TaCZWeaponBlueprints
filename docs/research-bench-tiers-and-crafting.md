@@ -42,6 +42,12 @@ other.
 
 ## Crafting access settings
 
+To enable manual ammo or attachment research, use **Server Settings → Research
+Progression → Ammo Research / Attachment Research**. Each offers **Use Profile**,
+**Enabled**, and **Disabled**. **Enabled** activates the bundled category without
+a separate datapack; the global **Enable Research** switch must also be on.
+These choices retain blueprint-specific exclusions and research requirements.
+
 The main settings screen provides two category strategies without requiring a
 datapack:
 

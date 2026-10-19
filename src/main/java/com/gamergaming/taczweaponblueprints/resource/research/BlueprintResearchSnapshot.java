@@ -11,6 +11,8 @@ import java.util.Optional;
 import java.util.Set;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
+import com.gamergaming.taczweaponblueprints.progression.ResearchDomainSettings;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.ProgressionCoordinate;
 import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintLootTag;
 
@@ -34,6 +36,7 @@ public final class BlueprintResearchSnapshot {
             Map.of(), Map.of(), Map.of());
 
     private final ResearchDataSnapshot researchData;
+    private final ResearchDomainSettings domainSettings;
     private final Map<ResourceLocation, BlueprintLootTag> tags;
     private final Map<ResourceLocation, BlueprintResearchProfile> profiles;
     private final Map<ResourceLocation, BlueprintResearchRule> rules;
@@ -65,6 +68,7 @@ public final class BlueprintResearchSnapshot {
                     techTreeProgressionByProfile,
             Map<ResourceLocation, TechTreeIndex> techTreeIndexes) {
         this.researchData = ResearchDataSnapshot.EMPTY;
+        this.domainSettings = ResearchDomainSettings.PROFILE_DEFAULTS;
         this.tags = immutableMap(tags);
         this.profiles = immutableMap(profiles);
         this.rules = immutableMap(rules);
@@ -87,11 +91,27 @@ public final class BlueprintResearchSnapshot {
 
     public BlueprintResearchSnapshot withResearchData(ResearchDataSnapshot data) {
         java.util.Objects.requireNonNull(data).validateAgainst(this);
-        return new BlueprintResearchSnapshot(this, data);
+        return new BlueprintResearchSnapshot(this, data, domainSettings);
     }
 
-    private BlueprintResearchSnapshot(BlueprintResearchSnapshot source, ResearchDataSnapshot data) {
+    public ResearchDomainSettings domainSettings() { return domainSettings; }
+
+    /** Retains the authored definitions and all indexes; only the final category gate changes. */
+    public BlueprintResearchSnapshot withDomainSettings(ResearchDomainSettings settings) {
+        java.util.Objects.requireNonNull(settings);
+        return domainSettings.equals(settings) ? this : new BlueprintResearchSnapshot(this, researchData, settings);
+    }
+
+    public BlueprintResearchProfile.DomainPolicy domainPolicy(ResourceLocation profileId, Domain domain) {
+        BlueprintResearchProfile profile = profiles.get(profileId);
+        return profile == null ? new BlueprintResearchProfile.DomainPolicy(false, false)
+                : domainSettings.apply(domain, profile.domainPolicy(domain));
+    }
+
+    private BlueprintResearchSnapshot(BlueprintResearchSnapshot source, ResearchDataSnapshot data,
+            ResearchDomainSettings settings) {
         this.researchData = data;
+        this.domainSettings = settings;
         this.tags = source.tags;
         this.profiles = source.profiles;
         this.rules = source.rules;

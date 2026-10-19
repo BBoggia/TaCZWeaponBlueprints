@@ -7,11 +7,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchDomainAvailability;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePresentation;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePublication;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain;
@@ -98,7 +100,9 @@ class SyncResearchTreePacketTest {
         ResearchTreePublication publication = new ResearchTreePublication(
                 graph,
                 base.presentation(),
-                largeTechTree(graph.nodes()));
+                largeTechTree(graph.nodes()),
+                Map.of(Domain.AMMO, ResearchDomainAvailability.PROFILE_DISABLED,
+                        Domain.ATTACHMENTS, ResearchDomainAvailability.SERVER_DISABLED));
         List<SyncResearchTreePacket> packets = SyncResearchTreePacket.split(publication, 55L);
         assertTrue(packets.size() > 1);
 
@@ -119,6 +123,35 @@ class SyncResearchTreePacketTest {
             completed = accumulator.accept(decoded.get(index));
         }
         assertEquals(publication, completed.orElseThrow());
+    }
+
+    @Test
+    void emptyTreeStillPublishesCategoryAvailability() {
+        var expected = new ResearchTreePublication(ResearchTreeGraph.EMPTY, ResearchTreePresentation.EMPTY,
+                ResearchTechTreePresentation.EMPTY,
+                Map.of(Domain.AMMO, ResearchDomainAvailability.SERVER_DISABLED));
+        var packet = SyncResearchTreePacket.split(expected, 71L).get(0);
+        var buffer = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            packet.toBytes(buffer);
+            assertEquals(expected, new SyncResearchTreePacket.ClientAccumulator()
+                    .accept(new SyncResearchTreePacket(buffer)).orElseThrow());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    void accumulatorRejectsCategoryStatusesThatChangeBetweenChunks() {
+        var base = publication(largeGraph());
+        var disabled = new ResearchTreePublication(base.graph(), base.presentation(), base.techTree(),
+                Map.of(Domain.AMMO, ResearchDomainAvailability.SERVER_DISABLED));
+        var first = SyncResearchTreePacket.split(base, 72L);
+        var conflicting = SyncResearchTreePacket.split(disabled, 72L);
+        assertTrue(first.size() > 1);
+        var accumulator = new SyncResearchTreePacket.ClientAccumulator();
+        assertTrue(accumulator.accept(first.get(0)).isEmpty());
+        assertThrows(IllegalArgumentException.class, () -> accumulator.accept(conflicting.get(1)));
     }
 
     @Test
@@ -562,6 +595,7 @@ class SyncResearchTreePacketTest {
             buffer.writeVarInt(1);
             buffer.writeVarInt(1);
             buffer.writeVarInt(1);
+            buffer.writeVarInt(0); // category status count
             buffer.writeVarInt(1);
             writeNode(buffer, node(0, "test:a", "name.a", 0));
             buffer.writeVarInt(0);
@@ -645,6 +679,7 @@ class SyncResearchTreePacketTest {
         buffer.writeVarInt(totalNodes == 0 ? 0 : 1);
         buffer.writeVarInt(totalNodes);
         buffer.writeVarInt(0);
+        buffer.writeVarInt(0); // category status count
     }
 
     private static SyncResearchTreePacket decodedPacket(
@@ -666,6 +701,7 @@ class SyncResearchTreePacketTest {
             buffer.writeVarInt(totalNodes == 0 ? 0 : 1);
             buffer.writeVarInt(totalNodes);
             buffer.writeVarInt(0);
+            buffer.writeVarInt(0); // category status count
             buffer.writeVarInt(nodes.size());
             for (ResearchTreeGraph.Node node : nodes) {
                 writeNode(buffer, node);

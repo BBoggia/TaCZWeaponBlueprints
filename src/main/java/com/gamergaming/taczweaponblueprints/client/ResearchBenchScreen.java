@@ -899,7 +899,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         ResearchTreePublication nextTreePublication = new ResearchTreePublication(
                 publication.graph(),
                 publication.presentation(),
-                publication.techTree());
+                publication.techTree(), publication.domainAvailability());
         boolean projectionGeometryChanged;
         try {
             ResearchTreeProjectionCache.UpdateOutcome update =
@@ -2942,6 +2942,19 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
 
     private MutableComponent techTreeDomainTooltip(Domain domain, int nodeCount) {
         Component name = techTreeDomainName(domain);
+        var availability = treeProjections.publication().availability(domain);
+        if (availability != com.gamergaming.taczweaponblueprints.research.tree.ResearchDomainAvailability.AVAILABLE) {
+            MutableComponent message = Component.translatable("gui.taczweaponblueprints.research_bench.tree.domain.tooltip."
+                    + availability.name().toLowerCase(java.util.Locale.ROOT), name);
+            if (domain != Domain.WEAPONS
+                    && availability != com.gamergaming.taczweaponblueprints.research.tree.ResearchDomainAvailability.PROFILE_UNAVAILABLE) {
+                message.append("\n").append(Component.translatable(
+                        "gui.taczweaponblueprints.research_bench.tree.domain.tooltip.setting",
+                        Component.translatable("config.taczweaponblueprints.blueprint."
+                                + (domain == Domain.AMMO ? "ammoResearch" : "attachmentResearch"))));
+            }
+            return message;
+        }
         return nodeCount > 0
                 ? Component.translatable(
                         "gui.taczweaponblueprints.research_bench.tree.domain.tooltip.count",
@@ -6246,8 +6259,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         protected void updateWidgetNarration(NarrationElementOutput output) {
             defaultButtonNarrationText(output);
             Component hint = !active
-                    ? Component.translatable(
-                            "gui.taczweaponblueprints.research_bench.tree.domain.unavailable")
+                    ? techTreeDomainTooltip(domain, nodeCount)
                     : ClientResearchCurrency.text(selected
                                     ? "gui.taczweaponblueprints.research_bench.tree.domain.selected"
                                     : "gui.taczweaponblueprints.research_bench.tree.domain.available",
@@ -6286,6 +6298,12 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             this.selectable = selectable;
             this.visibleBlueprintCount = visibleBlueprintCount;
             setMessage(name);
+            if (isTechTreeView() && entryIndex > 0 && entryIndex <= techTreeDomainMenu().entries().size()) {
+                setTooltip(Tooltip.create(techTreeDomainTooltip(
+                        techTreeDomainMenu().entryAt(entryIndex - 1).domain(), Math.max(0, visibleBlueprintCount))));
+            } else {
+                setTooltip(null);
+            }
         }
 
         private void updatePointerState(double mouseX, double mouseY) {
@@ -6429,6 +6447,10 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             if (entryIndex == 0) {
                 hint = Component.translatable(
                         "gui.taczweaponblueprints.research_bench.tree.rail.entry.view_action");
+            } else if (!selectable && isTechTreeView() && entryIndex > 0
+                    && entryIndex <= techTreeDomainMenu().entries().size()) {
+                hint = techTreeDomainTooltip(techTreeDomainMenu().entryAt(entryIndex - 1).domain(),
+                        Math.max(0, visibleBlueprintCount));
             } else if (!selectable) {
                 hint = Component.translatable(
                         "gui.taczweaponblueprints.research_bench.tree.domain.unavailable");

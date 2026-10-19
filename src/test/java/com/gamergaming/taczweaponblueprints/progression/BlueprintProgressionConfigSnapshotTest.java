@@ -59,6 +59,14 @@ class BlueprintProgressionConfigSnapshotTest {
         assertFalse(snapshot.creativeBypassesResearchCost());
         assertEquals(BlueprintConfig.DEFAULT_RESEARCH_PROFILE, snapshot.activeProfileId());
         assertEquals(10_000, BlueprintProgressionConfigSnapshot.DEFAULT_POINT_CAP);
+        assertEquals(ResearchDomainSettings.PROFILE_DEFAULTS, snapshot.domainSettings());
+
+        config.ammoResearch.accept(ResearchDomainMode.ENABLED);
+        config.attachmentResearch.accept(ResearchDomainMode.DISABLED);
+        config.onSyncServer();
+        assertEquals(new ResearchDomainSettings(ResearchDomainMode.ENABLED, ResearchDomainMode.DISABLED),
+                config.progressionSnapshot().domainSettings());
+        assertEquals(ResearchDomainSettings.PROFILE_DEFAULTS, snapshot.domainSettings());
 
         config.enableResearch.accept(false);
         config.onSyncServer();

@@ -52,6 +52,10 @@ public final class DesignerCapturedSettings {
         if (!cls.isRecord() || !cls.getPackageName().startsWith("com.gamergaming.taczweaponblueprints."))
             throw new IllegalArgumentException("Unsupported captured settings type " + cls.getName());
         var components = cls.getRecordComponents(); var object = value.getAsJsonObject().deepCopy();
+        if (cls == BlueprintProgressionConfigSnapshot.class && !object.has("domainSettings")) {
+            var domains = new JsonObject(); domains.addProperty("ammo", "PROFILE");
+            domains.addProperty("attachments", "PROFILE"); object.add("domainSettings", domains);
+        }
         if (cls == ResearchFeatureConfigSnapshot.class && !object.has("stations")) {
             var stations = new JsonObject(); stations.addProperty("analyzer", "TIERED");
             stations.addProperty("research", "PRESET"); stations.addProperty("dataRewardTier", "TIER_1");

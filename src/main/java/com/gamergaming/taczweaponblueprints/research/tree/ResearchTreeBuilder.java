@@ -103,9 +103,13 @@ public final class ResearchTreeBuilder {
             Predicate<ResourceLocation> progressionExemptPredicate,
             AutomaticWeaponPlacementCandidateSnapshot automaticCandidates,
             AutomaticWeaponPrerequisitePlan automaticPrerequisites) {
-        if (catalog == null || researchSnapshot == null || config == null || playerData == null
-                || !config.blueprintsEnabled() || !config.journalEnabled()) {
+        if (catalog == null || researchSnapshot == null || config == null || playerData == null) {
             return ResearchTreePublication.EMPTY;
+        }
+        researchSnapshot = researchSnapshot.withDomainSettings(config.domainSettings());
+        if (!config.blueprintsEnabled() || !config.journalEnabled()) {
+            return ResearchTreePublication.EMPTY.withDomainAvailability(
+                    researchSnapshot, config, config.activeProfileId());
         }
         if (catalog.entrySet().stream().anyMatch(entry -> entry.getKey() == null || entry.getValue() == null)) {
             throw new IllegalArgumentException("research tree catalog cannot contain null entries");
@@ -319,7 +323,8 @@ public final class ResearchTreeBuilder {
                     exception);
             techTree = ResearchTechTreePresentation.EMPTY;
         }
-        return new ResearchTreePublication(graph, presentation, techTree);
+        return new ResearchTreePublication(graph, presentation, techTree)
+                .withDomainAvailability(researchSnapshot, config, config.activeProfileId());
     }
 
     private static Availability availability(BlueprintResearchPolicy policy) {

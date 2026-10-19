@@ -30,6 +30,9 @@ import com.gamergaming.taczweaponblueprints.item.BlueprintData;
 import com.gamergaming.taczweaponblueprints.item.BlueprintKind;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionConfigSnapshot;
+import com.gamergaming.taczweaponblueprints.progression.ResearchDomainSettings;
+import com.gamergaming.taczweaponblueprints.progression.ResearchDomainMode;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchDomainAvailability;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintLearningService;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintUnlockOrigin;
 import com.gamergaming.taczweaponblueprints.progression.DuplicateBlueprintPolicy;
@@ -824,6 +827,48 @@ class DefaultTaCZResearchTreeTest {
         assertEquals(5_477, economy.finiteIncomeCoverageBasisPoints());
         assertTrue(topology.domain(Domain.ATTACHMENTS).isEmpty());
         assertTrue(topology.domain(Domain.AMMO).isEmpty());
+    }
+
+    @Test
+    void serverCategorySettingsEnableBundledResearchWithoutChangingAuthoredData() throws Exception {
+        var original = packagedSnapshot();
+        var catalog = completePinnedCatalog();
+        var enabled = original.withDomainSettings(new ResearchDomainSettings(
+                ResearchDomainMode.ENABLED, ResearchDomainMode.ENABLED));
+        for (var blueprint : List.of(id("tacz:45acp"), id("tacz:sight_acro_pistol"))) {
+            var before = BlueprintResearchPolicyResolver.definitionFor(original, catalog, PROFILE_ID, blueprint);
+            var after = BlueprintResearchPolicyResolver.definitionFor(enabled, catalog, PROFILE_ID, blueprint);
+            assertFalse(before.treeEnabled());
+            assertFalse(before.researchEnabled());
+            assertTrue(after.treeEnabled());
+            assertTrue(after.researchEnabled());
+            assertEquals(before.researchCost(), after.researchCost());
+            assertEquals(before.requirements(), after.requirements());
+        }
+        assertEquals(original.profiles(), enabled.profiles());
+        assertEquals(original.rules(), enabled.rules());
+        var restored = enabled.withDomainSettings(ResearchDomainSettings.PROFILE_DEFAULTS);
+        assertFalse(BlueprintResearchPolicyResolver.definitionFor(
+                restored, catalog, PROFILE_ID, id("tacz:45acp")).researchEnabled());
+
+        var settings = new BlueprintConfig();
+        settings.ammoResearch.accept(ResearchDomainMode.ENABLED);
+        settings.attachmentResearch.accept(ResearchDomainMode.ENABLED);
+        settings.onSyncServer();
+        var config = settings.progressionSnapshot();
+        var automatic = automaticBaseline(original, catalog);
+        var tree = ResearchTreeBuilder.buildPublication(catalog, original, config,
+                new PlayerRecipeData(), ignored -> false, automatic.candidates(), automatic.prerequisites());
+        assertEquals(Set.of(Domain.WEAPONS, Domain.AMMO, Domain.ATTACHMENTS), tree.techTree().domains()
+                .stream().map(ResearchTechTreePresentation.DomainView::domain).collect(java.util.stream.Collectors.toSet()));
+        assertEquals(ResearchDomainAvailability.AVAILABLE, tree.availability(Domain.AMMO));
+        settings.ammoResearch.accept(ResearchDomainMode.DISABLED);
+        settings.onSyncServer();
+        var disabled = ResearchTreeBuilder.buildPublication(catalog, original, settings.progressionSnapshot(),
+                new PlayerRecipeData(), ignored -> false, automatic.candidates(), automatic.prerequisites());
+        assertEquals(ResearchDomainAvailability.SERVER_DISABLED, disabled.availability(Domain.AMMO));
+        assertTrue(disabled.techTree().domains().stream().noneMatch(d -> d.domain() == Domain.AMMO));
+        assertEquals(ResearchDomainAvailability.AVAILABLE, disabled.availability(Domain.ATTACHMENTS));
     }
 
     @Test

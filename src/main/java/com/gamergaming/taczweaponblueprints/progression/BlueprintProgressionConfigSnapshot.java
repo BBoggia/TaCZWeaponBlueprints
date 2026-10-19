@@ -26,8 +26,22 @@ public record BlueprintProgressionConfigSnapshot(
         TreeResearchResultMode treeResearchResultMode,
         ResearchCostMode researchCostMode,
         FoundWeaponRecoveryMode foundWeaponRecoveryMode,
-        ResearchCurrencyPolicy currencyPolicy) {
+        ResearchCurrencyPolicy currencyPolicy,
+        ResearchDomainSettings domainSettings) {
     public static final int DEFAULT_POINT_CAP = 10_000;
+
+    /** Existing integrations retain the profile's domain choices. */
+    public BlueprintProgressionConfigSnapshot(boolean blueprintsEnabled, boolean discoveryTrackingEnabled,
+            boolean journalEnabled, JournalVisibility maximumUndiscoveredVisibility, boolean researchEnabled,
+            DuplicateBlueprintPolicy duplicatePolicy, boolean allowUnlearnedRecycling, int pointCap,
+            boolean creativeBypassesResearchCost, ResourceLocation activeProfileId,
+            TreeResearchResultMode treeResearchResultMode, ResearchCostMode researchCostMode,
+            FoundWeaponRecoveryMode foundWeaponRecoveryMode, ResearchCurrencyPolicy currencyPolicy) {
+        this(blueprintsEnabled, discoveryTrackingEnabled, journalEnabled, maximumUndiscoveredVisibility,
+                researchEnabled, duplicatePolicy, allowUnlearnedRecycling, pointCap, creativeBypassesResearchCost,
+                activeProfileId, treeResearchResultMode, researchCostMode, foundWeaponRecoveryMode,
+                currencyPolicy, ResearchDomainSettings.PROFILE_DEFAULTS);
+    }
 
     public BlueprintProgressionConfigSnapshot(boolean blueprintsEnabled, boolean discoveryTrackingEnabled,
             boolean journalEnabled, JournalVisibility maximumUndiscoveredVisibility, boolean researchEnabled,
@@ -42,7 +56,7 @@ public record BlueprintProgressionConfigSnapshot(
     }
 
     public BlueprintProgressionConfigSnapshot {
-        if (currencyPolicy == null || maximumUndiscoveredVisibility == null || duplicatePolicy == null
+        if (domainSettings == null || currencyPolicy == null || maximumUndiscoveredVisibility == null || duplicatePolicy == null
                 || activeProfileId == null || treeResearchResultMode == null
                 || researchCostMode == null || foundWeaponRecoveryMode == null) {
             throw new IllegalArgumentException("progression configuration contains null required state");
@@ -136,7 +150,8 @@ public record BlueprintProgressionConfigSnapshot(
                 profileId,
                 config.treeResearchResultMode.get(),
                 config.researchCostMode.get(),
-                config.foundWeaponRecoveryMode.get(), config.currencyPolicy());
+                config.foundWeaponRecoveryMode.get(), config.currencyPolicy(),
+                new ResearchDomainSettings(config.ammoResearch.get(), config.attachmentResearch.get()));
     }
 
     public BlueprintResearchPolicy apply(BlueprintResearchPolicy policy) {

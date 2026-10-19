@@ -31,7 +31,7 @@ public final class DesignerCaptureAssembly {
     public static JsonObject assemble(Inputs c, BlueprintProgressionConfigSnapshot progression, BlueprintAccessConfigSnapshot access,
             Predicate<String> blocked, JsonObject settings, JsonObject registryFacts, JsonObject dependencies,
             BiFunction<String,ResourceLocation,String> provenance) {
-        var snapshot = c.snapshot(); var catalog = c.catalog();
+        var snapshot = c.snapshot().withDomainSettings(progression.domainSettings()); var catalog = c.catalog();
         if (catalog.size() > 4096) throw new IllegalArgumentException("Catalog exceeds capture node limit");
         var profile = snapshot.profiles().get(c.profile());
         if (profile == null || profile.techTree().isEmpty()) throw new IllegalArgumentException("No active Tech Tree");

@@ -92,7 +92,12 @@ and separate research and crafting tiers. Datapacks can change tree branches,
 requirements, Analyzer rewards, fragments, Data pools, and villager trades.
 Progression Gates support advancements, Bench tiers, and custom milestones.
 The automatic tree adapts to compatible TaCZ catalogs; pack authors can instead
-select exact weapons and optionally enable ammo or attachment research.
+select exact weapons. To enable the included ammo and attachment Tech Trees,
+set **Ammo Research** and **Attachment Research** to **Enabled** under
+**Server Settings → Research Progression**, with **Enable Research** on.
+The default **Use Profile** choice follows your datapack's category rules;
+weapons are the only category enabled by the built-in profile. Saving the
+settings updates connected players without a reload or additional datapack.
 See the [operations guide](https://github.com/BBoggia/TaCZWeaponBlueprints/blob/main/docs/operations-and-migration.md).
 
 With **TaCZ Magazines 0.2.0-Beta**, craft empty magazines at the three Workbench

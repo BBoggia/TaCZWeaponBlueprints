@@ -159,14 +159,17 @@ public final class ResearchDesignerCompiler {
                     throw new IllegalArgumentException("Custom drafts must use authored_only placement");
                 ResearchTechTreeCatalogValidator.validate(snapshot, catalog);
                 var selectedProfile = snapshot.profiles().get(new ResourceLocation(profile.id()));
+                var domainSettings = capture.map(c -> DesignerCapturedSettings.progression(
+                        c, new ResourceLocation(profile.id())).domainSettings()).orElse(
+                                com.gamergaming.taczweaponblueprints.progression.ResearchDomainSettings.PROFILE_DEFAULTS);
                 for (var domain : com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain.values()) {
-                    var gate = selectedProfile.domainPolicy(domain);
+                    var gate = domainSettings.apply(domain, selectedProfile.domainPolicy(domain));
                     if ((!gate.treeEnabled() || !gate.researchEnabled()) && draft.nodes().stream().anyMatch(n -> n.blueprintId()
                             .map(ResourceLocation::new).map(catalog::get).filter(Objects::nonNull)
                             .map(data -> com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain.forKind(data.getKind()) == domain).orElse(false)))
                         diagnostics.add(new Diagnostic("domain_disabled", Severity.WARNING, "profile", "/draft/profile/definition/domain_policies",
-                                domain.name().toLowerCase(Locale.ROOT) + " contains nodes but its profile gate hides or disables research.",
-                                "Enable this domain if those nodes should be available to players."));
+                                domain.name().toLowerCase(Locale.ROOT) + " contains nodes but its effective category gate hides or disables research.",
+                                "Check this profile's category gates and the captured server category settings if these nodes should be available."));
                 }
                 validateMaterials(resources, "");
                 if (hasErrors()) return result(null);

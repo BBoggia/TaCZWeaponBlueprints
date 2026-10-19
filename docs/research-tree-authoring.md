@@ -149,11 +149,23 @@ Research profile format 2 adds one explicit policy for every Tech Tree domain:
 }
 ```
 
-Both fields are final gates. The effective value is the profile/rule result
+Both fields are category gates. The effective value is the profile/rule result
 AND the matching domain value, so an exact, tag, or selector rule cannot
-reactivate a domain disabled by its profile. Dormant costs, prerequisites,
-placement bundles, and fallback rules stay ready for a datapack that opts the
-domain back in.
+reactivate a disabled domain by itself.
+
+The server's **Ammo Research** (`ammoResearch`) and **Attachment Research**
+(`attachmentResearch`) settings can override the corresponding category gate:
+`PROFILE` preserves the profile values, `ENABLED` sets both gate values to true,
+and `DISABLED` sets both to false. They are under **Server Settings → Research
+Progression** and default to `PROFILE`. Individual research rules, costs,
+prerequisites, visibility restrictions, blacklists, and the global research
+switch still apply. The settings never rewrite the datapack or erase learned
+blueprints. Saving refreshes the server publication and connected players.
+
+Dormant costs, prerequisites, placements, and fallback rules stay ready for
+either a category setting or a datapack to enable the domain. If you installed
+the 1.3.7 enablement datapack solely to show these trees, remove that override
+when using the new settings so future bundled profile updates take effect.
 
 Format-2 profiles must declare all three keys and both booleans. Format-1
 profiles remain supported, must not declare `domain_policies`, and behave as if

@@ -103,6 +103,7 @@ public final class BlueprintJournalBuilder {
         if (catalog == null || researchSnapshot == null || config == null || playerData == null) {
             return BlueprintJournalSnapshot.EMPTY;
         }
+        researchSnapshot = researchSnapshot.withDomainSettings(config.domainSettings());
         progressionPolicies = progressionPolicies == null ? Map.of() : Map.copyOf(progressionPolicies);
         craftingPolicies = craftingPolicies == null ? Map.of() : Map.copyOf(craftingPolicies);
         if (!config.blueprintsEnabled() || !config.journalEnabled()) {

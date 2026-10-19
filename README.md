@@ -46,8 +46,8 @@ an optional server setting.
   workstations without exposing hidden research targets or enabling recipe
   transfer bypasses.
 
-Weapons are the only Tech Tree category enabled by default. Pack authors can
-add ammo and attachments to research using the included datapack data.
+Weapons are the only Tech Tree category enabled by default. Server settings can
+enable the included ammo and attachment research without an additional datapack.
 
 Research Designer lets operators copy the installed server tree or start an empty
 tree with its weapons, then build branches, edit requirements, test simulated
@@ -121,11 +121,19 @@ Server controls include:
   and Research Data loot;
 - research and crafting tier enforcement, external workstation mappings, and
   Creative-mode tier bypass;
+- Ammo Research and Attachment Research, each with Use Profile, Enabled, and
+  Disabled choices under Server Settings → Research Progression;
 - found-weapon recovery and duplicate recycling;
 - undiscovered blueprint visibility;
 - Creative-mode cost bypass;
 - starting blueprints and progression exemptions; and
 - the active research profile.
+
+To research ammo and attachments with the bundled Tech Trees, set **Ammo Research**
+and **Attachment Research** to **Enabled** and leave **Enable Research** on.
+Save the settings to refresh connected players; no extra datapack or reload is
+needed. The default **Use Profile** choice follows the active datapack's category
+rules. These settings preserve costs, prerequisites, and learned blueprints.
 
 Optional [TaCZ Magazines support](docs/tacz-magazines-integration.md) adds empty
 magazine crafting at all three Workbench tiers and TaCZ's ammo Workbench.
@@ -219,7 +227,7 @@ last working data active.
 - [Research economy supply and balance](docs/research-economy-balance.md)
 - [Research currency integration API](docs/research-currency-integrations.md)
 - [Economy release handoff and playtest checklist](docs/research-economy-release-handoff.md)
-- [Current release notes](docs/releases/1.3.7.md)
+- [Current release notes](docs/releases/1.3.8.md)
 - [CurseForge description](docs/curseforge-description.md)
 - [Operations and migration](docs/operations-and-migration.md)
 - [Research Designer workspace](docs/research-designer-workspace.md)

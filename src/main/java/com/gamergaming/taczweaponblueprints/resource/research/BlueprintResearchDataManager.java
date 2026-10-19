@@ -145,7 +145,8 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
                 prepared, resolvedIngredientTag);
         Publication previous = publication;
         publication = new Publication(
-                prepared, PublicationRevision.next(previous.revision()));
+                prepared.withDomainSettings(progressionConfig().domainSettings()),
+                PublicationRevision.next(previous.revision()));
         AutomaticWeaponPlacementCandidateManager.INSTANCE.invalidateForRevisions(
                 catalog.revision(), publication.revision());
         BlueprintResearchPolicyResolver.clearCache();
@@ -180,6 +181,21 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
                     unresolvedIngredientTags.size(),
                     unresolvedIngredientTags.stream().sorted().limit(12).toList());
         }
+    }
+
+    /** Republish category gates without editing or reloading the authored datapack definitions. */
+    public boolean refreshDomainSettings(
+            com.gamergaming.taczweaponblueprints.progression.ResearchDomainSettings settings) {
+        Publication previous = publication;
+        BlueprintResearchSnapshot effective = previous.snapshot().withDomainSettings(settings);
+        if (effective == previous.snapshot()) {
+            return false;
+        }
+        publication = new Publication(effective, PublicationRevision.next(previous.revision()));
+        BlueprintResearchPolicyResolver.clearCache();
+        AutomaticWeaponPlacementCandidateManager.INSTANCE.invalidateForRevisions(
+                BlueprintDataManager.SERVER.catalogPublication().revision(), publication.revision());
+        return true;
     }
 
     /** Logs graph metrics only after the live TaCZ catalog has been initialized. */

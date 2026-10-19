@@ -6,6 +6,29 @@ documentation.
 
 ## Unreleased
 
+## 1.3.8 - 2026-10-19
+
+### Added
+
+- Ammo Research and Attachment Research settings can enable the bundled Tech
+  Trees without an additional datapack. Choose Use Profile, Enabled, or Disabled
+  under Server Settings → Research Progression. Use Profile preserves existing
+  worlds and custom datapack behavior.
+- Research Bench category tooltips explain when server settings or the active
+  profile disable research and identify the relevant category setting.
+
+### Improved
+
+- Research Designer captures, previews, and category warnings account for the
+  server's Ammo Research and Attachment Research choices. Older captures
+  continue to use their profile's category rules.
+
+### Compatibility
+
+- Category settings refresh connected players and open workstations when saved.
+  Turning a category off preserves learned blueprints. Clients and servers must
+  update together to receive the new category-status messages (protocol 70).
+
 ## 1.3.7 - 2026-10-07
 
 ### Compatibility

@@ -232,6 +232,16 @@ public class BlueprintConfig extends Config {
 
     public ConfigGroup tieredProgression = new ConfigGroup("tieredProgression");
     @WithPerms(opLevel = 2)
+    public ValidatedEnum<com.gamergaming.taczweaponblueprints.progression.ResearchDomainMode> ammoResearch =
+            new ValidatedEnum<>(com.gamergaming.taczweaponblueprints.progression.ResearchDomainMode.PROFILE,
+                    ValidatedEnum.WidgetType.POPUP);
+
+    @WithPerms(opLevel = 2)
+    public ValidatedEnum<com.gamergaming.taczweaponblueprints.progression.ResearchDomainMode> attachmentResearch =
+            new ValidatedEnum<>(com.gamergaming.taczweaponblueprints.progression.ResearchDomainMode.PROFILE,
+                    ValidatedEnum.WidgetType.POPUP);
+
+    @WithPerms(opLevel = 2)
     public ValidatedCondition<ResearchProgressionPreset> progressionPreset = blueprintsEnabled(
             new ValidatedEnum<>(ResearchProgressionPreset.TIERED_RESEARCH_AND_CRAFTING));
 
@@ -577,7 +587,11 @@ public class BlueprintConfig extends Config {
         boolean policyShapeChanged = previousResearchFeatures == null
                 || !previousResearchFeatures.policyShape().equals(
                         currentResearchFeatures.policyShape());
-        if (policyShapeChanged || ProgressionPolicyAccessService.acquire(
+        boolean domainsChanged = com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchDataManager
+                .INSTANCE.refreshDomainSettings(progressionSnapshot.domainSettings());
+        if (domainsChanged) {
+            BlueprintDataManager.SERVER.rebuildDerivedPublicationsFromRetainedCatalog();
+        } else if (policyShapeChanged || ProgressionPolicyAccessService.acquire(
                 ProgressionPolicyAccessService.Mode.CURRENT_ONLY).isEmpty()) {
             BlueprintDataManager.SERVER.rebuildProgressionPolicy();
         }

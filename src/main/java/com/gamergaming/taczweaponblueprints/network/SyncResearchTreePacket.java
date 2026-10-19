@@ -1,5 +1,6 @@
 package com.gamergaming.taczweaponblueprints.network;
 
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchDomainAvailability;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -36,7 +37,7 @@ import net.minecraftforge.network.NetworkEvent;
  * groups, and its optional Tech Tree presentation metadata.
  */
 public final class SyncResearchTreePacket {
-    private static final int HEADER_RESERVE = 96;
+    private static final int HEADER_RESERVE = 104;
     private static final int NODE_FIXED_RESERVE = 40;
     private static final int EDGE_RESERVE = 10;
     private static final int REQUIREMENT_GROUP_FIXED_RESERVE = 7;
@@ -49,6 +50,7 @@ public final class SyncResearchTreePacket {
     private static final int TECH_MEMBER_RESERVE = 64;
     private static final ClientAccumulator CLIENT_ACCUMULATOR = new ClientAccumulator();
 
+    private final Map<Domain, ResearchDomainAvailability> domainAvailability;
     private final long syncId;
     private final int chunkIndex;
     private final int chunkCount;
@@ -78,7 +80,9 @@ public final class SyncResearchTreePacket {
             List<WireEdge> edges,
             List<WireRequirementGroup> requirementGroups,
             List<WireGroup> groups,
-            List<WireTechTree> techTrees) {
+            List<WireTechTree> techTrees,
+            Map<Domain, ResearchDomainAvailability> domainAvailability) {
+        this.domainAvailability = Map.copyOf(domainAvailability);
         this.syncId = syncId;
         this.chunkIndex = chunkIndex;
         this.chunkCount = chunkCount;
@@ -112,6 +116,15 @@ public final class SyncResearchTreePacket {
         totalGroups = buf.readVarInt();
         totalMembers = buf.readVarInt();
         totalTechTrees = buf.readVarInt();
+        int statusCount = readBoundedCount(buf, Domain.values().length, "Research domain status");
+        var statuses = new java.util.EnumMap<Domain, ResearchDomainAvailability>(Domain.class);
+        for (int index = 0; index < statusCount; index++) {
+            Domain domain = buf.readEnum(Domain.class);
+            if (statuses.put(domain, buf.readEnum(ResearchDomainAvailability.class)) != null) {
+                throw new IllegalArgumentException("Duplicate research domain status");
+            }
+        }
+        domainAvailability = Map.copyOf(statuses);
         validateChunkMetadata(chunkIndex, chunkCount);
         validateTotals(
                 totalNodes,
@@ -179,6 +192,13 @@ public final class SyncResearchTreePacket {
         buf.writeVarInt(totalGroups);
         buf.writeVarInt(totalMembers);
         buf.writeVarInt(totalTechTrees);
+        buf.writeVarInt(domainAvailability.size());
+        for (Domain domain : Domain.values()) {
+            if (domainAvailability.containsKey(domain)) {
+                buf.writeEnum(domain);
+                buf.writeEnum(domainAvailability.get(domain));
+            }
+        }
         buf.writeVarInt(nodes.size());
         nodes.forEach(node -> writeNode(buf, node));
         buf.writeVarInt(edges.size());
@@ -323,7 +343,7 @@ public final class SyncResearchTreePacket {
                     chunk.edges,
                     chunk.requirementGroups,
                     chunk.groups,
-                    chunk.techTrees));
+                    chunk.techTrees, publication.domainAvailability()));
         }
         return List.copyOf(packets);
     }
@@ -1497,6 +1517,7 @@ public final class SyncResearchTreePacket {
         private boolean initialized;
         private boolean completed;
         private long syncId;
+        private Map<Domain, ResearchDomainAvailability> domainAvailability = Map.of();
         private int expectedChunks;
         private int totalNodes;
         private int totalEdges;
@@ -1514,6 +1535,7 @@ public final class SyncResearchTreePacket {
                 initialized = true;
                 completed = false;
                 syncId = packet.syncId;
+                domainAvailability = packet.domainAvailability;
                 expectedChunks = packet.chunkCount;
                 totalNodes = packet.totalNodes;
                 totalEdges = packet.totalEdges;
@@ -1526,7 +1548,8 @@ public final class SyncResearchTreePacket {
             if (completed) {
                 return Optional.empty();
             }
-            if (expectedChunks != packet.chunkCount
+            if (!domainAvailability.equals(packet.domainAvailability)
+                    || expectedChunks != packet.chunkCount
                     || totalNodes != packet.totalNodes
                     || totalEdges != packet.totalEdges
                     || totalRequirementGroups != packet.totalRequirementGroups
@@ -1622,7 +1645,7 @@ public final class SyncResearchTreePacket {
                     ? ResearchTechTreePresentation.EMPTY
                     : wireTechTrees.get(0).resolve(nodes);
             ResearchTreePublication publication = new ResearchTreePublication(
-                    graph, presentation, techTree);
+                    graph, presentation, techTree, domainAvailability);
             completed = true;
             return Optional.of(publication);
         }
@@ -1631,6 +1654,7 @@ public final class SyncResearchTreePacket {
             initialized = false;
             completed = false;
             syncId = 0L;
+            domainAvailability = Map.of();
             expectedChunks = 0;
             totalNodes = 0;
             totalEdges = 0;

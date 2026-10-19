@@ -2,6 +2,12 @@ package com.gamergaming.taczweaponblueprints.research.tree;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.Map;
+import java.util.EnumMap;
+import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionConfigSnapshot;
+import com.gamergaming.taczweaponblueprints.progression.ResearchDomainMode;
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchSnapshot;
+import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain;
 
 import net.minecraft.resources.ResourceLocation;
 
@@ -13,11 +19,17 @@ import net.minecraft.resources.ResourceLocation;
 public record ResearchTreePublication(
         ResearchTreeGraph graph,
         ResearchTreePresentation presentation,
-        ResearchTechTreePresentation techTree) {
+        ResearchTechTreePresentation techTree,
+        Map<Domain, ResearchDomainAvailability> domainAvailability) {
     public static final ResearchTreePublication EMPTY = new ResearchTreePublication(
             ResearchTreeGraph.EMPTY,
             ResearchTreePresentation.EMPTY,
             ResearchTechTreePresentation.EMPTY);
+
+    public ResearchTreePublication(ResearchTreeGraph graph, ResearchTreePresentation presentation,
+            ResearchTechTreePresentation techTree) {
+        this(graph, presentation, techTree, Map.of());
+    }
 
     public ResearchTreePublication(
             ResearchTreeGraph graph,
@@ -26,11 +38,38 @@ public record ResearchTreePublication(
     }
 
     public ResearchTreePublication {
+        domainAvailability = Map.copyOf(domainAvailability);
         if (graph == null || presentation == null || techTree == null) {
             throw new IllegalArgumentException("research publication fields cannot be null");
         }
         validate(graph, presentation);
         techTree.validateAgainst(graph);
+    }
+
+    public ResearchDomainAvailability availability(Domain domain) {
+        return domainAvailability.getOrDefault(domain, ResearchDomainAvailability.AVAILABLE);
+    }
+
+    public ResearchTreePublication withDomainAvailability(BlueprintResearchSnapshot snapshot,
+            BlueprintProgressionConfigSnapshot config, ResourceLocation profileId) {
+        var statuses = new EnumMap<Domain, ResearchDomainAvailability>(Domain.class);
+        var profile = snapshot.profiles().get(profileId);
+        for (Domain domain : Domain.values()) {
+            ResearchDomainAvailability status = ResearchDomainAvailability.AVAILABLE;
+            if (!config.blueprintsEnabled() || !config.journalEnabled() || !config.researchEnabled()
+                    || config.domainSettings().mode(domain) == ResearchDomainMode.DISABLED) {
+                status = ResearchDomainAvailability.SERVER_DISABLED;
+            } else if (profile == null) {
+                status = ResearchDomainAvailability.PROFILE_UNAVAILABLE;
+            } else {
+                var gate = config.domainSettings().apply(domain, profile.domainPolicy(domain));
+                if (!gate.treeEnabled() || !gate.researchEnabled()) {
+                    status = ResearchDomainAvailability.PROFILE_DISABLED;
+                }
+            }
+            if (status != ResearchDomainAvailability.AVAILABLE) statuses.put(domain, status);
+        }
+        return new ResearchTreePublication(graph, presentation, techTree, statuses);
     }
 
     private static void validate(
