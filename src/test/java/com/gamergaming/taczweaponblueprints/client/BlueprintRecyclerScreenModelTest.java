@@ -27,8 +27,8 @@ import com.google.gson.JsonParser;
 import net.minecraft.resources.ResourceLocation;
 
 class BlueprintRecyclerScreenModelTest {
-    private static final ResourceLocation BLUEPRINT = new ResourceLocation("tacz:test_weapon");
-    private static final ResourceLocation DATA = new ResourceLocation("minecraft:paper");
+    private static final ResourceLocation BLUEPRINT = ResourceLocation.parse("tacz:test_weapon");
+    private static final ResourceLocation DATA = ResourceLocation.parse("minecraft:paper");
 
     @Test
     void insertedMagazineBlocksBothActionsAndKeepsItsSpecificReason() {

@@ -75,13 +75,13 @@ class ResearchGroupedRouteQualityBoundaryTest {
                 new LinkedHashMap<>();
         ResourceLocation previous = null;
         for (int index = 0; index < size; index++) {
-            ResourceLocation id = new ResourceLocation("phase_five", "weapon_" + index);
+            ResourceLocation id = ResourceLocation.fromNamespaceAndPath("phase_five", "weapon_" + index);
             nodes.add(new ResearchTreeGraph.Node(
                     index,
                     id,
                     "name.phase_five.weapon_" + index,
                     "rifle",
-                    new ResourceLocation("phase_five", "slot/weapon_" + index),
+                    ResourceLocation.fromNamespaceAndPath("phase_five", "slot/weapon_" + index),
                     JournalVisibility.FULL,
                     false,
                     true,
@@ -111,7 +111,7 @@ class ResearchGroupedRouteQualityBoundaryTest {
             previous = id;
         }
         ResourceLocation terminal = previous;
-        ResourceLocation parent = new ResourceLocation(
+        ResourceLocation parent = ResourceLocation.fromNamespaceAndPath(
                 "phase_five", "weapon_" + (size - 2));
         AutomaticWeaponPrerequisiteDecision decision =
                 new AutomaticWeaponPrerequisiteDecision(
@@ -156,7 +156,7 @@ class ResearchGroupedRouteQualityBoundaryTest {
                 Optional.of(decision)));
         ResearchTreeGraph graph = ResearchTreeGraph.withRequirementGroups(nodes, groups);
         ResearchTechTreePresentation presentation = new ResearchTechTreePresentation(
-                Optional.of(new ResourceLocation("phase_five", "tree")),
+                Optional.of(ResourceLocation.fromNamespaceAndPath("phase_five", "tree")),
                 "Maximum",
                 Optional.empty(),
                 Optional.empty(),
@@ -169,7 +169,7 @@ class ResearchGroupedRouteQualityBoundaryTest {
                         Optional.empty(),
                         Optional.empty(),
                         List.of(new ResearchTechTreePresentation.LaneView(
-                                new ResourceLocation("phase_five", "weapons"),
+                                ResourceLocation.fromNamespaceAndPath("phase_five", "weapons"),
                                 "Weapons",
                                 Optional.empty(),
                                 Optional.empty(),
@@ -177,8 +177,8 @@ class ResearchGroupedRouteQualityBoundaryTest {
                                 members)))));
         AutomaticWeaponPlacementDiagnostics diagnostics =
                 new AutomaticWeaponPlacementDiagnostics(
-                        new ResourceLocation("phase_five", "profile"),
-                        new ResourceLocation("phase_five", "tree"),
+                        ResourceLocation.fromNamespaceAndPath("phase_five", "profile"),
+                        ResourceLocation.fromNamespaceAndPath("phase_five", "tree"),
                         AutomaticPlacementMode.CONNECTED,
                         AutomaticWeaponPlacementPolicy.ReviewHandling.PLACE_CONNECTED,
                         AutomaticWeaponPlacementPolicy.LayeringStrategy.DYNAMIC_STAT_LAYERS,

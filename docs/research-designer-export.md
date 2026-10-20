@@ -16,7 +16,9 @@ folder. Choose a new name for each export; existing exports are never overwritte
 | `export-review.json` | Required profile, dependencies, captured settings, source assumptions, validation notices, and datapack checksum. |
 | `INSTALL.txt` | Installation and activation instructions. |
 
-The datapack uses Minecraft 1.20.1 pack format 15. It contains only definitions
+The datapack uses the running Minecraft version’s datapack format (48 for
+Minecraft 1.21.1). The review screen, export report, and installation instructions
+use the same version information. It contains only definitions
 owned by the project's namespace. TaCZ gun packs, external definitions, and other
 mods remain dependencies. Supply custom artwork or translations in a separate
 resource pack. The server does not need the editable project bundle.

@@ -12,7 +12,7 @@ import java.util.function.Function;
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.item.BlueprintKind;
 import com.gamergaming.taczweaponblueprints.item.PhysicalWeaponProvenance;
@@ -34,8 +34,7 @@ public final class FoundWeaponRecoveryService {
         if (player == null || !player.isAlive() || transaction == null) {
             return Evaluation.failure(Status.INVALID_PLAYER, null, 0, 0, 0);
         }
-        Optional<IPlayerRecipeData> data = player.getCapability(
-                ModCapabilities.PLAYER_RECIPE_DATA).resolve();
+        Optional<IPlayerRecipeData> data = ModAttachments.recipeData(player);
         if (data.isEmpty()) {
             return Evaluation.failure(
                     Status.PLAYER_DATA_UNAVAILABLE, null, 0, 0,
@@ -152,8 +151,7 @@ public final class FoundWeaponRecoveryService {
         if (player == null || !player.isAlive() || transaction == null) {
             return Result.failure(Status.INVALID_PLAYER, Optional.empty(), 0);
         }
-        Optional<IPlayerRecipeData> resolved = player.getCapability(
-                ModCapabilities.PLAYER_RECIPE_DATA).resolve();
+        Optional<IPlayerRecipeData> resolved = ModAttachments.recipeData(player);
         if (resolved.isEmpty()) {
             return Result.failure(Status.PLAYER_DATA_UNAVAILABLE, Optional.empty(), 0);
         }

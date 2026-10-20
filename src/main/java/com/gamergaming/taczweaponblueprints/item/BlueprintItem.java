@@ -5,9 +5,7 @@ import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Consumer;
 
-import com.gamergaming.taczweaponblueprints.client.ClientRendererRegistry;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.init.ModItems;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintDiscoveryService;
@@ -17,7 +15,6 @@ import com.gamergaming.taczweaponblueprints.progression.PhysicalBlueprintLearnin
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.gamergaming.taczweaponblueprints.util.ItemNameFilterHelper;
 
-import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
@@ -25,7 +22,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.client.extensions.common.IClientItemExtensions;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.Entity;
@@ -34,16 +30,6 @@ import net.minecraft.world.entity.player.Player;
 public class BlueprintItem extends Item {
     public BlueprintItem(Properties properties) {
         super(properties);
-    }
-
-    @Override
-    public void initializeClient(Consumer<IClientItemExtensions> consumer) {
-        consumer.accept(new IClientItemExtensions() {
-            @Override
-            public BlockEntityWithoutLevelRenderer getCustomRenderer() {
-                return ClientRendererRegistry.getBlueprintItemRenderer();
-            }
-        });
     }
 
     public static String getBpId(ItemStack stack) {
@@ -55,7 +41,7 @@ public class BlueprintItem extends Item {
         if (stack == null || stack.isEmpty() || !(stack.getItem() instanceof BlueprintItem)) {
             return Optional.empty();
         }
-        CompoundTag tag = stack.getTag();
+        CompoundTag tag = stack.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag();
         if (tag == null || !tag.contains("bpId", Tag.TAG_STRING)) {
             return Optional.empty();
         }
@@ -74,8 +60,7 @@ public class BlueprintItem extends Item {
 
     public static ItemStack createBlueprint(String bpId) {
         ItemStack blueprint = new ItemStack(ModItems.BLUEPRINT_ITEM.get());
-        CompoundTag tag = blueprint.getOrCreateTag();
-        tag.putString("bpId", bpId);
+        net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, blueprint, tag -> tag.putString("bpId", bpId));
         return blueprint;
     }
 
@@ -84,7 +69,7 @@ public class BlueprintItem extends Item {
             throw new IllegalArgumentException("blueprint provenance cannot be null");
         }
         ItemStack blueprint = createBlueprint(bpId);
-        blueprint.getOrCreateTag().put(BlueprintProvenance.TAG_KEY, provenance.toTag());
+        net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, blueprint, tag -> tag.put(BlueprintProvenance.TAG_KEY, provenance.toTag()));
         return blueprint;
     }
 
@@ -92,7 +77,7 @@ public class BlueprintItem extends Item {
         if (getBlueprintId(stack).isEmpty()) {
             return Optional.empty();
         }
-        return BlueprintProvenance.fromTag(stack.getTag());
+        return BlueprintProvenance.fromTag(stack.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag());
     }
 
     /**
@@ -103,7 +88,7 @@ public class BlueprintItem extends Item {
         if (getBlueprintId(stack).isEmpty()) {
             return false;
         }
-        return BlueprintProvenance.allowsRecycling(stack.getTag());
+        return BlueprintProvenance.allowsRecycling(stack.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag());
     }
 
     public static PhysicalBlueprintLearningMode physicalLearningMode(
@@ -112,7 +97,7 @@ public class BlueprintItem extends Item {
         if (getBlueprintId(stack).isEmpty()) {
             return PhysicalBlueprintLearningMode.DISABLED;
         }
-        return BlueprintProvenance.learningMode(stack.getTag(), legacyDefault);
+        return BlueprintProvenance.learningMode(stack.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag(), legacyDefault);
     }
 
     @Override
@@ -165,7 +150,7 @@ public class BlueprintItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Level world, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext world, List<Component> tooltip, TooltipFlag flag) {
         String bpId = getBpId(stack);
         BlueprintData data = BlueprintDataManager.presentationCatalog().getBlueprintData(bpId);
         if (data != null) {

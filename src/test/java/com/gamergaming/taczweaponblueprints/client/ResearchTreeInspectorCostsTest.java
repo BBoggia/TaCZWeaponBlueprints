@@ -13,10 +13,10 @@ import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.ResourceLocation;
 
 class ResearchTreeInspectorCostsTest {
-    private static final ResourceLocation ID = new ResourceLocation("test:target");
+    private static final ResourceLocation ID = ResourceLocation.parse("test:target");
     private static final int TEXT = 1, MUTED = 2, GOOD = 3, BAD = 4;
     private static final ResearchSelectionPreview.IngredientPreview INGREDIENT = new ResearchSelectionPreview.IngredientPreview(
-            List.of(new ResourceLocation("minecraft:iron_ingot")), Optional.of(new ResourceLocation("forge:ingots/iron")), 18, 3);
+            List.of(ResourceLocation.parse("minecraft:iron_ingot")), Optional.of(ResourceLocation.parse("forge:ingots/iron")), 18, 3);
 
     private ResearchSelectionPreview preview(ResearchCostMode mode, boolean bypass, int extra, boolean emptyMaterials) {
         var materials = mode.itemsEnabled() && !emptyMaterials ? List.of(INGREDIENT) : List.<ResearchSelectionPreview.IngredientPreview>of();
@@ -25,7 +25,7 @@ class ResearchTreeInspectorCostsTest {
                 ResearchSelectionPreview.PathPlanningState.NONE, mode);
     }
     private ResearchTreeSelectedNodePresenter.Presentation details(ResearchSelectionPreview preview, boolean matched, boolean learned) {
-        var node = new ResearchTreeGraph.Node(0, ID, "test.target", "rifle", new ResourceLocation("minecraft:paper"),
+        var node = new ResearchTreeGraph.Node(0, ID, "test.target", "rifle", ResourceLocation.parse("minecraft:paper"),
                 JournalVisibility.FULL, learned, true, !learned, 62, 1, 0, 0,
                 learned ? ResearchTreeGraph.Availability.LEARNED : ResearchTreeGraph.Availability.AVAILABLE);
         return ResearchTreeSelectedNodePresenter.present(new ResearchTreeSelectedNodePresenter.Input(node, false,
@@ -102,7 +102,7 @@ class ResearchTreeInspectorCostsTest {
         }
     }
     @Test void hiddenAndExternalAlternativesDoNotImplyASingleRequiredBlueprint() {
-        var other = new ResourceLocation("test:other");
+        var other = ResourceLocation.parse("test:other");
         for (int[] counts : new int[][]{{0,0},{1,0},{0,1}}) {
             var group = new ResearchTreeGraph.RequirementGroup(ID,0,List.of(other),counts[0],counts[1],true,false);
             var text = (TranslatableContents) ResearchTreeInspectorRequirements.groupHeading(group).getContents();

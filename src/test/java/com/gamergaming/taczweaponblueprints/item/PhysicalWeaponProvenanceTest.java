@@ -16,9 +16,9 @@ import net.minecraft.world.item.Items;
 
 class PhysicalWeaponProvenanceTest {
     private static final ResourceLocation LOOT =
-            new ResourceLocation("minecraft:chests/simple_dungeon");
+            ResourceLocation.parse("minecraft:chests/simple_dungeon");
     private static final ResourceLocation RECIPE =
-            new ResourceLocation("tacz:test_rifle");
+            ResourceLocation.parse("tacz:test_rifle");
 
     @BeforeAll
     static void bootstrapMinecraftRegistries() {

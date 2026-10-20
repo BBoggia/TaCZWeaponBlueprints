@@ -1,7 +1,6 @@
 package com.gamergaming.taczweaponblueprints.network;
 
 import java.util.Optional;
-import java.util.function.Supplier;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerActionContract;
@@ -10,10 +9,21 @@ import com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerMenuBridge;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 
 /** Bounded smart-slot request; the open Recycler menu remains authoritative. */
-public final class BlueprintRecyclerActionPacket {
+public final class BlueprintRecyclerActionPacket implements CustomPacketPayload {
+    public static final Type<BlueprintRecyclerActionPacket> TYPE = new Type<>(
+            com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.loc("blueprint_recycler_action"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, BlueprintRecyclerActionPacket> STREAM_CODEC =
+            StreamCodec.ofMember(BlueprintRecyclerActionPacket::toBytes, BlueprintRecyclerActionPacket::new);
+
+    @Override
+    public Type<BlueprintRecyclerActionPacket> type() { return TYPE; }
+
     private final int containerId;
     private final int requestId;
     private final BlueprintRecyclerActionContract.Action action;
@@ -72,9 +82,9 @@ public final class BlueprintRecyclerActionPacket {
         buffer.writeVarLong(expectedStateToken);
     }
 
-    public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
-        ServerPlayer sender = context.getSender();
+    public void handle(IPayloadContext contextSupplier) {
+        IPayloadContext context = contextSupplier;
+        ServerPlayer sender = NetworkHandler.sender(context);
         context.enqueueWork(() -> {
             if (sender != null
                     && sender.containerMenu.containerId == containerId
@@ -97,7 +107,6 @@ public final class BlueprintRecyclerActionPacket {
                         sender, containerId, requestId, result);
             }
         });
-        context.setPacketHandled(true);
     }
 
     int containerId() {

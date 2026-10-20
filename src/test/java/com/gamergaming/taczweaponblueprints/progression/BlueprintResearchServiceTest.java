@@ -853,7 +853,7 @@ class BlueprintResearchServiceTest {
     }
 
     private static ResourceLocation id(String value) {
-        return new ResourceLocation(value);
+        return ResourceLocation.parse(value);
     }
 
     private static final class TestInput implements ResearchInput {

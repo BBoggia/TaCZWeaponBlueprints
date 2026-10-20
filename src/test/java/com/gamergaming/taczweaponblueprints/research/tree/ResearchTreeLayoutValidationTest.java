@@ -12,8 +12,8 @@ import net.minecraft.resources.ResourceLocation;
 class ResearchTreeLayoutValidationTest {
     @Test
     void overlapDiagnosticsIdentifyBothNodesAndTheirCoordinates() {
-        ResourceLocation firstId = new ResourceLocation("test", "first");
-        ResourceLocation secondId = new ResourceLocation("test", "second");
+        ResourceLocation firstId = ResourceLocation.fromNamespaceAndPath("test", "first");
+        ResourceLocation secondId = ResourceLocation.fromNamespaceAndPath("test", "second");
 
         IllegalArgumentException failure = assertThrows(
                 IllegalArgumentException.class,

@@ -1,5 +1,7 @@
 package com.gamergaming.taczweaponblueprints.event;
 
+import net.neoforged.fml.common.EventBusSubscriber;
+
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.progression.ResearchPointAwardDispatcher;
 import com.gamergaming.taczweaponblueprints.progression.ResearchPointCombatTracker;
@@ -8,16 +10,14 @@ import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionSync
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraftforge.event.entity.EntityJoinLevelEvent;
-import net.minecraftforge.event.entity.living.LivingDeathEvent;
-import net.minecraftforge.event.entity.living.MobSpawnEvent;
-import net.minecraftforge.event.entity.player.AdvancementEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.player.AdvancementEvent;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
 
 /** Authoritative Forge entry points for finite Research Point awards. */
-@Mod.EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+@EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, bus = EventBusSubscriber.Bus.GAME)
 public final class ResearchPointAwardEvents {
     private ResearchPointAwardEvents() {
     }
@@ -26,7 +26,7 @@ public final class ResearchPointAwardEvents {
     public static void onAdvancementEarned(AdvancementEvent.AdvancementEarnEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             ResearchPointAwardDispatcher.advancementCompleted(
-                    player, event.getAdvancement().getId());
+                    player, event.getAdvancement().id());
         }
     }
 
@@ -42,7 +42,7 @@ public final class ResearchPointAwardEvents {
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void onMobFinalizeSpawn(MobSpawnEvent.FinalizeSpawn event) {
+    public static void onMobFinalizeSpawn(net.neoforged.neoforge.event.entity.living.FinalizeSpawnEvent event) {
         if (!event.isSpawnCancelled() && event.getEntity().level() instanceof ServerLevel level) {
             ResearchPointCombatTracker.recordSpawn(
                     event.getEntity(), event.getSpawnType(), gameTime(level));

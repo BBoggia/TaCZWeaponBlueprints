@@ -72,7 +72,7 @@ public final class PhysicalItemBlueprintResolver {
                     BlueprintKind.AMMO,
                     false,
                     false,
-                    stack.hasCustomHoverName());
+                    stack.has(net.minecraft.core.component.DataComponents.CUSTOM_NAME));
         }
         IAttachment attachment = IAttachment.getIAttachmentOrNull(stack);
         if (attachment != null) {
@@ -81,7 +81,7 @@ public final class PhysicalItemBlueprintResolver {
                     BlueprintKind.ATTACHMENT,
                     false,
                     false,
-                    stack.hasCustomHoverName()
+                    stack.has(net.minecraft.core.component.DataComponents.CUSTOM_NAME)
                             || attachment.getSkinId(stack) != null
                             || attachment.hasCustomLaserColor(stack));
         }
@@ -126,7 +126,7 @@ public final class PhysicalItemBlueprintResolver {
             }
         }
         ResourceLocation displayId = gun.getGunDisplayId(stack);
-        boolean customized = stack.hasCustomHoverName()
+        boolean customized = stack.has(net.minecraft.core.component.DataComponents.CUSTOM_NAME)
                 || (displayId != null && !DefaultAssets.DEFAULT_GUN_DISPLAY_ID.equals(displayId))
                 || gun.getExp(stack) > 0
                 || gun.hasCustomLaserColor(stack)

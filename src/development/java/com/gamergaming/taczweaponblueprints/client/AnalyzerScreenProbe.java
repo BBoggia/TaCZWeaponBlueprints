@@ -25,15 +25,16 @@ import net.minecraft.world.item.*;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.phys.*;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 /** Opt-in screen acceptance; never loads an unmarked player world or saves GUI preferences. */
-@Mod.EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID,value=Dist.CLIENT)
+@EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID,value=Dist.CLIENT)
 public final class AnalyzerScreenProbe {
     private static final boolean ENABLED=Boolean.getBoolean("tacz.analyzerScreenQA.enabled");
     private static final Path OUTPUT=Path.of(System.getProperty("tacz.analyzerStationsQA.output","."));
@@ -56,7 +57,7 @@ public final class AnalyzerScreenProbe {
             if (!opened && event.getScreen() instanceof TitleScreen && mc.getOverlay()==null) {
                 marker(mc.gameDirectory.toPath().resolve("saves").resolve(WORLD));
                 Files.createDirectories(OUTPUT); oldScale=mc.options.guiScale().get(); opened=true;
-                mc.createWorldOpenFlows().loadLevel(event.getScreen(),WORLD); return;
+                mc.createWorldOpenFlows().openWorld(WORLD, () -> mc.setScreen(event.getScreen())); return;
             }
             if (expected==null || ticks<30 || !(event.getScreen() instanceof BlueprintRecyclerScreen screen) || mc.getOverlay()!=null) return;
             if (step<15 || step>18 || ticks<=30) check(screen.getMenu().preview().withStateToken(0).equals(expected.withStateToken(0)),
@@ -121,8 +122,8 @@ public final class AnalyzerScreenProbe {
             case 17->"no-result";case 18->"reconstructed-result";case 19->"research-data";case 20->"ordinary-fragments";
             case 21->"direct-rp-missing-materials";case 22->"direct-rp-scrolled-materials";case 23->"direct-rp-ready";case 24->"blueprint-learning-disabled";case 25->"choice-known-recovery";case 26->"choice-missing-analysis-material";default->"choice-analysis-tier-blocked"; };
     }
-    @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
-        if (!ENABLED || finished || !opened || event.phase!=TickEvent.Phase.END) return;
+    @SubscribeEvent public static void tick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event) {
+        if (!ENABLED || finished || !opened) return;
         var mc=Minecraft.getInstance();
         try {
             if (++total>3000) throw new IllegalStateException("Analyzer screen QA timed out");
@@ -186,8 +187,8 @@ public final class AnalyzerScreenProbe {
             }).findFirst().orElseThrow());
         }
         player.closeContainer();player.getInventory().clearContent();
-        var data=player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElseThrow();
-        var target=scenario==27?new ResourceLocation("tacz:cz75"):targets.get(scenario<9?scenario%3:scenario==24?2:1);
+        var data=com.gamergaming.taczweaponblueprints.init.ModAttachments.recipeData(player).orElseThrow();
+        var target=scenario==27?ResourceLocation.parse("tacz:cz75"):targets.get(scenario<9?scenario%3:scenario==24?2:1);
         data.clearRecipes();
         data.replaceProgression(Set.of(),Set.of(target.toString()),20);data.clearArchivedBlueprintFragments();data.clearArchivedAnalysisFragments();
         player.getInventory().setItem(0,new ItemStack(Items.IRON_INGOT,8));
@@ -197,10 +198,10 @@ public final class AnalyzerScreenProbe {
         player.serverLevel().removeBlock(pos, false);
         if (!com.gamergaming.taczweaponblueprints.block.BlueprintRecyclerBlock.placeCompleteStructure(
                 player.serverLevel(), pos, block.defaultBlockState())) throw new IllegalStateException("Analyzer fixture needs two blocks");
-        block.use(player.serverLevel().getBlockState(pos),player.serverLevel(),pos,player,InteractionHand.MAIN_HAND,new BlockHitResult(Vec3.atCenterOf(pos),Direction.NORTH,pos,false));
+        player.serverLevel().getBlockState(pos).useWithoutItem(player.serverLevel(), player,new BlockHitResult(Vec3.atCenterOf(pos),Direction.NORTH,pos,false));
         var menu=(BlueprintRecyclerMenu)player.containerMenu;
-        var item=ForgeRegistries.ITEMS.getValues().stream().filter(i->i instanceof IGun).findFirst().orElseThrow();
-        var input=new ItemStack(item);((IGun)item).setGunId(input,target);PhysicalWeaponProvenance.stampLootGenerated(input,new ResourceLocation("minecraft:chests/simple_dungeon"));
+        var item=BuiltInRegistries.ITEM.stream().filter(i->i instanceof IGun).findFirst().orElseThrow();
+        var input=new ItemStack(item);((IGun)item).setGunId(input,target);PhysicalWeaponProvenance.stampLootGenerated(input,ResourceLocation.parse("minecraft:chests/simple_dungeon"));
         if (scenario==9 || scenario==10 || scenario==18) {
             input=BlueprintFragmentItem.createAnalysis(target,AnalysisRewardClass.PROTECTED_PREREQUISITES);input.setCount(3);
             data.applyAnalysisFragmentMutation(new AnalysisFragmentMutation(PlayerProgressValueMutation.Operation.COMMIT,target.toString(),AnalysisFragmentCounts.EMPTY,new AnalysisFragmentCounts(scenario==10?10:2,0,0,0)));
@@ -208,7 +209,7 @@ public final class AnalyzerScreenProbe {
         if(scenario==11)menu.getSlot(1).set(new ItemStack(Items.STONE));
         if(scenario==12){data.setResearchPoints(0);player.getInventory().clearContent();}
         if(scenario==19)input=new ItemStack(ModItems.RESEARCH_NOTE.get(),3);
-        if(scenario==20){input=new ItemStack(ModItems.BLUEPRINT_FRAGMENT.get());input.getOrCreateTag().putString("BlueprintTarget",target.toString());input.setCount(3);}
+        if(scenario==20){input=new ItemStack(ModItems.BLUEPRINT_FRAGMENT.get());net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, input, tag -> tag.putString("BlueprintTarget",target.toString()));input.setCount(3);}
         if(scenario==23 || scenario>=25)player.getInventory().setItem(1,new ItemStack(Items.PAPER,4));
         if(scenario==25)data.addBlueprint(target.toString());
         if(scenario==26)player.getInventory().setItem(0,ItemStack.EMPTY);

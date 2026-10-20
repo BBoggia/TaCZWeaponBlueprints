@@ -7,20 +7,21 @@ import com.gamergaming.taczweaponblueprints.villager.stock.*;
 import com.gamergaming.taczweaponblueprints.villager.trade.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.OnDatapackSyncEvent;
-import net.minecraftforge.eventbus.api.*;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.OnDatapackSyncEvent;
+import net.neoforged.bus.api.*;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /** Actual late failure, successful commit, and another late failure against that new commit. */
-@Mod.EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID)
+@EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID)
 public final class VillagerLateReloadProbe {
     private static int phase,ticks,round;
     private static boolean failNext;
     private static Throwable failure;
     private static TradeSnapshot before;
-    private static final ResourceLocation TARGET=new ResourceLocation("taczweaponblueprints:gunsmith/buy_iron");
+    private static final ResourceLocation TARGET=ResourceLocation.parse("taczweaponblueprints:gunsmith/buy_iron");
     private static final List<String> checks=new ArrayList<>();
     private static final class LastSyncFailure {
         @SubscribeEvent(priority=EventPriority.LOWEST) public void synced(OnDatapackSyncEvent event) {
@@ -30,13 +31,13 @@ public final class VillagerLateReloadProbe {
             }
         }
     }
-    @SubscribeEvent public static void tick(TickEvent.ServerTickEvent event) {
-        if(!Boolean.getBoolean("tacz.villagerQA.lateReload")||event.phase!=TickEvent.Phase.END||VillagerPrototypeStock.root()==null||phase==3)return;
+    @SubscribeEvent public static void tick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+        if(!Boolean.getBoolean("tacz.villagerQA.lateReload")||VillagerPrototypeStock.root()==null||phase==3)return;
         var server=event.getServer();
         try {
             if(phase==0){
                 StockPublicationCoordinator.settle();if(StockPublicationCoordinator.pending()||!StockCatalog.current().coherent())return;
-                MinecraftForge.EVENT_BUS.register(new LastSyncFailure());
+                NeoForge.EVENT_BUS.register(new LastSyncFailure());
                 start(server);
             }else if(phase==2){
                 StockPublicationCoordinator.settle();if(StockPublicationCoordinator.pending()&&ticks++<100)return;

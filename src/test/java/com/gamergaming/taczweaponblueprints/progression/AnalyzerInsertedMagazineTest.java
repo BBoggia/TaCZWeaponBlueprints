@@ -19,10 +19,10 @@ class AnalyzerInsertedMagazineTest {
 
     static ItemStack gun(String magazine) {
         var stack = new ItemStack(AnalysisTestItems.gun);
-        stack.getOrCreateTag().putString("GunId", "test:weapon");
-        stack.getOrCreateTag().putBoolean("HasBulletInBarrel", true);
-        stack.getOrCreateTag().putInt("GunCurrentAmmoCount", 12);
-        if (magazine.equals("malformed")) stack.getOrCreateTag().putString(KEY, "broken");
+        net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, stack, customTag -> customTag.putString("GunId", "test:weapon"));
+        net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, stack, customTag -> customTag.putBoolean("HasBulletInBarrel", true));
+        net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, stack, customTag -> customTag.putInt("GunCurrentAmmoCount", 12));
+        if (magazine.equals("malformed")) net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, stack, customTag -> customTag.putString(KEY, "broken"));
         else {
             var stored = new CompoundTag();
             if (!magazine.equals("empty_compound")) {
@@ -32,7 +32,7 @@ class AnalyzerInsertedMagazineTest {
                 data.putInt("AmmoCount", magazine.equals("empty") ? 0 : 30);
                 stored.put("tag", data);
             }
-            stack.getOrCreateTag().put(KEY, stored);
+            net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, stack, customTag -> customTag.put(KEY, stored));
         }
         return stack;
     }
@@ -50,8 +50,8 @@ class AnalyzerInsertedMagazineTest {
 
     @Test void ordinaryGunsAndOtherItemsDoNotAcquireAnOptionalDependencyOrTags() {
         var stack = new ItemStack(AnalysisTestItems.gun);
-        assertFalse(InsertedMagazineGuard.hasInsertedMagazine(stack)); assertNull(stack.getTag());
-        var paper = new ItemStack(Items.PAPER); paper.getOrCreateTag().put(KEY, new CompoundTag());
+        assertFalse(InsertedMagazineGuard.hasInsertedMagazine(stack)); assertFalse(stack.has(net.minecraft.core.component.DataComponents.CUSTOM_DATA));
+        var paper = new ItemStack(Items.PAPER); net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, paper, customTag -> customTag.put(KEY, new CompoundTag()));
         assertFalse(InsertedMagazineGuard.hasInsertedMagazine(paper));
         assertFalse(InsertedMagazineGuard.hasInsertedMagazine(ItemStack.EMPTY));
         assertFalse(InsertedMagazineGuard.hasInsertedMagazine(null));
@@ -59,7 +59,7 @@ class AnalyzerInsertedMagazineTest {
 
     @Test void removingOnlyTheStoredMagazineMarkerRestoresTheNormalEvaluation() {
         var tx = new BlueprintWeaponAnalysisServiceTest.Tx(); tx.input = gun("empty");
-        tx.input.getTag().remove(KEY);
+        net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, tx.input, tag -> tag.remove(KEY));
         assertTrue(BlueprintWeaponAnalysisServiceTest.evaluate(tx, BlueprintWeaponAnalysisServiceTest.data()).ready());
     }
 
@@ -67,7 +67,7 @@ class AnalyzerInsertedMagazineTest {
     void finalExecutionRejectsInsertedMagazineBeforePaymentRandomnessOrOutput(boolean physicalCurrency) {
         var tx = new BlueprintWeaponAnalysisServiceTest.Tx(); tx.input = new ItemStack(AnalysisTestItems.gun);
         if (physicalCurrency) {
-            tx.currency = ResearchCurrencyPolicy.physical(new net.minecraft.resources.ResourceLocation("minecraft:iron_ingot"), 1);
+            tx.currency = ResearchCurrencyPolicy.physical(net.minecraft.resources.ResourceLocation.parse("minecraft:iron_ingot"), 1);
             tx.inventory.get(0).setCount(64);
             while (tx.inventory.size() < 36) tx.inventory.add(ItemStack.EMPTY);
         }

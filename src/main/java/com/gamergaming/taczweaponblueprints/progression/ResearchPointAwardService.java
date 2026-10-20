@@ -33,7 +33,7 @@ import com.gamergaming.taczweaponblueprints.resource.award.ResearchPointAwardTri
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.common.MinecraftForge;
+import net.neoforged.neoforge.common.NeoForge;
 
 /**
  * Validates repeat and shared-budget history and atomically commits one or more
@@ -189,7 +189,7 @@ public final class ResearchPointAwardService {
         if (!livePublicationCurrent(config, awardRevision, context)) return AwardResult.failure(definitionId, Status.STALE_RESOLUTION);
         ResearchPointAwardEvent.Pre pre = new ResearchPointAwardEvent.Pre(
                 player, definitionId, context, evaluation.requestedPoints());
-        if (MinecraftForge.EVENT_BUS.post(pre)) {
+        if (NeoForge.EVENT_BUS.post(pre).isCanceled()) {
             return AwardResult.failure(definitionId, Status.CANCELLED);
         }
         // Event listeners run on the same server thread but may still change
@@ -207,7 +207,7 @@ public final class ResearchPointAwardService {
         if (!livePublicationCurrent(config, awardRevision, context)) return AwardResult.failure(definitionId, Status.STALE_RESOLUTION);
         AwardResult result = commitWithExternal(playerData, revalidated, config, externalTransaction);
         if (result.committed()) {
-            try { MinecraftForge.EVENT_BUS.post(new ResearchPointAwardEvent.Post(
+            try { NeoForge.EVENT_BUS.post(new ResearchPointAwardEvent.Post(
                     player,
                     definitionId,
                     context,
@@ -286,7 +286,7 @@ public final class ResearchPointAwardService {
             var copy = PlayerRecipeData.copyResearchPointState(data); copy.setResearchPoints(0);
             var e = prepareOne(copy, award, context, physicalConfig, gameTime).evaluation();
             if (!e.eligible()) { rejected.add(AwardResult.failure(e.definitionId(), e.status())); continue; }
-            if (MinecraftForge.EVENT_BUS.post(new ResearchCurrencyAwardEvent.Pre(player, e.definitionId(), context, currency, e.requestedPoints())))
+            if (NeoForge.EVENT_BUS.post(new ResearchCurrencyAwardEvent.Pre(player, e.definitionId(), context, currency, e.requestedPoints())).isCanceled())
                 rejected.add(AwardResult.failure(e.definitionId(), Status.CANCELLED));
             else allowed.add(award);
         }
@@ -299,7 +299,7 @@ public final class ResearchPointAwardService {
                 && awardRevision == com.gamergaming.taczweaponblueprints.resource.award.ResearchPointAwardDataManager.INSTANCE.revision());
         var committed = commitPhysicalAwards(data, allowed, context, config, gameTime, guarded, external);
         for (var value : committed.awards()) if (value.committed()) {
-            try { MinecraftForge.EVENT_BUS.post(new ResearchCurrencyAwardEvent.Post(player, value.definitionId(), context, currency, value.awardedPoints())); }
+            try { NeoForge.EVENT_BUS.post(new ResearchCurrencyAwardEvent.Post(player, value.definitionId(), context, currency, value.awardedPoints())); }
             catch (RuntimeException exception) { com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.LOGGER.warn("Currency post-award listener failed", exception); }
         }
         rejected.addAll(committed.awards());

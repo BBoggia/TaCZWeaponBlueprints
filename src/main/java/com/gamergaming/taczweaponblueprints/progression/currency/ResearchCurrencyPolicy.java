@@ -5,7 +5,7 @@ import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 /** Server-issued currency identity. A physical policy never exposes a saved RP balance as money. */
 public record ResearchCurrencyPolicy(Kind kind, Optional<ResourceLocation> item, int pointCap, long revision) {
@@ -13,7 +13,7 @@ public record ResearchCurrencyPolicy(Kind kind, Optional<ResourceLocation> item,
         BANKED_RP, PHYSICAL_ITEM;
         @Override public String prefix() { return "config.taczweaponblueprints.blueprint.researchCurrencyKind"; }
     }
-    public static final ResourceLocation SCRAP = new ResourceLocation("taczweaponblueprints:scrap");
+    public static final ResourceLocation SCRAP = ResourceLocation.parse("taczweaponblueprints:scrap");
 
     public ResearchCurrencyPolicy {
         if (kind == null || item == null || revision < 1 || pointCap < 0
@@ -21,7 +21,7 @@ public record ResearchCurrencyPolicy(Kind kind, Optional<ResourceLocation> item,
                 || (kind == Kind.PHYSICAL_ITEM) != item.isPresent()
                 || kind == Kind.PHYSICAL_ITEM && pointCap != 0
                 || item.filter(id -> id.toString().length() > PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH
-                        || id.equals(new ResourceLocation("minecraft:air"))).isPresent()) {
+                        || id.equals(ResourceLocation.parse("minecraft:air"))).isPresent()) {
             throw new IllegalArgumentException("invalid research currency policy");
         }
     }
@@ -36,8 +36,8 @@ public record ResearchCurrencyPolicy(Kind kind, Optional<ResourceLocation> item,
 
     /** Registry resolution is delayed until registries exist; unknown IDs cannot resolve to air. */
     public Optional<ItemStack> physicalUnit() {
-        if (kind != Kind.PHYSICAL_ITEM || !ForgeRegistries.ITEMS.containsKey(item.orElseThrow())) return Optional.empty();
-        var value = ForgeRegistries.ITEMS.getValue(item.orElseThrow());
+        if (kind != Kind.PHYSICAL_ITEM || !BuiltInRegistries.ITEM.containsKey(item.orElseThrow())) return Optional.empty();
+        var value = BuiltInRegistries.ITEM.get(item.orElseThrow());
         if (value == null || value == Items.AIR) return Optional.empty();
         var stack = new ItemStack(value);
         return stack.getMaxStackSize() > 0 && stack.getMaxStackSize() <= 64 ? Optional.of(stack) : Optional.empty();

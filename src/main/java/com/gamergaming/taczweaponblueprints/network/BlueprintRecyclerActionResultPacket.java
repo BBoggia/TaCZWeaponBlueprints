@@ -1,7 +1,6 @@
 package com.gamergaming.taczweaponblueprints.network;
 
 import java.util.Optional;
-import java.util.function.Supplier;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.client.BlueprintRecyclerActionResultListener;
@@ -10,10 +9,21 @@ import com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerActionContract
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 
 /** Correlates a Recycler response with the exact client request and input. */
-public final class BlueprintRecyclerActionResultPacket {
+public final class BlueprintRecyclerActionResultPacket implements CustomPacketPayload {
+    public static final Type<BlueprintRecyclerActionResultPacket> TYPE = new Type<>(
+            com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.loc("blueprint_recycler_action_result"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, BlueprintRecyclerActionResultPacket> STREAM_CODEC =
+            StreamCodec.ofMember(BlueprintRecyclerActionResultPacket::toBytes, BlueprintRecyclerActionResultPacket::new);
+
+    @Override
+    public Type<BlueprintRecyclerActionResultPacket> type() { return TYPE; }
+
     private final int containerId;
     private final int requestId;
     private final BlueprintRecyclerActionContract.ActionResult result;
@@ -59,17 +69,24 @@ public final class BlueprintRecyclerActionResultPacket {
         buffer.writeVarLong(result.stateToken());
     }
 
-    public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
-        context.enqueueWork(() -> {
-            Minecraft minecraft = Minecraft.getInstance();
-            if (minecraft.screen instanceof BlueprintRecyclerActionResultListener listener
-                    && minecraft.player != null
-                    && minecraft.player.containerMenu.containerId == containerId) {
-                listener.acceptRecyclerActionResult(requestId, result);
-            }
-        });
-        context.setPacketHandled(true);
+    public void handle(IPayloadContext context) {
+        new ClientHandler().handle(context);
+    }
+
+    /** Loaded only when this clientbound payload is handled, never during server registration. */
+    @net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)
+    private final class ClientHandler {
+        void handle(IPayloadContext contextSupplier) {
+            IPayloadContext context = contextSupplier;
+            context.enqueueWork(() -> {
+                Minecraft minecraft = Minecraft.getInstance();
+                if (minecraft.screen instanceof BlueprintRecyclerActionResultListener listener
+                        && minecraft.player != null
+                        && minecraft.player.containerMenu.containerId == containerId) {
+                    listener.acceptRecyclerActionResult(requestId, result);
+                }
+            });
+        }
     }
 
     int containerId() {

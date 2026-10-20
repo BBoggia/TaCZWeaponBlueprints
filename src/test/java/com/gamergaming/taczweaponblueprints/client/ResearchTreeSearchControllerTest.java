@@ -26,7 +26,7 @@ class ResearchTreeSearchControllerTest {
         assertTrue(search.window(3).isEmpty());
         assertTrue(search.selectNext(1).isEmpty());
         search.update("discovery", graph.nodes(), node -> node.blueprintId().getPath());
-        assertEquals(new ResourceLocation("phase_zero:discovery_required"), search.window(1).get(0).blueprintId());
+        assertEquals(ResourceLocation.parse("phase_zero:discovery_required"), search.window(1).get(0).blueprintId());
         search.update("another_missing_query", List.of(), node -> "");
         assertTrue(search.window(3).isEmpty());
     }
@@ -44,8 +44,8 @@ class ResearchTreeSearchControllerTest {
         assertEquals("required", search.query());
         assertEquals(
                 List.of(
-                        new ResourceLocation("phase_zero:discovery_required"),
-                        new ResourceLocation("phase_zero:prerequisites_required")),
+                        ResourceLocation.parse("phase_zero:discovery_required"),
+                        ResourceLocation.parse("phase_zero:prerequisites_required")),
                 List.copyOf(search.matches()));
         assertEquals(
                 List.copyOf(search.matches()),
@@ -56,8 +56,8 @@ class ResearchTreeSearchControllerTest {
     void resultCursorChangesWithoutImplicitlyCommittingNavigation() {
         ResearchTreeGraph graph = ResearchTreeUxPhaseZeroFixture.everyAvailability();
         ResearchTreeSearchController search = new ResearchTreeSearchController();
-        ResourceLocation first = new ResourceLocation("phase_zero:discovery_required");
-        ResourceLocation second = new ResourceLocation("phase_zero:prerequisites_required");
+        ResourceLocation first = ResourceLocation.parse("phase_zero:discovery_required");
+        ResourceLocation second = ResourceLocation.parse("phase_zero:prerequisites_required");
 
         search.update("required", graph.nodes(), node -> node.blueprintId().getPath());
         assertEquals(first, search.activeMatch().orElseThrow());
@@ -71,7 +71,7 @@ class ResearchTreeSearchControllerTest {
         assertEquals(second, search.activeMatch().orElseThrow());
         search.update("discovery", graph.nodes(), node -> node.blueprintId().getPath());
         assertEquals(first, search.activeMatch().orElseThrow());
-        assertTrue(search.select(new ResourceLocation("test:missing")).isEmpty());
+        assertTrue(search.select(ResourceLocation.parse("test:missing")).isEmpty());
     }
 
     @Test

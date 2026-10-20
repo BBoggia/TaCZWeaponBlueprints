@@ -11,7 +11,7 @@ import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
 import com.gamergaming.taczweaponblueprints.progression.*;
 
 class ResearchRouteReviewPacketTest {
-    private final ResourceLocation target = new ResourceLocation("test:target");
+    private final ResourceLocation target = ResourceLocation.parse("test:target");
     private ResearchRouteReviewRequestPacket request() { return new ResearchRouteReviewRequestPacket(7,19,42,target,new ResearchRouteFingerprint(11,12)); }
     @Test void requestAndSuccessRoundTripEveryCorrelationFieldAndBoundedRoute() {
         var b=new FriendlyByteBuf(Unpooled.buffer());
@@ -36,7 +36,7 @@ class ResearchRouteReviewPacketTest {
             request().toBytes(b);b.writeVarInt(Integer.MAX_VALUE);
             assertThrows(IllegalArgumentException.class,()->new ResearchRouteReviewResultPacket(b));
         } finally {b.release();}
-        assertEquals("70",NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("neoforge-1",NetworkHandler.PROTOCOL_VERSION);
     }
     @Test void oversizedMaterialPayloadIsRejectedBeforeAllocation() {
         var b=new FriendlyByteBuf(Unpooled.buffer());try {

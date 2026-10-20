@@ -30,9 +30,9 @@ import net.minecraft.world.SimpleContainer;
 class ResearchWorkstationsPhaseEightTest {
     private static final Path PROJECT = Path.of(System.getProperty("user.dir"));
     private static final ResourceLocation BENCH =
-            new ResourceLocation("taczweaponblueprints:research_bench");
+            ResourceLocation.parse("taczweaponblueprints:research_bench");
     private static final ResourceLocation RECYCLER =
-            new ResourceLocation("taczweaponblueprints:blueprint_recycler");
+            ResourceLocation.parse("taczweaponblueprints:blueprint_recycler");
 
     @BeforeAll
     static void bootstrapMinecraftRegistries() {
@@ -49,7 +49,7 @@ class ResearchWorkstationsPhaseEightTest {
         assertEquals(RECYCLER, ModItems.BLUEPRINT_RECYCLER_ITEM.getId());
         assertEquals(RECYCLER, ModMenus.BLUEPRINT_RECYCLER.getId());
         assertTrue(ResearchBenchPresentationPolicy.permanentFullscreen());
-        assertEquals("70", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("neoforge-1", NetworkHandler.PROTOCOL_VERSION);
     }
 
     @Test
@@ -73,7 +73,8 @@ class ResearchWorkstationsPhaseEightTest {
     @Test
     void releaseArtifactGateRequiresTheCompleteRecyclerRuntimeAndFinalArt()
             throws IOException {
-        String build = Files.readString(PROJECT.resolve("build.gradle"));
+        String build = Files.readString(PROJECT.resolve("build.gradle"))
+                + Files.readString(PROJECT.resolve("gradle/release.gradle"));
         for (String required : List.of(
                 "client/ClientModEvents.class",
                 "init/ModBlocks.class",
@@ -109,9 +110,9 @@ class ResearchWorkstationsPhaseEightTest {
                 "src/main/java/com/gamergaming/taczweaponblueprints/client/ClientModEvents.java"));
 
         assertTrue(clientEvents.contains(
-                "MenuScreens.register(ModMenus.RESEARCH_BENCH.get(), ResearchBenchScreen::new)"));
+                "event.register(ModMenus.RESEARCH_BENCH.get(), ResearchBenchScreen::new)"));
         assertTrue(clientEvents.contains(
-                "MenuScreens.register(ModMenus.BLUEPRINT_RECYCLER.get(), BlueprintRecyclerScreen::new)"));
+                "event.register(ModMenus.BLUEPRINT_RECYCLER.get(), BlueprintRecyclerScreen::new)"));
     }
 
     @Test

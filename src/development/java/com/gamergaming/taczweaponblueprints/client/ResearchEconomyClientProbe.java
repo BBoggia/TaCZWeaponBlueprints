@@ -9,21 +9,22 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.*;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.resolver.ServerAddress;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /** Two independent real clients exercise the normal screen request and result packets. */
-@Mod.EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, value = Dist.CLIENT)
 public final class ResearchEconomyClientProbe {
     private static boolean opened, connected, finished, clicked;
     private static int ticks, age, failedConnections;
     private static BlueprintRecyclerScreen activeScreen;
     private static final AtomicInteger SAVED = new AtomicInteger();
-    @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
-        if (!ENABLED || finished || event.phase != TickEvent.Phase.END) return;
+    @SubscribeEvent public static void tick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event) {
+        if (!ENABLED || finished) return;
         var mc = Minecraft.getInstance();
         try {
             if (++age > 12000) throw new IllegalStateException("Economy client timeout");
@@ -37,10 +38,10 @@ public final class ResearchEconomyClientProbe {
                 artifactOrigin(); opened = true;
                 mc.options.guiScale().set(3); mc.resizeDisplay();
                 ConnectScreen.startConnecting(new TitleScreen(), mc, ServerAddress.parseString("127.0.0.1:25578"),
-                        new ServerData("Disposable economy acceptance", "127.0.0.1:25578", false), false);
+                        new ServerData("Disposable economy acceptance", "127.0.0.1:25578", net.minecraft.client.multiplayer.ServerData.Type.OTHER), false, null);
             }
             if (command.equals("disconnect") && mc.player != null) {
-                mc.level.disconnect(); mc.clearLevel(); mc.setScreen(new TitleScreen()); opened = false;
+                mc.level.disconnect(); mc.disconnect(); mc.setScreen(new TitleScreen()); opened = false;
             }
             if (command.equals("failed")) throw new IllegalStateException(read("server-error.txt"));
             if (command.equals("complete") && (!PHASE.equals("gameplay") || SAVED.get() == 1)) {

@@ -59,7 +59,7 @@ class BlueprintLootParityTest {
 
     @Test
     void packagedGlobalModifierIndexIncludesDynamicEntry() {
-        JsonObject globalIndex = readJson("/data/forge/loot_modifiers/global_loot_modifiers.json").getAsJsonObject();
+        JsonObject globalIndex = readJson("/data/neoforge/loot_modifiers/global_loot_modifiers.json").getAsJsonObject();
         Set<String> entries = new LinkedHashSet<>();
         globalIndex.getAsJsonArray("entries").forEach(element -> entries.add(element.getAsString()));
 

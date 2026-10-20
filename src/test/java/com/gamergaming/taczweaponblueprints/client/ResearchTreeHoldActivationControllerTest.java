@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import net.minecraft.resources.ResourceLocation;
 
 class ResearchTreeHoldActivationControllerTest {
-    private static final ResourceLocation NODE = new ResourceLocation("test:node");
+    private static final ResourceLocation NODE = ResourceLocation.parse("test:node");
 
     @Test
     void holdActivatesExactlyOnceAtTheConfiguredThreshold() {

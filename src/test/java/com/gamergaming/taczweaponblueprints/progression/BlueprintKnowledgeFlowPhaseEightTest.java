@@ -28,7 +28,7 @@ class BlueprintKnowledgeFlowPhaseEightTest {
 
     @Test
     void artifactAndCandidateGatesRecordTheCompleteAssistantContract() throws IOException {
-        String build = read("build.gradle");
+        String build = read("build.gradle") + read("gradle/release.gradle");
         for (String required : List.of(
                 "progression/BlueprintBalancePreset.class",
                 "progression/BlueprintBalanceSettings.class",

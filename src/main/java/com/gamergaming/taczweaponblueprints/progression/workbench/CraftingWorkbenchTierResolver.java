@@ -9,11 +9,11 @@ import net.minecraft.resources.ResourceLocation;
 /** Resolves the effective crafting capability of one TaCZ workstation ID. */
 public final class CraftingWorkbenchTierResolver {
     public static final ResourceLocation TIER_1_ID =
-            new ResourceLocation("taczweaponblueprints:workbench_lvl1");
+            ResourceLocation.parse("taczweaponblueprints:workbench_lvl1");
     public static final ResourceLocation TIER_2_ID =
-            new ResourceLocation("taczweaponblueprints:workbench_lvl2");
+            ResourceLocation.parse("taczweaponblueprints:workbench_lvl2");
     public static final ResourceLocation TIER_3_ID =
-            new ResourceLocation("taczweaponblueprints:workbench_lvl3");
+            ResourceLocation.parse("taczweaponblueprints:workbench_lvl3");
 
     private static final Map<ResourceLocation, ResearchWorkbenchTier> NATIVE_TIERS = Map.of(
             TIER_1_ID, ResearchWorkbenchTier.TIER_1,

@@ -28,10 +28,10 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 class FoundWeaponRecoveryServiceTest {
-    private static final ResourceLocation BLUEPRINT = new ResourceLocation("test:found_rifle");
-    private static final ResourceLocation PROFILE = new ResourceLocation("test:profile");
+    private static final ResourceLocation BLUEPRINT = ResourceLocation.parse("test:found_rifle");
+    private static final ResourceLocation PROFILE = ResourceLocation.parse("test:profile");
     private static final ResourceLocation LOOT =
-            new ResourceLocation("minecraft:chests/simple_dungeon");
+            ResourceLocation.parse("minecraft:chests/simple_dungeon");
 
     @BeforeAll
     static void bootstrapMinecraftRegistries() {
@@ -69,7 +69,7 @@ class FoundWeaponRecoveryServiceTest {
         mark(
                 crafted,
                 PhysicalWeaponProvenance.Origin.CRAFTED_SURVIVAL,
-                new ResourceLocation("test:rifle_recipe"));
+                ResourceLocation.parse("test:rifle_recipe"));
         assertEquals(
                 FoundWeaponRecoveryService.Status.VERIFIED_LOOT_REQUIRED,
                 evaluate(crafted, data, reverse, FoundWeaponRecoveryMode.PLAYER_CHOICE).status());
@@ -87,7 +87,7 @@ class FoundWeaponRecoveryServiceTest {
                     evaluate(found, data, reverse, mode).ready(), mode.name());
             ItemStack crafted = gun();
             mark(crafted, PhysicalWeaponProvenance.Origin.CRAFTED_SURVIVAL,
-                    new ResourceLocation("test:rifle_recipe"));
+                    ResourceLocation.parse("test:rifle_recipe"));
             for (var input : List.of(crafted, gun())) {
                 assertEquals(FoundWeaponRecoveryService.Status.VERIFIED_LOOT_REQUIRED,
                         evaluate(input, data, reverse, mode).status(), mode.name());
@@ -173,10 +173,10 @@ class FoundWeaponRecoveryServiceTest {
                 BLUEPRINT.toString(),
                 "item.test.found_rifle",
                 "tooltip.test",
-                new ResourceLocation("test:found_rifle_recipe"),
+                ResourceLocation.parse("test:found_rifle_recipe"),
                 null,
                 "rifle",
-                new ResourceLocation("tacz:slot"),
+                ResourceLocation.parse("tacz:slot"),
                 BlueprintKind.GUN,
                 1);
         PhysicalItemBlueprintResolver.Resolution physical =
@@ -250,12 +250,12 @@ class FoundWeaponRecoveryServiceTest {
             ItemStack stack,
             PhysicalWeaponProvenance.Origin origin,
             ResourceLocation source) {
-        stack.getOrCreateTag().put(
+        net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, stack, customTag -> customTag.put(
                 PhysicalWeaponProvenance.TAG_KEY,
                 new PhysicalWeaponProvenance(
                         PhysicalWeaponProvenance.CURRENT_FORMAT,
                         origin,
-                        source).toTag());
+                        source).toTag()));
     }
 
     private static final class TestTransaction

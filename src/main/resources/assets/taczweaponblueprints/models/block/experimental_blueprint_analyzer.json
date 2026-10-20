@@ -1,5 +1,5 @@
 {
-  "loader": "forge:obj",
+  "loader": "neoforge:obj",
   "model": "taczweaponblueprints:models/block/experimental_blueprint_analyzer.obj",
   "flip_v": true,
   "automatic_culling": false,

@@ -3,7 +3,6 @@ package com.gamergaming.taczweaponblueprints.network;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Supplier;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.client.ClientResearchGuidanceState;
@@ -18,10 +17,21 @@ import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchI
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 
 /** Correlated authoritative research-guidance response for one tree publication. */
-public final class ResearchGuidanceResultPacket {
+public final class ResearchGuidanceResultPacket implements CustomPacketPayload {
+    public static final Type<ResearchGuidanceResultPacket> TYPE = new Type<>(
+            com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.loc("research_guidance_result"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, ResearchGuidanceResultPacket> STREAM_CODEC =
+            StreamCodec.ofMember(ResearchGuidanceResultPacket::toBytes, ResearchGuidanceResultPacket::new);
+
+    @Override
+    public Type<ResearchGuidanceResultPacket> type() { return TYPE; }
+
     private final int containerId;
     private final int requestId;
     private final long publicationGeneration;
@@ -66,40 +76,47 @@ public final class ResearchGuidanceResultPacket {
         result.snapshot().ifPresent(snapshot -> writeSnapshot(buffer, snapshot));
     }
 
-    public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
-        context.enqueueWork(() -> {
-            Minecraft minecraft = Minecraft.getInstance();
-            if (minecraft.player == null
-                    || minecraft.player.containerMenu.containerId != containerId
-                    || !(minecraft.player.containerMenu instanceof ResearchBenchMenu)) {
-                return;
-            }
-            if (result.code() == ResearchBenchMenu.GuidanceResultCode.SUCCESS) {
-                boolean accepted = ClientResearchGuidanceState.accept(
-                        requestId,
-                        publicationGeneration,
-                        result.snapshot().orElseThrow(),
-                        ClientResearchState.publication());
-                if ((accepted || ClientResearchGuidanceState.unavailable())
-                        && minecraft.screen instanceof ResearchBenchScreen screen) {
-                    screen.refreshAuthoritativeGuidance();
+    public void handle(IPayloadContext context) {
+        new ClientHandler().handle(context);
+    }
+
+    /** Loaded only when this clientbound payload is handled, never during server registration. */
+    @net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)
+    private final class ClientHandler {
+        void handle(IPayloadContext contextSupplier) {
+            IPayloadContext context = contextSupplier;
+            context.enqueueWork(() -> {
+                Minecraft minecraft = Minecraft.getInstance();
+                if (minecraft.player == null
+                        || minecraft.player.containerMenu.containerId != containerId
+                        || !(minecraft.player.containerMenu instanceof ResearchBenchMenu)) {
+                    return;
                 }
-            } else {
-                boolean rejected = ClientResearchGuidanceState.reject(
-                        requestId,
-                        publicationGeneration,
-                        result.code() == ResearchBenchMenu.GuidanceResultCode.REJECTED);
-                if (rejected && minecraft.screen instanceof ResearchBenchScreen screen) {
-                    if (result.code() == ResearchBenchMenu.GuidanceResultCode.THROTTLED) {
-                        screen.scheduleAuthoritativeGuidanceRetry();
-                    } else {
+                if (result.code() == ResearchBenchMenu.GuidanceResultCode.SUCCESS) {
+                    boolean accepted = ClientResearchGuidanceState.accept(
+                            requestId,
+                            publicationGeneration,
+                            result.snapshot().orElseThrow(),
+                            ClientResearchState.publication());
+                    if ((accepted || ClientResearchGuidanceState.unavailable())
+                            && minecraft.screen instanceof ResearchBenchScreen screen) {
                         screen.refreshAuthoritativeGuidance();
                     }
+                } else {
+                    boolean rejected = ClientResearchGuidanceState.reject(
+                            requestId,
+                            publicationGeneration,
+                            result.code() == ResearchBenchMenu.GuidanceResultCode.REJECTED);
+                    if (rejected && minecraft.screen instanceof ResearchBenchScreen screen) {
+                        if (result.code() == ResearchBenchMenu.GuidanceResultCode.THROTTLED) {
+                            screen.scheduleAuthoritativeGuidanceRetry();
+                        } else {
+                            screen.refreshAuthoritativeGuidance();
+                        }
+                    }
                 }
-            }
-        });
-        context.setPacketHandled(true);
+            });
+        }
     }
 
     int containerId() {

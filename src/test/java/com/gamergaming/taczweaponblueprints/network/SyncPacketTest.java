@@ -210,8 +210,8 @@ class SyncPacketTest {
 
     @Test
     void blueprintPacketUsesMapKeysAndStableOrdering() {
-        ResourceLocation firstId = new ResourceLocation("test", "alpha");
-        ResourceLocation secondId = new ResourceLocation("test", "bravo");
+        ResourceLocation firstId = ResourceLocation.fromNamespaceAndPath("test", "alpha");
+        ResourceLocation secondId = ResourceLocation.fromNamespaceAndPath("test", "bravo");
         Map<ResourceLocation, BlueprintData> blueprints = new LinkedHashMap<>();
         blueprints.put(secondId, blueprint(secondId));
         blueprints.put(firstId, blueprint(firstId));
@@ -232,7 +232,7 @@ class SyncPacketTest {
 
     @Test
     void blueprintPacketRoundTripsAndRejectsOutboundValuesTheClientCannotDecode() {
-        ResourceLocation blueprintId = new ResourceLocation("test", "alpha");
+        ResourceLocation blueprintId = ResourceLocation.fromNamespaceAndPath("test", "alpha");
         FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
         try {
             SyncBlueprintDataPacket outbound = new SyncBlueprintDataPacket(
@@ -279,8 +279,8 @@ class SyncPacketTest {
     void legacyBlueprintAccumulatorIsConnectionScopedAndMonotonic() {
         SyncBlueprintDataPacket.ClientAccumulator accumulator =
                 new SyncBlueprintDataPacket.ClientAccumulator();
-        ResourceLocation newerId = new ResourceLocation("test", "newer");
-        ResourceLocation olderId = new ResourceLocation("test", "older");
+        ResourceLocation newerId = ResourceLocation.fromNamespaceAndPath("test", "newer");
+        ResourceLocation olderId = ResourceLocation.fromNamespaceAndPath("test", "older");
         SyncBlueprintDataPacket newer = SyncBlueprintDataPacket
                 .split(Map.of(newerId, blueprint(newerId)), 20L).get(0);
         SyncBlueprintDataPacket older = SyncBlueprintDataPacket
@@ -295,7 +295,7 @@ class SyncPacketTest {
 
         Map<ResourceLocation, BlueprintData> largeSnapshot = new LinkedHashMap<>();
         for (int index = 0; index < 2_000; index++) {
-            ResourceLocation id = new ResourceLocation("test", "partial_" + index);
+            ResourceLocation id = ResourceLocation.fromNamespaceAndPath("test", "partial_" + index);
             largeSnapshot.put(id, blueprint(
                     id, "n".repeat(256), "t".repeat(256), "rifle"));
         }
@@ -304,7 +304,7 @@ class SyncPacketTest {
         accumulator.clear();
         assertTrue(accumulator.accept(partial.get(0)).isEmpty());
         accumulator.clear();
-        ResourceLocation replacementId = new ResourceLocation("test", "replacement");
+        ResourceLocation replacementId = ResourceLocation.fromNamespaceAndPath("test", "replacement");
         assertEquals(
                 Set.of(replacementId),
                 accumulator.accept(SyncBlueprintDataPacket.split(
@@ -318,7 +318,7 @@ class SyncPacketTest {
         Set<String> recipes = new java.util.LinkedHashSet<>();
         Set<String> progressionIds = new java.util.LinkedHashSet<>();
         for (int index = 0; index < BlueprintDataManager.MAX_CATALOG_ENTRIES; index++) {
-            ResourceLocation blueprintId = new ResourceLocation("test", "blueprint_" + index);
+            ResourceLocation blueprintId = ResourceLocation.fromNamespaceAndPath("test", "blueprint_" + index);
             blueprints.put(
                     blueprintId,
                     blueprint(
@@ -390,8 +390,8 @@ class SyncPacketTest {
 
     @Test
     void clientCatalogCannotOverwriteServerCatalogAndStaleRecipesAreNotSynchronized() {
-        ResourceLocation serverId = new ResourceLocation("test", "server");
-        ResourceLocation clientId = new ResourceLocation("test", "client");
+        ResourceLocation serverId = ResourceLocation.fromNamespaceAndPath("test", "server");
+        ResourceLocation clientId = ResourceLocation.fromNamespaceAndPath("test", "client");
         try {
             BlueprintDataManager.SERVER.setBlueprintDataMap(Map.of(serverId, blueprint(serverId)));
             BlueprintDataManager.CLIENT.setBlueprintDataMap(Map.of(clientId, blueprint(clientId)));
@@ -413,10 +413,10 @@ class SyncPacketTest {
 
     @Test
     void duplicateRecipeAliasesMigrateToTheCanonicalRecipeForTheirBlueprint() {
-        ResourceLocation blueprintId = new ResourceLocation("test", "shared_output");
+        ResourceLocation blueprintId = ResourceLocation.fromNamespaceAndPath("test", "shared_output");
         BlueprintData canonical = blueprint(blueprintId);
         ResourceLocation canonicalRecipe = canonical.getRecipeId();
-        ResourceLocation legacyAlias = new ResourceLocation("oldpack", "gun/shared_output");
+        ResourceLocation legacyAlias = ResourceLocation.fromNamespaceAndPath("oldpack", "gun/shared_output");
 
         assertEquals(
                 Set.of(canonicalRecipe.toString()),
@@ -436,7 +436,7 @@ class SyncPacketTest {
 
     @Test
     void progressionExemptRecipesArePublishedWithoutInventingLearnedBlueprints() {
-        ResourceLocation blueprintId = new ResourceLocation("test", "exempt_rifle");
+        ResourceLocation blueprintId = ResourceLocation.fromNamespaceAndPath("test", "exempt_rifle");
         BlueprintData blueprint = blueprint(blueprintId);
 
         assertEquals(
@@ -495,9 +495,9 @@ class SyncPacketTest {
                 "deliberately:different_from_map_key",
                 nameKey,
                 tooltipKey,
-                new ResourceLocation("test", "recipe/" + blueprintId.getPath()),
+                ResourceLocation.fromNamespaceAndPath("test", "recipe/" + blueprintId.getPath()),
                 null,
                 itemType,
-                new ResourceLocation("test", "display/rifle"));
+                ResourceLocation.fromNamespaceAndPath("test", "display/rifle"));
     }
 }

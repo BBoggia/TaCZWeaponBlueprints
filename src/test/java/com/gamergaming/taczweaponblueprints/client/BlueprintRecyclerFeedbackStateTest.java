@@ -15,8 +15,8 @@ import com.gamergaming.taczweaponblueprints.progression.ResearchDataRedemptionSe
 import net.minecraft.resources.ResourceLocation;
 
 class BlueprintRecyclerFeedbackStateTest {
-    private static final ResourceLocation NOTE = new ResourceLocation("test:note");
-    private static final ResourceLocation REPORT = new ResourceLocation("test:report");
+    private static final ResourceLocation NOTE = ResourceLocation.parse("test:note");
+    private static final ResourceLocation REPORT = ResourceLocation.parse("test:report");
 
     @Test
     void resultRemainsVisibleForItsInputAndForTheEmptyPostConsumptionSlot() {

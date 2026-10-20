@@ -9,12 +9,12 @@ import com.gamergaming.taczweaponblueprints.villager.VillagerTradeOffers;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.trading.MerchantOffer;
-import net.minecraftforge.event.village.VillagerTradesEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.village.VillagerTradesEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /** Controlled examples only; this source set is absent from the distributable mod. */
-@Mod.EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID)
+@EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID)
 public final class VillagerPrototypeStock {
     public static Path root() {
         String value = System.getProperty("tacz.villagerQA.root", "");
@@ -24,9 +24,9 @@ public final class VillagerPrototypeStock {
         return root;
     }
     public static MerchantOffer offer(String slot, ItemStack a, ItemStack b, ItemStack output, int uses, int xp) {
-        return VillagerTradeOffers.create(new ResourceLocation(TaCZWeaponBlueprints.MODID, "prototype/" + slot), a, b, output, uses, xp, .05F);
+        return VillagerTradeOffers.create(ResourceLocation.fromNamespaceAndPath(TaCZWeaponBlueprints.MODID, "prototype/" + slot), a, b, output, uses, xp, .05F);
     }
-    @SubscribeEvent(priority=net.minecraftforge.eventbus.api.EventPriority.LOWEST) public static void trades(VillagerTradesEvent event) {
+    @SubscribeEvent(priority=net.neoforged.bus.api.EventPriority.LOWEST) public static void trades(VillagerTradesEvent event) {
         if (root() == null || !ModVillagers.owns(event.getType()) || Boolean.getBoolean("tacz.villagerQA.trades") || (Boolean.getBoolean("tacz.villagerQA.stock") || Boolean.getBoolean("tacz.villagerQA.economy") || Boolean.getBoolean("tacz.villagerQA.lifecycle") || !System.getProperty("tacz.villagerQA.persistence", "").isEmpty())) return;
         event.getTrades().values().forEach(rows -> rows.removeIf(row -> row instanceof com.gamergaming.taczweaponblueprints.villager.stock.StockTradeEvents.Factory));
         var novice = event.getTrades().get(1);

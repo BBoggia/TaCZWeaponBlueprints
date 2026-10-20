@@ -27,7 +27,7 @@ public final class DesignerResearchProperties {
         // Validate with the runtime codec, including all untouched extensions.
         var rule=policy.deepCopy();rule.addProperty("format",5);rule.addProperty("profile",project.draft().profile().id());
         var target=new JsonObject();var targets=new JsonArray();targets.add(ResearchDesignerStructure.node(project,node).blueprintId().orElseThrow());target.add("blueprints",targets);rule.add("target",target);
-        BlueprintResearchRule.CODEC.parse(JsonOps.INSTANCE,rule).getOrThrow(false,message->{throw new IllegalArgumentException(message);});
+        BlueprintResearchRule.CODEC.parse(JsonOps.INSTANCE,rule).getOrThrow(IllegalArgumentException::new);
         var next=ResearchDesignerEdits.apply(project,ResearchDesignerEdits.policy(node,policy)).project();
         return new ResearchDesignerStructure.Proposal(project.digest(),"Edit research property",next,List.of(field.path+": "+value.map(JsonElement::toString).orElse("inherit from profile"),"Other selected-rule fields, requirements and placement stay unchanged."));
     }
@@ -39,10 +39,10 @@ public final class DesignerResearchProperties {
         facts.add("Currency, result mode, undiscovered visibility limits and Creative overrides are captured server settings, not tree properties.");
         var config=DesignerCapturedSettings.progression(capture,current.profile());facts.add("Currency: "+config.currencyPolicy().item().map(Object::toString).orElse("Banked RP"));facts.add("Research result: "+config.treeResearchResultMode()+"; undiscovered visibility limit: "+config.maximumUndiscoveredVisibility());
         var feature=DesignerCapturedSettings.features(capture);facts.add("Server research enabled: "+config.researchEnabled()+"; blueprints enabled: "+config.blueprintsEnabled());facts.add("Server category settings: Ammo " + config.domainSettings().ammo() + "; Attachments " + config.domainSettings().attachments());facts.add("Server permits Creative cost bypass: "+config.creativeBypassesResearchCost());facts.add("Enforce Research Bench tiers: "+feature.enforceResearchTiers()+"; Creative skips tiers: "+feature.creativeBypassesWorkbenchTiers()+"; Creative skips gates: "+feature.creativeBypassesProgressionGates());
-        try{facts.add("Crafting (resolved separately): "+context.crafting(current.snapshot()).policy(current.profile(),new ResourceLocation(bp)).map(p->p.disposition()+p.requiredWorkbenchTier().map(t->", workstation tier "+t.level()).orElse("")+"; source: "+p.source()).orElse("Unavailable"));}catch(RuntimeException e){facts.add("Crafting facts unavailable: "+e.getMessage());}
+        try{facts.add("Crafting (resolved separately): "+context.crafting(current.snapshot()).policy(current.profile(),ResourceLocation.parse(bp)).map(p->p.disposition()+p.requiredWorkbenchTier().map(t->", workstation tier "+t.level()).orElse("")+"; source: "+p.source()).orElse("Unavailable"));}catch(RuntimeException e){facts.add("Crafting facts unavailable: "+e.getMessage());}
         var analyzerContext=new BlueprintAnalyzerPolicyResolver.Context(current.snapshot(),context.catalog(),1,1,context.progression(current.snapshot()),feature.stations());
         for(var tier:com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerTier.values())for(var origin:BlueprintAnalyzerPolicy.Origin.values()){
-            var quote=BlueprintAnalyzerPolicyResolver.resolve(analyzerContext,current.profile(),new ResourceLocation(bp),tier,origin,config.foundWeaponRecoveryMode());
+            var quote=BlueprintAnalyzerPolicyResolver.resolve(analyzerContext,current.profile(),ResourceLocation.parse(bp),tier,origin,config.foundWeaponRecoveryMode());
             facts.add("Blueprint Analyzer "+tier+" / "+origin+": "+quote.status()+"; weapon tier "+quote.weaponTier().map(t->t.name().substring(5)).orElse("unknown")+quote.outcomes().map(o->{double total=(double)o.blueprintWeight()+o.fragmentWeight()+o.noResultWeight();return String.format(Locale.ROOT,"; blueprint %.1f%%; fragments %.1f%% (%d–%d); nothing %.1f%%",100*o.blueprintWeight()/total,100*o.fragmentWeight()/total,o.minimumFragments(),o.maximumFragments(),100*o.noResultWeight()/total);}).orElse(""));
         }
         facts.add("Saved dependency facts can be stale. Survival supply is unassessed.");
@@ -55,8 +55,8 @@ public final class DesignerResearchProperties {
     private static String resolved(ResearchDesignerCompiler.Candidate candidate,DesignerCapturedContext context,String bp,Field field){
         var knowledge=new PlayerRecipeData();context.catalog().keySet().forEach(id->knowledge.discoverBlueprint(id.toString()));
         var result=ResearchDesignerPreview.evaluate(candidate,context.catalog(),new ResearchDesignerPreview.Scenario(DesignerCapturedSettings.progression(context.capture(),candidate.profile()),DesignerCapturedSettings.features(context.capture()),knowledge,context::blocked,context::exempt,Optional.empty(),false));
-        var policy=result.policies().get(new ResourceLocation(bp));
-        return switch(field){case COST->BlueprintResearchCost.CODEC.encodeStart(JsonOps.INSTANCE,policy.researchCost()).getOrThrow(false,s->{}).toString();case BENCH->result.progression().policy(candidate.profile(),new ResourceLocation(bp)).map(p->p.researchWorkbenchTier().serializedName()).orElse("Unavailable");case RESEARCH->""+policy.researchEnabled();case TREE->""+policy.treeEnabled();case DISCOVERY->""+policy.requiresDiscovery();case VISIBILITY->policy.visibility().serializedName();case CREATIVE->""+policy.creativeBypassesCost();};
+        var policy=result.policies().get(ResourceLocation.parse(bp));
+        return switch(field){case COST->BlueprintResearchCost.CODEC.encodeStart(JsonOps.INSTANCE,policy.researchCost()).getOrThrow(IllegalArgumentException::new).toString();case BENCH->result.progression().policy(candidate.profile(),ResourceLocation.parse(bp)).map(p->p.researchWorkbenchTier().serializedName()).orElse("Unavailable");case RESEARCH->""+policy.researchEnabled();case TREE->""+policy.treeEnabled();case DISCOVERY->""+policy.requiresDiscovery();case VISIBILITY->policy.visibility().serializedName();case CREATIVE->""+policy.creativeBypassesCost();};
     }
     public static ResearchDesignerStructure.Proposal domain(ResearchDesignerProject project,String domain,boolean tree,boolean research){
         if(!Set.of("weapons","ammo","attachments").contains(domain))throw new IllegalArgumentException("Unknown domain");
@@ -65,7 +65,7 @@ public final class DesignerResearchProperties {
     }
     public static ResearchDesignerStructure.Proposal disclosure(ResearchDesignerProject project,String id,String mode,Optional<String> anchor){
         if(!Set.of("public_when_populated","anchor_revealed").contains(mode))throw new IllegalArgumentException("Choose a supported label rule");
-        var b=ResearchDesignerStructure.branch(project,id);b.addProperty("label_visibility",mode);if(anchor.isPresent())b.addProperty("anchor",new ResourceLocation(anchor.get()).toString());else b.remove("anchor");
+        var b=ResearchDesignerStructure.branch(project,id);b.addProperty("label_visibility",mode);if(anchor.isPresent())b.addProperty("anchor",ResourceLocation.parse(anchor.get()).toString());else b.remove("anchor");
         var next=ResearchDesignerEdits.apply(project,ResearchDesignerEdits.replaceBranch(id,b)).project();return new ResearchDesignerStructure.Proposal(project.digest(),"Edit branch disclosure",next,List.of("Label visibility: "+mode+"; anchor: "+anchor.orElse("none"),"Validation checks anchor ownership within this branch subtree."));
     }
 }

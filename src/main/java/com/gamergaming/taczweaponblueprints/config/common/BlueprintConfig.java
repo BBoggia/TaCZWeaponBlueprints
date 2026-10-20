@@ -6,13 +6,13 @@ import java.util.stream.Collectors;
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 
 import net.minecraft.world.level.storage.loot.LootTable;
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 public class BlueprintConfig {
-    public static ForgeConfigSpec.DoubleValue BLUEPRINT_SPAWN_RATE;
-    public static ForgeConfigSpec.Range<Integer> MIN_MAX_BLUEPRINTS_TO_SPAWN;
+    public static ModConfigSpec.DoubleValue BLUEPRINT_SPAWN_RATE;
+    public static ModConfigSpec.Range<Integer> MIN_MAX_BLUEPRINTS_TO_SPAWN;
 
-    public static void init(ForgeConfigSpec.Builder builder) {
+    public static void init(ModConfigSpec.Builder builder) {
             builder.push("TaCZ Blueprint Config");
 
             BLUEPRINT_SPAWN_RATE = builder

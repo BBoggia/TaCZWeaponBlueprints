@@ -11,7 +11,6 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.BlockPlaceContext;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -44,7 +43,7 @@ public final class CraftingWorkbenchItem extends BlockItem {
     @Override
     public void appendHoverText(
             ItemStack stack,
-            Level level,
+            net.minecraft.world.item.Item.TooltipContext level,
             List<Component> tooltip,
             TooltipFlag flag) {
         tooltip.add(Component.translatable(

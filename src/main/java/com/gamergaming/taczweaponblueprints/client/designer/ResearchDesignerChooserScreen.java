@@ -81,10 +81,11 @@ public final class ResearchDesignerChooserScreen extends Screen {
         if(ClientDesignerCapture.captured().isPresent()){capturing=false;create(true);}
         else if(!ClientDesignerCapture.pending()){capturing=false;status=tr("capture_prefix")+ClientDesignerCapture.status().map(Enum::name).orElse(tr("cancelled"))+tr("capture_requirement");}
     }}
-    @Override public void render(GuiGraphics g,int mx,int my,float partial){
+    @Override public void renderBackground(GuiGraphics g,int mx,int my,float partial){
         g.fill(0,0,width,height,0xFF0C141D);g.drawCenteredString(font,getTitle(),width/2,16,0xFFE4ECEF);
         int x=Math.max(8,width/2-180);g.drawString(font,tr("namespace"),x,36,0xFFA4BAC7);g.drawString(font,tr("title"),x+Math.min(360,width-16)/2+4,36,0xFFA4BAC7);
-        g.drawString(font,tr("saved_projects"),x,134,0xFFE4ECEF);super.render(g,mx,my,partial);
+        g.drawString(font,tr("saved_projects"),x,134,0xFFE4ECEF);}
+    @Override public void render(GuiGraphics g,int mx,int my,float partial){super.render(g,mx,my,partial);
         g.drawString(font,font.plainSubstrByWidth(status,width-16),8,height-10,0xFFA4BAC7);if(my>=height-12)g.renderTooltip(font,font.split(Component.literal(status),width-20),mx,my);
     }
     @Override public void removed(){needsRefresh=true;ClientDesignerCapture.cancel();capturing=false;super.removed();}

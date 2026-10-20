@@ -12,9 +12,8 @@ import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.mojang.logging.LogUtils;
 
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.common.Mod;
 
 @Mod(TaCZWeaponBlueprints.MODID)
 public class TaCZWeaponBlueprints {
@@ -23,15 +22,12 @@ public class TaCZWeaponBlueprints {
 
     public static final Logger LOGGER = LogUtils.getLogger();
 
-    public TaCZWeaponBlueprints() {
-        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+    public TaCZWeaponBlueprints(IEventBus modEventBus) {
 
         ModConfigs.init();
-        modEventBus.addListener((net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent event) ->
-                event.enqueueWork(() -> net.minecraftforge.common.crafting.CraftingHelper.register(
-                        new com.gamergaming.taczweaponblueprints.resource.StationRecipeCondition.Serializer())));
-
-        NetworkHandler.registerPackets();
+        com.gamergaming.taczweaponblueprints.resource.StationRecipeCondition.register(modEventBus);
+        com.gamergaming.taczweaponblueprints.init.ModAttachments.register(modEventBus);
+        modEventBus.addListener(NetworkHandler::registerPackets);
 
         ModBlocks.register(modEventBus);
         ModItems.register(modEventBus);
@@ -44,6 +40,6 @@ public class TaCZWeaponBlueprints {
     }
 
     public static ResourceLocation loc(String path) {
-        return new ResourceLocation(MODID, path);
+        return ResourceLocation.fromNamespaceAndPath(MODID, path);
     }
 }

@@ -44,14 +44,15 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /** Opt-in real-server station assertions and native renderer evidence in a marked disposable world. */
-@Mod.EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, value = Dist.CLIENT)
 public final class AnalyzerStationProbe {
     private static final String OUTPUT = System.getProperty("tacz.analyzerStationsQA.output");
     private static final boolean TRANSACTIONS = Boolean.getBoolean("tacz.analyzerTransactionsQA.enabled");
@@ -76,7 +77,7 @@ public final class AnalyzerStationProbe {
             if (!opened && event.getScreen() instanceof TitleScreen && mc.getOverlay() == null) {
                 requireMarker(mc.gameDirectory.toPath().resolve("saves").resolve(WORLD));
                 opened = true;
-                mc.createWorldOpenFlows().loadLevel(event.getScreen(), WORLD);
+                mc.createWorldOpenFlows().openWorld(WORLD, () -> mc.setScreen(event.getScreen()));
                 return;
             }
             if (!ready || ticks < 35 || mc.getOverlay() != null) return;
@@ -94,8 +95,8 @@ public final class AnalyzerStationProbe {
         } catch (Exception error) { fail(error); }
     }
 
-    @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
-        if (Boolean.getBoolean("tacz.analyzerScreenQA.enabled") || OUTPUT == null || failed || finished || !opened || event.phase != TickEvent.Phase.END) return;
+    @SubscribeEvent public static void tick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event) {
+        if (Boolean.getBoolean("tacz.analyzerScreenQA.enabled") || OUTPUT == null || failed || finished || !opened) return;
         var mc = Minecraft.getInstance();
         try {
             if (++totalTicks > 2400) throw new IllegalStateException("Station QA timed out");
@@ -170,16 +171,16 @@ public final class AnalyzerStationProbe {
             var block = blocks().get(tier - 1);
             check(block.tier().level() == tier, "registered tier " + tier);
             var id = BuiltInRegistries.BLOCK.getKey(block);
-            var recipe = (CraftingRecipe) level.getRecipeManager().byKey(id).orElseThrow();
+            var recipe = (CraftingRecipe) level.getRecipeManager().byKey(id).orElseThrow().value();
             var grid = new TransientCraftingContainer(new CraftingMenu(1, player.getInventory()), 3, 3);
             for (int i = 0; i < recipe.getIngredients().size(); i++) {
                 var options = recipe.getIngredients().get(i).getItems();
                 grid.setItem(i, options.length == 0 ? ItemStack.EMPTY : options[0].copy());
             }
-            check(recipe.matches(grid, level), "loaded crafting recipe " + id);
-            check(recipe.assemble(grid, level.registryAccess()).is(block.asItem()), "recipe output " + id);
+            check(recipe.matches(grid.asCraftInput(), level), "loaded crafting recipe " + id);
+            check(recipe.assemble(grid.asCraftInput(), level.registryAccess()).is(block.asItem()), "recipe output " + id);
             grid.setItem(0, ItemStack.EMPTY);
-            check(!recipe.matches(grid, level), "incomplete recipe rejected " + id);
+            check(!recipe.matches(grid.asCraftInput(), level), "incomplete recipe rejected " + id);
             for (Direction facing : Direction.Plane.HORIZONTAL) {
                 player.closeContainer(); level.removeBlock(pos, false);
                 player.setYRot(facing.toYRot());
@@ -226,7 +227,7 @@ public final class AnalyzerStationProbe {
                 placeFixture(level, pos, state);
                 check(!menu.stillValid(player) && menu.analyzerTier().isEmpty(), "same tier replacement cannot revive session");
                 var result = menu.handleRecyclerAction(player, BlueprintRecyclerActionContract.Action.REDEEM,
-                        new ResourceLocation("minecraft:dirt"), 3, token);
+                        ResourceLocation.parse("minecraft:dirt"), 3, token);
                 check(result.code() == BlueprintRecyclerActionContract.ResultCode.INVALID_INPUT, "old action rejected");
                 check(menu.inputStack().getCount() == 3 && menu.outputStack().getCount() == 2, "rejected action preserves both slots");
                 int dirt = player.getInventory().countItem(Items.DIRT), stone = player.getInventory().countItem(Items.STONE);
@@ -236,8 +237,7 @@ public final class AnalyzerStationProbe {
             }
             open(player, block, pos);
             var active = (BlueprintRecyclerMenu) player.containerMenu;
-            var data = player.getCapability(com.gamergaming.taczweaponblueprints.init.ModCapabilities.PLAYER_RECIPE_DATA)
-                    .resolve().orElseThrow();
+            var data = com.gamergaming.taczweaponblueprints.init.ModAttachments.recipeData(player).orElseThrow();
             check(data.setResearchPoints(0), "reset disposable RP fixture");
             active.getSlot(0).set(new ItemStack(ModItems.RESEARCH_NOTE.get()));
             active.refreshAuthoritativePreview(player);
@@ -341,7 +341,7 @@ public final class AnalyzerStationProbe {
                 var model = mc.getBlockRenderer().getBlockModel(state);
                 check(model != mc.getModelManager().getMissingModel(), "baked block model " + id);
                 var quads = model.getQuads(state, null, net.minecraft.util.RandomSource.create(1),
-                        net.minecraftforge.client.model.data.ModelData.EMPTY, null);
+                        net.neoforged.neoforge.client.model.data.ModelData.EMPTY, null);
                 check(quads.size() == expectedFaces, "all authored faces baked " + id + " got " + quads.size());
                 check(quads.stream().noneMatch(quad -> quad.getSprite().contents().name().getPath().contains("missingno")),
                         "resolved block atlas " + id);
@@ -355,7 +355,7 @@ public final class AnalyzerStationProbe {
             int itemFaces = 0;
             for (var pass : itemModel.getRenderPasses(stack, true)) {
                 var quads = pass.getQuads(null, null, net.minecraft.util.RandomSource.create(1),
-                        net.minecraftforge.client.model.data.ModelData.EMPTY, null);
+                        net.neoforged.neoforge.client.model.data.ModelData.EMPTY, null);
                 itemFaces += quads.size();
                 check(quads.stream().noneMatch(quad -> quad.getSprite().contents().name().getPath().contains("missingno")),
                         "resolved item atlas " + id);
@@ -365,8 +365,7 @@ public final class AnalyzerStationProbe {
     }
 
     private static void open(ServerPlayer player, BlueprintRecyclerBlock block, BlockPos pos) {
-        block.use(player.serverLevel().getBlockState(pos), player.serverLevel(), pos, player,
-                InteractionHand.MAIN_HAND, new BlockHitResult(Vec3.atCenterOf(pos), Direction.NORTH, pos, false));
+        player.serverLevel().getBlockState(pos).useWithoutItem(player.serverLevel(), player, new BlockHitResult(Vec3.atCenterOf(pos), Direction.NORTH, pos, false));
     }
 
     private static void requireMarker(Path root) {

@@ -19,7 +19,7 @@ import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.capabilities.BlueprintLearningMutation;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressValueMutation;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
@@ -45,7 +45,7 @@ public final class BlueprintResearchService {
     }
 
     private static int activeBalance(ServerPlayer player) {
-        return player == null ? 0 : player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
+        return player == null ? 0 : ModAttachments.recipeData(player)
                 .map(data -> ResearchCurrencyPayments.balance(ModConfigs.BLUEPRINT.currencyPolicy(), player.getInventory().items, data)).orElse(0);
     }
     private static Result activeFailure(ServerPlayer player, Result result) {
@@ -77,7 +77,7 @@ public final class BlueprintResearchService {
             return Result.failure(
                     Status.WORKBENCH_TIER_REQUIRED,
                     Optional.of(blueprintId),
-                    player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
+                    ModAttachments.recipeData(player)
                             .map(IPlayerRecipeData::getResearchPoints).orElse(0),
                     TreeResearchResultMode.DIRECT_LEARN);
         }
@@ -122,12 +122,12 @@ public final class BlueprintResearchService {
             return Result.failure(
                     Status.INVALID_INPUT,
                     Optional.ofNullable(blueprintId),
-                    player == null ? 0 : player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
+                    player == null ? 0 : ModAttachments.recipeData(player)
                             .map(IPlayerRecipeData::getResearchPoints).orElse(0),
                     TreeResearchResultMode.DIRECT_LEARN);
         }
         Optional<IPlayerRecipeData> resolvedData =
-                player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve();
+                ModAttachments.recipeData(player);
         if (resolvedData.isEmpty()) {
             return Result.failure(
                     Status.PLAYER_DATA_UNAVAILABLE,
@@ -275,7 +275,7 @@ public final class BlueprintResearchService {
             ResearchInput input,
             ResearchWorkbenchContext workbenchContext) {
         Optional<IPlayerRecipeData> resolvedData =
-                player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve();
+                ModAttachments.recipeData(player);
         if (resolvedData.isEmpty()) {
             return Result.failure(Status.PLAYER_DATA_UNAVAILABLE, Optional.of(blueprintId), 0);
         }

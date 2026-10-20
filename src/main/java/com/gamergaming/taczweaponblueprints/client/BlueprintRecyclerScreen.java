@@ -20,7 +20,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.*;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 /** Horizontal workstation overview with an optional, independently scrollable explanation. */
 public final class BlueprintRecyclerScreen extends AbstractContainerScreen<BlueprintRecyclerMenu>
@@ -135,7 +135,7 @@ public final class BlueprintRecyclerScreen extends AbstractContainerScreen<Bluep
         feedback.clear();
         detailScroll = 0;
         try {
-            NetworkHandler.INSTANCE.sendToServer(new BlueprintRecyclerActionPacket(
+            net.neoforged.neoforge.network.PacketDistributor.sendToServer(new BlueprintRecyclerActionPacket(
                     menu.containerId,
                     request.requestId(),
                     request.action(),
@@ -184,7 +184,7 @@ public final class BlueprintRecyclerScreen extends AbstractContainerScreen<Bluep
         };
     }
     @Override public void render(GuiGraphics g,int mouseX,int mouseY,float partialTick) {
-        pointerOverDetails=overDetails(mouseX,mouseY);hoverTexts.clear();renderBackground(g);super.render(g,mouseX,mouseY,partialTick);
+        pointerOverDetails=overDetails(mouseX,mouseY);hoverTexts.clear();super.render(g,mouseX,mouseY,partialTick);
         if(!detailsOpen||mouseY>=topPos+Layout.ACTION_Y)renderTooltip(g,mouseX,mouseY);
         for(var hover:hoverTexts)if(mouseX>=leftPos+hover.x()&&mouseX<leftPos+hover.x()+hover.width()
                 &&mouseY>=topPos+hover.y()&&mouseY<topPos+hover.y()+hover.height()) {
@@ -382,7 +382,7 @@ public final class BlueprintRecyclerScreen extends AbstractContainerScreen<Bluep
                 label.append(" / ");
             }
             ResourceLocation id = ingredient.items().get(index);
-            Item item = ForgeRegistries.ITEMS.getValue(id);
+            Item item = BuiltInRegistries.ITEM.get(id);
             label.append(item == null ? Component.literal(id.toString()) : item.getDescription());
         }
         if (ingredient.items().size() > shown) {
@@ -502,8 +502,9 @@ public final class BlueprintRecyclerScreen extends AbstractContainerScreen<Bluep
     @Override public boolean mouseReleased(double x,double y,int button) {
         if(overDetails(x,y))return super.mouseReleased(leftPos+imageWidth-5,topPos+imageHeight-5,button);return super.mouseReleased(x,y,button);
     }
-    @Override public boolean mouseScrolled(double x,double y,double amount) {
-        if(overDetails(x,y)){scrollDetails(amount>0?-1:1);return true;}return super.mouseScrolled(x,y,amount);
+    @Override public boolean mouseScrolled(double x, double y, double horizontal, double amount) {
+        if (amount == 0) return false;
+        if(overDetails(x,y)){scrollDetails(amount>0?-1:1);return true;}return super.mouseScrolled(x,y,horizontal, amount);
     }
     @Override public boolean keyPressed(int key,int scan,int modifiers) {
         if(detailsOpen&&key==256){detailsOpen=false;updateControls();setFocused(detailsButton);return true;}

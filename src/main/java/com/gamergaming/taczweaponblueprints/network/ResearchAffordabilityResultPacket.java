@@ -3,7 +3,6 @@ package com.gamergaming.taczweaponblueprints.network;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Supplier;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.client.ClientResearchAffordabilityState;
@@ -17,10 +16,21 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.Util;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 
 /** Correlated compact result for one progressive Affordable Now batch. */
-public final class ResearchAffordabilityResultPacket {
+public final class ResearchAffordabilityResultPacket implements CustomPacketPayload {
+    public static final Type<ResearchAffordabilityResultPacket> TYPE = new Type<>(
+            com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.loc("research_affordability_result"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, ResearchAffordabilityResultPacket> STREAM_CODEC =
+            StreamCodec.ofMember(ResearchAffordabilityResultPacket::toBytes, ResearchAffordabilityResultPacket::new);
+
+    @Override
+    public Type<ResearchAffordabilityResultPacket> type() { return TYPE; }
+
     private final int containerId;
     private final int requestId;
     private final long publicationGeneration;
@@ -67,43 +77,50 @@ public final class ResearchAffordabilityResultPacket {
         result.snapshot().ifPresent(snapshot -> writeSnapshot(buffer, snapshot));
     }
 
-    public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
-        context.enqueueWork(() -> {
-            Minecraft minecraft = Minecraft.getInstance();
-            if (minecraft.player == null
-                    || minecraft.player.containerMenu.containerId != containerId
-                    || !(minecraft.player.containerMenu instanceof ResearchBenchMenu)) {
-                return;
-            }
-            ClientResearchAffordabilityState.ResponseOutcome outcome;
-            if (result.code() == ResearchBenchMenu.AffordabilityResultCode.SUCCESS) {
-                outcome = ClientResearchAffordabilityState.accept(
-                        requestId,
-                        publicationGeneration,
-                        result.snapshot().orElseThrow(),
-                        ClientResearchState.publication());
-            } else if (result.code() == ResearchBenchMenu.AffordabilityResultCode.QUEUED) {
-                outcome = ClientResearchAffordabilityState.acknowledge(
-                        requestId, publicationGeneration, Util.getMillis());
-            } else if (result.code() == ResearchBenchMenu.AffordabilityResultCode.THROTTLED) {
-                outcome = ClientResearchAffordabilityState.throttle(
-                        requestId, publicationGeneration);
-            } else {
-                outcome = ClientResearchAffordabilityState.reject(
-                        requestId, publicationGeneration);
-            }
-            if (minecraft.screen instanceof ResearchBenchScreen screen) {
-                switch (outcome) {
-                    case ACKNOWLEDGED, ACCEPTED, ADVANCED_AFTER_FAILURE ->
-                            screen.refreshAuthoritativeAffordability();
-                    case RETRY -> screen.scheduleAffordabilityRetry();
-                    case IGNORED -> {
+    public void handle(IPayloadContext context) {
+        new ClientHandler().handle(context);
+    }
+
+    /** Loaded only when this clientbound payload is handled, never during server registration. */
+    @net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)
+    private final class ClientHandler {
+        void handle(IPayloadContext contextSupplier) {
+            IPayloadContext context = contextSupplier;
+            context.enqueueWork(() -> {
+                Minecraft minecraft = Minecraft.getInstance();
+                if (minecraft.player == null
+                        || minecraft.player.containerMenu.containerId != containerId
+                        || !(minecraft.player.containerMenu instanceof ResearchBenchMenu)) {
+                    return;
+                }
+                ClientResearchAffordabilityState.ResponseOutcome outcome;
+                if (result.code() == ResearchBenchMenu.AffordabilityResultCode.SUCCESS) {
+                    outcome = ClientResearchAffordabilityState.accept(
+                            requestId,
+                            publicationGeneration,
+                            result.snapshot().orElseThrow(),
+                            ClientResearchState.publication());
+                } else if (result.code() == ResearchBenchMenu.AffordabilityResultCode.QUEUED) {
+                    outcome = ClientResearchAffordabilityState.acknowledge(
+                            requestId, publicationGeneration, Util.getMillis());
+                } else if (result.code() == ResearchBenchMenu.AffordabilityResultCode.THROTTLED) {
+                    outcome = ClientResearchAffordabilityState.throttle(
+                            requestId, publicationGeneration);
+                } else {
+                    outcome = ClientResearchAffordabilityState.reject(
+                            requestId, publicationGeneration);
+                }
+                if (minecraft.screen instanceof ResearchBenchScreen screen) {
+                    switch (outcome) {
+                        case ACKNOWLEDGED, ACCEPTED, ADVANCED_AFTER_FAILURE ->
+                                screen.refreshAuthoritativeAffordability();
+                        case RETRY -> screen.scheduleAffordabilityRetry();
+                        case IGNORED -> {
+                        }
                     }
                 }
-            }
-        });
-        context.setPacketHandled(true);
+            });
+        }
     }
 
     int containerId() {

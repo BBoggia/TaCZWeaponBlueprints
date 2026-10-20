@@ -11,8 +11,8 @@ import com.tacz.guns.resource.pojo.data.block.TabConfig;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.fml.ModList;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.fml.ModList;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 /** Decorates the screen's tab list without mutating shared gun-pack block data. */
 public final class MagazineWorkbenchTabs {
@@ -23,7 +23,7 @@ public final class MagazineWorkbenchTabs {
                 || authoredTabs.stream().anyMatch(tab -> TaCZMagazinesAdapter.MAGAZINE_TAB.equals(tab.id()))) {
             return authoredTabs;
         }
-        var icon = ForgeRegistries.ITEMS.getValue(new ResourceLocation("taczmagazines:tab_icon"));
+        var icon = BuiltInRegistries.ITEM.get(ResourceLocation.parse("taczmagazines:tab_icon"));
         if (icon == null || icon == Items.AIR) return authoredTabs;
         var decorated = new ArrayList<>(authoredTabs);
         decorated.add(new TabConfig(TaCZMagazinesAdapter.MAGAZINE_TAB,

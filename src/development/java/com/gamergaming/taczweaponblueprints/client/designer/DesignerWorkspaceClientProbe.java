@@ -9,14 +9,15 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.components.*;
 import net.minecraft.client.gui.screens.*;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 import org.lwjgl.glfw.GLFW;
 
 /** Disposable, opt-in native-screen control. No world or server is opened. */
-@Mod.EventBusSubscriber(modid="taczweaponblueprints", value=Dist.CLIENT)
+@EventBusSubscriber(modid="taczweaponblueprints", value=Dist.CLIENT)
 public final class DesignerWorkspaceClientProbe {
     private static final String ROOT=System.getProperty("tacz.designerWorkspaceQA.root");
     private static boolean ready;
@@ -25,8 +26,8 @@ public final class DesignerWorkspaceClientProbe {
     private static Screen active(Minecraft mc) throws Exception {if(mc.screen instanceof ResearchDesignerWorkspaceScreen){var editor=field(mc.screen,"editor");if(editor instanceof Screen screen)return screen;var build=field(mc.screen,"build");if(build instanceof Screen screen)return screen;}return mc.screen;}
     private static int activeHeight(Minecraft mc){return mc.screen.height;}
     private static ResearchDesignerSession session(Minecraft mc) throws Exception {return (ResearchDesignerSession)field(mc.screen,"session");}
-    @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
-        if(ROOT==null||event.phase!=TickEvent.Phase.END)return;
+    @SubscribeEvent public static void tick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event) {
+        if(ROOT==null)return;
         var mc=Minecraft.getInstance();if(mc.getOverlay()!=null)return;
         var root=Path.of(ROOT);
         try {
@@ -69,14 +70,14 @@ public final class DesignerWorkspaceClientProbe {
                     new ResearchDesignerCaptureStore(root).save(capture);
                     mc.setScreen(new ResearchDesignerWorkspaceScreen(new ResearchDesignerChooserScreen(new TitleScreen()),session,fixture.equals("empty")?Optional.empty():Optional.of(capture),false));
                 }
-                case "connect" -> net.minecraft.client.gui.screens.ConnectScreen.startConnecting(new TitleScreen(),mc,net.minecraft.client.multiplayer.resolver.ServerAddress.parseString("127.0.0.1:25579"),new net.minecraft.client.multiplayer.ServerData("Disposable Designer acceptance","127.0.0.1:25579",false),false);
-                case "integrated" -> mc.createWorldOpenFlows().loadLevel(new TitleScreen(),"designer-disposable-world");
-                case "leave_server" -> {if(mc.level!=null)mc.level.disconnect();mc.clearLevel();mc.setScreen(new TitleScreen());}
+                case "connect" -> net.minecraft.client.gui.screens.ConnectScreen.startConnecting(new TitleScreen(),mc,net.minecraft.client.multiplayer.resolver.ServerAddress.parseString("127.0.0.1:25579"),new net.minecraft.client.multiplayer.ServerData("Disposable Designer acceptance","127.0.0.1:25579",net.minecraft.client.multiplayer.ServerData.Type.OTHER), false, null);
+                case "integrated" -> mc.createWorldOpenFlows().openWorld("designer-disposable-world", () -> mc.setScreen(new TitleScreen()));
+                case "leave_server" -> {if(mc.level!=null)mc.level.disconnect();mc.disconnect();mc.setScreen(new TitleScreen());}
                 case "capture_request" -> ClientDesignerCapture.request();
                 case "server_reload" -> mc.player.connection.sendCommand("reload");
-                case "bench_select" -> {var method=mc.screen.getClass().getDeclaredMethod("selectTreeNode",net.minecraft.resources.ResourceLocation.class);method.setAccessible(true);method.invoke(mc.screen,new net.minecraft.resources.ResourceLocation(input.get("blueprint").getAsString()));}
+                case "bench_select" -> {var method=mc.screen.getClass().getDeclaredMethod("selectTreeNode",net.minecraft.resources.ResourceLocation.class);method.setAccessible(true);method.invoke(mc.screen,net.minecraft.resources.ResourceLocation.parse(input.get("blueprint").getAsString()));}
                 case "bench_research" -> {var button=(Button)field(mc.screen,"primaryResearchButton");if(!button.active)throw new IllegalStateException("Research button disabled");mc.screen.mouseClicked(button.getX()+2,button.getY()+2,0);mc.screen.mouseReleased(button.getX()+2,button.getY()+2,0);}
-                case "scroll" -> mc.screen.mouseScrolled(input.get("x").getAsDouble(),input.get("y").getAsDouble(),input.get("amount").getAsDouble());
+                case "scroll" -> mc.screen.mouseScrolled(input.get("x").getAsDouble(),input.get("y").getAsDouble(), 0,input.get("amount").getAsDouble());
                 case "click" -> {mc.screen.mouseClicked(input.get("x").getAsDouble(),input.get("y").getAsDouble(),0);mc.screen.mouseReleased(input.get("x").getAsDouble(),input.get("y").getAsDouble(),0);}
                 case "state" -> {}
                 case "edit" -> session(mc).execute("Test title edit",ResearchDesignerEdits.title(input.get("title").getAsString()));
@@ -110,8 +111,8 @@ public final class DesignerWorkspaceClientProbe {
                 }
                 case "drag_node" -> {
                     var scene=(com.gamergaming.taczweaponblueprints.client.DesignerSceneAdapter)field(mc.screen,"scene");
-                    var a=scene.canvas.nodeBounds(new net.minecraft.resources.ResourceLocation(input.get("source").getAsString())).orElseThrow();
-                    var b=scene.canvas.nodeBounds(new net.minecraft.resources.ResourceLocation(input.get("target").getAsString())).orElseThrow();
+                    var a=scene.canvas.nodeBounds(net.minecraft.resources.ResourceLocation.parse(input.get("source").getAsString())).orElseThrow();
+                    var b=scene.canvas.nodeBounds(net.minecraft.resources.ResourceLocation.parse(input.get("target").getAsString())).orElseThrow();
                     var v=scene.canvas.viewport();var bounds=scene.canvas.bounds();
                     double ax=bounds.x()+v.viewportX(a.x()+a.width()/2),ay=bounds.y()+v.viewportY(a.y()+a.height()/2);
                     double bx=bounds.x()+v.viewportX(b.x()+b.width()/2),by=bounds.y()+v.viewportY(b.y()+b.height()/2);

@@ -655,10 +655,10 @@ class BlueprintResearchPolicyResolverTest {
                 id.toString(),
                 "item.test.name",
                 "item.test.tooltip",
-                new ResourceLocation("test", "recipe/" + id.getPath()),
+                ResourceLocation.fromNamespaceAndPath("test", "recipe/" + id.getPath()),
                 null,
                 type,
-                new ResourceLocation("test", "display/" + type)));
+                ResourceLocation.fromNamespaceAndPath("test", "display/" + type)));
     }
 
     private static ResourceLocation profileId() {

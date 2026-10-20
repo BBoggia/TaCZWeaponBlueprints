@@ -24,7 +24,7 @@ import net.minecraft.world.entity.player.Player;
 /** Structural gates for the additive server-side Recycler introduced in Phase 2. */
 class ResearchWorkstationsPhaseTwoTest {
     private static final ResourceLocation RECYCLER =
-            new ResourceLocation("taczweaponblueprints:blueprint_recycler");
+            ResourceLocation.parse("taczweaponblueprints:blueprint_recycler");
 
     @BeforeAll
     static void bootstrapMinecraftRegistries() {
@@ -37,7 +37,7 @@ class ResearchWorkstationsPhaseTwoTest {
         assertEquals(RECYCLER, ModBlocks.BLUEPRINT_RECYCLER.getId());
         assertEquals(RECYCLER, ModItems.BLUEPRINT_RECYCLER_ITEM.getId());
         assertEquals(RECYCLER, ModMenus.BLUEPRINT_RECYCLER.getId());
-        assertEquals("70", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("neoforge-1", NetworkHandler.PROTOCOL_VERSION);
     }
 
     @Test
@@ -78,7 +78,7 @@ class ResearchWorkstationsPhaseTwoTest {
 
     @Test
     void preservedPhysicalIdentityDoesNotMasqueradeAsResearchData() {
-        ResourceLocation paper = new ResourceLocation("minecraft:paper");
+        ResourceLocation paper = ResourceLocation.parse("minecraft:paper");
         ResearchDataRedemptionService.Evaluation unavailable =
                 new ResearchDataRedemptionService.Evaluation(
                         ResearchDataRedemptionService.Status.PLAYER_DATA_UNAVAILABLE,

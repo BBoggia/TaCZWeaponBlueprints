@@ -4,7 +4,7 @@ import net.minecraft.resources.ResourceLocation;
 import com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy;
 import static org.junit.jupiter.api.Assertions.*;
 class LegacyDataTradeSafetyTest {
-    final ResourceLocation scrap=new ResourceLocation("taczweaponblueprints:scrap"),emerald=new ResourceLocation("minecraft:emerald");
+    final ResourceLocation scrap=ResourceLocation.parse("taczweaponblueprints:scrap"),emerald=ResourceLocation.parse("minecraft:emerald");
     @Test void comparisonsRequireExplicitConsentAndSamePhysicalUnits(){
         var physical=ResearchCurrencyPolicy.physical(scrap,1);
         assertFalse(LegacyDataTradeSafety.compare(false,physical,scrap,3,1,1).isEmpty());

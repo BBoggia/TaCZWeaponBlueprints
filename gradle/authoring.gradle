@@ -1,0 +1,189 @@
+// Pack-author tools retained for the Minecraft 1.21.1 NeoForge branch.
+tasks.register('generateAnalyzerBalanceReport', JavaExec) {
+    group = 'authoring'
+    description = 'Estimates first-blueprint attempts and consumed resources from a resolved research catalog export.'
+    dependsOn tasks.named('authoringClasses')
+    classpath = sourceSets.authoring.runtimeClasspath
+    mainClass = 'com.gamergaming.taczweaponblueprints.analyzer.authoring.AnalyzerBalanceTool'
+    def catalog = providers.gradleProperty('analyzerCatalog')
+    def report = providers.gradleProperty('analyzerBalanceReport').orElse(
+            layout.buildDirectory.file('reports/analyzer/balance.json').map { it.asFile.absolutePath })
+    def target = providers.gradleProperty('analyzerTarget')
+    inputs.files(catalog).optional()
+    inputs.property('target', target.orElse(''))
+    inputs.files(providers.gradleProperty('economySupply')).optional()
+    inputs.property('economySupplyBudget', providers.gradleProperty('economySupplyBudget').orElse('32'))
+    outputs.file(report)
+    doFirst {
+        if (!catalog.isPresent()) throw new GradleException('Supply -PanalyzerCatalog=/path/to/research-export.json (catalog format 22).')
+        args = ['--catalog', file(catalog.get()).absolutePath, '--output', file(report.get()).absolutePath]
+        if (target.isPresent()) args += ['--target', target.get()]
+        if (providers.gradleProperty('economySupply').isPresent()) args += ['--supply', file(providers.gradleProperty('economySupply').get()).absolutePath]
+        if (providers.gradleProperty('economySupplyBudget').isPresent()) args += ['--supply-budget', providers.gradleProperty('economySupplyBudget').get()]
+    }
+}
+
+def analyzerDatapackTasks = ['legacy', 'tiered', 'overrides'].collect { preset ->
+    tasks.register("packageAnalyzer${preset.capitalize()}Datapack", Zip) {
+        group = 'authoring'
+        description = "Packages the optional ${preset} Blueprint Analyzer datapack."
+        from("examples/blueprint-analyzer/${preset}")
+        archiveFileName = "blueprint-analyzer-${preset}.zip"
+        destinationDirectory = layout.buildDirectory.dir('distributions/analyzer')
+        preserveFileTimestamps = false
+        reproducibleFileOrder = true
+    }
+}
+def researchEconomyDatapackTasks = ['unlearned-only', 'weighted-pool', 'recyclable-data'].collect { preset ->
+    tasks.register("packageResearchEconomy${preset.replace('-', '_')}Datapack", Zip) {
+        group = 'authoring'
+        from("examples/research-economy/${preset}")
+        archiveFileName = "research-economy-${preset}.zip"
+        destinationDirectory = layout.buildDirectory.dir('distributions/research-economy')
+        preserveFileTimestamps = false
+        reproducibleFileOrder = true
+    }
+}
+tasks.register('packageResearchEconomyDatapacks') {
+    group = 'authoring'
+    description = 'Packages optional Research Data policies; does not activate them.'
+    dependsOn researchEconomyDatapackTasks
+}
+
+tasks.register('packageAnalyzerDatapacks') {
+    group = 'authoring'
+    description = 'Packages opt-in Analyzer presets and rule examples; does not activate them.'
+    dependsOn analyzerDatapackTasks
+}
+
+tasks.register('generateResearchTechTreeRatings', JavaExec) {
+    group = 'authoring'
+    description = 'Extracts TaCZ gun-pack evidence and writes non-authoritative Tech Tree rating suggestions.'
+    dependsOn tasks.named('authoringClasses')
+    classpath = sourceSets.authoring.runtimeClasspath
+    mainClass = 'com.gamergaming.taczweaponblueprints.research.tree.authoring.ResearchTechTreeRatingTool'
+
+    def gunPack = providers.gradleProperty('researchGunPack')
+            .orElse(layout.projectDirectory.dir('run/neoforge/client/tacz/tacz_default_gun').asFile.absolutePath)
+    def report = providers.gradleProperty('researchRatingReport')
+            .orElse(layout.buildDirectory.file('reports/research-tech-tree/tacz-weapon-ratings.json')
+                    .map { it.asFile.absolutePath })
+    def appeal = providers.gradleProperty('researchAppealRatings')
+            .orElse(layout.projectDirectory
+                    .file('src/authoring/resources/tacz-1.1.8-appeal-ratings.json')
+                    .asFile.absolutePath)
+    def sourceVersion = providers.gradleProperty('researchGunPackVersion').orElse(tacz_version)
+    def expectedGunCount = providers.gradleProperty('researchExpectedGunCount').orElse('53')
+
+    inputs.dir(gunPack).withPropertyName('gunPackContents')
+    inputs.property('gunPackPath', gunPack)
+    inputs.property('sourceVersion', sourceVersion)
+    inputs.property('expectedGunCount', expectedGunCount)
+    inputs.files(appeal).withPropertyName('appealRatingsFile').optional()
+    outputs.file(report)
+
+    doFirst {
+        args = [
+                '--pack', gunPack.get(),
+                '--output', report.get(),
+                '--source-version', sourceVersion.get(),
+                '--expected-count', expectedGunCount.get()
+        ]
+        args += ['--appeal', appeal.get()]
+    }
+}
+
+tasks.register('generateAutomaticWeaponReference', JavaExec) {
+    group = 'authoring'
+    description = 'Regenerates the checked-in TaCZ 1.1.8 mechanical reference catalog.'
+    dependsOn tasks.named('authoringClasses')
+    classpath = sourceSets.authoring.runtimeClasspath
+    mainClass = 'com.gamergaming.taczweaponblueprints.research.tree.authoring.ResearchAutomaticReferenceTool'
+
+    def gunPack = providers.gradleProperty('researchGunPack')
+            .orElse(layout.projectDirectory.dir('run/neoforge/client/tacz/tacz_default_gun').asFile.absolutePath)
+    def output = providers.gradleProperty('researchAutomaticReference')
+            .orElse(layout.projectDirectory.file(
+                    'src/main/resources/assets/taczweaponblueprints/research/automatic/'
+                            + 'tacz-1.1.8-mechanical-v2.json').asFile.absolutePath)
+    def sourceVersion = providers.gradleProperty('researchGunPackVersion').orElse(tacz_version)
+    def expectedGunCount = providers.gradleProperty('researchExpectedGunCount').orElse('53')
+
+    inputs.dir(gunPack).withPropertyName('gunPackContents')
+    inputs.property('gunPackPath', gunPack)
+    inputs.property('sourceVersion', sourceVersion)
+    inputs.property('expectedGunCount', expectedGunCount)
+    outputs.file(output)
+
+    doFirst {
+        args = [
+                '--pack', gunPack.get(),
+                '--output', output.get(),
+                '--source-version', sourceVersion.get(),
+                '--expected-count', expectedGunCount.get()
+        ]
+    }
+}
+
+tasks.register('generateCapabilityWeaponReference', JavaExec) {
+    group = 'authoring'
+    description = 'Regenerates the checked-in TaCZ 1.1.8 v3 capability reference catalog.'
+    dependsOn tasks.named('authoringClasses')
+    classpath = sourceSets.authoring.runtimeClasspath
+    mainClass = 'com.gamergaming.taczweaponblueprints.research.tree.authoring.ResearchCapabilityReferenceTool'
+
+    def gunPack = providers.gradleProperty('researchGunPack')
+            .orElse(layout.projectDirectory.dir('run/neoforge/client/tacz/tacz_default_gun').asFile.absolutePath)
+    def output = providers.gradleProperty('researchCapabilityReference')
+            .orElse(layout.projectDirectory.file(
+                    'src/main/resources/assets/taczweaponblueprints/research/automatic/'
+                            + 'tacz-1.1.8-capability-v3.json').asFile.absolutePath)
+    def sourceVersion = providers.gradleProperty('researchGunPackVersion').orElse(tacz_version)
+    def expectedGunCount = providers.gradleProperty('researchExpectedGunCount').orElse('53')
+
+    inputs.dir(gunPack).withPropertyName('gunPackContents')
+    inputs.property('gunPackPath', gunPack)
+    inputs.property('sourceVersion', sourceVersion)
+    inputs.property('expectedGunCount', expectedGunCount)
+    outputs.file(output)
+
+    doFirst {
+        args = [
+                '--pack', gunPack.get(),
+                '--output', output.get(),
+                '--source-version', sourceVersion.get(),
+                '--expected-count', expectedGunCount.get()
+        ]
+    }
+}
+
+tasks.register('generateCapabilityComparisonReport', JavaExec) {
+    group = 'authoring'
+    description = 'Writes a full TaCZ v2-versus-v3 capability shadow comparison.'
+    dependsOn tasks.named('authoringClasses')
+    mustRunAfter tasks.named('generateCapabilityWeaponReference')
+    classpath = sourceSets.authoring.runtimeClasspath
+    mainClass = 'com.gamergaming.taczweaponblueprints.research.tree.authoring.ResearchCapabilityComparisonTool'
+
+    def gunPack = providers.gradleProperty('researchGunPack')
+            .orElse(layout.projectDirectory.dir('run/neoforge/client/tacz/tacz_default_gun').asFile.absolutePath)
+    def output = providers.gradleProperty('researchCapabilityComparison')
+            .orElse(layout.buildDirectory.file(
+                    'reports/research-tech-tree/capability-v3-comparison.json')
+                    .map { it.asFile.absolutePath })
+    def expectedGunCount = providers.gradleProperty('researchExpectedGunCount').orElse('53')
+    inputs.dir(gunPack).withPropertyName('gunPackContents')
+    inputs.file('src/main/resources/assets/taczweaponblueprints/research/automatic/'
+            + 'tacz-1.1.8-mechanical-v2.json')
+    inputs.file('src/main/resources/assets/taczweaponblueprints/research/automatic/'
+            + 'tacz-1.1.8-capability-v3.json')
+    inputs.property('expectedGunCount', expectedGunCount)
+    outputs.file(output)
+    doFirst {
+        args = [
+                '--pack', gunPack.get(),
+                '--output', output.get(),
+                '--expected-count', expectedGunCount.get()
+        ]
+    }
+}

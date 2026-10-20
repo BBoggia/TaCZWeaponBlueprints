@@ -84,10 +84,10 @@ class MagazineCraftingAccessTest {
             var recipe = recipe();
             var old = capture(recipe);
             switch (change) {
-                case "loaded" -> recipe.getOutput().getOrCreateTag().putInt("AmmoCount", 1);
-                case "capacity" -> recipe.getOutput().getOrCreateTag().putInt("MaxCapacity", 30);
+                case "loaded" -> net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, recipe.getOutput(), customTag -> customTag.putInt("AmmoCount", 1));
+                case "capacity" -> net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, recipe.getOutput(), customTag -> customTag.putInt("MaxCapacity", 30));
                 case "count" -> recipe.getOutput().setCount(2);
-                case "family" -> recipe.getOutput().getOrCreateTag().putString("MagazineFamily", "other");
+                case "family" -> net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, recipe.getOutput(), customTag -> customTag.putString("MagazineFamily", "other"));
                 case "ingredient" -> recipe.getInputs().set(0, new GunSmithTableIngredient(Ingredient.of(Items.DIAMOND), 5));
                 case "input_count" -> recipe.getInputs().set(0, new GunSmithTableIngredient(Ingredient.of(Items.IRON_INGOT), 6));
             }
@@ -102,13 +102,12 @@ class MagazineCraftingAccessTest {
     @Test
     void wrongTabAndAliasCannotReuseAValidDescriptor() {
         var original = recipe();
-        var wrongTab = new GunSmithTableRecipe(RECIPE, new GunSmithTableResult(original.getOutput(), id("tacz:ammo")), original.getInputs());
-        var alias = new GunSmithTableRecipe(id("taczmagazines:magazine/0001_9mm_17"),
-                new GunSmithTableResult(original.getOutput(), TaCZMagazinesAdapter.MAGAZINE_TAB), original.getInputs());
-        for (var replacement : List.of(wrongTab, alias)) {
-            assertFalse(MagazineCraftingAccess.allows(capture(original), MagazineCraftingAccess.AMMO_WORKBENCH,
-                    RECIPE, ignored -> replacement, 172, d -> true));
-        }
+        var wrongTab = new GunSmithTableRecipe( new GunSmithTableResult(original.getOutput(), id("tacz:ammo")), original.getInputs());
+        assertFalse(MagazineCraftingAccess.allows(capture(original), MagazineCraftingAccess.AMMO_WORKBENCH,
+                RECIPE, ignored -> wrongTab, 172, d -> true));
+        // Recipe IDs belong to holders in 1.21; an identical value at an uncaptured ID has no permission.
+        assertFalse(MagazineCraftingAccess.allows(capture(original), MagazineCraftingAccess.AMMO_WORKBENCH,
+                id("taczmagazines:magazine/0001_9mm_17"), ignored -> original, 172, d -> true));
     }
 
     @Test
@@ -188,20 +187,20 @@ class MagazineCraftingAccessTest {
 
     private static GunSmithTableRecipe recipe() {
         var output = new ItemStack(Items.PAPER);
-        output.getOrCreateTag().putString("MagazineFamily", "9mm_17");
-        output.getOrCreateTag().putInt("MaxCapacity", 17);
-        output.getOrCreateTag().putInt("AmmoCount", 0);
-        return new GunSmithTableRecipe(RECIPE, new GunSmithTableResult(output, TaCZMagazinesAdapter.MAGAZINE_TAB),
+        net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, output, customTag -> customTag.putString("MagazineFamily", "9mm_17"));
+        net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, output, customTag -> customTag.putInt("MaxCapacity", 17));
+        net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, output, customTag -> customTag.putInt("AmmoCount", 0));
+        return new GunSmithTableRecipe( new GunSmithTableResult(output, TaCZMagazinesAdapter.MAGAZINE_TAB),
                 new ArrayList<>(List.of(new GunSmithTableIngredient(Ingredient.of(Items.IRON_INGOT), 5))));
     }
 
     private static TaCZMagazinesAdapter.Capture capture(GunSmithTableRecipe recipe) {
         var descriptor = new MagazineDescriptor(FAMILY, "9mm_17", id("tacz:9mm"), 17, 0,
-                Set.of(id("tacz:glock_17")), recipe.getId(), recipe.getOutput(), recipe.getInputs().stream()
-                        .map(input -> new MagazineDescriptor.IngredientCost(input.getIngredient().toJson().toString(), input.getCount())).toList());
+                Set.of(id("tacz:glock_17")), RECIPE, recipe.getOutput(), recipe.getInputs().stream()
+                        .map(input -> new MagazineDescriptor.IngredientCost(Ingredient.CODEC.encodeStart(com.mojang.serialization.JsonOps.INSTANCE, input.getIngredient()).getOrThrow().toString(), input.getCount())).toList());
         return new TaCZMagazinesAdapter.Capture(TaCZMagazinesAdapter.Status.READY,
-                Map.of(FAMILY, descriptor), Map.of(recipe.getId(), FAMILY), Map.of());
+                Map.of(FAMILY, descriptor), Map.of(RECIPE, FAMILY), Map.of());
     }
 
-    private static ResourceLocation id(String text) { return new ResourceLocation(text); }
+    private static ResourceLocation id(String text) { return ResourceLocation.parse(text); }
 }

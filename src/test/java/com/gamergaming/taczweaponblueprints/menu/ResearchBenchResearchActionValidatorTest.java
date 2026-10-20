@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Test;
 import net.minecraft.resources.ResourceLocation;
 
 class ResearchBenchResearchActionValidatorTest {
-    private static final ResourceLocation SELECTED = new ResourceLocation("test:selected");
-    private static final ResourceLocation OTHER = new ResourceLocation("test:other");
+    private static final ResourceLocation SELECTED = ResourceLocation.parse("test:selected");
+    private static final ResourceLocation OTHER = ResourceLocation.parse("test:other");
 
     @Test
     void selectionAcceptsPresentEmptyAndNullRequests() {

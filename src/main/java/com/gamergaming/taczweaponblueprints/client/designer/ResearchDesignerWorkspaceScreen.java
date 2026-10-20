@@ -84,7 +84,7 @@ public final class ResearchDesignerWorkspaceScreen extends Screen {
     void openBuildRequirement(String group){if(group==null)((DesignerEditingPanel)editor).openRequirements(selected);else ((DesignerEditingPanel)editor).openGroup(selected,group);}
     private void refreshIdleWidgets(){if(editor!=null||build==null||!build.typing())rebuildWidgets();}
     void openSimulation(){openProperties();((DesignerPolicyPanel)editor).openSimulation();}
-    private String nodeName(String id){return DesignerSceneAdapter.name(new ResourceLocation(id),names.getOrDefault(id,id)).getString();}
+    private String nodeName(String id){return DesignerSceneAdapter.name(ResourceLocation.parse(id),names.getOrDefault(id,id)).getString();}
     private void compile() {
         if(previewWork!=null)previewWork.cancel();previewBusy=true;
         int token=++generation;var checkpoint=session.checkpoint();compiledSequence=session.sequence();status=tr("checking");
@@ -110,7 +110,7 @@ public final class ResearchDesignerWorkspaceScreen extends Screen {
             if(result.scene!=null)try {scene.bind(result.scene);
                 if(restoreView&&!session.view().equals(ResearchDesignerSession.View.initial())) {var v=session.view();scene.canvas.viewport().restore(new ResearchTreeViewport.Snapshot(v.x(),v.y(),v.zoom()));}
                 restoreView=false;
-                if(selected!=null)session.project().draft().nodes().stream().filter(n->n.id().equals(selected)).flatMap(n->n.blueprintId().stream()).findFirst().ifPresent(id->scene.canvas.setAuthoritativeSelection(new ResourceLocation(id)));
+                if(selected!=null)session.project().draft().nodes().stream().filter(n->n.id().equals(selected)).flatMap(n->n.blueprintId().stream()).findFirst().ifPresent(id->scene.canvas.setAuthoritativeSelection(ResourceLocation.parse(id)));
             }catch(RuntimeException error){publication=null;status=tr("graph_failed")+error.getMessage();}
             refreshIdleWidgets();
         },error->{if(token==generation&&!closing&&!detached){previewBusy=false;status=tr("preview_failed")+error.getMessage();publication=null;refreshIdleWidgets();}});
@@ -146,7 +146,7 @@ public final class ResearchDesignerWorkspaceScreen extends Screen {
         },error->{storageBusy=false;closing=false;
             if(error instanceof ResearchDesignerProjectStore.SaveFailure failure)session.checkpointWritten(checkpoint,failure.recoveryDigest());
             status=tr("save_failed")+error.getMessage();
-            if(!detached)rebuildWidgets();else minecraft.getToasts().addToast(net.minecraft.client.gui.components.toasts.SystemToast.multiline(minecraft,net.minecraft.client.gui.components.toasts.SystemToast.SystemToastIds.PACK_LOAD_FAILURE,Component.literal(tr("save_failed_title")),Component.literal(Objects.toString(error.getMessage(),tr("unknown_error")))));});
+            if(!detached)rebuildWidgets();else minecraft.getToasts().addToast(net.minecraft.client.gui.components.toasts.SystemToast.multiline(minecraft,net.minecraft.client.gui.components.toasts.SystemToast.SystemToastId.PACK_LOAD_FAILURE,Component.literal(tr("save_failed_title")),Component.literal(Objects.toString(error.getMessage(),tr("unknown_error")))));});
     }
     private record Storage(String receipt,String viewError) {}
     private ResearchDesignerSession.View view(){var v=build==null?scene.canvas.viewport().snapshot():build.snapshot();return new ResearchDesignerSession.View(v.panX(),v.panY(),v.scale(),Optional.ofNullable(selected),domain.name().toLowerCase(Locale.ROOT));}
@@ -162,7 +162,7 @@ public final class ResearchDesignerWorkspaceScreen extends Screen {
     Set<String> editingSelection(){return multiple.isEmpty()?(selected==null?Set.of():Set.of(selected)):Set.copyOf(multiple);}
     String editingName(String id){return nodeName(id);}
     void openEditing(){dragNode=null;scene.release(0);if(editor!=null)editor.removed();editor=new DesignerEditingPanel(this);editor.init(minecraft,width,height);minecraft.getNarrator().sayNow(Component.literal(tr("edit.edit_tech_tree")));}
-    DesignerSimulation.State simulationState(){if(simulation==null)simulation=DesignerSimulation.State.empty(capture.map(c->DesignerCapturedSettings.progression(c,new ResourceLocation(session.project().draft().profile().id())).treeResearchResultMode()).orElse(com.gamergaming.taczweaponblueprints.progression.TreeResearchResultMode.DIRECT_LEARN));return simulation;}
+    DesignerSimulation.State simulationState(){if(simulation==null)simulation=DesignerSimulation.State.empty(capture.map(c->DesignerCapturedSettings.progression(c,ResourceLocation.parse(session.project().draft().profile().id())).treeResearchResultMode()).orElse(com.gamergaming.taczweaponblueprints.progression.TreeResearchResultMode.DIRECT_LEARN));return simulation;}
     void simulationState(DesignerSimulation.State value){simulation=value;}
     boolean isDetail(Screen value){return editor==value&&!detached&&!closing;}
     void closeDetail(){closeEditing();}
@@ -178,7 +178,7 @@ public final class ResearchDesignerWorkspaceScreen extends Screen {
     @Override public boolean mouseClicked(double x,double y,int button){return editor!=null?editor.mouseClicked(x,y,button):build.mouseClicked(x,y,button);}
     @Override public boolean mouseDragged(double x,double y,int button,double dx,double dy){return editor!=null?editor.mouseDragged(x,y,button,dx,dy):build.mouseDragged(x,y,button,dx,dy);}
     @Override public boolean mouseReleased(double x,double y,int button){return editor!=null?editor.mouseReleased(x,y,button):build.mouseReleased(x,y,button);}
-    @Override public boolean mouseScrolled(double x,double y,double delta){return editor!=null?editor.mouseScrolled(x,y,delta):build.mouseScrolled(x,y,delta);}
+    @Override public boolean mouseScrolled(double x, double y, double horizontal, double delta){return editor!=null?editor.mouseScrolled(x,y,horizontal, delta):build.mouseScrolled(x,y,horizontal, delta);}
     @Override public boolean charTyped(char c,int mods){return editor!=null?editor.charTyped(c,mods):build.charTyped(c,mods);}
     @Override public boolean keyPressed(int key,int scan,int mods){
         if(hasControlDown()&&key==GLFW.GLFW_KEY_S){if(hasShiftDown())saveCopy();else store(true);return true;}

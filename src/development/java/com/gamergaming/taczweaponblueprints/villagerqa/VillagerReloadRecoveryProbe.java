@@ -14,13 +14,13 @@ import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.npc.*;
 import net.minecraft.world.inventory.*;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.event.*;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.common.MinecraftForge;
+import net.neoforged.neoforge.event.*;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.common.NeoForge;
 
 /** Failed/overlapping native reload acceptance, confined to explicitly marked disposable worlds. */
-@Mod.EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID)
+@EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID)
 public final class VillagerReloadRecoveryProbe {
  private static boolean armed,nest,nestedFinished,done;
  private static int tick,phase,finishedAt,initialPrice;
@@ -31,9 +31,9 @@ public final class VillagerReloadRecoveryProbe {
  private static ItemStack payment;
  private static List<String> attemptedPacks;
  private static final List<String> checks=new ArrayList<>();
- private static final net.minecraft.resources.ResourceLocation AMMO=new net.minecraft.resources.ResourceLocation("taczweaponblueprints:gunsmith/starter_ammo");
+ private static final net.minecraft.resources.ResourceLocation AMMO=net.minecraft.resources.ResourceLocation.parse("taczweaponblueprints:gunsmith/starter_ammo");
  private static boolean enabled(){return Boolean.getBoolean("tacz.villagerQA.reloadRecovery")&&VillagerPrototypeStock.root()!=null;}
- @SubscribeEvent(priority=net.minecraftforge.eventbus.api.EventPriority.LOWEST) public static void listeners(AddReloadListenerEvent event){
+ @SubscribeEvent(priority=net.neoforged.bus.api.EventPriority.LOWEST) public static void listeners(AddReloadListenerEvent event){
   if(!enabled())return;
   event.addListener(new SimplePreparableReloadListener<Boolean>(){
    protected Boolean prepare(ResourceManager r,ProfilerFiller p){return armed;}
@@ -47,15 +47,15 @@ public final class VillagerReloadRecoveryProbe {
    }
   });
  }
- @SubscribeEvent public static void tick(TickEvent.ServerTickEvent event){
-  if(!enabled()||event.phase!=TickEvent.Phase.END||done)return;
+ @SubscribeEvent public static void tick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event){
+  if(!enabled()||done)return;
   server=event.getServer();tick++;
   try{
    if(tick>1000)throw new AssertionError("Reload recovery probe timed out");
    if(tick==20){
-    MinecraftForge.EVENT_BUS.post(new OnDatapackSyncEvent(server.getPlayerList(),null));StockPublicationCoordinator.settle();
+    NeoForge.EVENT_BUS.post(new OnDatapackSyncEvent(server.getPlayerList(),null));StockPublicationCoordinator.settle();
     var level=server.overworld();var v=new Villager(EntityType.VILLAGER,level);v.moveTo(.5,85,.5);v.setNoAi(true);v.setVillagerData(v.getVillagerData().setProfession(ModVillagers.GUNSMITH.get()));level.addFreshEntity(v);
-    player=net.minecraftforge.common.util.FakePlayerFactory.get(level,new com.mojang.authlib.GameProfile(UUID.randomUUID(),"ReloadRecovery"));player.moveTo(.5,85,2.5);player.setHealth(20);v.setTradingPlayer(player);
+    player=net.neoforged.neoforge.common.util.FakePlayerFactory.get(level,new com.mojang.authlib.GameProfile(UUID.randomUUID(),"ReloadRecovery"));player.moveTo(.5,85,2.5);player.setHealth(20);v.setTradingPlayer(player);
     offer=v.getOffers().stream().filter(o->((OwnedVillagerOffer)o).taczweaponblueprints$binding().entry().kind()==TradeDefinition.Kind.AMMO).findFirst().orElseThrow();
     menu=new MerchantMenu(81,player.getInventory(),v);player.containerMenu=menu;menu.setSelectionHint(v.getOffers().indexOf(offer));payment=offer.getCostA().copy();menu.getSlot(0).set(payment.copy());
     require(((VillagerMerchantMenuBridge)menu).taczweaponblueprints$validateQuote(player)&&!menu.getSlot(2).getItem().isEmpty(),"Initial funded native quote is usable");

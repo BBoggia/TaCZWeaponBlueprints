@@ -24,9 +24,9 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 
 class BlueprintRecyclerPacketTest {
-    private static final ResourceLocation BLUEPRINT = new ResourceLocation("test:rifle");
+    private static final ResourceLocation BLUEPRINT = ResourceLocation.parse("test:rifle");
     private static final ResourceLocation RESEARCH_NOTE =
-            new ResourceLocation("taczweaponblueprints:research_note");
+            ResourceLocation.parse("taczweaponblueprints:research_note");
 
     @Test
     void purchasedOriginRoundTripsWithoutFoundRecovery() {
@@ -156,7 +156,7 @@ class BlueprintRecyclerPacketTest {
                         true,
                         Optional.of(BlueprintReverseEngineeringService.Status.READY),
                         List.of(new BlueprintRecyclerPreview.IngredientPreview(
-                                List.of(new ResourceLocation("minecraft:iron_ingot")),
+                                List.of(ResourceLocation.parse("minecraft:iron_ingot")),
                                 Optional.empty(),
                                 2,
                                 3)),
@@ -271,7 +271,7 @@ class BlueprintRecyclerPacketTest {
                         1,
                         1,
                         BlueprintRecyclerActionContract.Action.RECYCLE,
-                        new ResourceLocation("test", "x".repeat(252)),
+                        ResourceLocation.fromNamespaceAndPath("test", "x".repeat(252)),
                         1));
 
         assertThrows(IllegalArgumentException.class, () ->

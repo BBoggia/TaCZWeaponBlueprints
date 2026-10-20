@@ -513,14 +513,14 @@ class AutomaticWeaponEvidenceManagerTest {
                 id.toString(),
                 "name." + id.getPath(),
                 "tooltip",
-                new ResourceLocation(id.getNamespace(), "recipe/" + id.getPath()),
+                ResourceLocation.fromNamespaceAndPath(id.getNamespace(), "recipe/" + id.getPath()),
                 null,
                 "pistol",
-                new ResourceLocation(id.getNamespace(), "display/" + id.getPath()),
+                ResourceLocation.fromNamespaceAndPath(id.getNamespace(), "display/" + id.getPath()),
                 BlueprintKind.GUN);
     }
 
     private static ResourceLocation id(String value) {
-        return new ResourceLocation(value);
+        return ResourceLocation.parse(value);
     }
 }

@@ -25,7 +25,7 @@ class ProgressionCriteriaTest {
 
     @Test
     void publicResultsDistinguishMutationFromIdempotentSuccess() {
-        ResourceLocation id = new ResourceLocation("test:trial");
+        ResourceLocation id = ResourceLocation.parse("test:trial");
         ChangeResult applied = new ChangeResult(
                 Status.APPLIED, id, ChangeOperation.GRANT, 1, 0, 1);
         ChangeResult unchanged = new ChangeResult(

@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import net.minecraft.resources.ResourceLocation;
 
 class ResearchTreeFullscreenOverlayStateTest {
-    private static final ResourceLocation NODE = new ResourceLocation("test:node");
+    private static final ResourceLocation NODE = ResourceLocation.parse("test:node");
 
     @Test
     void railRemainsDiscoverableUntilUsedAndNeverCollapsesWhileEngaged() {
@@ -83,7 +83,7 @@ class ResearchTreeFullscreenOverlayStateTest {
         state.retainVisibleNodes(Set.of(NODE));
         assertEquals(NODE, state.pinnedNodeId().orElseThrow());
 
-        state.retainVisibleNodes(Set.of(new ResourceLocation("test:other")));
+        state.retainVisibleNodes(Set.of(ResourceLocation.parse("test:other")));
         assertTrue(state.pinnedNodeId().isEmpty());
         assertThrows(IllegalArgumentException.class, () -> state.pinNode(null));
         assertThrows(IllegalArgumentException.class, () -> state.retainVisibleNodes(null));

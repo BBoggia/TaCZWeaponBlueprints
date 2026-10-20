@@ -49,7 +49,7 @@ class ResearchTreeCameraStoreTest {
                 new ResearchTreeCameraStore.Key(
                         ResearchTreeScreenLayout.ViewMode.FULLSCREEN,
                         ResearchTreePresentationContract.BrowseView.ALL_WEAPONS,
-                        Optional.of(new ResourceLocation("test:first"))));
+                        Optional.of(ResourceLocation.parse("test:first"))));
         assertThrows(IllegalArgumentException.class, () ->
                 new ResearchTreeCameraStore.Key(
                         ResearchTreeScreenLayout.ViewMode.FULLSCREEN,
@@ -116,6 +116,6 @@ class ResearchTreeCameraStoreTest {
                 view,
                 groupId == null
                         ? Optional.empty()
-                        : Optional.of(new ResourceLocation(groupId)));
+                        : Optional.of(ResourceLocation.parse(groupId)));
     }
 }

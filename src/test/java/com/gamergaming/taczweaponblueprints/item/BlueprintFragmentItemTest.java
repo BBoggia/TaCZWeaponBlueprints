@@ -35,14 +35,14 @@ class BlueprintFragmentItemTest {
         ItemStack first = new ItemStack(Items.PAPER);
         ItemStack same = new ItemStack(Items.PAPER);
         ItemStack different = new ItemStack(Items.PAPER);
-        first.setTag(firstTag);
-        same.setTag(sameTag);
-        different.setTag(differentTag);
+        first.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(firstTag));
+        same.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(sameTag));
+        different.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(differentTag));
 
         assertEquals(FIRST, BlueprintFragmentItem.getTarget(firstTag).orElseThrow());
         assertEquals(1, firstTag.size());
-        assertTrue(ItemStack.isSameItemSameTags(first, same));
-        assertFalse(ItemStack.isSameItemSameTags(first, different));
+        assertTrue(ItemStack.isSameItemSameComponents(first, same));
+        assertFalse(ItemStack.isSameItemSameComponents(first, different));
     }
 
     @Test
@@ -74,13 +74,13 @@ class BlueprintFragmentItemTest {
     @Test
     void copiedStacksRetainExactTargetIdentity() {
         ItemStack original = new ItemStack(Items.PAPER);
-        original.setTag(BlueprintFragmentItem.createTargetTag(FIRST));
+        original.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(BlueprintFragmentItem.createTargetTag(FIRST)));
         original.setCount(32);
         ItemStack copy = original.copy();
 
         assertEquals(32, copy.getCount());
-        assertEquals(FIRST, BlueprintFragmentItem.getTarget(copy.getTag()).orElseThrow());
-        assertTrue(ItemStack.isSameItemSameTags(original, copy));
+        assertEquals(FIRST, BlueprintFragmentItem.getTarget(copy.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag()).orElseThrow());
+        assertTrue(ItemStack.isSameItemSameComponents(original, copy));
     }
 
     private static ResourceLocation id(String value) {

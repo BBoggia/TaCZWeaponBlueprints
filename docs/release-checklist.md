@@ -1,6 +1,13 @@
 # Release checklist
 
-Use this checklist for every public build. Release commands require JDK 17.
+For the NeoForge 1.21.1 branch, use JDK 21 and the
+[packaged runtime matrix](neoforge-development.md#packaged-runtime-matrix),
+then run `verifyPublicationReadiness` after finalizing the release version
+and copy. NeoForge metadata is `META-INF/neoforge.mods.toml`, and its build
+output is under `build/neoforge/`.
+
+The checklist below describes the preserved Forge 1.20.1 release workflow.
+Its release commands require JDK 17.
 The detailed contract checks and manual test coverage are documented in the
 [release validation reference](release-validation.md).
 

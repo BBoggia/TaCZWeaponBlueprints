@@ -1,7 +1,6 @@
 package com.gamergaming.taczweaponblueprints.network;
 
 import java.util.Optional;
-import java.util.function.Supplier;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.client.ResearchBenchScreen;
@@ -11,10 +10,21 @@ import com.gamergaming.taczweaponblueprints.menu.ResearchBenchResearchAction;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 
 /** Correlates a server-authoritative selection or research result with its client request. */
-public final class ResearchBenchActionResultPacket {
+public final class ResearchBenchActionResultPacket implements CustomPacketPayload {
+    public static final Type<ResearchBenchActionResultPacket> TYPE = new Type<>(
+            com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.loc("research_bench_action_result"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, ResearchBenchActionResultPacket> STREAM_CODEC =
+            StreamCodec.ofMember(ResearchBenchActionResultPacket::toBytes, ResearchBenchActionResultPacket::new);
+
+    @Override
+    public Type<ResearchBenchActionResultPacket> type() { return TYPE; }
+
     private final int containerId;
     private final int requestId;
     private final ResearchBenchMenu.ActionResult result;
@@ -49,17 +59,24 @@ public final class ResearchBenchActionResultPacket {
         buffer.writeVarInt(result.code().ordinal());
     }
 
-    public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
-        context.enqueueWork(() -> {
-            Minecraft minecraft = Minecraft.getInstance();
-            if (minecraft.screen instanceof ResearchBenchScreen screen
-                    && minecraft.player != null
-                    && minecraft.player.containerMenu.containerId == containerId) {
-                screen.acceptActionResult(requestId, result);
-            }
-        });
-        context.setPacketHandled(true);
+    public void handle(IPayloadContext context) {
+        new ClientHandler().handle(context);
+    }
+
+    /** Loaded only when this clientbound payload is handled, never during server registration. */
+    @net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)
+    private final class ClientHandler {
+        void handle(IPayloadContext contextSupplier) {
+            IPayloadContext context = contextSupplier;
+            context.enqueueWork(() -> {
+                Minecraft minecraft = Minecraft.getInstance();
+                if (minecraft.screen instanceof ResearchBenchScreen screen
+                        && minecraft.player != null
+                        && minecraft.player.containerMenu.containerId == containerId) {
+                    screen.acceptActionResult(requestId, result);
+                }
+            });
+        }
     }
 
     int containerId() {

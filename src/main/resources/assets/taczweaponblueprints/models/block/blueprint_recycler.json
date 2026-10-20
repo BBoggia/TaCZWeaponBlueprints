@@ -1,11 +1,11 @@
 {
-  "loader": "forge:composite",
+  "loader": "neoforge:composite",
   "textures": {
     "particle": "taczweaponblueprints:block/blueprint_recycler"
   },
   "children": {
     "body": {
-      "loader": "forge:obj",
+      "loader": "neoforge:obj",
       "model": "taczweaponblueprints:models/block/blueprint_recycler.obj",
       "flip_v": true,
       "automatic_culling": false,
@@ -16,7 +16,7 @@
       }
     },
     "glass": {
-      "loader": "forge:obj",
+      "loader": "neoforge:obj",
       "model": "taczweaponblueprints:models/block/blueprint_recycler_glass.obj",
       "flip_v": true,
       "automatic_culling": false,

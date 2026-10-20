@@ -1,30 +1,40 @@
 package com.gamergaming.taczweaponblueprints.client;
 
+import net.neoforged.fml.common.EventBusSubscriber;
+
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.init.ModBlocks;
 import com.gamergaming.taczweaponblueprints.init.ModMenus;
 
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.gui.screens.MenuScreens;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 
-@Mod.EventBusSubscriber(
+@EventBusSubscriber(
         modid = TaCZWeaponBlueprints.MODID,
         value = Dist.CLIENT,
-        bus = Mod.EventBusSubscriber.Bus.MOD)
+        bus = EventBusSubscriber.Bus.MOD)
 public final class ClientModEvents {
     private ClientModEvents() {
     }
 
     @SubscribeEvent
+    public static void registerScreens(net.neoforged.neoforge.client.event.RegisterMenuScreensEvent event) {
+        event.register(ModMenus.RESEARCH_BENCH.get(), ResearchBenchScreen::new);
+        event.register(ModMenus.BLUEPRINT_RECYCLER.get(), BlueprintRecyclerScreen::new);
+    }
+
+    @SubscribeEvent
+    public static void registerItemExtensions(net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent event) {
+        event.registerItem(new com.gamergaming.taczweaponblueprints.client.renderer.item.BlueprintItemClientExtensions(),
+                com.gamergaming.taczweaponblueprints.init.ModItems.BLUEPRINT_ITEM.get());
+    }
+
+    @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
-            MenuScreens.register(ModMenus.RESEARCH_BENCH.get(), ResearchBenchScreen::new);
-            MenuScreens.register(ModMenus.BLUEPRINT_RECYCLER.get(), BlueprintRecyclerScreen::new);
             ItemBlockRenderTypes.setRenderLayer(ModBlocks.RESEARCH_BENCH.get(), RenderType.cutout());
             ItemBlockRenderTypes.setRenderLayer(
                     ModBlocks.ADVANCED_RESEARCH_BENCH.get(), RenderType.cutout());

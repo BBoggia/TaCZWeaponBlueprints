@@ -1,0 +1,34 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IRI",
+    "IGI",
+    "IHI"
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:grindstone"
+    },
+    "H": {
+      "item": "minecraft:hopper"
+    },
+    "I": {
+      "tag": "c:ingots/iron"
+    },
+    "R": {
+      "item": "minecraft:redstone"
+    }
+  },
+  "result": {
+    "id": "taczweaponblueprints:blueprint_recycler"
+  },
+  "show_notification": true,
+  "neoforge:conditions": [
+    {
+      "type": "taczweaponblueprints:station_setup",
+      "analyzer": true,
+      "tier": 1
+    }
+  ]
+}

@@ -201,7 +201,7 @@ class ResearchPointAwardLedgerTest {
     @Test
     void publicValueObjectsRejectInvalidStateAndSnapshotsAreReadOnly() {
         assertThrows(IllegalArgumentException.class,
-                () -> ClaimKey.once(new ResourceLocation("a", "x".repeat(300))));
+                () -> ClaimKey.once(ResourceLocation.fromNamespaceAndPath("a", "x".repeat(300))));
         assertThrows(NullPointerException.class,
                 () -> ClaimKey.targeted(id("test:claim"), null));
         assertThrows(IllegalArgumentException.class, () -> new WindowEntry(-1L, 1));
@@ -224,6 +224,6 @@ class ResearchPointAwardLedgerTest {
     }
 
     private static ResourceLocation id(String value) {
-        return new ResourceLocation(value);
+        return ResourceLocation.parse(value);
     }
 }

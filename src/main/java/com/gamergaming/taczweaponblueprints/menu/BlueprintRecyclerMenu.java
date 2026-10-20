@@ -8,7 +8,7 @@ import java.util.Optional;
 
 import com.gamergaming.taczweaponblueprints.block.BlueprintRecyclerBlock;
 import com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerTier;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import com.gamergaming.taczweaponblueprints.init.ModMenus;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
 import com.gamergaming.taczweaponblueprints.item.BlueprintFragmentItem;
@@ -42,7 +42,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.tags.TagKey;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 /** Server-authoritative two-slot transaction menu for the Blueprint Analyzer. */
 public final class BlueprintRecyclerMenu extends AbstractContainerMenu
@@ -322,7 +322,7 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
         Optional<BlueprintRecyclerActionContract.FragmentResult> fragmentResult = Optional.empty();
         if (action == BlueprintRecyclerActionContract.Action.ARCHIVE_FRAGMENTS && resultCode == BlueprintRecyclerActionContract.ResultCode.SUCCESS) {
             int retained = workstation.getItem(INPUT_SLOT).getCount();
-            var data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElseThrow();
+            var data = ModAttachments.recipeData(player).orElseThrow();
             int saved = fragmentIdentity.flatMap(BlueprintFragmentItem.Identity::analysisClass)
                     .map(reward -> data.getArchivedAnalysisFragments().getOrDefault(expectedInputId.toString(),
                             com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisFragmentCounts.EMPTY).get(reward))
@@ -505,7 +505,7 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
                 var identity = BlueprintFragmentItem.identity(physicalInput).orElseThrow();
                 var reward = identity.analysisClass().orElseThrow();
                 var policy = BlueprintAnalysisFragmentService.policy(player, fragmentTransaction(), analyzerTier().orElseThrow());
-                int total = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve()
+                int total = ModAttachments.recipeData(player)
                         .map(data -> data.getArchivedAnalysisFragments().getOrDefault(identity.target().toString(),
                                 com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisFragmentCounts.EMPTY).total()).orElse(0);
                 var outputReward = policy.learning().learningPermitted()
@@ -610,7 +610,7 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
     private static Optional<ResourceLocation> itemId(ItemStack stack) {
         return stack == null || stack.isEmpty()
                 ? Optional.empty()
-                : Optional.ofNullable(ForgeRegistries.ITEMS.getKey(stack.getItem()));
+                : Optional.ofNullable(BuiltInRegistries.ITEM.getKey(stack.getItem()));
     }
 
     static BlueprintRecyclerPreview.InputKind classifyInput(
@@ -652,7 +652,7 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
             var q = p.quote();
             var reward = q.attempt().filter(a -> a.physicalBlueprintLearningMode().learningPermitted())
                     .map(a -> com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisRewardClass.of(a.outputRecyclable(), a.physicalBlueprintLearningMode()));
-            var counts = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve()
+            var counts = ModAttachments.recipeData(player)
                     .map(data -> data.getArchivedAnalysisFragments().getOrDefault(q.blueprintId().toString(),
                             com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisFragmentCounts.EMPTY))
                     .orElse(com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisFragmentCounts.EMPTY);
@@ -676,11 +676,10 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
             BlueprintResearchIngredient ingredient = reverse.cost().ingredients().get(index);
             List<ResourceLocation> items = ingredient.items();
             if (items.isEmpty() && ingredient.tag().isPresent()) {
-                items = ForgeRegistries.ITEMS.tags()
+                items = BuiltInRegistries.ITEM
                         .getTag(TagKey.create(
-                                Registries.ITEM, ingredient.tag().orElseThrow()))
-                        .stream()
-                        .map(ForgeRegistries.ITEMS::getKey)
+                                Registries.ITEM, ingredient.tag().orElseThrow())).stream().flatMap(net.minecraft.core.HolderSet::stream).map(net.minecraft.core.Holder::value)
+                        .map(BuiltInRegistries.ITEM::getKey)
                         .filter(java.util.Objects::nonNull)
                         .limit(BlueprintResearchIngredient.MAX_ITEMS)
                         .toList();
@@ -698,7 +697,7 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
     }
 
     public com.gamergaming.taczweaponblueprints.progression.currency.PlayerResearchCurrencyContext currencyContext(ServerPlayer player) {
-        var data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElseThrow();
+        var data = ModAttachments.recipeData(player).orElseThrow();
         return new com.gamergaming.taczweaponblueprints.progression.currency.PlayerResearchCurrencyContext(
                 player, data, () -> workstation.getItem(OUTPUT_SLOT), stack -> workstation.setItem(OUTPUT_SLOT, stack.copy()),
                 () -> player.containerMenu == this && isRecyclerMenuValid(player));
@@ -875,7 +874,7 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
                 ? BlueprintRecyclerActionContract.Action.RECYCLE
                 : action;
         ResourceLocation safeInputId = inputId == null
-                ? new ResourceLocation("taczweaponblueprints:invalid_recycler_input")
+                ? ResourceLocation.parse("taczweaponblueprints:invalid_recycler_input")
                 : inputId;
         return new BlueprintRecyclerActionContract.ActionResult(
                 safeAction, Optional.of(safeInputId), code);
@@ -918,8 +917,7 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
             inventory.items.stream().map(ItemStack::copy).forEach(stacks::add);
             Optional<ResourceLocation> fragmentTarget = BlueprintFragmentItem.getTarget(
                     workstation.getItem(INPUT_SLOT));
-            IPlayerRecipeDataSnapshot progression = owner
-                    .getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
+            IPlayerRecipeDataSnapshot progression = ModAttachments.recipeData(owner)
                     .map(data -> new IPlayerRecipeDataSnapshot(
                             data.getResearchPoints(),
                             fragmentTarget.map(id -> data.getArchivedBlueprintFragments()
@@ -936,7 +934,7 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
                     fragmentTarget,
                     progression.archivedFragments(),
                     progression.learned(),
-                    owner.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).map(data -> data.serializeNBT().copy())
+                    ModAttachments.recipeData(owner).map(data -> data.serializeNBT().copy())
                             .orElseGet(net.minecraft.nbt.CompoundTag::new),
                     List.of(com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.progressionSnapshot(),
                             com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.accessSnapshot(),

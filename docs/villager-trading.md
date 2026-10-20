@@ -43,7 +43,7 @@ and [a strict economy](../examples/villager-trading/strict/README.md).
 Both job blocks occupy one block, have four horizontal facing states, and have
 crafting recipes and block drops. Every facing belongs to its profession's POI.
 The POIs are included in `minecraft:acquirable_job_site`. Registration uses
-Forge's normal registry handling; there is no second manual POI state-map update.
+NeoForge's normal registry handling; there is no second manual POI state-map update.
 The vise bench and measuring desk have distinct models and original pixel
 textures. Both professions have distinct outfits and headgear, retaining biome
 hems and boots, exposed faces, and vanilla level badges, including on zombie

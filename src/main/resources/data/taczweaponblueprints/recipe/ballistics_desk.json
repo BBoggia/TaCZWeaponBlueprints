@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "III",
+    "PCP",
+    "P P"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:paper"
+    },
+    "C": {
+      "item": "minecraft:glass_pane"
+    },
+    "P": {
+      "tag": "minecraft:planks"
+    }
+  },
+  "result": {
+    "id": "taczweaponblueprints:ballistics_desk"
+  }
+}

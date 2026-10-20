@@ -60,11 +60,10 @@ public final class VillagerMerchantSession {
         for (int i = 0; valid && i < quotes.size(); i++) valid = quotes.get(i).current(offers.get(i));
         valid &= before==com.gamergaming.taczweaponblueprints.villager.stock.StockCatalog.current();
         if(valid && player instanceof ServerPlayer serverPlayer && lastStatusPublication!=before){
-            var status=VillagerTradeStatus.capture(offers);lastStatusPublication=before;
+            var status=VillagerTradeStatus.capture(offers,player.registryAccess());lastStatusPublication=before;
             if(!status.equals(lastStatus)){
                 lastStatus=status;
-                com.gamergaming.taczweaponblueprints.network.NetworkHandler.INSTANCE.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(()->serverPlayer),
-                        new com.gamergaming.taczweaponblueprints.network.SyncVillagerTradeStatusPacket(menu.containerId,session,++statusRevision,status));
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(serverPlayer, new com.gamergaming.taczweaponblueprints.network.SyncVillagerTradeStatusPacket(menu.containerId,session,++statusRevision,status));
             }
         }
         if (!valid && player instanceof ServerPlayer serverPlayer && player.containerMenu == menu) {

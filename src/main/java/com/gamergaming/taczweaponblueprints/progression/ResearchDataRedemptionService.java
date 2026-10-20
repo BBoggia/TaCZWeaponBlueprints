@@ -9,7 +9,7 @@ import java.util.Set;
 
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.resource.award.ResearchPointAwardContext;
@@ -24,7 +24,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 /**
  * Explicit, server-authoritative conversion of configured inventory items into
@@ -85,7 +85,7 @@ public final class ResearchDataRedemptionService {
         if (input != null && !input.isEmpty() && !ResearchDataAnalysisService.legacyAllowed(input))
             return new Evaluation(ModConfigs.BLUEPRINT.dataSettings().behavior() == com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPolicy.Behavior.DISABLED ? Status.DATA_DISABLED : Status.STATION_REQUIRED, itemId(input), Math.min(64, input.getCount()), 0,
                     player == null ? 0 : ResearchCurrencyPayments.balance(ModConfigs.BLUEPRINT.currencyPolicy(), player.getInventory().items,
-                            player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElse(null)), ModConfigs.BLUEPRINT.currencyPolicy().pointCap());
+                            ModAttachments.recipeData(player).orElse(null)), ModConfigs.BLUEPRINT.currencyPolicy().pointCap());
         Optional<ResourceLocation> inputId = itemId(input);
         int inputCount = input == null ? 0 : input.getCount();
         ServerState state = serverState(player);
@@ -258,7 +258,7 @@ public final class ResearchDataRedemptionService {
 
     private static int activeBalance(ServerPlayer player) {
         return player == null ? 0 : ResearchCurrencyPayments.balance(ModConfigs.BLUEPRINT.currencyPolicy(), player.getInventory().items,
-                player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElse(null));
+                ModAttachments.recipeData(player).orElse(null));
     }
 
     private static int activeBalance(ServerPlayer player, IPlayerRecipeData data, ResearchPointAwardConfigSnapshot config) {
@@ -431,8 +431,7 @@ public final class ResearchDataRedemptionService {
         if (player == null || !player.isAlive()) {
             return null;
         }
-        IPlayerRecipeData data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
-                .resolve().orElse(null);
+        IPlayerRecipeData data = ModAttachments.recipeData(player).orElse(null);
         ResearchPointAwardConfigSnapshot config = ModConfigs.BLUEPRINT.awardSnapshot();
         return data == null || config == null ? null : new ServerState(data, config);
     }
@@ -444,7 +443,7 @@ public final class ResearchDataRedemptionService {
     private static Optional<ResourceLocation> itemId(ItemStack stack) {
         return stack == null || stack.isEmpty()
                 ? Optional.empty()
-                : Optional.ofNullable(ForgeRegistries.ITEMS.getKey(stack.getItem()));
+                : Optional.ofNullable(BuiltInRegistries.ITEM.getKey(stack.getItem()));
     }
 
     private static void publishSuccess(ServerPlayer player, Result result, ResearchCurrencyPolicy currency) {
@@ -501,7 +500,7 @@ public final class ResearchDataRedemptionService {
 
         @Override
         public ResourceLocation itemId() {
-            return ForgeRegistries.ITEMS.getKey(stack().getItem());
+            return BuiltInRegistries.ITEM.getKey(stack().getItem());
         }
 
         @Override
@@ -532,7 +531,7 @@ public final class ResearchDataRedemptionService {
 
         @Override
         public ResourceLocation itemId() {
-            return ForgeRegistries.ITEMS.getKey(stack.getItem());
+            return BuiltInRegistries.ITEM.getKey(stack.getItem());
         }
 
         @Override

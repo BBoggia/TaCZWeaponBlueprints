@@ -14,8 +14,8 @@ import com.gamergaming.taczweaponblueprints.menu.ResearchSelectionPreview;
 import net.minecraft.resources.ResourceLocation;
 
 class ResearchTreeContextCardPolicyTest {
-    private static final ResourceLocation NODE = new ResourceLocation("test:node");
-    private static final ResourceLocation OTHER = new ResourceLocation("test:other");
+    private static final ResourceLocation NODE = ResourceLocation.parse("test:node");
+    private static final ResourceLocation OTHER = ResourceLocation.parse("test:other");
     private static final ResearchSelectionPreview MATCHING = new ResearchSelectionPreview(
             Optional.of(NODE), 4, 8, true, true, true, true, false,
             List.of());

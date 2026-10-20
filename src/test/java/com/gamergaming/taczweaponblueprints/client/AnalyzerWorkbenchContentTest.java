@@ -12,7 +12,7 @@ import com.gamergaming.taczweaponblueprints.resource.research.AnalyzerPolicyQuot
 import net.minecraft.resources.ResourceLocation;
 
 class AnalyzerWorkbenchContentTest {
-    private static final ResourceLocation TARGET = new ResourceLocation("tacz:ak47");
+    private static final ResourceLocation TARGET = ResourceLocation.parse("tacz:ak47");
     private static final Optional<Action> ANALYZE = Optional.of(Action.REVERSE_ENGINEER);
     private static final Optional<Action> RECOVER = Optional.of(Action.RECOVER_POINTS);
 

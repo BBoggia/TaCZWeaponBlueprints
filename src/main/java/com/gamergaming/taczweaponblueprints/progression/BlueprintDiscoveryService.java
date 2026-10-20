@@ -2,7 +2,7 @@ package com.gamergaming.taczweaponblueprints.progression;
 
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
 import com.gamergaming.taczweaponblueprints.item.BlueprintFragmentItem;
@@ -47,8 +47,7 @@ public final class BlueprintDiscoveryService {
         if (!config.blueprintsEnabled() || !config.discoveryTrackingEnabled()) {
             return DiscoveryResult.TRACKING_DISABLED;
         }
-        IPlayerRecipeData data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
-                .resolve()
+        IPlayerRecipeData data = ModAttachments.recipeData(player)
                 .orElse(null);
         DiscoveryResult result = discover(
                 data,

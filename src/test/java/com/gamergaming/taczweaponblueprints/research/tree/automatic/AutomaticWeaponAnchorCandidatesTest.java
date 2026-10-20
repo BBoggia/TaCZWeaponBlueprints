@@ -67,5 +67,5 @@ class AutomaticWeaponAnchorCandidatesTest {
         return result;
     }
     private static ProgressionPosition position(long order) { return new ProgressionPosition(Tier.STARTER, 0, order); }
-    private static ResourceLocation id(String path) { return new ResourceLocation("test:" + path); }
+    private static ResourceLocation id(String path) { return ResourceLocation.parse("test:" + path); }
 }

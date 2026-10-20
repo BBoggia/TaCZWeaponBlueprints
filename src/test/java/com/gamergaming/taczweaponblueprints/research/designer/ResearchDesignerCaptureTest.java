@@ -19,8 +19,9 @@ class ResearchDesignerCaptureTest {
         var f=compileFixture(project,c);
         var config=new BlueprintProgressionConfigSnapshot(true,true,true,JournalVisibility.FULL,true,DuplicateBlueprintPolicy.MANUAL_RECYCLING,false,100,false,f.profile());
         var dependencies=new JsonObject();dependencies.add("mods",new JsonObject());
+        var settings=new JsonObject(); var effective=new JsonObject(); effective.add("progression", DesignerValues.evidence(config)); settings.add("effective", effective);
         var context=DesignerCaptureAssembly.assemble(new DesignerCaptureAssembly.Inputs(f.snapshot(),f.catalog(),f.profile(),Map.of(),Map.of(),Map.of(),Map.of()),
-                config,BlueprintAccessConfigSnapshot.EMPTY,ignored->false,new JsonObject(),new JsonObject(),dependencies,(kind,id)->"fixture");
+                config,BlueprintAccessConfigSnapshot.EMPTY,ignored->false,settings,new JsonObject(),dependencies,(kind,id)->"fixture");
         var revisions=new JsonObject();for(String key:List.of("catalog","research","automatic","config","access","tags"))revisions.addProperty(key,1);
         return ResearchDesignerCapture.create(UUID.randomUUID(),revisions,context);
     }

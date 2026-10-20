@@ -70,7 +70,7 @@ class ResearchBenchCompatibilityBaselineTest {
     @Test
     void onlyTheRootHalfCanProduceBlockLoot() throws IOException {
         var loot = JsonParser.parseString(Files.readString(PROJECT.resolve(
-                "src/main/resources/data/taczweaponblueprints/loot_tables/blocks/"
+                "src/main/resources/data/taczweaponblueprints/loot_table/blocks/"
                         + "research_bench.json")))
                 .getAsJsonObject();
         String serialized = loot.toString();
@@ -86,7 +86,7 @@ class ResearchBenchCompatibilityBaselineTest {
 
         assertTrue(source.contains("getWorldBorder().isWithinBounds(extensionPos)"));
         assertTrue(source.contains("getBlockState(extensionPos).canBeReplaced(context)"));
-        assertTrue(source.contains("void playerWillDestroy("));
+        assertTrue(source.contains("BlockState playerWillDestroy("));
         assertTrue(source.contains("void onRemove("));
         assertTrue(source.contains("BlockState updateShape("));
         assertTrue(source.contains("BlockState rotate("));

@@ -46,11 +46,11 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeManager;
-import net.minecraftforge.common.crafting.ConditionalRecipe;
-import net.minecraftforge.common.crafting.CraftingHelper;
-import net.minecraftforge.common.crafting.conditions.FalseCondition;
+import net.neoforged.neoforge.common.conditions.ConditionalOps;
+import net.neoforged.neoforge.common.crafting.CraftingHelper;
+import net.neoforged.neoforge.common.conditions.FalseCondition;
 
-/** Pins the TaCZ 1.1.8 and Forge 47 seams selected for tiered workstations. */
+/** Pins the TaCZ NeoForge 1.1.8-hotfix-r7 and NeoForge 21.1 seams selected for tiered workstations. */
 class TaCZWorkbenchAdapterContractTest {
     private static final String FIXTURE_ROOT = "/fixtures/tiered-workbench/";
 
@@ -58,12 +58,9 @@ class TaCZWorkbenchAdapterContractTest {
     static void bootstrapMinecraftRegistries() {
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
-        try {
-            CraftingHelper.register(FalseCondition.Serializer.INSTANCE);
-        } catch (IllegalStateException duplicateRegistration) {
-            // A fuller Forge test bootstrap may already have installed it.
-            assertTrue(duplicateRegistration.getMessage().contains("Duplicate"));
-        }
+        var conditions = net.neoforged.neoforge.registries.NeoForgeRegistries.CONDITION_SERIALIZERS;
+        var key = ResourceLocation.parse("neoforge:false");
+        if (!conditions.containsKey(key)) net.minecraft.core.Registry.register(conditions, key, FalseCondition.CODEC);
     }
 
     @Test
@@ -184,7 +181,7 @@ class TaCZWorkbenchAdapterContractTest {
                         JsonObject value = tab.getAsJsonObject();
                         assertTrue(configuredTabs.add(value.get("id").getAsString()),
                                 "Workbench tabs must not have duplicate IDs");
-                        assertNotNull(value.getAsJsonObject("icon").get("item"));
+                        assertNotNull(value.getAsJsonObject("icon").get("id"));
                         assertNotNull(value.get("name"));
                     });
             assertTrue(configuredTabs.containsAll(bundledTabs),
@@ -242,24 +239,18 @@ class TaCZWorkbenchAdapterContractTest {
 
     @Test
     void productionSuppressesOnlyTheLegacyTableRecipe() throws IOException {
-        JsonObject override = classpathJson("/data/tacz/recipes/gun_smith_table.json");
-        Recipe<?> parsed = new ConditionalRecipe.Serializer<Recipe<?>>().fromJson(
-                id("tacz:gun_smith_table"),
-                override,
-                net.minecraftforge.common.crafting.conditions.ICondition.IContext.EMPTY);
-        assertNull(parsed);
+        JsonObject override = classpathJson("/data/tacz/recipe/gun_smith_table.json");
+        var parsed = ConditionalOps.createConditionalCodec(Recipe.CODEC).parse(com.mojang.serialization.JsonOps.INSTANCE, override).getOrThrow();
+        assertTrue(parsed.isEmpty());
     }
 
     @Test
     void falseConditionalOverrideSkipsTheLegacyRecipeCleanly() throws IOException {
-        JsonObject override = fixtureJson("data/tacz/recipes/gun_smith_table.json");
+        JsonObject override = fixtureJson("data/tacz/recipe/gun_smith_table.json");
 
-        assertEquals("forge:conditional", override.get("type").getAsString());
-        Recipe<?> parsed = new ConditionalRecipe.Serializer<Recipe<?>>().fromJson(
-                id("tacz:gun_smith_table"),
-                override,
-                net.minecraftforge.common.crafting.conditions.ICondition.IContext.EMPTY);
-        assertNull(parsed, "forge:false must omit the overridden recipe without a placeholder");
+        assertEquals("neoforge:false", override.getAsJsonArray("neoforge:conditions").get(0).getAsJsonObject().get("type").getAsString());
+        var parsed = ConditionalOps.createConditionalCodec(Recipe.CODEC).parse(com.mojang.serialization.JsonOps.INSTANCE, override).getOrThrow();
+        assertTrue(parsed.isEmpty(), "neoforge:false must omit the overridden recipe without a placeholder");
     }
 
     @Test
@@ -268,7 +259,7 @@ class TaCZWorkbenchAdapterContractTest {
         Path dependency = Path.of(GunSmithTableMenu.class.getProtectionDomain()
                 .getCodeSource().getLocation().toURI());
         try (JarFile jar = new JarFile(dependency.toFile())) {
-            var entry = jar.getJarEntry("data/tacz/recipes/gun_smith_table.json");
+            var entry = jar.getJarEntry("data/tacz/recipe/gun_smith_table.json");
             assertNotNull(entry, "TaCZ's bundled Gun Smith Table recipe moved");
             try (InputStream stream = jar.getInputStream(entry)) {
                 original = JsonParser.parseReader(
@@ -279,7 +270,7 @@ class TaCZWorkbenchAdapterContractTest {
         assertEquals("minecraft:crafting_shaped", original.get("type").getAsString());
         assertEquals(
                 "tacz:gun_smith_table",
-                original.getAsJsonObject("result").get("item").getAsString());
+                original.getAsJsonObject("result").get("id").getAsString());
     }
 
     private static JsonObject fixtureJson(String relativePath) throws IOException {
@@ -309,6 +300,6 @@ class TaCZWorkbenchAdapterContractTest {
     }
 
     private static ResourceLocation id(String value) {
-        return new ResourceLocation(value);
+        return ResourceLocation.parse(value);
     }
 }

@@ -10,7 +10,7 @@ import java.util.Set;
 
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import com.gamergaming.taczweaponblueprints.progression.ProgressionIds;
 import com.gamergaming.taczweaponblueprints.progression.gate.ProgressionGateCondition.Advancement;
 import com.gamergaming.taczweaponblueprints.progression.gate.ProgressionGateCondition.Criterion;
@@ -94,8 +94,7 @@ public final class ProgressionGateEvaluator {
         if (authorityFailure != null) {
             return authorityFailure;
         }
-        IPlayerRecipeData playerData = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
-                .resolve().orElse(null);
+        IPlayerRecipeData playerData = ModAttachments.recipeData(player).orElse(null);
         if (playerData == null) {
             return ProgressionGateEvaluation.unavailable(
                     subjectId,
@@ -291,8 +290,8 @@ public final class ProgressionGateEvaluator {
     private static boolean advancementCompleted(
             ServerPlayer player,
             ResourceLocation advancementId) {
-        net.minecraft.advancements.Advancement advancement =
-                player.server.getAdvancements().getAdvancement(advancementId);
+        net.minecraft.advancements.AdvancementHolder advancement =
+                player.server.getAdvancements().get(advancementId);
         return advancement != null
                 && player.getAdvancements().getOrStartProgress(advancement).isDone();
     }

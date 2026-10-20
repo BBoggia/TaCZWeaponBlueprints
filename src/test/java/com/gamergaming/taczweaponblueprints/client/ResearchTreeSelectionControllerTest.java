@@ -24,19 +24,19 @@ class ResearchTreeSelectionControllerTest {
                 .orElseThrow().sendAuthoritativeSelection());
         assertTrue(controller.resolve(
                 graph,
-                new ResourceLocation("phase_zero:preview"))
+                ResourceLocation.parse("phase_zero:preview"))
                 .orElseThrow().sendAuthoritativeSelection());
         assertTrue(controller.resolve(
                 graph,
-                new ResourceLocation("phase_zero:available"))
+                ResourceLocation.parse("phase_zero:available"))
                 .orElseThrow().sendAuthoritativeSelection());
-        assertTrue(controller.resolve(graph, new ResourceLocation("test:missing")).isEmpty());
+        assertTrue(controller.resolve(graph, ResourceLocation.parse("test:missing")).isEmpty());
     }
 
     @Test
     void malformedSelectionStateIsRejected() {
         ResearchTreeSelectionController controller = new ResearchTreeSelectionController();
         assertThrows(IllegalArgumentException.class,
-                () -> controller.resolve(null, new ResourceLocation("test:node")));
+                () -> controller.resolve(null, ResourceLocation.parse("test:node")));
     }
 }

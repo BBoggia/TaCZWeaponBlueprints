@@ -8,12 +8,12 @@ import com.tacz.guns.api.item.IAmmoBox;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 /** Public 0.2.0-Beta API boundary, linked only after checking the installed mod version. */
 final class ReflectiveMagazineSource implements TaCZMagazinesAdapter.Source {
     private static final String ROOT = "com.raiiiden.taczmagazines.";
-    private static final ResourceLocation ITEM_ID = new ResourceLocation(TaCZMagazinesAdapter.MOD_ID, "magazine");
+    private static final ResourceLocation ITEM_ID = ResourceLocation.fromNamespaceAndPath(TaCZMagazinesAdapter.MOD_ID, "magazine");
     private final Class<?> magazine;
     private final Method families, family, capacity, familyCapacity, ammo, guns, extended, extension, override, enabled, familyForGun;
 
@@ -48,7 +48,7 @@ final class ReflectiveMagazineSource implements TaCZMagazinesAdapter.Source {
     public boolean isMagazine(ItemStack stack) {
         return !stack.isEmpty() && magazine.isInstance(stack.getItem())
                 && stack.getItem() instanceof IAmmoBox
-                && ITEM_ID.equals(ForgeRegistries.ITEMS.getKey(stack.getItem()));
+                && ITEM_ID.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()));
     }
 
     @Override public String familyForGun(ResourceLocation gun) { return (String) call(familyForGun, null, gun); }

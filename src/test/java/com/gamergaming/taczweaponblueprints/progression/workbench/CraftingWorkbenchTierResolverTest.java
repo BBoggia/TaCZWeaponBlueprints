@@ -33,7 +33,7 @@ class CraftingWorkbenchTierResolverTest {
 
     @Test
     void exactExternalMappingWinsBeforeFallback() {
-        ResourceLocation workstation = new ResourceLocation("example:assembler");
+        ResourceLocation workstation = ResourceLocation.parse("example:assembler");
         ResearchFeatureConfigSnapshot config = withExternalPolicy(
                 Map.of(workstation, ResearchWorkbenchTier.TIER_2),
                 ResearchWorkbenchTier.TIER_1,
@@ -49,7 +49,7 @@ class CraftingWorkbenchTierResolverTest {
 
     @Test
     void unknownExternalPolicyIsExplicitAndDeterministic() {
-        ResourceLocation workstation = new ResourceLocation("example:unknown");
+        ResourceLocation workstation = ResourceLocation.parse("example:unknown");
         var fallback = CraftingWorkbenchTierResolver.resolve(
                 workstation,
                 withExternalPolicy(Map.of(), ResearchWorkbenchTier.TIER_2, false));

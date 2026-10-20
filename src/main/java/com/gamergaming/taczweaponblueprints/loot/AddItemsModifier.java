@@ -14,6 +14,7 @@ import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintLootDataManager;
 import com.google.common.base.Suppliers;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -21,8 +22,8 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
-import net.minecraftforge.common.loot.IGlobalLootModifier;
-import net.minecraftforge.common.loot.LootModifier;
+import net.neoforged.neoforge.common.loot.IGlobalLootModifier;
+import net.neoforged.neoforge.common.loot.LootModifier;
 
 public class AddItemsModifier extends LootModifier {
     private final List<Pair<ItemStack, Float>> itemsWithWeights;
@@ -45,8 +46,8 @@ public class AddItemsModifier extends LootModifier {
         ).apply(instance, Pair::of)
     );
 
-    public static final Supplier<Codec<AddItemsModifier>> CODEC = Suppliers.memoize(() ->
-       RecordCodecBuilder.create(instance ->
+    public static final Supplier<MapCodec<AddItemsModifier>> CODEC = Suppliers.memoize(() ->
+       RecordCodecBuilder.mapCodec(instance ->
            codecStart(instance)
                 .and(Codec.FLOAT.fieldOf("poolProbability").forGetter(m -> m.poolProbability))
                 .and(RANDOM_ROLL_RANGE_CODEC.fieldOf("rolls").forGetter(m -> m.randomRollRange))
@@ -63,7 +64,7 @@ public class AddItemsModifier extends LootModifier {
     }
 
     @Override
-    public Codec<? extends IGlobalLootModifier> codec() {
+    public MapCodec<? extends IGlobalLootModifier> codec() {
         return CODEC.get();
     }
 

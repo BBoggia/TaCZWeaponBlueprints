@@ -386,7 +386,7 @@ class BlueprintResearchCodecTest {
     }
 
     private static net.minecraft.resources.ResourceLocation id(String value) {
-        return new net.minecraft.resources.ResourceLocation(value);
+        return net.minecraft.resources.ResourceLocation.parse(value);
     }
 
     private static <T> void assertDecodeFails(Codec<T> codec, String json) {

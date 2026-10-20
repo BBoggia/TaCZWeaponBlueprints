@@ -3,10 +3,12 @@ package com.gamergaming.taczweaponblueprints.progression;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchProfile.DomainPolicy;
 
 /** An operator override of a profile's category gate, not of individual research rules. */
-public enum ResearchDomainMode {
+public enum ResearchDomainMode implements me.fzzyhmstrs.fzzy_config.util.EnumTranslatable {
     PROFILE,
     ENABLED,
     DISABLED;
+
+    @Override public String prefix() { return "config.taczweaponblueprints.blueprint.researchDomainMode"; }
 
     public DomainPolicy apply(DomainPolicy profile) {
         return switch (this) {

@@ -23,7 +23,7 @@ class BlueprintKnowledgeFlowPhaseSixTest {
         assertTrue(BlueprintAccessConfigSnapshot.EMPTY.progressionExemptKinds().isEmpty());
         assertTrue(BlueprintAccessConfigSnapshot.EMPTY.progressionExemptItemTypes().isEmpty());
         assertTrue(BlueprintAccessConfigSnapshot.EMPTY.startingBlueprints().isEmpty());
-        assertEquals("70", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("neoforge-1", NetworkHandler.PROTOCOL_VERSION);
     }
 
     @Test
@@ -39,7 +39,8 @@ class BlueprintKnowledgeFlowPhaseSixTest {
         assertTrue(config.contains("StartingBlueprintGrantService.applyConfiguredGrants(onlinePlayer)"));
         assertTrue(config.contains("NetworkHandler.syncPlayerRecipeData(onlinePlayer)"));
 
-        String build = Files.readString(PROJECT.resolve("build.gradle"));
+        String build = Files.readString(PROJECT.resolve("build.gradle"))
+                + Files.readString(PROJECT.resolve("gradle/release.gradle"));
         for (String required : List.of(
                 "progression/BlueprintAccessConfigSnapshot.class",
                 "progression/BlueprintProgressionAccess.class",

@@ -87,8 +87,8 @@ class ResearchTreeOverviewLayoutComposerTest {
             }
         }
         ResearchTreeLayout.EdgeRouteHint route = layout.edgeRouteHint(
-                new ResourceLocation("tacz", "rhino357"),
-                new ResourceLocation("tacz", "taurus500")).orElseThrow();
+                ResourceLocation.fromNamespaceAndPath("tacz", "rhino357"),
+                ResourceLocation.fromNamespaceAndPath("tacz", "taurus500")).orElseThrow();
         assertEquals(3, route.waypoints().get(0).rank());
         assertTrue(layout.nodes().stream()
                 .filter(node -> node.tier() == 3)
@@ -222,7 +222,7 @@ class ResearchTreeOverviewLayoutComposerTest {
 
     @Test
     void includedRedactedIslandPreservesOnlyItsPublishedOpaqueIdentity() {
-        ResourceLocation excludedId = new ResourceLocation("phase_four", "excluded");
+        ResourceLocation excludedId = ResourceLocation.fromNamespaceAndPath("phase_four", "excluded");
         ResourceLocation anonymousId = ResearchTreeGraph.redactedNodeId(1);
         ResearchTreeGraph graph = new ResearchTreeGraph(
                 List.of(
@@ -247,7 +247,7 @@ class ResearchTreeOverviewLayoutComposerTest {
                 graph,
                 new ResearchTreePresentation(List.of(
                         new ResearchTreePresentation.Group(
-                                new ResourceLocation("phase_four", "excluded_group"),
+                                ResourceLocation.fromNamespaceAndPath("phase_four", "excluded_group"),
                                 "Excluded",
                                 Optional.empty(),
                                 Optional.of(excludedId),
@@ -404,8 +404,8 @@ class ResearchTreeOverviewLayoutComposerTest {
                 .map(ResearchTreeLayout.PositionedNode::y)
                 .distinct()
                 .count() > 1);
-        ResourceLocation rhino = new ResourceLocation("tacz", "rhino357");
-        ResourceLocation taurus = new ResourceLocation("tacz", "taurus500");
+        ResourceLocation rhino = ResourceLocation.fromNamespaceAndPath("tacz", "rhino357");
+        ResourceLocation taurus = ResourceLocation.fromNamespaceAndPath("tacz", "taurus500");
         assertTrue(ordinary.edgeRouteHint(rhino, taurus).isPresent());
         assertTrue(wrapped.edgeRouteHint(rhino, taurus).isEmpty(),
                 "wrapped ranks must fall back to obstacle routing instead of stale skeleton geometry");
@@ -475,13 +475,13 @@ class ResearchTreeOverviewLayoutComposerTest {
         List<ResearchTreePresentation.Member> members = new ArrayList<>(
                 ResearchTreeGraph.MAX_NODES);
         for (int ordinal = 0; ordinal < ResearchTreeGraph.MAX_NODES; ordinal++) {
-            ResourceLocation nodeId = new ResourceLocation("phase_four", "maximum/" + ordinal);
+            ResourceLocation nodeId = ResourceLocation.fromNamespaceAndPath("phase_four", "maximum/" + ordinal);
             nodes.add(new ResearchTreeGraph.Node(
                     ordinal,
                     nodeId,
                     "fixture.phase_four.maximum",
                     "rifle",
-                    new ResourceLocation("minecraft", "paper"),
+                    ResourceLocation.fromNamespaceAndPath("minecraft", "paper"),
                     JournalVisibility.FULL,
                     false,
                     false,
@@ -496,7 +496,7 @@ class ResearchTreeOverviewLayoutComposerTest {
         return new ResearchTreePublication(
                 new ResearchTreeGraph(nodes, List.of()),
                 new ResearchTreePresentation(List.of(new ResearchTreePresentation.Group(
-                        new ResourceLocation("phase_four", "maximum"),
+                        ResourceLocation.fromNamespaceAndPath("phase_four", "maximum"),
                         "Maximum",
                         Optional.empty(),
                         Optional.of(nodes.get(0).blueprintId()),
@@ -534,12 +534,12 @@ class ResearchTreeOverviewLayoutComposerTest {
                 rootCount + dependentCount);
         List<ResearchTreeGraph.Edge> edges = new ArrayList<>(ResearchTreeGraph.MAX_EDGES);
         for (int root = 0; root < rootCount; root++) {
-            ResourceLocation nodeId = new ResourceLocation("phase_four", "dense/root_" + root);
+            ResourceLocation nodeId = ResourceLocation.fromNamespaceAndPath("phase_four", "dense/root_" + root);
             nodes.add(denseNode(nodes.size(), nodeId, 0));
             members.add(new ResearchTreePresentation.Member(nodeId, 0, root));
         }
         for (int dependent = 0; dependent < dependentCount; dependent++) {
-            ResourceLocation dependentId = new ResourceLocation(
+            ResourceLocation dependentId = ResourceLocation.fromNamespaceAndPath(
                     "phase_four", "dense/dependent_" + dependent);
             nodes.add(denseNode(
                     nodes.size(),
@@ -556,7 +556,7 @@ class ResearchTreeOverviewLayoutComposerTest {
         return new ResearchTreePublication(
                 graph,
                 new ResearchTreePresentation(List.of(new ResearchTreePresentation.Group(
-                        new ResourceLocation("phase_four", "dense"),
+                        ResourceLocation.fromNamespaceAndPath("phase_four", "dense"),
                         "Dense",
                         Optional.empty(),
                         Optional.of(nodes.get(0).blueprintId()),
@@ -574,7 +574,7 @@ class ResearchTreeOverviewLayoutComposerTest {
                 nodeId,
                 "fixture.phase_four.dense",
                 "rifle",
-                new ResourceLocation("minecraft", "paper"),
+                ResourceLocation.fromNamespaceAndPath("minecraft", "paper"),
                 JournalVisibility.FULL,
                 false,
                 false,
@@ -594,7 +594,7 @@ class ResearchTreeOverviewLayoutComposerTest {
                 nodeId,
                 "fixture.phase_four.disclosed",
                 "rifle",
-                new ResourceLocation("minecraft", "paper"),
+                ResourceLocation.fromNamespaceAndPath("minecraft", "paper"),
                 JournalVisibility.FULL,
                 false,
                 false,
@@ -611,12 +611,12 @@ class ResearchTreeOverviewLayoutComposerTest {
         List<ResearchTreePresentation.Group> groups = new ArrayList<>(
                 ResearchTreePresentation.MAX_GROUPS);
         for (int ordinal = 0; ordinal < ResearchTreeGraph.MAX_NODES; ordinal++) {
-            ResourceLocation nodeId = new ResourceLocation(
+            ResourceLocation nodeId = ResourceLocation.fromNamespaceAndPath(
                     "phase_four", "separated/" + ordinal);
             ResearchTreeGraph.Node node = disclosedNode(ordinal, nodeId);
             nodes.add(node);
             groups.add(new ResearchTreePresentation.Group(
-                    new ResourceLocation("phase_four", "separated_group/" + ordinal),
+                    ResourceLocation.fromNamespaceAndPath("phase_four", "separated_group/" + ordinal),
                     "Separated " + ordinal,
                     Optional.empty(),
                     Optional.of(nodeId),
@@ -630,6 +630,6 @@ class ResearchTreeOverviewLayoutComposerTest {
     }
 
     private static ResourceLocation id(String path) {
-        return new ResourceLocation("phase_zero", path);
+        return ResourceLocation.fromNamespaceAndPath("phase_zero", path);
     }
 }

@@ -11,12 +11,15 @@ import net.minecraft.world.level.block.state.StateDefinition;
 
 /** A single-block job site. Its four facing states all belong to the same POI. */
 public final class VillagerJobSiteBlock extends HorizontalDirectionalBlock {
+    public static final com.mojang.serialization.MapCodec<VillagerJobSiteBlock> CODEC = simpleCodec(VillagerJobSiteBlock::new);
+    @Override public com.mojang.serialization.MapCodec<VillagerJobSiteBlock> codec() { return CODEC; }
+
     public VillagerJobSiteBlock(Properties properties) {
         super(properties);
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
     @Override public void appendHoverText(net.minecraft.world.item.ItemStack stack,
-            net.minecraft.world.level.BlockGetter level, java.util.List<net.minecraft.network.chat.Component> lines,
+            net.minecraft.world.item.Item.TooltipContext level, java.util.List<net.minecraft.network.chat.Component> lines,
             net.minecraft.world.item.TooltipFlag flag) {
         lines.add(net.minecraft.network.chat.Component.translatable(getDescriptionId()+".hint")
                 .withStyle(net.minecraft.ChatFormatting.GRAY));

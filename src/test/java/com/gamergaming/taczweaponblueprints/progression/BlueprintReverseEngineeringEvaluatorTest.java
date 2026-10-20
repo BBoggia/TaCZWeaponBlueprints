@@ -59,7 +59,7 @@ class BlueprintReverseEngineeringEvaluatorTest {
                         ignored -> false,
                         ignored -> false,
                         inspected -> {
-                            inspected.getOrCreateTag().putBoolean("inspection_only", true);
+                            net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, inspected, customTag -> customTag.putBoolean("inspection_only", true));
                             return identity(ammoId, BlueprintKind.AMMO, false, false, false);
                         });
 
@@ -322,9 +322,9 @@ class BlueprintReverseEngineeringEvaluatorTest {
 
     @Test void legacyTradedGunCannotInheritBypassLearningFromUnmarkedWeaponDefaults() {
         var gunId=id("test:traded");var input=new ItemStack(Items.IRON_INGOT);
-        input.getOrCreateTag().put(com.gamergaming.taczweaponblueprints.item.PhysicalWeaponProvenance.TAG_KEY,
+        net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, input, customTag -> customTag.put(com.gamergaming.taczweaponblueprints.item.PhysicalWeaponProvenance.TAG_KEY,
                 new com.gamergaming.taczweaponblueprints.item.PhysicalWeaponProvenance(1,
-                        com.gamergaming.taczweaponblueprints.item.PhysicalWeaponProvenance.Origin.TRADED,id("test:shop")).toTag());
+                        com.gamergaming.taczweaponblueprints.item.PhysicalWeaponProvenance.Origin.TRADED,id("test:shop")).toTag()));
         var eval=BlueprintReverseEngineeringEvaluator.evaluate(input,snapshot(BlueprintReverseEngineeringPolicy.DEFAULT),
                 Map.of(gunId,data(gunId,BlueprintKind.GUN,"pistol",1)),PROFILE,new PlayerRecipeData(),ignored->false,ignored->false,
                 ignored->identity(gunId,BlueprintKind.GUN,false,false,false));
@@ -362,7 +362,7 @@ class BlueprintReverseEngineeringEvaluatorTest {
                 id.toString(),
                 "item." + id.getNamespace() + "." + id.getPath(),
                 "tooltip.test",
-                new ResourceLocation(id.getNamespace(), "recipe/" + id.getPath()),
+                ResourceLocation.fromNamespaceAndPath(id.getNamespace(), "recipe/" + id.getPath()),
                 null,
                 itemType,
                 id("tacz:slot"),
@@ -371,7 +371,7 @@ class BlueprintReverseEngineeringEvaluatorTest {
     }
 
     private static ResourceLocation id(String value) {
-        return new ResourceLocation(value);
+        return ResourceLocation.parse(value);
     }
 
     private static PhysicalItemBlueprintResolver.InspectedIdentity identity(

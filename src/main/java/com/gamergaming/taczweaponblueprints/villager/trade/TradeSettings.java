@@ -39,7 +39,7 @@ public record TradeSettings(boolean gunsmith, boolean researcher, CurrencyMode c
     }
     public ResourceLocation currency(ResearchCurrencyPolicy policy) {
         return currencyMode == CurrencyMode.FIXED_ITEM ? fixedCurrency
-                : policy.item().orElse(new ResourceLocation("minecraft:emerald"));
+                : policy.item().orElse(ResourceLocation.parse("minecraft:emerald"));
     }
     public boolean enabled(TradeDefinition.Profession profession) {
         return profession == TradeDefinition.Profession.GUNSMITH ? gunsmith : researcher;

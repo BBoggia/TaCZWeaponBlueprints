@@ -47,7 +47,7 @@ class ResearchPointAwardCodecTest {
         assertEquals(100, definition.priority());
         assertEquals(2, definition.reward().points());
         assertEquals(ResearchPointAwardRepeat.Type.ONCE_PER_TARGET, definition.repeat().type());
-        assertEquals(new ResourceLocation("example", "pistol_discovery"),
+        assertEquals(ResourceLocation.fromNamespaceAndPath("example", "pistol_discovery"),
                 definition.repeat().claimId().orElseThrow());
         assertEquals("pistol", definition.trigger().target().orElseThrow()
                 .catalogSelector().orElseThrow().category().orElseThrow());
@@ -142,7 +142,7 @@ class ResearchPointAwardCodecTest {
                                         + "\"max_points\": 32, \"window_ticks\": 1200},\n"
                                         + "  \"presentation\": {"));
 
-        assertEquals(new ResourceLocation("test", "combat"),
+        assertEquals(ResourceLocation.fromNamespaceAndPath("test", "combat"),
                 unlimited.budget().orElseThrow().id());
     }
 
@@ -200,15 +200,15 @@ class ResearchPointAwardCodecTest {
                 ResearchPointAwardDefinition.CODEC, integration);
         assertEquals(ResearchPointAwardTrigger.Type.INTEGRATION, decoded.trigger().type());
         ResearchPointAwardSnapshot integrationSnapshot = ResearchPointAwardSnapshot.create(Map.of(
-                new ResourceLocation("test:integration_award"), decoded));
+                ResourceLocation.parse("test:integration_award"), decoded));
         var resolution = ResearchPointAwardResolver.resolve(
                 integrationSnapshot,
                 ResearchPointAwardContext.simple(
                         ResearchPointAwardTrigger.Type.INTEGRATION,
-                        new ResourceLocation("test:profile"),
-                        new ResourceLocation("test:item")));
+                        ResourceLocation.parse("test:profile"),
+                        ResourceLocation.parse("test:item")));
         assertEquals(1, resolution.awards().size());
-        assertEquals(java.util.List.of(new ResourceLocation("test:item")),
+        assertEquals(java.util.List.of(ResourceLocation.parse("test:item")),
                 ResearchPointAwardDiagnostics.integrationSourceIds(integrationSnapshot));
 
         assertDecodeFails(ResearchPointAwardDefinition.CODEC,

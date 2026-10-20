@@ -14,14 +14,15 @@ import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.npc.*;
 import net.minecraft.world.entity.monster.ZombieVillager;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /** Native renderer and MerchantScreen acceptance, only in marked disposable QA clients. */
-@Mod.EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID,value=Dist.CLIENT)
+@EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID,value=Dist.CLIENT)
 public final class VillagerPresentationProbe {
  private static int ticks,step,waitUntil;private static boolean opened,queued,reloaded;private static Villager trader;
  private static Path root(){return VillagerPrototypeStock.root();}
@@ -29,10 +30,10 @@ public final class VillagerPresentationProbe {
  @SubscribeEvent public static void screen(ScreenEvent.Init.Post e){
   if(!enabled()||opened||!(e.getScreen() instanceof TitleScreen))return;opened=true;var mc=Minecraft.getInstance();mc.options.pauseOnLostFocus=false;
   org.lwjgl.glfw.GLFW.glfwSetWindowSize(mc.getWindow().getWindow(),1280,800);mc.options.guiScale().set(2);mc.resizeDisplay();
-  mc.createWorldOpenFlows().loadLevel(e.getScreen(),"lifecycle-integrated");
+  mc.createWorldOpenFlows().openWorld("lifecycle-integrated", () -> mc.setScreen(e.getScreen()));
  }
- @SubscribeEvent public static void tick(TickEvent.ClientTickEvent e){
-  if(!enabled()||e.phase!=TickEvent.Phase.END)return;var mc=Minecraft.getInstance();if(mc.level==null||mc.player==null)return;ticks++;
+ @SubscribeEvent public static void tick(net.neoforged.neoforge.client.event.ClientTickEvent.Post e){
+  if(!enabled())return;var mc=Minecraft.getInstance();if(mc.level==null||mc.player==null)return;ticks++;
   try{
    if(ticks>2200)throw new AssertionError("Presentation timeout step "+step);
    if(ticks<50||ticks<waitUntil)return;
@@ -67,10 +68,10 @@ public final class VillagerPresentationProbe {
  private static void openMerchant(int at){
   var mc=Minecraft.getInstance();var server=mc.getSingleplayerServer();var p=server.getPlayerList().getPlayers().get(0);p.closeContainer();
   if(trader!=null)trader.discard();trader=new Villager(EntityType.VILLAGER,p.serverLevel());trader.setNoAi(true);trader.setNoGravity(true);trader.moveTo(p.getX()+1,p.getY(),p.getZ());trader.setVillagerData(trader.getVillagerData().setProfession(at%2==0?ModVillagers.BALLISTICS_RESEARCHER.get():ModVillagers.GUNSMITH.get()));p.serverLevel().addFreshEntity(trader);
-  trader.getOffers();try{for(int i=1;i<5;i++)net.minecraftforge.fml.util.ObfuscationReflectionHelper.findMethod(Villager.class,"m_35528_").invoke(trader);}catch(Exception ex){throw new RuntimeException(ex);}
+  trader.getOffers();try{for(int i=1;i<5;i++)net.neoforged.fml.util.ObfuscationReflectionHelper.findMethod(Villager.class,"increaseMerchantCareer").invoke(trader);}catch(Exception ex){throw new RuntimeException(ex);}
   if(at==7){trader.getOffers().clear();}
   if(at==8){var o=trader.getOffers().get(0);o.setToOutOfStock();}
-  if(at==6){var o=trader.getOffers().get(0);o.getResult().setHoverName(Component.literal("An unusually long custom-pack weapon and research supply display name for wrapping checks"));}
+  if(at==6){var o=trader.getOffers().get(0);o.getResult().set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, Component.literal("An unusually long custom-pack weapon and research supply display name for wrapping checks"));}
   trader.setTradingPlayer(p);trader.openTradingScreen(p,trader.getDisplayName(),trader.getVillagerData().getLevel());
  }
  @SubscribeEvent public static void render(ScreenEvent.Render.Post e){
@@ -80,7 +81,7 @@ public final class VillagerPresentationProbe {
   int selected=0;
   if(step==9)for(int i=0;i<m.getMenu().getOffers().size();i++)if(com.gamergaming.taczweaponblueprints.client.ClientVillagerTradeStatus.row(m.getMenu(),i).map(r->(r.flags()&4)!=0).orElse(false)){selected=i;break;}
   if(step==10&&!m.getMenu().getOffers().isEmpty()){
-   var item=m.getMenu().getOffers().get(0).getResult().copy();item.setHoverName(Component.literal("An unusually long custom-pack weapon display name with additional descriptive text to check native tooltip wrapping"));e.getGuiGraphics().renderTooltip(mc.font,item,left+220,top+48);
+   var item=m.getMenu().getOffers().get(0).getResult().copy();item.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, Component.literal("An unusually long custom-pack weapon display name with additional descriptive text to check native tooltip wrapping"));e.getGuiGraphics().renderTooltip(mc.font,item,left+220,top+48);
   }else com.gamergaming.taczweaponblueprints.client.ClientVillagerTradeStatus.render(e.getGuiGraphics(),m.getMenu(),mc.font,left,top,0,selected,left+197,top+45);
  }
  private static void capture(String name){var mc=Minecraft.getInstance();Screenshot.grab(root().toFile(),name+".png",mc.getMainRenderTarget(),ignored->{});}
@@ -100,13 +101,13 @@ public final class VillagerPresentationProbe {
      int column=i%3,x=width*(column*2+1)/6,y=i<3?height/2-6:height-16;
      var entity=entities.get(i);float yaw=column==0?180:column==1?240:360;
      entity.yBodyRot=entity.yHeadRot=entity.yHeadRotO=yaw;entity.setYRot(yaw);
-     InventoryScreen.renderEntityInInventory(g,x,y-4,Math.min(150,(height-80)/5),new org.joml.Quaternionf().rotateZ((float)Math.PI),new org.joml.Quaternionf(),entity);
+     InventoryScreen.renderEntityInInventory(g,x,y-4,Math.min(150,(height-80)/5),new org.joml.Vector3f(),new org.joml.Quaternionf().rotateZ((float)Math.PI),new org.joml.Quaternionf(),entity);
      g.drawCenteredString(font,(i<3?"Villager":"Zombie")+" · "+new String[]{"Front","Side","Back"}[column],x,y+3,0xc8d6da);
     }
     return;
    }
    if(page<2){String[] names={"Plains","Desert","Jungle","Savanna","Snow","Swamp","Taiga"};
-    for(int i=0;i<entities.size();i++){int x=(i%7)*width/7+width/14,y=i<7?height/2-12:height-18;g.drawCenteredString(font,names[i%7]+" · "+(i%5+1),x,y+3,0xc8d6da);InventoryScreen.renderEntityInInventoryFollowsMouse(g,x,y-5,Math.min(width/14,(height-80)/5),15,0,entities.get(i));}
+    for(int i=0;i<entities.size();i++){int x=(i%7)*width/7+width/14,y=i<7?height/2-12:height-18;g.drawCenteredString(font,names[i%7]+" · "+(i%5+1),x,y+3,0xc8d6da);InventoryScreen.renderEntityInInventory(g,x,y-5,Math.min(width/14,(height-80)/5),new org.joml.Vector3f(),new org.joml.Quaternionf().rotateZ((float)Math.PI),new org.joml.Quaternionf(),entities.get(i));}
    }else{var items=List.of(ModItems.GUNSMITH_STATION.get(),ModItems.BALLISTICS_DESK.get());for(int i=0;i<2;i++){int x=width/4+i*width/2;g.pose().pushPose();g.pose().translate(x-48,height/2-48,0);g.pose().scale(6,6,6);g.renderItem(new ItemStack(items.get(i)),0,0);g.pose().popPose();g.drawCenteredString(font,items.get(i).getDescription(),x,height/2+64,0xe9dec0);}}
   }
  }

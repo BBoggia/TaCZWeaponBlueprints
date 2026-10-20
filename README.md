@@ -1,5 +1,10 @@
 # [TaCZ] Weapon Research & Blueprints
 
+This branch targets Minecraft 1.21.1 with NeoForge. The current build is a
+NeoForge beta; the released Forge 1.20.1 source is preserved at `v1.3.8`. See
+[NeoForge development](docs/neoforge-development.md) for the port's dependencies,
+setup commands, and current limitations.
+
 [TaCZ] Weapon Research & Blueprints turns the Timeless and Classics Zero (TaCZ) arsenal into a
 persistent progression system built around exploration, blueprints, and
 research.
@@ -79,19 +84,24 @@ stock, research restrictions, and modpack examples.
 
 ## Requirements
 
+These requirements apply to the NeoForge beta. For the separate Forge 1.20.1
+version, see the [Forge release notes](docs/releases/1.3.8.md).
+
 | Component | Version |
 | --- | --- |
-| Minecraft | 1.20.1 |
-| Forge | 47.x; built with 47.3.0 and runtime tested with 47.4.10 |
-| Timeless and Classics Zero | 1.1.8 or newer (`[1.1.8,)`); compiled against 1.1.8-hotfix |
-| Fzzy Config | 0.7.6 for Forge (`[0.7.6,0.8)`) |
-| Kotlin for Forge | Required by Fzzy Config; tested with 4.12.0 |
+| Minecraft | 1.21.1 |
+| NeoForge | 21.1.233 or newer in the 21.1 series (`[21.1.233,21.2)`) |
+| Java | 21 |
+| Timeless and Classics Zero | Unofficial NeoForge port, 1.1.8 or newer (`[1.1.8,)`); compiled against 1.1.8-hotfix-r7 |
+| Fzzy Config | 0.7.7 or later in the 0.7 series for NeoForge (`[0.7.7,0.8)`) |
+| Kotlin for Forge | NeoForge variant; tested with 5.12.0 |
 
-JEI 15.x and EMI 1.1.x are optional client-side integrations.
+JEI 19.x and EMI 1.1.x for Minecraft 1.21.1 NeoForge are optional client-side integrations.
 
-TaCZ 1.1.8-hotfix and 1.1.8-hotfix2 have passed runtime checks. Newer versions
-are accepted by the dependency requirement; API changes can still require a
-compatibility update.
+Use the unofficial NeoForge TaCZ port; the Forge TaCZ JAR is incompatible with
+this loader. Newer versions are accepted by the dependency requirement; API
+changes can still require a compatibility update. Start this beta in a new
+world; migration of Forge 1.20.1 worlds and player progress is not supported.
 
 Install matching [TaCZ] Weapon Research & Blueprints versions on both the client and server.
 TaCZ content packs can be added or removed independently; the available
@@ -135,10 +145,11 @@ Save the settings to refresh connected players; no extra datapack or reload is
 needed. The default **Use Profile** choice follows the active datapack's category
 rules. These settings preserve costs, prerequisites, and learned blueprints.
 
-Optional [TaCZ Magazines support](docs/tacz-magazines-integration.md) adds empty
+On the Forge 1.20.1 version, optional [TaCZ Magazines support](docs/tacz-magazines-integration.md) adds empty
 magazine crafting at all three Workbench tiers and TaCZ's ammo Workbench.
 Servers can keep material-only access or link magazines to learned compatible
-weapons, with separate minimum tiers for basic and extended magazines.
+weapons, with separate minimum tiers for basic and extended magazines. This
+integration is not supported in the NeoForge beta.
 
 Each player also has Personal Settings for research confirmation, currency
 notifications, reduced motion, the optional background grid, and Compact,
@@ -227,7 +238,7 @@ last working data active.
 - [Research economy supply and balance](docs/research-economy-balance.md)
 - [Research currency integration API](docs/research-currency-integrations.md)
 - [Economy release handoff and playtest checklist](docs/research-economy-release-handoff.md)
-- [Current release notes](docs/releases/1.3.8.md)
+- [Current release notes](docs/releases/1.3.8-neoforge-beta.1.md)
 - [CurseForge description](docs/curseforge-description.md)
 - [Operations and migration](docs/operations-and-migration.md)
 - [Research Designer workspace](docs/research-designer-workspace.md)
@@ -248,34 +259,22 @@ last working data active.
 
 ## Building
 
-Use JDK 17 from the repository root:
+Use JDK 21 on this branch. Compile the addon and its isolated
+dependency probe from the repository root:
 
 ```text
-./gradlew cleanTest build
-./gradlew certifyReleaseCandidate
+./gradlew verifyPortDependencies compileJava processResources portBootstrapClasses portVerificationClasses
 ```
 
-The release artifact is written to
-`build/libs/taczweaponblueprints-<version>.jar`.
+Port output goes into `build/neoforge/`; the saved Forge artifacts remain in
+`build/releases/1.3.8/` when present locally. Normal `build`, `runClient`, and
+`runServer` compile the full addon. The dependency probe only checks startup;
+the packaged runtime fixtures exercise addon gameplay. See
+[NeoForge development](docs/neoforge-development.md).
 
-Optional structure-aware data generation must be requested explicitly:
-
-```text
-./gradlew runData -PincludeStructureDataMods=true
-```
-
-Run data generation in a clean or isolated working tree and review generated
-resource changes before accepting them.
-
-Captured client or server startup logs can be checked with:
-
-```text
-./gradlew verifyRuntimeSmokeLog -PsmokeKind=client -PsmokeLog=run/logs/client.log.gz
-./gradlew verifyRuntimeSmokeLog -PsmokeKind=server -PsmokeLog=run/logs/server.log
-```
-
-The complete validation and publishing procedure is in the
-[release checklist](docs/release-checklist.md).
+The [release checklist](docs/release-checklist.md) links the NeoForge validation
+commands and retains the separate Forge workflow. NeoForge candidates require
+the full regression suite, packaged runtime matrix, and publication checks.
 
 ## License
 

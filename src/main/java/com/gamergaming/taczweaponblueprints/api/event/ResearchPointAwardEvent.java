@@ -5,8 +5,8 @@ import com.gamergaming.taczweaponblueprints.resource.award.ResearchPointAwardCon
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.eventbus.api.Cancelable;
-import net.minecraftforge.eventbus.api.Event;
+import net.neoforged.bus.api.ICancellableEvent;
+import net.neoforged.bus.api.Event;
 
 /** Server-only observation boundary around one already-resolved RP award. */
 public abstract class ResearchPointAwardEvent extends Event {
@@ -47,8 +47,7 @@ public abstract class ResearchPointAwardEvent extends Event {
     }
 
     /** Fired after eligibility but before any balance or ledger mutation. */
-    @Cancelable
-    public static final class Pre extends ResearchPointAwardEvent {
+    public static final class Pre extends ResearchPointAwardEvent implements ICancellableEvent {
         public Pre(
                 ServerPlayer player,
                 ResourceLocation definitionId,

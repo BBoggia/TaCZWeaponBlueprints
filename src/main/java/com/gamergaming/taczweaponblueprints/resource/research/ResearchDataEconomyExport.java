@@ -23,7 +23,7 @@ public final class ResearchDataEconomyExport {
                         new ResearchDataPoolResolver.PlayerView(endgame?known:Set.of(),endgame?all:Set.of(),Map.of()),id->!lowerOnly||source.progression().policy(profile,id).map(p->p.researchWorkbenchTier().level()==1).orElse(false));
                 var row=new JsonObject();row.addProperty("definition",definition.getKey().toString());row.addProperty("station",station.level());
                 row.addProperty("scenario",endgame?"known_90_percent":lowerOnly?"tier_1_only_catalog":"fresh");row.addProperty("status",pool.status().name());
-                row.add("policy",ResearchDataPolicy.CODEC.encodeStart(JsonOps.INSTANCE,definition.getValue()).getOrThrow(false,m->{}));
+                row.add("policy",ResearchDataPolicy.CODEC.encodeStart(JsonOps.INSTANCE,definition.getValue()).getOrThrow(IllegalArgumentException::new));
                 var targets=new JsonArray();double duplicate=0;
                 long total=pool.tiers().stream().mapToLong(ResearchDataPoolResolver.TierPool::weight).sum();
                 for(var tier:pool.tiers())for(var candidate:tier.candidates()) {
@@ -32,7 +32,7 @@ public final class ResearchDataEconomyExport {
                     var target=new JsonObject();target.addProperty("target",candidate.target().toString());target.addProperty("tier",candidate.tier().level());
                     target.addProperty("probability",probability);target.addProperty("learned",endgame&&known.contains(candidate.target()));
                     target.addProperty("threshold",candidate.reconstruction().map(p->p.threshold()).orElse(0));
-                    target.add("outcomes",com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable.CODEC.encodeStart(JsonOps.INSTANCE,candidate.outcomes()).getOrThrow(false,m->{}));
+                    target.add("outcomes",com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable.CODEC.encodeStart(JsonOps.INSTANCE,candidate.outcomes()).getOrThrow(IllegalArgumentException::new));
                     targets.add(target);if(endgame&&known.contains(candidate.target()))duplicate+=probability;
                 }
                 row.addProperty("duplicate_probability",duplicate);row.add("targets",targets);rows.add(row);

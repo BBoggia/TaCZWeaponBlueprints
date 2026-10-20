@@ -59,7 +59,7 @@ public abstract class VillagerMerchantMenuMixin extends AbstractContainerMenu im
         // offer. Require room for the whole owned output before it moves any items.
         for (int i = 3; i < 39 && remaining > 0; i++) {
             var target = slots.get(i); var existing = target.getItem();
-            if (!target.mayPlace(output) || (!existing.isEmpty() && !ItemStack.isSameItemSameTags(existing, output))) continue;
+            if (!target.mayPlace(output) || (!existing.isEmpty() && !ItemStack.isSameItemSameComponents(existing, output))) continue;
             int limit = Math.min(target.getMaxStackSize(output), output.getMaxStackSize());
             remaining -= Math.max(0, limit - existing.getCount());
         }

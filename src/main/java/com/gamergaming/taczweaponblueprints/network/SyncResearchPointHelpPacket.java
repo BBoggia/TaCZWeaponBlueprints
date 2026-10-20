@@ -2,7 +2,6 @@ package com.gamergaming.taczweaponblueprints.network;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.client.ClientResearchPointPresentationState;
@@ -11,10 +10,21 @@ import com.gamergaming.taczweaponblueprints.progression.ResearchPointPresentatio
 import com.gamergaming.taczweaponblueprints.resource.award.ResearchPointAwardTrigger;
 
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 
 /** Complete bounded disclosure-filtered RP earning-help publication. */
-public final class SyncResearchPointHelpPacket {
+public final class SyncResearchPointHelpPacket implements CustomPacketPayload {
+    public static final Type<SyncResearchPointHelpPacket> TYPE = new Type<>(
+            com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.loc("sync_research_point_help"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, SyncResearchPointHelpPacket> STREAM_CODEC =
+            StreamCodec.ofMember(SyncResearchPointHelpPacket::toBytes, SyncResearchPointHelpPacket::new);
+
+    @Override
+    public Type<SyncResearchPointHelpPacket> type() { return TYPE; }
+
     private final HelpSnapshot snapshot;
 
     public SyncResearchPointHelpPacket(HelpSnapshot snapshot) {
@@ -53,10 +63,17 @@ public final class SyncResearchPointHelpPacket {
         }
     }
 
-    public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
-        context.enqueueWork(() -> ClientResearchPointPresentationState.acceptHelp(snapshot));
-        context.setPacketHandled(true);
+    public void handle(IPayloadContext context) {
+        new ClientHandler().handle(context);
+    }
+
+    /** Loaded only when this clientbound payload is handled, never during server registration. */
+    @net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)
+    private final class ClientHandler {
+        void handle(IPayloadContext contextSupplier) {
+            IPayloadContext context = contextSupplier;
+            context.enqueueWork(() -> ClientResearchPointPresentationState.acceptHelp(snapshot));
+        }
     }
 
     HelpSnapshot snapshot() {

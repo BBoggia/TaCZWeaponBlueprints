@@ -42,7 +42,7 @@ class ResearchPointPresentationServiceTest {
     void capClaimsRemainPresentWithoutPretendingPointsWereAdded() {
         ResolvedAward award = resolved(ResearchPointAwardPresentation.Visibility.HIDDEN);
         var result = new ResearchPointAwardService.AwardResult(
-                new ResourceLocation("test:award"),
+                ResourceLocation.parse("test:award"),
                 ResearchPointAwardService.Status.LEDGER_RECORDED_AT_CAP,
                 4,
                 0);
@@ -76,11 +76,11 @@ class ResearchPointPresentationServiceTest {
         ResourceLocation definitionId = award.binding().definitionId();
         var definition = award.binding().definition();
         var data = new com.gamergaming.taczweaponblueprints.capabilities.PlayerRecipeData();
-        ResourceLocation profile = new ResourceLocation("test:profile");
+        ResourceLocation profile = ResourceLocation.parse("test:profile");
         ResearchPointAwardContext context = ResearchPointAwardContext.simple(
                 ResearchPointAwardTrigger.Type.ADVANCEMENT_COMPLETED,
                 profile,
-                new ResourceLocation("minecraft:story/mine_iron"));
+                ResourceLocation.parse("minecraft:story/mine_iron"));
 
         assertFalse(ResearchPointPresentationService.finiteAwardExhausted(
                 data, definitionId, definition));
@@ -101,7 +101,7 @@ class ResearchPointPresentationServiceTest {
             boolean conditionalVisible) {
         ResolvedAward award = resolved(visibility);
         var result = new ResearchPointAwardService.AwardResult(
-                new ResourceLocation("test:award"),
+                ResourceLocation.parse("test:award"),
                 ResearchPointAwardService.Status.AWARDED,
                 4,
                 4);
@@ -113,7 +113,7 @@ class ResearchPointPresentationServiceTest {
                 1,
                 true,
                 List.of(),
-                new ResourceLocation("test:group"),
+                ResourceLocation.parse("test:group"),
                 0,
                 new ResearchPointAwardTrigger(
                         ResearchPointAwardTrigger.Type.ADVANCEMENT_COMPLETED,
@@ -134,7 +134,7 @@ class ResearchPointPresentationServiceTest {
                                 ? Optional.empty()
                                 : Optional.of("award.test.name")));
         return new ResolvedAward(
-                new Binding(new ResourceLocation("test:award"), definition),
+                new Binding(ResourceLocation.parse("test:award"), definition),
                 Specificity.GENERIC);
     }
 
@@ -143,7 +143,7 @@ class ResearchPointPresentationServiceTest {
                 1,
                 true,
                 List.of(),
-                new ResourceLocation("test:finite_group"),
+                ResourceLocation.parse("test:finite_group"),
                 0,
                 new ResearchPointAwardTrigger(
                         ResearchPointAwardTrigger.Type.ADVANCEMENT_COMPLETED,
@@ -154,7 +154,7 @@ class ResearchPointPresentationServiceTest {
                 new ResearchPointAwardReward(4, ResearchPointAwardReward.Overflow.CLAMP),
                 new ResearchPointAwardRepeat(
                         ResearchPointAwardRepeat.Type.ONCE,
-                        Optional.of(new ResourceLocation("test:finite_claim")),
+                        Optional.of(ResourceLocation.parse("test:finite_claim")),
                         ResearchPointAwardRepeat.Scope.DEFINITION,
                         Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty()),
                 Optional.empty(),
@@ -162,7 +162,7 @@ class ResearchPointPresentationServiceTest {
                         ResearchPointAwardPresentation.Visibility.PUBLIC,
                         Optional.of("award.test.finite")));
         return new ResolvedAward(
-                new Binding(new ResourceLocation("test:finite_award"), definition),
+                new Binding(ResourceLocation.parse("test:finite_award"), definition),
                 Specificity.GENERIC);
     }
 }

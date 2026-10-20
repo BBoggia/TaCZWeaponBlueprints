@@ -7,15 +7,13 @@ import java.util.Arrays;
 
 import org.junit.jupiter.api.Test;
 
-import net.minecraftforge.eventbus.api.Cancelable;
+import net.neoforged.bus.api.ICancellableEvent;
 
 class ProgressionCriterionChangeEventContractTest {
     @Test
     void onlyThePreCommitEventIsCancellable() {
-        assertTrue(ProgressionCriterionChangeEvent.Pre.class
-                .isAnnotationPresent(Cancelable.class));
-        assertFalse(ProgressionCriterionChangeEvent.Post.class
-                .isAnnotationPresent(Cancelable.class));
+        assertTrue(ICancellableEvent.class.isAssignableFrom(ProgressionCriterionChangeEvent.Pre.class));
+        assertFalse(ICancellableEvent.class.isAssignableFrom(ProgressionCriterionChangeEvent.Post.class));
     }
 
     @Test

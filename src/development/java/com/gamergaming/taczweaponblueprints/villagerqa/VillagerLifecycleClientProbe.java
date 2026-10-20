@@ -11,14 +11,15 @@ import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraft.network.protocol.game.ServerboundSelectTradePacket;
 import net.minecraft.world.inventory.*;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /** Real Minecraft client sends native selection/click/close packets; no server shortcut. */
-@Mod.EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID,value=Dist.CLIENT)
+@EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID,value=Dist.CLIENT)
 public final class VillagerLifecycleClientProbe {
     private static boolean opened;
     private static int ticks,lastAction=-1,selectTick;
@@ -28,11 +29,11 @@ public final class VillagerLifecycleClientProbe {
     @SubscribeEvent public static void screen(ScreenEvent.Init.Post event){
         if(name().isEmpty()||opened||!(event.getScreen() instanceof TitleScreen)||VillagerPrototypeStock.root()==null)return;
         opened=true;var mc=Minecraft.getInstance();mc.options.pauseOnLostFocus=false;
-        if(name().equals("client-integrated"))mc.createWorldOpenFlows().loadLevel(event.getScreen(),"lifecycle-integrated");
-        else ConnectScreen.startConnecting(event.getScreen(),mc,ServerAddress.parseString("127.0.0.1:25610"),new ServerData("Villager lifecycle QA","127.0.0.1:25610",false),false);
+        if(name().equals("client-integrated"))mc.createWorldOpenFlows().openWorld("lifecycle-integrated", () -> mc.setScreen(event.getScreen()));
+        else ConnectScreen.startConnecting(event.getScreen(),mc,ServerAddress.parseString("127.0.0.1:25610"),new ServerData("Villager lifecycle QA","127.0.0.1:25610",ServerData.Type.OTHER),false,null);
     }
-    @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event){
-        if(name().isEmpty()||event.phase!=TickEvent.Phase.END||VillagerPrototypeStock.root()==null)return;
+    @SubscribeEvent public static void tick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event){
+        if(name().isEmpty()||VillagerPrototypeStock.root()==null)return;
         ticks++;if(ticks%5!=0)return;var mc=Minecraft.getInstance();
         try{
             var state=new JsonObject();state.addProperty("ticks",ticks);state.addProperty("screen",mc.screen==null?"none":mc.screen.getClass().getSimpleName());state.addProperty("connected",mc.player!=null);state.addProperty("last_action",lastAction);

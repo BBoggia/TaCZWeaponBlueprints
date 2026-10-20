@@ -19,7 +19,7 @@ import com.gamergaming.taczweaponblueprints.item.BlueprintKind;
 import com.gamergaming.taczweaponblueprints.compat.magazines.MagazineCraftingAccess;
 import com.gamergaming.taczweaponblueprints.compat.magazines.TaCZMagazinesAdapter;
 import com.gamergaming.taczweaponblueprints.compat.tacz.TaCZWorkbenchMenuBridge;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
 import com.gamergaming.taczweaponblueprints.progression.gate.ProgressionGateEvaluation;
@@ -76,7 +76,7 @@ public final class CraftingEligibilityService {
         if (magazineRecipe) {
             var magazine = MagazineCraftingAccess.validatedRecipe(MagazineCatalog.INSTANCE.publication().catalog(),
                     menu.getBlockId(), requestedRecipeId,
-                    id -> player.server.getRecipeManager().byKey(id).orElse(null),
+                    id -> player.server.getRecipeManager().byKey(id).map(net.minecraft.world.item.crafting.RecipeHolder::value).orElse(null),
                     BlueprintDataManager.SERVER.catalogPublication().blueprints().size()).orElse(null);
             if (magazine == null) return Evaluation.blocked(Status.UNKNOWN_RECIPE);
             var context = preparePolicyContext(player, workbench);
@@ -93,8 +93,7 @@ public final class CraftingEligibilityService {
             return Evaluation.blocked(recipeIdentity);
         }
         boolean exempt = BlueprintProgressionAccess.isProgressionExempt(blueprintId);
-        IPlayerRecipeData playerData = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
-                .resolve().orElse(null);
+        IPlayerRecipeData playerData = ModAttachments.recipeData(player).orElse(null);
         if (!exempt && !learned(playerData, blueprintId, requestedRecipeId)) {
             return Evaluation.blocked(Status.RECIPE_NOT_LEARNED);
         }
@@ -177,8 +176,7 @@ public final class CraftingEligibilityService {
         catalog = policyContext.catalog();
         TreeSet<ResourceLocation> candidates = new TreeSet<>(
                 java.util.Comparator.comparing(ResourceLocation::toString));
-        IPlayerRecipeData playerData = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
-                .resolve().orElse(null);
+        IPlayerRecipeData playerData = ModAttachments.recipeData(player).orElse(null);
         KnowledgeCollection knowledge = collectKnownRecipes(candidates, playerData, catalog);
         int knownCandidates = candidates.size();
         TreeSet<ResourceLocation> exemptCandidates = new TreeSet<>(
@@ -192,7 +190,7 @@ public final class CraftingEligibilityService {
         candidates.addAll(exemptCandidates);
         Set<ResourceLocation> magazineRecipes = MagazineCraftingAccess.allowedRecipes(
                 MagazineCatalog.INSTANCE.publication().catalog(), menu.getBlockId(),
-                id -> player.server.getRecipeManager().byKey(id).orElse(null), catalog.size(),
+                id -> player.server.getRecipeManager().byKey(id).map(net.minecraft.world.item.crafting.RecipeHolder::value).orElse(null), catalog.size(),
                 magazine -> magazineEvaluation(player, magazine, policyContext).status() == Status.ALLOWED);
         candidates.addAll(magazineRecipes);
         if (candidates.isEmpty()) {
@@ -283,7 +281,7 @@ public final class CraftingEligibilityService {
     }
 
     private static Evaluation magazineEvaluation(ServerPlayer player, MagazineDescriptor magazine, PolicyContext context) {
-        var playerData = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElse(null);
+        var playerData = ModAttachments.recipeData(player).orElse(null);
         var settings = ModConfigs.BLUEPRINT.magazineSettings();
         Status result = settings.evaluate(magazine,
                 MagazineProgressionSettings.workstationTier(context.workbench().workstationId(), context.config()),

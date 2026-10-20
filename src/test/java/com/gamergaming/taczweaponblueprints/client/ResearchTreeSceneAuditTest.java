@@ -184,7 +184,7 @@ class ResearchTreeSceneAuditTest {
 
     private static ResearchTechTreeProjectionCatalog catalog(ResearchTechTreeProjection projection) {
         var presentation = new com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreePresentation(
-                java.util.Optional.of(new net.minecraft.resources.ResourceLocation("baseline", "audit")), "Audit",
+                java.util.Optional.of(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("baseline", "audit")), "Audit",
                 java.util.Optional.empty(), java.util.Optional.empty(), List.of(), List.of(), List.of(projection.presentation()));
         return new ResearchTechTreeProjectionCatalog(presentation, List.of(projection));
     }

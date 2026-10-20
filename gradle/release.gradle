@@ -1,0 +1,245 @@
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+import java.security.MessageDigest
+import java.util.jar.JarFile
+
+// NeoForge uses Mojang names in production. There is no Forge SRG reobfuscation/refmap gate.
+def digest = { File file -> MessageDigest.getInstance('SHA-256').digest(file.bytes).encodeHex().toString() }
+def reportDirectory = layout.buildDirectory.dir('reports/release')
+def writeReport = { String name, Map value ->
+    def destination = new File(reportDirectory.get().asFile, name)
+    destination.parentFile.mkdirs()
+    destination.text = JsonOutput.prettyPrint(JsonOutput.toJson(value)) + '\n'
+}
+def requiredClasses = [
+    'block/BlueprintRecyclerBlock.class',
+    'capabilities/BlueprintLearningMutation.class',
+    'client/BlueprintOnboardingPlan.class',
+    'client/BlueprintRecyclerScreen.class',
+    'client/BlueprintRecyclerScreenModel.class',
+    'client/ClientModEvents.class',
+    'command/sub/BlueprintSetupCommand.class',
+    'compat/emi/TaCZWeaponBlueprintsEmiPlugin.class',
+    'compat/jei/TaCZWeaponBlueprintsJeiPlugin.class',
+    'compat/recipeviewer/BlueprintRecipeViewerInfo.class',
+    'init/ModAttachments.class',
+    'init/ModBlocks.class',
+    'init/ModItems.class',
+    'init/ModMenus.class',
+    'item/BlueprintProvenance.class',
+    'menu/BlueprintRecyclerActionContract.class',
+    'menu/BlueprintRecyclerMenu.class',
+    'menu/BlueprintRecyclerPreview.class',
+    'network/BlueprintRecyclerActionPacket.class',
+    'network/BlueprintRecyclerActionResultPacket.class',
+    'network/SyncBalancePresetPacket.class',
+    'network/SyncBlueprintRecyclerPreviewPacket.class',
+    'progression/BlueprintAccessConfigSnapshot.class',
+    'progression/BlueprintBalancePreset.class',
+    'progression/BlueprintBalanceSettings.class',
+    'progression/BlueprintLearningService.class',
+    'progression/BlueprintProgressionAccess.class',
+    'progression/BlueprintReverseEngineeringEvaluator.class',
+    'progression/BlueprintReverseEngineeringService.class',
+    'progression/BlueprintSetupAssistant.class',
+    'progression/PhysicalItemBlueprintResolver.class',
+    'progression/StartingBlueprintGrantService.class',
+    'resource/research/BlueprintReverseEngineeringPolicy.class',
+    'research/designer/ResearchDesignerCompiler.class',
+    'villager/OwnedOfferSerialization.class'
+]
+def behaviorContracts = [
+    researchWorkstations: [
+        research: [presentation: 'permanent_fullscreen_research_tree'],
+        analyzer: [presentation: 'two_slot_contextual_analyzer', localOutputs: 1, actions: ['reverse_engineer', 'recycle', 'analyze_data']]
+    ],
+    guidance: [onboarding: 'journal_getting_started', viewerContent: 'generic_information_only',
+        recipeTransfer: 'none', hiddenCatalogEnumeration: 'none'],
+    access: [exemptionPersistence: 'live_policy_only', awardPolicy: 'starting_grants_do_not_award'],
+    assistant: [scope               : 'discovery_pacing_only',
+        presets             : ['custom', 'accessible', 'balanced', 'scarce'],
+        application         : 'preview_then_explicit_confirm',
+        customValues        : 'preserved',
+        playerProgression   : 'unchanged',
+        exportFormat        : 1],
+    manualQa       : 'docs/research-tree-manual-qa.md'
+]
+
+tasks.register('verifyReleaseArtifact') {
+    group = 'verification'
+    description = 'Checks the assembled NeoForge JAR, its production classes/resources, and loader metadata.'
+    dependsOn tasks.named('jar')
+    doLast {
+        def artifact = tasks.named('jar', Jar).get().archiveFile.get().asFile
+        new JarFile(artifact).withCloseable { jar ->
+            def entries = jar.entries().toList().findAll { !it.directory }.collect { it.name }
+            def requireEntry = { String path ->
+                def entry = jar.getJarEntry(path)
+                if (entry == null) throw new GradleException("Missing production JAR entry: ${path}")
+                jar.getInputStream(entry).withCloseable { it.readAllBytes() }
+            }
+            requiredClasses.each { requireEntry("com/gamergaming/taczweaponblueprints/${it}") }
+            // Cover every compiled production class, not only the named contract anchors.
+            def expected = [:]
+            sourceSets.main.output.classesDirs.files.each { root ->
+                fileTree(root).matching { include '**/*.class' }.each { f ->
+                    expected[root.toPath().relativize(f.toPath()).toString().replace('\\', '/')] = f.bytes
+                }
+            }
+            expected.each { name, bytes ->
+                if (!Arrays.equals(bytes, requireEntry(name))) throw new GradleException("JAR class differs from compiled source: ${name}")
+                if ((((bytes[6] & 255) << 8) | (bytes[7] & 255)) != 65) throw new GradleException("Non-Java-21 class: ${name}")
+                if (new String(bytes, java.nio.charset.StandardCharsets.ISO_8859_1).contains('net/minecraftforge/'))
+                    throw new GradleException("Legacy Forge linkage in ${name}")
+            }
+            def extraClasses = entries.findAll { it.endsWith('.class') && !expected.containsKey(it) }
+            if (!extraClasses.empty) throw new GradleException("Non-production classes packaged: ${extraClasses.take(10)}")
+            fileTree(sourceSets.main.output.resourcesDir).each { f ->
+                def relative = sourceSets.main.output.resourcesDir.toPath().relativize(f.toPath()).toString().replace('\\', '/')
+                if (!Arrays.equals(f.bytes, requireEntry(relative))) throw new GradleException("Packaged resource differs: ${relative}")
+            }
+            if (entries.any { it == 'META-INF/mods.toml' || it.endsWith('.jar') || it.contains('.DS_Store')
+                    || it ==~ /data\/[^\/]+\/(recipes|loot_tables|advancements)\/.*/ })
+                throw new GradleException('JAR includes a legacy resource directory, Forge metadata, or bundled dependency.')
+            def metadata = new String(requireEntry('META-INF/neoforge.mods.toml'), 'UTF-8')
+            ['modLoader="javafml"', "modId=\"${mod_id}\"", "version=\"${project.version}\"", 'javaVersion="[21,)"',
+                "versionRange=\"${minecraft_version_range}\"", "versionRange=\"${neo_version_range}\"",
+                "versionRange=\"${tacz_version_range}\"", "versionRange=\"${fzzy_config_version_range}\""].each {
+                if (!metadata.contains(it)) throw new GradleException("Metadata is missing ${it}")
+            }
+            if (metadata.contains('${')) throw new GradleException('Unexpanded metadata property')
+            if (jar.manifest.mainAttributes.getValue('Implementation-Version') != project.version.toString())
+                throw new GradleException('Manifest version does not match gradle.properties')
+            def json = new JsonSlurper()
+            def mixins = json.parse(requireEntry('taczweaponblueprints.mixins.json'))
+            if (!mixins.required || mixins.compatibilityLevel != 'JAVA_21' || mixins.injectors.defaultRequire != 1)
+                throw new GradleException('Mandatory mixin contract changed')
+            (mixins.mixins + mixins.client).each { requireEntry(mixins.package.replace('.', '/') + '/' + it + '.class') }
+            entries.findAll { it.endsWith('.json') || it.endsWith('.mcmeta') }.each { json.parse(requireEntry(it)) }
+            for (station in ['research_bench', 'advanced_research_bench', 'experimental_research_bench', 'blueprint_recycler', 'advanced_blueprint_analyzer', 'experimental_blueprint_analyzer']) {
+                def states = json.parse(requireEntry("assets/${mod_id}/blockstates/${station}.json"))
+                if (!states.variants || states.variants.size() != 8) throw new GradleException("${station} requires two-part blockstates")
+                requireEntry("data/${mod_id}/recipe/${station}.json")
+            }
+            def atlas = javax.imageio.ImageIO.read(new ByteArrayInputStream(requireEntry("assets/${mod_id}/textures/block/blueprint_recycler.png")))
+            if (atlas == null || atlas.width != 512 || atlas.height != 256) throw new GradleException('Blueprint Analyzer requires its 512x256 pixel atlas')
+            writeReport('artifact.json', [passed: true, artifact: artifact.name, sha256: digest(artifact),
+                version: project.version.toString(), minecraft: minecraft_version, neoforge: neo_version,
+                classes: expected.size(), resources: entries.size() - expected.size(), contracts: behaviorContracts])
+        }
+    }
+}
+
+apply from: 'gradle/release-evidence.gradle'
+
+tasks.named('check') {
+    dependsOn tasks.named('verifyReleaseArtifact'), tasks.named('verifyRegressionEvidence'), tasks.named('testReleaseGates')
+}
+
+tasks.register('verifyPackagedRuntimeEvidence') {
+    group = 'verification'
+    description = 'Rejects incomplete or stale installed-game evidence for the current artifact and verification fixture.'
+    dependsOn tasks.named('jar'), 'portVerificationJar'
+    doLast {
+        def artifact = tasks.named('jar', Jar).get().archiveFile.get().asFile
+        def evidenceFile = file(providers.gradleProperty('runtimeEvidence').orElse('build/neoforge/reports/runtime/matrix.json').get())
+        if (!evidenceFile.isFile()) throw new GradleException('Missing packaged runtime matrix; run scripts/verify-neoforge-runtime.py first.')
+        def evidence = new JsonSlurper().parse(evidenceFile)
+        if (evidence.passed != true || evidence.sha256 != digest(artifact)
+                || evidence.minecraft != minecraft_version || evidence.neoforge != neo_version)
+            throw new GradleException('Runtime evidence does not certify the current artifact and pinned loader.')
+        def fixtureHash = digest(tasks.named('portVerificationJar', Jar).get().archiveFile.get().asFile)
+        if (evidence.fixtureSha256 != fixtureHash || evidence.runnerSha256 != digest(file('scripts/verify-neoforge-runtime.py')))
+            throw new GradleException('Runtime evidence used a different verification fixture or launcher.')
+        def dependencies = configurations.runtimeClasspath.resolvedConfiguration.resolvedArtifacts.findAll {
+            it.moduleVersion.id.group in ['maven.modrinth', 'thedarkcolour']
+        }.collectEntries { [(it.file.name): digest(it.file)] }
+        def viewers = configurations.verificationViewers.resolvedConfiguration.resolvedArtifacts.findAll {
+            it.moduleVersion.id.group in ['dev.emi', 'mezz.jei']
+        }.collectEntries { [(it.file.name): digest(it.file)] }
+        if (evidence.dependencies != dependencies) throw new GradleException('Runtime dependencies differ from the current pinned artifacts.')
+        def required = ['core', 'features', 'review-regressions', 'lifecycle', 'restart', 'integrated', 'emi', 'jei']
+        if (!required.every { key -> evidence.suites[key]?.passed == true }) throw new GradleException('Packaged runtime matrix is incomplete.')
+        required.each { key ->
+            def suite = evidence.suites[key]
+            def expectedSuite = key in ['emi', 'jei'] ? 'features' : key
+            def sides = key in ['lifecycle', 'restart'] ? ['server', 'client', 'peer'] : ['server', 'client']
+            if (suite.fixtureSha256 != fixtureHash || suite.dependencies != dependencies)
+                throw new GradleException("Mismatched suite environment: ${key}")
+            sides.each { side ->
+                def result = suite[side]
+                if (result?.passed != true || result.artifactSha256 != digest(artifact)
+                        || result.suite != expectedSuite || !(result.checks instanceof List) || result.checks.empty)
+                    throw new GradleException("Missing or mismatched runtime result: ${key}/${side}")
+            }
+            def expectedViewer = key in ['emi', 'jei'] ? viewers.findAll { name, hash -> name.startsWith(key + '-') } : [:]
+            if (suite.viewer != expectedViewer || (key in ['emi', 'jei'] && expectedViewer.size() != 1))
+                throw new GradleException("Recipe-viewer evidence differs from the requested environment: ${key}")
+        }
+        writeReport('runtime.json', evidence)
+    }
+}
+
+tasks.register('certifyReleaseCandidate') {
+    group = 'verification'
+    description = 'Checks full regression results and packaged client/server evidence for this exact artifact.'
+    dependsOn tasks.named('verifyReleaseArtifact'), tasks.named('verifyRegressionEvidence'), tasks.named('verifyPackagedRuntimeEvidence'), tasks.named('testReleaseGates')
+    doLast {
+        def artifact = tasks.named('jar', Jar).get().archiveFile.get().asFile
+        writeReport('candidate.json', [passed: true, sha256: digest(artifact), version: project.version.toString(),
+            runtimeEvidence: new JsonSlurper().parse(new File(reportDirectory.get().asFile, 'runtime.json')),
+            regression: new JsonSlurper().parse(new File(reportDirectory.get().asFile, 'regression.json'))])
+    }
+}
+
+tasks.register('verifyPublicationReadiness') {
+    group = 'verification'
+    description = 'Requires a certified artifact and finalized release-specific public copy.'
+    dependsOn tasks.named('certifyReleaseCandidate'), tasks.named('verifyVersionState')
+    doLast {
+        if (project.version.toString().endsWith('-dev')) throw new GradleException('Choose a release version and finalize its notes before publication.')
+        def notes = file("docs/releases/${project.version}.md")
+        def releaseHeading = "## ${project.version}"
+        def releaseRecorded = file('CHANGELOG.md').readLines('UTF-8').any { it == releaseHeading || it.startsWith(releaseHeading + ' - ') }
+        if (!notes.isFile() || notes.text.trim().empty || !releaseRecorded)
+            throw new GradleException('Missing release notes or matching changelog entry.')
+        def description = file('docs/curseforge-description.md').text
+        if (!description.contains('1.21.1') || !description.contains('NeoForge'))
+            throw new GradleException('CurseForge description must state the NeoForge 1.21.1 requirements before this port is published.')
+        writeReport('publication.json', [passed: true, version: project.version.toString(), releaseNotes: notes.name])
+    }
+}
+
+tasks.register('portVerificationJar', Jar) {
+    archiveBaseName = 'wrb-port-verification'
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+    from sourceSets.portVerification.output
+}
+
+tasks.register('preparePackagedVerification') {
+    group = 'verification'
+    dependsOn tasks.named('verifyReleaseArtifact'), tasks.named('portVerificationJar')
+    doLast {
+        def dependencies = configurations.runtimeClasspath.resolvedConfiguration.resolvedArtifacts.findAll {
+            it.moduleVersion.id.group in ['maven.modrinth', 'thedarkcolour']
+        }.collect { it.file }
+        def viewers = configurations.verificationViewers.resolvedConfiguration.resolvedArtifacts.findAll {
+            it.moduleVersion.id.group in ['dev.emi', 'mezz.jei']
+        }.collect { it.file }
+        copy { from viewers; into file('run/neoforge/verification-viewers') }
+        for (side in ['server', 'client']) {
+            def destination = file("run/neoforge/production-${side}/mods")
+            destination.mkdirs()
+            // Only these explicitly disposable installations are managed by the fixture.
+            delete fileTree(destination).matching { include '*.jar' }
+            copy { from dependencies; from tasks.named('jar', Jar).get().archiveFile; from tasks.named('portVerificationJar', Jar).get().archiveFile; into destination }
+        }
+        writeReport('runtime-inputs.json', [artifact: tasks.named('jar', Jar).get().archiveFile.get().asFile.absolutePath,
+            sha256: digest(tasks.named('jar', Jar).get().archiveFile.get().asFile),
+            dependencies: dependencies.collectEntries { [(it.name): digest(it)] },
+            viewers: viewers.collectEntries { [(it.name): digest(it)] },
+            fixture: tasks.named('portVerificationJar', Jar).get().archiveFile.get().asFile.name,
+            fixtureSha256: digest(tasks.named('portVerificationJar', Jar).get().archiveFile.get().asFile)])
+    }
+}

@@ -16,8 +16,8 @@ import com.gamergaming.taczweaponblueprints.progression.ResearchRouteFingerprint
 import net.minecraft.resources.ResourceLocation;
 
 class ResearchSelectionPreviewTest {
-    private static final ResourceLocation BLUEPRINT = new ResourceLocation("test:rifle");
-    private static final ResourceLocation PAPER = new ResourceLocation("minecraft:paper");
+    private static final ResourceLocation BLUEPRINT = ResourceLocation.parse("test:rifle");
+    private static final ResourceLocation PAPER = ResourceLocation.parse("minecraft:paper");
 
     @Test
     void researchStateIsRepresentedWithoutWorkstationTurnInFields() {

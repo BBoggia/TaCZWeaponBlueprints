@@ -12,13 +12,13 @@ import com.gamergaming.taczweaponblueprints.progression.ResearchCostMode;
 import com.gamergaming.taczweaponblueprints.progression.eligibility.ResearchAccessSummary;
 
 class ResearchMaterialPagePacketTest {
-    private static final ResourceLocation TARGET = new ResourceLocation("test:target");
+    private static final ResourceLocation TARGET = ResourceLocation.parse("test:target");
     @Test void requestAndPartialFinalPageRoundTripWithoutRelaxingMaterialBounds() {
         var request = new ResearchMaterialPageRequestPacket(2, 19, TARGET, 0, 6);
         var b = new FriendlyByteBuf(Unpooled.buffer());
         try {
             request.toBytes(b); assertEquals(request, new ResearchMaterialPageRequestPacket(b));
-            var row = new ResearchSelectionPreview.IngredientPreview(List.of(new ResourceLocation("minecraft:paper")), Optional.empty(), 3, 1);
+            var row = new ResearchSelectionPreview.IngredientPreview(List.of(ResourceLocation.parse("minecraft:paper")), Optional.empty(), 3, 1);
             var preview = new ResearchSelectionPreview(Optional.of(TARGET), 2, 0, true, false, true, false, false,
                     List.of(row), 2, 7, ResearchSelectionPreview.PathPlanningState.NONE, ResearchCostMode.POINTS_AND_ITEMS,
                     Optional.empty(), ResearchAccessSummary.NONE, ResearchSelectionProgressionPreview.EMPTY, 6);
@@ -38,7 +38,7 @@ class ResearchMaterialPagePacketTest {
         } finally { b.release(); }
     }
     @Test void malformedPreviewOffsetCannotExposeAnOutOfRangePage() {
-        var row = new ResearchSelectionPreview.IngredientPreview(List.of(new ResourceLocation("minecraft:paper")), Optional.empty(), 3, 1);
+        var row = new ResearchSelectionPreview.IngredientPreview(List.of(ResourceLocation.parse("minecraft:paper")), Optional.empty(), 3, 1);
         var preview = new ResearchSelectionPreview(Optional.of(TARGET), 2, 0, true, false, true, false, false,
                 List.of(row), 2, 7, ResearchSelectionPreview.PathPlanningState.NONE, ResearchCostMode.POINTS_AND_ITEMS,
                 Optional.empty(), ResearchAccessSummary.NONE, ResearchSelectionProgressionPreview.EMPTY, 6);

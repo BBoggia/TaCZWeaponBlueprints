@@ -24,7 +24,7 @@ class DesignerExportTest {
     @Test void exportedBytesPreserveRuntimeGraphAndFundedResearchRoute()throws Exception{
         var f=fixtures.fixture("inclusive_or");var resources=ResearchDesignerExport.resources(DesignerArchive.read(prepare(f).datapack()));
         var after=new ResearchDesignerCompiler.Candidate(f.project().digest(),f.candidate().profile(),ResearchDesignerCompiler.decodeResources(resources),new DesignerJson.ObjectValue(resources));
-        var state=fixtures.funded(f,TreeResearchResultMode.DIRECT_LEARN,Set.of());var selected=Optional.of(new ResourceLocation("designer_fixture:end"));
+        var state=fixtures.funded(f,TreeResearchResultMode.DIRECT_LEARN,Set.of());var selected=Optional.of(ResourceLocation.parse("designer_fixture:end"));
         var before=DesignerSimulation.evaluate(f.candidate(),f.context(),state,selected);var result=DesignerSimulation.evaluate(after,f.context(),state,selected);
         assertEquals(before.evaluation().tree(),result.evaluation().tree());assertEquals(before.quote(),result.quote());assertEquals(before.unlocks(),result.unlocks());assertEquals(before.ready(),result.ready());assertEquals(14,result.quote().orElseThrow().pointCost());
     }

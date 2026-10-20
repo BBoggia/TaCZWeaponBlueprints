@@ -16,14 +16,15 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.*;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /** Runs after the marked currency world's transaction assertions, never on an ordinary world. */
-@Mod.EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID,value=Dist.CLIENT)
+@EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID,value=Dist.CLIENT)
 public final class ResearchDataScreenProbe {
     private static boolean active,dispatch,done,clicked,captured;
     private static int step,ticks,total,oldScale,oldWidth,oldHeight,checks;
@@ -42,8 +43,8 @@ public final class ResearchDataScreenProbe {
     private static boolean analysis(){return (step/2)%2==0;}
     private static boolean physical(){return step>=4;}
     private static String name(){return (physical()?"scrap":"banked")+"-"+(analysis()?"analysis":"legacy")+(step%2==1?"-narrow":"-normal");}
-    @SubscribeEvent public static void tick(TickEvent.ClientTickEvent e) {
-        if(!active||done||e.phase!=TickEvent.Phase.END)return;
+    @SubscribeEvent public static void tick(net.neoforged.neoforge.client.event.ClientTickEvent.Post e) {
+        if(!active||done)return;
         var mc=Minecraft.getInstance();
         try {
             if(++total>1800)throw new IllegalStateException("Data screen QA timed out");
@@ -101,17 +102,17 @@ public final class ResearchDataScreenProbe {
         ModConfigs.BLUEPRINT.researchDataBehavior=new ValidatedEnum<>(analysis()?ResearchDataPolicy.Behavior.ANALYSIS:ResearchDataPolicy.Behavior.LEGACY_CURRENCY);
         ResearchDataTransactionProbe.publishConfig();
         if(analysis()){
-            ResearchDataTransactionProbe.install(original,new net.minecraft.resources.ResourceLocation("tacz:ak47"),true);
+            ResearchDataTransactionProbe.install(original,net.minecraft.resources.ResourceLocation.parse("tacz:ak47"),true);
             var snapshot=BlueprintResearchDataManager.INSTANCE.snapshot();var old=snapshot.researchData().policies().values().iterator().next();
             var rows=new EnumMap<AnalyzerTier,ResearchDataPolicy.StationRow>(AnalyzerTier.class);
             for(var tier:AnalyzerTier.values()) rows.put(tier,new ResearchDataPolicy.StationRow(new AnalyzerOutcomeTable(tier.level()*2,100-tier.level()*2,0,tier.level(),tier.level()+2),Map.of()));
             var policy=new ResearchDataPolicy(old.format(),old.enabled(),old.priority(),old.input(),old.profile(),old.behavior(),old.minimumAnalyzerTier(),
                     new BlueprintResearchCost(3,List.of()),old.pool(),old.allowLearned(),old.allowUndiscovered(),old.progressBonus(),old.rewardClass(),old.reconstruction(),rows);
-            ResearchDataTransactionProbe.apply(snapshot.withResearchData(new ResearchDataSnapshot(Map.of(new net.minecraft.resources.ResourceLocation("qa:data"),policy),snapshot.researchData().reconstruction())));
+            ResearchDataTransactionProbe.apply(snapshot.withResearchData(new ResearchDataSnapshot(Map.of(net.minecraft.resources.ResourceLocation.parse("qa:data"),policy),snapshot.researchData().reconstruction())));
         }else ResearchDataTransactionProbe.apply(original);
         var menu=ResearchCurrencyProbe.open(player,player.blockPosition().offset(3,0,0));
         player.getInventory().clearContent();player.getInventory().setItem(0,new ItemStack(ModItems.SCRAP.get(),16));
-        var data=player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElseThrow();data.replaceProgression(Set.of(),Set.of("tacz:ak47"),137);data.addBlueprint("tacz:ak47");data.clearArchivedAnalysisFragments();data.getResearchPointAwardLedger().clear();
+        var data=com.gamergaming.taczweaponblueprints.init.ModAttachments.recipeData(player).orElseThrow();data.replaceProgression(Set.of(),Set.of("tacz:ak47"),137);data.addBlueprint("tacz:ak47");data.clearArchivedAnalysisFragments();data.getResearchPointAwardLedger().clear();
         menu.getSlot(0).set(new ItemStack(ModItems.RESEARCH_REPORT.get(),3));menu.refreshAuthoritativePreview(player);menu.broadcastChanges();
         if(physical()&&analysis()) {
             player.getInventory().setItem(0,new ItemStack(ModItems.SCRAP.get(),1));menu.broadcastChanges();

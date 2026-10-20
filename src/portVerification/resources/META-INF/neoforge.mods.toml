@@ -1,0 +1,14 @@
+modLoader="javafml"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
+[[mods]]
+modId="wrb_core_verification"
+version="${mod_version}"
+displayName="Weapon Research core verification"
+description="Development-only integration checks. Never included in release jars."
+[[dependencies.wrb_core_verification]]
+modId="taczweaponblueprints"
+type="required"
+versionRange="[1,)"
+ordering="AFTER"
+side="BOTH"

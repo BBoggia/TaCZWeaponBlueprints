@@ -42,7 +42,7 @@ public final class DesignerCapturedSettings {
             return null;
         }
         if (cls == String.class) return value.getAsString();
-        if (cls == ResourceLocation.class) return new ResourceLocation(value.getAsString());
+        if (cls == ResourceLocation.class) return ResourceLocation.parse(value.getAsString());
         if (cls == boolean.class || cls == Boolean.class) { if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isBoolean()) throw new IllegalArgumentException("Expected boolean setting"); return value.getAsBoolean(); }
         if (cls == int.class || cls == Integer.class) return value.getAsBigDecimal().intValueExact();
         if (cls == long.class || cls == Long.class) return value.getAsBigDecimal().longValueExact();

@@ -98,7 +98,7 @@ public final class AnalyzerAmmoRecovery {
     static void insert(List<ItemStack> slots, ItemStack remaining, int slotLimit) {
         for (int pass=0;pass<2&&!remaining.isEmpty();pass++) for (int i=0;i<slots.size()&&!remaining.isEmpty();i++) {
             var current=slots.get(i);
-            if (pass==0 ? current.isEmpty() || !ItemStack.isSameItemSameTags(current,remaining) : !current.isEmpty()) continue;
+            if (pass==0 ? current.isEmpty() || !ItemStack.isSameItemSameComponents(current,remaining) : !current.isEmpty()) continue;
             int moved=Math.min(remaining.getCount(), Math.max(0,Math.min(slotLimit,remaining.getMaxStackSize())-current.getCount()));
             if (moved==0) continue;
             if (current.isEmpty()) { var stack=remaining.copy();stack.setCount(moved);slots.set(i,stack); }

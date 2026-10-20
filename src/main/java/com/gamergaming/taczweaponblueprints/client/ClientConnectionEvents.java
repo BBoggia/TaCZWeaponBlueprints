@@ -1,5 +1,7 @@
 package com.gamergaming.taczweaponblueprints.client;
 
+import net.neoforged.fml.common.EventBusSubscriber;
+
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.network.SyncResearchTreePacket;
 import com.gamergaming.taczweaponblueprints.network.SyncBlueprintDataPacket;
@@ -10,17 +12,16 @@ import com.gamergaming.taczweaponblueprints.network.SyncPlayerRecipeDataPacket;
 import com.gamergaming.taczweaponblueprints.network.SyncPlayerSupplementalProgressionPacket;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 
 /** Prevents one server's disclosure-filtered Journal from surviving logout. */
-@Mod.EventBusSubscriber(
+@EventBusSubscriber(
         modid = TaCZWeaponBlueprints.MODID,
         value = Dist.CLIENT,
-        bus = Mod.EventBusSubscriber.Bus.FORGE)
+        bus = EventBusSubscriber.Bus.GAME)
 public final class ClientConnectionEvents {
     private static final ResearchTreeGuidancePreference ONBOARDING_PREFERENCE =
             ResearchTreeGuidancePreference.client();
@@ -28,13 +29,13 @@ public final class ClientConnectionEvents {
     private ClientConnectionEvents() {
     }
 
-    @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.LOWEST)
-    public static void onRecipesUpdated(net.minecraftforge.client.event.RecipesUpdatedEvent event) {
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
+    public static void onRecipesUpdated(net.neoforged.neoforge.client.event.RecipesUpdatedEvent event) {
         ClientBlueprintCatalog.refreshOpenGunSmithScreen();
     }
 
     @SubscribeEvent
-    public static void onItemTooltip(net.minecraftforge.event.entity.player.ItemTooltipEvent event) {
+    public static void onItemTooltip(net.neoforged.neoforge.event.entity.player.ItemTooltipEvent event) {
         var stack=event.getItemStack();
         if (com.gamergaming.taczweaponblueprints.item.PhysicalWeaponProvenance.from(stack)
                 .filter(p -> p.origin() == com.gamergaming.taczweaponblueprints.item.PhysicalWeaponProvenance.Origin.TRADED).isPresent())
@@ -48,7 +49,7 @@ public final class ClientConnectionEvents {
             event.getToolTip().add(ClientResearchCurrency.text("tooltip.taczweaponblueprints.data."+ClientResearchCurrency.dataMode())
                     .withStyle(net.minecraft.ChatFormatting.GRAY));
         }
-        if(ClientResearchCurrency.policy().item().filter(id->id.equals(net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(stack.getItem()))).isPresent())
+        if(ClientResearchCurrency.policy().item().filter(id->id.equals(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()))).isPresent())
             event.getToolTip().add(net.minecraft.network.chat.Component.translatable("tooltip.taczweaponblueprints.currency").withStyle(net.minecraft.ChatFormatting.GRAY));
     }
 
@@ -74,10 +75,8 @@ public final class ClientConnectionEvents {
     }
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) {
-            return;
-        }
+    public static void onClientTick(ClientTickEvent.Post event) {
+
         net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
         ClientResearchState.Publication publication = ClientResearchState.publication();
         boolean hasPublishedResearch = publication.generation() != Long.MIN_VALUE
@@ -104,7 +103,7 @@ public final class ClientConnectionEvents {
                     == com.gamergaming.taczweaponblueprints.progression.StationSetup.ResearchAccess.PORTABLE
                     && com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.progressionSnapshot().researchEnabled()
                     && com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.progressionSnapshot().blueprintsEnabled()) {
-                com.gamergaming.taczweaponblueprints.network.NetworkHandler.INSTANCE.sendToServer(
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(
                         new com.gamergaming.taczweaponblueprints.network.OpenPortableResearchPacket());
             } else minecraft.setScreen(new BlueprintJournalScreen());
         }

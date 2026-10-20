@@ -56,10 +56,10 @@ public final class DesignerCaptureComparison {
         java.util.function.BiPredicate<net.minecraft.resources.ResourceLocation, net.minecraft.resources.ResourceLocation> inTag =
                 (item, tag) -> itemTags.has(tag.toString()) && itemTags.getAsJsonArray(tag.toString()).contains(new JsonPrimitive(item.toString()));
         for (var item : itemIds) {
-            var itemId = new net.minecraft.resources.ResourceLocation(item);
+            var itemId = net.minecraft.resources.ResourceLocation.parse(item);
             var sourceOwner = context.source().researchData().select(itemId, context.profile(), inTag).selected();
             var expectedOwner = sourceOwner.map(id -> context.source().researchData().policies().get(id).profile().isPresent()
-                    ? new net.minecraft.resources.ResourceLocation(candidate.profile().getNamespace(), "captured/research_data/" + id.getNamespace() + "/" + id.getPath()) : id);
+                    ? net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(candidate.profile().getNamespace(), "captured/research_data/" + id.getNamespace() + "/" + id.getPath()) : id);
             var customOwner = candidate.snapshot().researchData().select(itemId, candidate.profile(), inTag).selected();
             if (!expectedOwner.equals(customOwner) && changes.size() <= 1000) changes.add(new Difference("research_data", item, "all", "input_owner"));
         }
@@ -91,7 +91,7 @@ public final class DesignerCaptureComparison {
                 var policy = entry.getValue();
                 if (policy.profile().isPresent() && !policy.profile().get().equals(context.profile())) continue;
                 var targetId = policy.profile().isPresent()
-                        ? new net.minecraft.resources.ResourceLocation(candidate.profile().getNamespace(),
+                        ? net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(candidate.profile().getNamespace(),
                                 "captured/research_data/" + entry.getKey().getNamespace() + "/" + entry.getKey().getPath())
                         : entry.getKey();
                 if (!candidate.snapshot().researchData().policies().containsKey(targetId)) {

@@ -59,9 +59,9 @@ class ResearchTreeSubgraphTest {
         assertEquals(0, rootsOnly.requirementGroupsVisited);
     }
 
-    private static ResourceLocation id(int i) { return new ResourceLocation("test:n" + i); }
+    private static ResourceLocation id(int i) { return ResourceLocation.parse("test:n" + i); }
     private static ResearchTreeGraph.Node node(int i, int prerequisites, int hidden) {
-        return new ResearchTreeGraph.Node(i, id(i), "name." + i, "rifle", new ResourceLocation("minecraft:paper"),
+        return new ResearchTreeGraph.Node(i, id(i), "name." + i, "rifle", ResourceLocation.parse("minecraft:paper"),
                 JournalVisibility.FULL, false, false, false, 1, 0, prerequisites, hidden,
                 ResearchTreeGraph.Availability.PREREQUISITES_REQUIRED);
     }

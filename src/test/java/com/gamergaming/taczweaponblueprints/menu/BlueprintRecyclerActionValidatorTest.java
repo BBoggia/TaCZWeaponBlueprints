@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Test;
 import net.minecraft.resources.ResourceLocation;
 
 class BlueprintRecyclerActionValidatorTest {
-    private static final ResourceLocation INPUT = new ResourceLocation("test:input");
-    private static final ResourceLocation OTHER = new ResourceLocation("test:other");
+    private static final ResourceLocation INPUT = ResourceLocation.parse("test:input");
+    private static final ResourceLocation OTHER = ResourceLocation.parse("test:other");
 
     @Test
     void physicalIdentityAndCountMustBothMatchThePreview() {

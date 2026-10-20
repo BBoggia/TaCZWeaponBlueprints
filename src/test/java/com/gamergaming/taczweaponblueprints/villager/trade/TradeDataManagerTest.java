@@ -109,6 +109,9 @@ class TradeDataManagerTest {
     }
 
     private static final PackResources TEST_PACK = new PackResources() {
+        @Override public net.minecraft.server.packs.PackLocationInfo location() {
+            return new net.minecraft.server.packs.PackLocationInfo(packId(), net.minecraft.network.chat.Component.literal(packId()), net.minecraft.server.packs.repository.PackSource.DEFAULT, java.util.Optional.empty());
+        }
         @Override
         public IoSupplier<InputStream> getRootResource(String... path) {
             return null;

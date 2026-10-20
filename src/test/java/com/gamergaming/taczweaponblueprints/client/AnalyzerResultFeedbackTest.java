@@ -6,7 +6,7 @@ import com.gamergaming.taczweaponblueprints.menu.*;
 import com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable;
 import net.minecraft.resources.ResourceLocation;
 class AnalyzerResultFeedbackTest {
-    private static final ResourceLocation ID=new ResourceLocation("test:gun");
+    private static final ResourceLocation ID=ResourceLocation.parse("test:gun");
     @Test void delayedReceiptCannotAttachToReplacementWithSameTargetAndCount() {
         var f = new BlueprintRecyclerFeedbackState();
         var result = blueprintResult().withStateToken(10);
@@ -51,7 +51,7 @@ class AnalyzerResultFeedbackTest {
         f.accept(new BlueprintRecyclerActionContract.ActionResult(BlueprintRecyclerActionContract.Action.ARCHIVE_FRAGMENTS,Optional.of(ID),
                 BlueprintRecyclerActionContract.ResultCode.SUCCESS,Optional.empty(),Optional.of(result)),BlueprintRecyclerPreview.EMPTY);
         assertEquals(Optional.of(result),f.visibleFragments());
-        f.reconcile(BlueprintRecyclerPreview.invalid(Optional.of(new ResourceLocation("test:new_item")),1,0,0));
+        f.reconcile(BlueprintRecyclerPreview.invalid(Optional.of(ResourceLocation.parse("test:new_item")),1,0,0));
         assertTrue(f.visibleFragments().isEmpty());assertTrue(f.visibleOutcome().isEmpty());
     }
     @Test void timedOutOrMismatchedRequestsCannotInstallResults() {

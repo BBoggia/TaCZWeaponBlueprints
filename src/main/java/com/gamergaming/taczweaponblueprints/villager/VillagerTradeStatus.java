@@ -21,13 +21,13 @@ public final class VillagerTradeStatus {
         private static void id(ResourceLocation id){if(id.toString().length()>256)throw new IllegalArgumentException("Oversized merchant ID");}
     }
     private VillagerTradeStatus(){}
-    public static String fingerprint(MerchantOffer offer){
+    public static String fingerprint(MerchantOffer offer,net.minecraft.core.HolderLookup.Provider registries){
         var tag=new net.minecraft.nbt.CompoundTag();
-        tag.put("a",offer.getCostA().save(new net.minecraft.nbt.CompoundTag()));tag.put("b",offer.getCostB().save(new net.minecraft.nbt.CompoundTag()));tag.put("out",offer.getResult().save(new net.minecraft.nbt.CompoundTag()));
+        tag.put("a",offer.getCostA().saveOptional(registries));tag.put("b",offer.getCostB().saveOptional(registries));tag.put("out",offer.getResult().saveOptional(registries));
         try{return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(tag.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)));}
         catch(java.security.NoSuchAlgorithmException impossible){throw new IllegalStateException(impossible);}
     }
-    public static List<Row> capture(MerchantOffers offers){
+    public static List<Row> capture(MerchantOffers offers,net.minecraft.core.HolderLookup.Provider registries){
         if(offers.size()>256)return List.of();var rows=new ArrayList<Row>();var catalog=StockCatalog.current();
         for(int i=0;i<offers.size();i++){
             var offer=offers.get(i);var owned=(OwnedVillagerOffer)offer;var terms=owned.taczweaponblueprints$terms();if(terms==null)continue;
@@ -43,7 +43,7 @@ public final class VillagerTradeStatus {
                 if(kind==Kind.MAGAZINE){var descriptor=MagazineCatalog.INSTANCE.publication().catalog().families().get(entry.target());
                     if(descriptor!=null){family=Optional.of(descriptor.familyKey());ammo=Optional.of(descriptor.ammoId());capacity=descriptor.capacity();}}
             }
-            rows.add(new Row(i,terms.revision(),fingerprint(offer),reason,flags,family,ammo,capacity));
+            rows.add(new Row(i,terms.revision(),fingerprint(offer,registries),reason,flags,family,ammo,capacity));
         }
         return List.copyOf(rows);
     }

@@ -13,7 +13,7 @@ import java.util.function.BiPredicate;
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
@@ -48,7 +48,7 @@ public final class BlueprintReverseEngineeringService {
             return Evaluation.failure(Status.INVALID_PLAYER, 0, 0, true);
         }
         Optional<IPlayerRecipeData> resolvedData =
-                player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve();
+                ModAttachments.recipeData(player);
         if (resolvedData.isEmpty()) {
             return Evaluation.failure(
                     Status.PLAYER_DATA_UNAVAILABLE,
@@ -98,7 +98,7 @@ public final class BlueprintReverseEngineeringService {
             return Evaluation.failure(Status.INVALID_PLAYER, 0, 0, true);
         }
         Optional<IPlayerRecipeData> resolvedData =
-                player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve();
+                ModAttachments.recipeData(player);
         if (resolvedData.isEmpty()) {
             return Evaluation.failure(
                     Status.PLAYER_DATA_UNAVAILABLE,
@@ -145,7 +145,7 @@ public final class BlueprintReverseEngineeringService {
             return new Execution(Result.failure(Status.INVALID_PLAYER, Optional.empty(), 0), Optional.empty());
         }
         Optional<IPlayerRecipeData> resolvedData =
-                player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve();
+                ModAttachments.recipeData(player);
         if (resolvedData.isEmpty()) {
             return new Execution(Result.failure(Status.PLAYER_DATA_UNAVAILABLE, Optional.empty(), 0), Optional.empty());
         }

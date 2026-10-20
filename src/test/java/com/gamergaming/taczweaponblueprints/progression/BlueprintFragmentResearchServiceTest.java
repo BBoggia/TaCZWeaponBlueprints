@@ -30,9 +30,9 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
 class BlueprintFragmentResearchServiceTest {
-    private static final ResourceLocation PROFILE = new ResourceLocation("test:profile");
-    private static final ResourceLocation ROOT = new ResourceLocation("test:root");
-    private static final ResourceLocation TARGET = new ResourceLocation("test:target");
+    private static final ResourceLocation PROFILE = ResourceLocation.parse("test:profile");
+    private static final ResourceLocation ROOT = ResourceLocation.parse("test:root");
+    private static final ResourceLocation TARGET = ResourceLocation.parse("test:target");
 
     @Test
     void analysisFragmentsNeverProvideAnOrdinaryResearchDiscount() {
@@ -238,7 +238,7 @@ class BlueprintFragmentResearchServiceTest {
     private static BlueprintLearningService.LearningTarget target(ResourceLocation id) {
         return new BlueprintLearningService.LearningTarget(
                 id,
-                new ResourceLocation(id.getNamespace(), "gun/" + id.getPath()));
+                ResourceLocation.fromNamespaceAndPath(id.getNamespace(), "gun/" + id.getPath()));
     }
 
     private static BlueprintResearchService.ResearchInput emptyInput() {

@@ -8,18 +8,28 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.function.Supplier;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.client.ClientBlueprintCatalog;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 
-public class SyncPlayerRecipeDataPacket {
+public class SyncPlayerRecipeDataPacket implements CustomPacketPayload {
+    public static final Type<SyncPlayerRecipeDataPacket> TYPE = new Type<>(
+            com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.loc("sync_player_recipe_data"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, SyncPlayerRecipeDataPacket> STREAM_CODEC =
+            StreamCodec.ofMember(SyncPlayerRecipeDataPacket::toBytes, SyncPlayerRecipeDataPacket::new);
+
+    @Override
+    public Type<SyncPlayerRecipeDataPacket> type() { return TYPE; }
+
     private static final int MAX_RECIPES = PlayerProgressionLimits.MAX_IDS_PER_COLLECTION;
     private static final ClientAccumulator CLIENT_ACCUMULATOR = new ClientAccumulator();
 
@@ -109,17 +119,24 @@ public class SyncPlayerRecipeDataPacket {
         }
     }
 
-    public void handle(Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> CLIENT_ACCUMULATOR.accept(this).ifPresent(completed -> {
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.player != null) {
-                mc.player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).ifPresent(cap -> {
-                    cap.replaceRecipes(completed);
-                    ClientBlueprintCatalog.refreshOpenGunSmithScreen();
-                });
-            }
-        }));
-        ctx.get().setPacketHandled(true);
+    public void handle(IPayloadContext context) {
+        new ClientHandler().handle(context);
+    }
+
+    /** Loaded only when this clientbound payload is handled, never during server registration. */
+    @net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)
+    private final class ClientHandler {
+        void handle(IPayloadContext ctx) {
+            ctx.enqueueWork(() -> CLIENT_ACCUMULATOR.accept(SyncPlayerRecipeDataPacket.this).ifPresent(completed -> {
+                Minecraft mc = Minecraft.getInstance();
+                if (mc.player != null) {
+                    ModAttachments.recipeData(mc.player).ifPresent(cap -> {
+                        cap.replaceRecipes(completed);
+                        ClientBlueprintCatalog.refreshOpenGunSmithScreen();
+                    });
+                }
+            }));
+        }
     }
 
     /** Drops any partial or completed snapshot retained from the previous connection. */

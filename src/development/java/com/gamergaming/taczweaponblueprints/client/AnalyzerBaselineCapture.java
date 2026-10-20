@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.init.ModBlocks;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import com.gamergaming.taczweaponblueprints.init.ModItems;
 import com.gamergaming.taczweaponblueprints.item.BlueprintFragmentItem;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
@@ -25,23 +25,24 @@ import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.storage.LevelResource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.network.NetworkHooks;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+
+import net.minecraft.core.registries.BuiltInRegistries;
 import org.lwjgl.glfw.GLFW;
 
 /** Opt-in native screenshots of real server previews; never loaded in release jars. */
-@Mod.EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, value = Dist.CLIENT)
 public final class AnalyzerBaselineCapture {
     private static final String OUTPUT = System.getProperty("tacz.analyzerBaseline.output");
     private static final String WORLD = "Analyzer A0 QA";
     private static final String MARKER = ".analyzer-baseline-copy";
     private static final String[] CASES = {"empty", "invalid", "weapon", "fragment", "research-data", "blueprint"};
-    private static final ResourceLocation TARGET = new ResourceLocation("tacz:ak47");
+    private static final ResourceLocation TARGET = ResourceLocation.parse("tacz:ak47");
     private static final AtomicInteger SAVED = new AtomicInteger();
     private static boolean opened, waiting, failed, finished;
     private static int step, ticks, totalTicks;
@@ -60,7 +61,7 @@ public final class AnalyzerBaselineCapture {
                     throw new IllegalStateException("Create the marked disposable Analyzer world first");
                 }
                 opened = true;
-                mc.createWorldOpenFlows().loadLevel(event.getScreen(), WORLD);
+                mc.createWorldOpenFlows().openWorld(WORLD, () -> mc.setScreen(event.getScreen()));
                 return;
             }
             if (!waiting || ticks < 40 || !(event.getScreen() instanceof BlueprintRecyclerScreen screen)
@@ -96,8 +97,8 @@ public final class AnalyzerBaselineCapture {
     }
 
     @SubscribeEvent
-    public static void tick(TickEvent.ClientTickEvent event) {
-        if (OUTPUT == null || failed || finished || event.phase != TickEvent.Phase.END) return;
+    public static void tick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event) {
+        if (OUTPUT == null || failed || finished) return;
         var mc = Minecraft.getInstance();
         if (!opened) return;
         try {
@@ -142,13 +143,13 @@ public final class AnalyzerBaselineCapture {
                     if (player == null) throw new IllegalStateException("QA player disconnected");
                     player.closeContainer();
                     player.getInventory().clearContent();
-                    var data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElseThrow();
+                    var data = com.gamergaming.taczweaponblueprints.init.ModAttachments.recipeData(player).orElseThrow();
                     data.replaceProgression(scenario == 5 ? Set.of(TARGET.toString()) : Set.of(), Set.of(TARGET.toString()), 125);
                     data.clearArchivedBlueprintFragments();
                     data.applyArchivedFragmentMutation(PlayerProgressValueMutation.Request.commit(TARGET.toString(), 0, 4));
                     var pos = player.blockPosition().below();
                     player.serverLevel().setBlockAndUpdate(pos, ModBlocks.BLUEPRINT_RECYCLER.get().defaultBlockState());
-                    NetworkHooks.openScreen(player, new SimpleMenuProvider((id, inventory, ignored) ->
+                    player.openMenu(new SimpleMenuProvider((id, inventory, ignored) ->
                             BlueprintRecyclerMenu.server(id, inventory, player.serverLevel(), pos),
                             Component.translatable("container.taczweaponblueprints.blueprint_recycler")), buffer -> buffer.writeBlockPos(pos));
                     var menu = (BlueprintRecyclerMenu) player.containerMenu;
@@ -167,10 +168,10 @@ public final class AnalyzerBaselineCapture {
             case 0 -> ItemStack.EMPTY;
             case 1 -> new ItemStack(Items.DIRT);
             case 2 -> {
-                var item = ForgeRegistries.ITEMS.getValues().stream().filter(value -> value instanceof IGun).findFirst().orElseThrow();
+                var item = BuiltInRegistries.ITEM.stream().filter(value -> value instanceof IGun).findFirst().orElseThrow();
                 var stack = new ItemStack(item);
                 ((IGun) item).setGunId(stack, TARGET);
-                PhysicalWeaponProvenance.stampLootGenerated(stack, new ResourceLocation("minecraft:chests/simple_dungeon"));
+                PhysicalWeaponProvenance.stampLootGenerated(stack, ResourceLocation.parse("minecraft:chests/simple_dungeon"));
                 yield stack;
             }
             case 3 -> { var stack = BlueprintFragmentItem.create(TARGET); stack.setCount(3); yield stack; }

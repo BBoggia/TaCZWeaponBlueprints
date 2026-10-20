@@ -1,0 +1,34 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IPI",
+    "RCR",
+    "III"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "P": {
+      "item": "minecraft:piston"
+    },
+    "R": {
+      "item": "minecraft:redstone_block"
+    },
+    "C": {
+      "item": "minecraft:cartography_table"
+    }
+  },
+  "result": {
+    "id": "taczweaponblueprints:advanced_research_bench"
+  },
+  "show_notification": true,
+  "neoforge:conditions": [
+    {
+      "type": "taczweaponblueprints:station_setup",
+      "analyzer": false,
+      "tier": 2
+    }
+  ]
+}

@@ -18,7 +18,7 @@ import org.objectweb.asm.Opcodes;
 /** Guards config editors whose widget signatures reference client-only classes. */
 class ConfigClientBoundaryContractTest {
     private static final String ONLY_IN_DESCRIPTOR =
-            "Lnet/minecraftforge/api/distmarker/OnlyIn;";
+            "Lnet/neoforged/api/distmarker/OnlyIn;";
 
     @Test
     void displayUnitWidgetIsMarkedClientOnly() throws IOException {

@@ -6,8 +6,8 @@ import java.util.Set;
 import com.gamergaming.taczweaponblueprints.progression.CraftingEligibilityService;
 import com.gamergaming.taczweaponblueprints.progression.CraftingEligibilityService.AccessIdentity;
 
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 /** Ephemeral allow-list for the exact native crafting menu currently open. */
 @OnlyIn(Dist.CLIENT)

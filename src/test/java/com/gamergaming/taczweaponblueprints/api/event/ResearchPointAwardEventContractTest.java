@@ -9,13 +9,13 @@ import org.junit.jupiter.api.Test;
 
 import com.gamergaming.taczweaponblueprints.progression.ResearchPointAwardService;
 
-import net.minecraftforge.eventbus.api.Cancelable;
+import net.neoforged.bus.api.ICancellableEvent;
 
 class ResearchPointAwardEventContractTest {
     @Test
     void onlyThePreCommitEventIsCancellable() {
-        assertTrue(ResearchPointAwardEvent.Pre.class.isAnnotationPresent(Cancelable.class));
-        assertFalse(ResearchPointAwardEvent.Post.class.isAnnotationPresent(Cancelable.class));
+        assertTrue(ICancellableEvent.class.isAssignableFrom(ResearchPointAwardEvent.Pre.class));
+        assertFalse(ICancellableEvent.class.isAssignableFrom(ResearchPointAwardEvent.Post.class));
         assertFalse(ResearchPointAwardService.Status.CANCELLED.committed());
     }
 

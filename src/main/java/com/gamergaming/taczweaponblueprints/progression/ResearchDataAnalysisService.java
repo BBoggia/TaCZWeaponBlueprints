@@ -17,7 +17,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.TagKey;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 /** One-item workstation analysis. Neither previews nor rejected requests sample a reward. */
 public final class ResearchDataAnalysisService {
@@ -32,13 +32,13 @@ public final class ResearchDataAnalysisService {
     public static Optional<ResourceLocation> owner(ItemStack input) {
         if (input == null || input.isEmpty()) return Optional.empty();
         var source = context().source();
-        return source.research().researchData().select(ForgeRegistries.ITEMS.getKey(input.getItem()),
+        return source.research().researchData().select(BuiltInRegistries.ITEM.getKey(input.getItem()),
                 ModConfigs.BLUEPRINT.progressionSnapshot().activeProfileId(),
                 (item, tag) -> input.is(TagKey.create(Registries.ITEM, tag))).selected();
     }
     /** Legacy mode preserves old turn-ins. In analysis mode a selected disabled owner never falls through. */
     public static boolean legacyAllowed(ItemStack input) {
-        return legacyAllowed(input == null || input.isEmpty() ? null : ForgeRegistries.ITEMS.getKey(input.getItem()));
+        return legacyAllowed(input == null || input.isEmpty() ? null : BuiltInRegistries.ITEM.getKey(input.getItem()));
     }
     public static boolean legacyAllowed(ResourceLocation item) {
         var settings = ModConfigs.BLUEPRINT.dataSettings();
@@ -46,7 +46,7 @@ public final class ResearchDataAnalysisService {
         if (settings.behavior() == ResearchDataPolicy.Behavior.DISABLED || item == null) return false;
         var source = context().source();
         var selected = source.research().researchData().select(item, ModConfigs.BLUEPRINT.progressionSnapshot().activeProfileId(),
-                (id, tag) -> ForgeRegistries.ITEMS.containsKey(id) && ForgeRegistries.ITEMS.getValue(id).builtInRegistryHolder()
+                (id, tag) -> BuiltInRegistries.ITEM.containsKey(id) && BuiltInRegistries.ITEM.get(id).builtInRegistryHolder()
                         .is(TagKey.create(Registries.ITEM, tag))).selected();
         return settings.behaviorFor(selected.map(source.research().researchData().policies()::get)) == ResearchDataPolicy.Behavior.LEGACY_CURRENCY;
     }
@@ -56,7 +56,7 @@ public final class ResearchDataAnalysisService {
         if (settings.behavior() == ResearchDataPolicy.Behavior.LEGACY_CURRENCY) return Optional.empty();
         var owner = owner(station.physicalInput());
         if (owner.isEmpty() || legacyAllowed(station.physicalInput())) return Optional.empty();
-        var data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve();
+        var data = ModAttachments.recipeData(player);
         if (data.isEmpty()) return Optional.empty();
         var context = context(); var config = ModConfigs.BLUEPRINT.progressionSnapshot();
         var access = ModConfigs.BLUEPRINT.accessSnapshot(); var tier = station.analyzerTier();
@@ -79,7 +79,7 @@ public final class ResearchDataAnalysisService {
     }
     public static com.gamergaming.taczweaponblueprints.menu.ResearchDataPresentation presentation(ServerPlayer player, Prepared prepared) {
         var policy=prepared.pool().policy(); var settings=ModConfigs.BLUEPRINT.dataSettings();
-        var data=player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElseThrow();
+        var data=ModAttachments.recipeData(player).orElseThrow();
         var config=ModConfigs.BLUEPRINT.progressionSnapshot(); var source=context();
         var rows=new ArrayList<com.gamergaming.taczweaponblueprints.menu.ResearchDataPresentation.Station>(3);
         int configured=0;
@@ -105,7 +105,7 @@ public final class ResearchDataAnalysisService {
     public static Result analyze(ServerPlayer player, WorkstationTransaction station) {
         var prepared = prepare(player, station);
         if (prepared.isEmpty()) return failure(Status.NO_MATCH);
-        var data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElseThrow();
+        var data = ModAttachments.recipeData(player).orElseThrow();
         // Transition publication occurs only after the entire workstation commit.
         var before = Set.copyOf(data.getDiscoveredBlueprints());
         var result = commit(prepared.orElseThrow(), data, station, bound -> java.util.concurrent.ThreadLocalRandom.current().nextLong(bound));

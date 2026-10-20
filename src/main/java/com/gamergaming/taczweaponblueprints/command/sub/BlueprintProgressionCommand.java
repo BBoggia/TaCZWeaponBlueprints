@@ -9,7 +9,7 @@ import com.gamergaming.taczweaponblueprints.api.ProgressionCriteria;
 import com.gamergaming.taczweaponblueprints.api.ProgressionCriteria.ChangeOperation;
 import com.gamergaming.taczweaponblueprints.api.ProgressionCriteria.ChangeResult;
 import com.gamergaming.taczweaponblueprints.api.ProgressionCriteria.Status;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
@@ -19,9 +19,7 @@ import com.gamergaming.taczweaponblueprints.progression.ResearchPointPresentatio
 import com.gamergaming.taczweaponblueprints.progression.gate.ProgressionGateEvaluator;
 import com.gamergaming.taczweaponblueprints.progression.workbench.CraftingWorkbenchTierResolver;
 import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchInteractionMode;
-import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.gamergaming.taczweaponblueprints.resource.research.ProgressionPolicyAccessService;
-import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchDataManager;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.gamergaming.taczweaponblueprints.progression.PlayerProgressionAdminService.ResetState;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -138,7 +136,7 @@ public final class BlueprintProgressionCommand {
 
     private static int inspect(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = EntityArgument.getPlayer(context, "player");
-        return player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).map(data -> {
+        return ModAttachments.recipeData(player).map(data -> {
             var snapshot = PlayerProgressionAdminService.inspect(data);
             context.getSource().sendSuccess(() -> Component.translatable(
                     "commands.taczweaponblueprints.progression.inspect",
@@ -176,7 +174,7 @@ public final class BlueprintProgressionCommand {
                     blueprintId));
             return 0;
         }
-        return player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).map(data -> {
+        return ModAttachments.recipeData(player).map(data -> {
             var researchPolicy = policyAccess.policyFor(blueprintId);
             var craftingPolicy = policyAccess.craftingPolicyFor(blueprintId).orElse(null);
             if (craftingPolicy == null) {
@@ -279,7 +277,7 @@ public final class BlueprintProgressionCommand {
 
         int changed = 0;
         for (ServerPlayer player : players) {
-            boolean updated = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
+            boolean updated = ModAttachments.recipeData(player)
                     .map(data -> PlayerProgressionAdminService.reset(data, state))
                     .orElse(false);
             if (updated) {
@@ -307,7 +305,7 @@ public final class BlueprintProgressionCommand {
         int amount = IntegerArgumentType.getInteger(command, "amount");
         int successful = 0;
         for (var player : players) {
-            var data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElse(null);
+            var data = ModAttachments.recipeData(player).orElse(null);
             if (data == null) continue;
             var live = com.gamergaming.taczweaponblueprints.progression.currency.PlayerResearchCurrencyContext.inventory(player, data);
             var plan = com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPlanner.prepare(live.policy(), live.read(),
@@ -333,7 +331,7 @@ public final class BlueprintProgressionCommand {
         int capped = 0;
         int unavailable = 0;
         for (ServerPlayer player : players) {
-            var data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve();
+            var data = ModAttachments.recipeData(player);
             if (data.isEmpty()) {
                 unavailable++;
                 continue;

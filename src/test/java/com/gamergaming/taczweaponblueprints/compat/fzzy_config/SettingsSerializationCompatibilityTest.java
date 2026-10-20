@@ -82,7 +82,7 @@ class SettingsSerializationCompatibilityTest {
         var loaded = ConfigApi.deserializeConfig(new BlueprintConfig(), serialized).get();
         assertEquals("example:nested", loaded.activeResearchProfile.get());
         loaded.initializeLoadedSnapshots();
-        assertEquals(new net.minecraft.resources.ResourceLocation("example:nested"), loaded.progressionSnapshot().activeProfileId());
+        assertEquals(net.minecraft.resources.ResourceLocation.parse("example:nested"), loaded.progressionSnapshot().activeProfileId());
         assertEquals(2676, loaded.progressionSnapshot().pointCap());
         assertEquals(loaded.progressionSnapshot().activeProfileId(), loaded.awardSnapshot().activeProfileId());
     }
@@ -131,7 +131,7 @@ class SettingsSerializationCompatibilityTest {
         assertEquals(BlueprintFragmentPreset.DISABLED, migrated.fragmentPreset.get());
         assertFalse(migrated.researchFeatureSnapshot().fragmentPolicy(
                 BlueprintFragmentProfilePolicy.DEFAULT,
-                new ResourceLocation("test", "legacy_target"),
+                ResourceLocation.fromNamespaceAndPath("test", "legacy_target"),
                 ResearchWorkbenchTier.TIER_1,
                 Optional.empty()).enabled());
         assertEquals(AmmoCraftingStrategy.PROFILE, migrated.ammoCraftingStrategy.get());

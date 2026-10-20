@@ -32,18 +32,18 @@ class AnalyzerStationResourcesTest {
             }
             for (String domain : List.of("block", "item")) {
                 var model = json(ASSETS + "models/" + domain + "/" + id + ".json");
-                assertEquals(id.equals("blueprint_recycler") ? "forge:composite" : "forge:obj",
+                assertEquals(id.equals("blueprint_recycler") ? "neoforge:composite" : "neoforge:obj",
                         model.get("loader").getAsString());
             }
         }
     }
 
     @Test void recipesUnlockAndDropTheMatchingStation() throws Exception {
-        var pickaxes = json("data/minecraft/tags/blocks/mineable/pickaxe.json").getAsJsonArray("values");
+        var pickaxes = json("data/minecraft/tags/block/mineable/pickaxe.json").getAsJsonArray("values");
         for (String id : IDS) {
             String item = "taczweaponblueprints:" + id;
-            var recipe = json(DATA + "recipes/" + id + ".json");
-            assertEquals(item, recipe.getAsJsonObject("result").get("item").getAsString());
+            var recipe = json(DATA + "recipe/" + id + ".json");
+            assertEquals(item, recipe.getAsJsonObject("result").get("id").getAsString());
             assertEquals("minecraft:crafting_shaped", recipe.get("type").getAsString());
             assertEquals(3, recipe.getAsJsonArray("pattern").size());
             var key = recipe.getAsJsonObject("key");
@@ -51,9 +51,9 @@ class AnalyzerStationResourcesTest {
                 assertEquals(3, row.getAsString().length());
                 for (char symbol : row.getAsString().toCharArray()) assertTrue(key.has(String.valueOf(symbol)));
             }
-            var advancement = json(DATA + "advancements/recipes/misc/" + id + ".json");
+            var advancement = json(DATA + "advancement/recipes/misc/" + id + ".json");
             assertEquals(item, advancement.getAsJsonObject("rewards").getAsJsonArray("recipes").get(0).getAsString());
-            var loot = json(DATA + "loot_tables/blocks/" + id + ".json").getAsJsonArray("pools");
+            var loot = json(DATA + "loot_table/blocks/" + id + ".json").getAsJsonArray("pools");
             assertEquals(1, loot.size());
             assertEquals(1, loot.get(0).getAsJsonObject().get("rolls").getAsInt());
             assertEquals(item, loot.get(0).getAsJsonObject().getAsJsonArray("entries").get(0)

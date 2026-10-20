@@ -495,7 +495,7 @@ class BlueprintAmmoCraftingPolicyResolverTest {
                 id.toString(),
                 "name." + id.getPath(),
                 "tooltip.test",
-                new ResourceLocation(id.getNamespace(), "recipe/" + id.getPath()),
+                ResourceLocation.fromNamespaceAndPath(id.getNamespace(), "recipe/" + id.getPath()),
                 null,
                 kind == BlueprintKind.AMMO ? "ammo" : "rifle",
                 id("tacz:" + (kind == BlueprintKind.AMMO ? "ammo" : "rifle")),
@@ -504,6 +504,6 @@ class BlueprintAmmoCraftingPolicyResolverTest {
     }
 
     private static ResourceLocation id(String value) {
-        return new ResourceLocation(value);
+        return ResourceLocation.parse(value);
     }
 }

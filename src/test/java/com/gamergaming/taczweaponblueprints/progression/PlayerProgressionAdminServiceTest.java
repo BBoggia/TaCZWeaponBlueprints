@@ -125,7 +125,7 @@ class PlayerProgressionAdminServiceTest {
                 0,
                 100,
                 Mutation.claim(ClaimKey.once(
-                        new net.minecraft.resources.ResourceLocation("test:award_claim"))));
+                        net.minecraft.resources.ResourceLocation.parse("test:award_claim"))));
         data.recordRecentUnlockBatch(
                 RecentBlueprintUnlockBatch.Source.PHYSICAL_BLUEPRINT,
                 "test:learned",

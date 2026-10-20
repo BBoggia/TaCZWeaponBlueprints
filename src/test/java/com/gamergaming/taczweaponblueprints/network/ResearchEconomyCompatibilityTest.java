@@ -63,7 +63,7 @@ class ResearchEconomyCompatibilityTest {
             var item = (CompoundTag) raw;
             if (!item.getString("id").equals("taczweaponblueprints:blueprint_fragment")) continue;
             var stack = new ItemStack(AnalysisTestItems.fragment,item.getByte("Count"));
-            stack.setTag(item.getCompound("tag").copy());
+            stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(item.getCompound("tag").copy()));
             var identity = BlueprintFragmentItem.identity(stack).orElseThrow();
             assertEquals(id("tacz:ai_awp"),identity.target());
             seen.add(identity.analysisClass().orElseThrow());
@@ -71,14 +71,14 @@ class ResearchEconomyCompatibilityTest {
         }
         assertEquals(EnumSet.allOf(AnalysisRewardClass.class),seen);
         var ordinary = new ItemStack(AnalysisTestItems.fragment);
-        ordinary.setTag(nbt("ordinary-item-tags.snbt").getCompound("fragment"));
+        ordinary.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(nbt("ordinary-item-tags.snbt").getCompound("fragment")));
         assertEquals(id("tacz:ak47"),BlueprintFragmentItem.getOrdinaryTarget(ordinary).orElseThrow());
     }
 
     @Test void damagedHistoricalAnalysisMarkerCannotBecomeAnOrdinaryReward() throws Exception {
         var tag = nbt("analysis-inventory.snbt").getList("Inventory",Tag.TAG_COMPOUND).getCompound(0).getCompound("tag").copy();
         tag.getCompound(BlueprintFragmentItem.ANALYSIS_TAG).putString("reward_class","future_class");
-        var stack = new ItemStack(AnalysisTestItems.fragment); stack.setTag(tag);
+        var stack = new ItemStack(AnalysisTestItems.fragment); stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(tag));
         assertTrue(BlueprintFragmentItem.identity(stack).isEmpty());
         assertTrue(BlueprintFragmentItem.getOrdinaryTarget(stack).isEmpty());
     }
@@ -186,7 +186,7 @@ class ResearchEconomyCompatibilityTest {
     private static BlueprintResearchProfile profile(String name) throws Exception {
         return BlueprintResearchProfile.CODEC.parse(JsonOps.INSTANCE,json(name)).result().orElseThrow();
     }
-    private static ResourceLocation id(String raw) { return new ResourceLocation(raw); }
+    private static ResourceLocation id(String raw) { return ResourceLocation.parse(raw); }
     private static net.minecraft.network.FriendlyByteBuf buffer(String name) throws Exception {
         return new net.minecraft.network.FriendlyByteBuf(Unpooled.wrappedBuffer(HexFormat.of().parseHex(read(name).strip())));
     }

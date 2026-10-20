@@ -1,13 +1,13 @@
 package com.gamergaming.taczweaponblueprints.config.common;
 
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 public class GeneralConfig {
 
-    public static ForgeConfigSpec.BooleanValue DEBUG_MODE;
+    public static ModConfigSpec.BooleanValue DEBUG_MODE;
 
-    
-    public static void init(ForgeConfigSpec.Builder builder) {
+
+    public static void init(ModConfigSpec.Builder builder) {
         builder.push("General Config");
 
         builder.comment("Debug mode");
@@ -15,5 +15,5 @@ public class GeneralConfig {
 
         builder.pop();
     }
-    
+
 }

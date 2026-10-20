@@ -1,5 +1,7 @@
 package com.gamergaming.taczweaponblueprints.client;
 
+import net.neoforged.fml.common.EventBusSubscriber;
+
 import java.util.*;
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.network.SyncVillagerTradeStatusPacket;
@@ -9,14 +11,13 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.Font;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.MerchantMenu;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 
 /** Data is bound to the actual menu instance and never participates in a trade. */
-@Mod.EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID,value=Dist.CLIENT)
+@EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID,value=Dist.CLIENT)
 public final class ClientVillagerTradeStatus {
     private static final com.gamergaming.taczweaponblueprints.villager.VillagerStatusInbox INBOX=new com.gamergaming.taczweaponblueprints.villager.VillagerStatusInbox();
     private ClientVillagerTradeStatus(){}
@@ -26,7 +27,7 @@ public final class ClientVillagerTradeStatus {
     }
     public static Optional<VillagerTradeStatus.Row> row(MerchantMenu open,int index){
         if(index<0||index>=open.getOffers().size())return Optional.empty();
-        return INBOX.current(open).stream().flatMap(p->p.rows().stream()).filter(r->r.index()==index&&r.fingerprint().equals(VillagerTradeStatus.fingerprint(open.getOffers().get(index)))).findFirst();
+        return INBOX.current(open).stream().flatMap(p->p.rows().stream()).filter(r->r.index()==index&&r.fingerprint().equals(VillagerTradeStatus.fingerprint(open.getOffers().get(index),net.minecraft.client.Minecraft.getInstance().player.registryAccess()))).findFirst();
     }
     public static void render(GuiGraphics graphics,MerchantMenu open,Font font,int left,int top,int scroll,int selected,int mouseX,int mouseY){
         if(open.getOffers().isEmpty()&&INBOX.current(open).isPresent()) {

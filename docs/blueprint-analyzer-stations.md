@@ -24,7 +24,7 @@ not change Research Bench or crafting requirements.
 
 Each tier has its own direct crafting-table recipe. Higher tiers do not consume
 an existing station. Their recipe-book entries unlock when the player obtains
-a comparator. Iron and diamond ingredients use Forge tags, so packs can provide
+a comparator. Iron and diamond ingredients use common `c:` tags, so packs can provide
 equivalent materials. Packs can replace the recipes and harvesting tags through
 ordinary datapack resources.
 

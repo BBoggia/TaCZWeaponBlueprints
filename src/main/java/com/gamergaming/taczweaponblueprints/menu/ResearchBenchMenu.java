@@ -45,7 +45,7 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 /** Research-only, slotless server menu for the permanent Research Tree. */
 public final class ResearchBenchMenu extends AbstractContainerMenu {
@@ -279,9 +279,7 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
                             BlueprintResearchService.Status.INVALID_INPUT,
                             Optional.of(requestedId),
                             0,
-                            player.getCapability(
-                                    com.gamergaming.taczweaponblueprints.init.ModCapabilities
-                                            .PLAYER_RECIPE_DATA)
+                            com.gamergaming.taczweaponblueprints.init.ModAttachments.recipeData(player)
                                     .map(data -> data.getResearchPoints()).orElse(0),
                             false),
                     preview);
@@ -305,9 +303,7 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
                             BlueprintResearchService.Status.POLICY_UNAVAILABLE,
                             Optional.of(requestedId),
                             0,
-                            player.getCapability(
-                                            com.gamergaming.taczweaponblueprints.init
-                                                    .ModCapabilities.PLAYER_RECIPE_DATA)
+                            com.gamergaming.taczweaponblueprints.init.ModAttachments.recipeData(player)
                                     .map(data -> data.getResearchPoints()).orElse(0),
                             false),
                     preview);
@@ -457,10 +453,7 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
                         == ResearchBenchRequestLimiter.Decision.THROTTLE) {
             return Optional.of(AffordabilityResult.throttled());
         }
-        IPlayerRecipeData data = player.getCapability(
-                        com.gamergaming.taczweaponblueprints.init.ModCapabilities
-                                .PLAYER_RECIPE_DATA)
-                .resolve().orElse(null);
+        IPlayerRecipeData data = com.gamergaming.taczweaponblueprints.init.ModAttachments.recipeData(player).orElse(null);
         ResearchTreeGraph graph = data == null
                 ? null
                 : BlueprintResearchDataManager.INSTANCE.treeFor(data);
@@ -586,9 +579,9 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
             var next = ResearchSelectionPreviewFactory.create(
                     evaluation,
                     prepared.costMode(),
-                    tag -> ForgeRegistries.ITEMS.tags()
-                            .getTag(TagKey.create(Registries.ITEM, tag)).stream()
-                            .map(ForgeRegistries.ITEMS::getKey)
+                    tag -> BuiltInRegistries.ITEM
+                            .getTag(TagKey.create(Registries.ITEM, tag)).stream().flatMap(net.minecraft.core.HolderSet::stream).map(net.minecraft.core.Holder::value)
+                            .map(BuiltInRegistries.ITEM::getKey)
                             .filter(java.util.Objects::nonNull)
                             .limit(BlueprintResearchIngredient.MAX_ITEMS)
                             .toList(),
@@ -724,9 +717,7 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
         }
         var config = ModConfigs.BLUEPRINT.progressionSnapshot();
         boolean directPathResearch = config.treeResearchResultMode().learnsDirectly();
-        var data = player.getCapability(
-                com.gamergaming.taczweaponblueprints.init.ModCapabilities.PLAYER_RECIPE_DATA)
-                .resolve().orElse(null);
+        var data = com.gamergaming.taczweaponblueprints.init.ModAttachments.recipeData(player).orElse(null);
         if (data == null) {
             return Optional.empty();
         }
@@ -801,9 +792,7 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
     private static MigrationAttempt migrateLegacyKnowledge(
             ServerPlayer player) {
         try {
-            return player.getCapability(
-                            com.gamergaming.taczweaponblueprints.init.ModCapabilities
-                                    .PLAYER_RECIPE_DATA)
+            return com.gamergaming.taczweaponblueprints.init.ModAttachments.recipeData(player)
                     .map(data -> {
                         BlueprintLearningService.MigrationResult result =
                                 BlueprintLearningService.migrateLegacyUnlocksDetailed(
@@ -844,14 +833,14 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
         }
         if (portable) return Optional.of(new ResearchWorkbenchContext(workbenchPosition,
                 workbenchLevel.dimension().location(),
-                new ResourceLocation("taczweaponblueprints", "portable_research"), ResearchWorkbenchTier.TIER_3,
+                ResourceLocation.fromNamespaceAndPath("taczweaponblueprints", "portable_research"), ResearchWorkbenchTier.TIER_3,
                 ResearchInteractionMode.RESEARCH, (long) containerId + 1L));
         var state = workbenchLevel.getBlockState(workbenchPosition);
         if (!(state.getBlock() instanceof ResearchBenchBlock bench)
                 || bench.tier() != workbenchTier) {
             return Optional.empty();
         }
-        ResourceLocation workstationId = ForgeRegistries.BLOCKS.getKey(bench);
+        ResourceLocation workstationId = BuiltInRegistries.BLOCK.getKey(bench);
         if (workstationId == null) {
             return Optional.empty();
         }
@@ -1017,9 +1006,7 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
             ServerPlayer player,
             ResourceLocation blueprintId) {
         try {
-            var data = player.getCapability(
-                    com.gamergaming.taczweaponblueprints.init.ModCapabilities.PLAYER_RECIPE_DATA)
-                    .resolve().orElse(null);
+            var data = com.gamergaming.taczweaponblueprints.init.ModAttachments.recipeData(player).orElse(null);
             return data == null
                     ? Optional.empty()
                     : Optional.ofNullable(

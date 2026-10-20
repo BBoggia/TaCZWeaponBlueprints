@@ -22,8 +22,8 @@ import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
 import net.minecraft.resources.ResourceLocation;
 
 class BlueprintProgressionConfigSnapshotTest {
-    private static final ResourceLocation PROFILE = new ResourceLocation("test", "profile");
-    private static final ResourceLocation BLUEPRINT = new ResourceLocation("test", "blueprint");
+    private static final ResourceLocation PROFILE = ResourceLocation.fromNamespaceAndPath("test", "profile");
+    private static final ResourceLocation BLUEPRINT = ResourceLocation.fromNamespaceAndPath("test", "blueprint");
 
     @Test
     void rejectsInvalidPointCapsAndRequiredState() {
@@ -178,7 +178,7 @@ class BlueprintProgressionConfigSnapshotTest {
         BlueprintResearchCost authored = new BlueprintResearchCost(
                 8,
                 List.of(new BlueprintResearchIngredient(
-                        List.of(new ResourceLocation("minecraft:paper")),
+                        List.of(ResourceLocation.parse("minecraft:paper")),
                         Optional.empty(),
                         4)));
         BlueprintResearchPolicy base = basePolicy(10, 8).withResearchCost(authored);

@@ -415,7 +415,7 @@ final class ResearchTreePresentationBuilder {
             while (nextSuffix < ResearchTreeGraph.MAX_NODES) {
                 int suffix = nextSuffix++;
                 String path = suffix == 0 ? basePath : basePath + "/" + suffix;
-                ResourceLocation candidate = new ResourceLocation(SYNTHETIC_NAMESPACE, path);
+                ResourceLocation candidate = ResourceLocation.fromNamespaceAndPath(SYNTHETIC_NAMESPACE, path);
                 if (!usedIds.contains(candidate)) {
                     return candidate;
                 }

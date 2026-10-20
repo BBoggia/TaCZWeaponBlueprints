@@ -56,14 +56,14 @@ class ResearchPointAwardReconciliationPolicyTest {
                 """;
         ResearchPointAwardDefinition definition = ResearchPointAwardDefinition.CODEC
                 .parse(JsonOps.INSTANCE, JsonParser.parseString(json)).result().orElseThrow();
-        ResourceLocation profile = new ResourceLocation("test:profile");
+        ResourceLocation profile = ResourceLocation.parse("test:profile");
         ResearchPointAwardContext context = ResearchPointAwardContext.simple(
                 com.gamergaming.taczweaponblueprints.resource.award.ResearchPointAwardTrigger.Type.BLUEPRINT_DISCOVERED,
                 profile,
-                new ResourceLocation("test:pistol"));
+                ResourceLocation.parse("test:pistol"));
         ResearchPointAwardResolver.Resolution resolution = ResearchPointAwardResolver.resolve(
                 ResearchPointAwardSnapshot.create(Map.of(
-                        new ResourceLocation("test:award"), definition)),
+                        ResourceLocation.parse("test:award"), definition)),
                 context);
         PlayerRecipeData data = new PlayerRecipeData();
         data.setResearchPoints(10);

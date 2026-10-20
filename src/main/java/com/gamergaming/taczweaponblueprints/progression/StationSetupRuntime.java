@@ -1,5 +1,7 @@
 package com.gamergaming.taczweaponblueprints.progression;
 
+import net.neoforged.fml.common.EventBusSubscriber;
+
 import java.util.Map;
 import java.util.WeakHashMap;
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
@@ -7,14 +9,13 @@ import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
 import com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerMenu;
 import net.minecraft.server.MinecraftServer;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.server.ServerStartedEvent;
-import net.minecraftforge.event.server.ServerStoppedEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 
 /** Detects changes even when an integrated-server configuration callback is missed. */
-@Mod.EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID)
+@EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID)
 public final class StationSetupRuntime {
     private static final Map<MinecraftServer, State> STATES = new WeakHashMap<>();
     private static final class State {
@@ -25,8 +26,8 @@ public final class StationSetupRuntime {
         STATES.put(event.getServer(), new State(ModConfigs.BLUEPRINT.stationSetup()));
     }
     @SubscribeEvent public static void stopped(ServerStoppedEvent event) { STATES.remove(event.getServer()); }
-    @SubscribeEvent public static void tick(TickEvent.ServerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    @SubscribeEvent public static void tick(ServerTickEvent.Post event) {
+
         var server = event.getServer();
         var current = ModConfigs.BLUEPRINT.stationSetup();
         var state = STATES.get(server);

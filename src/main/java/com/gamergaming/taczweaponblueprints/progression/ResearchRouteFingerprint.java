@@ -213,7 +213,7 @@ public record ResearchRouteFingerprint(long high, long low) {
                         false,
                         0,
                         false,
-                        new ResourceLocation("taczweaponblueprints:empty")),
+                        ResourceLocation.parse("taczweaponblueprints:empty")),
                 BlueprintAccessConfigSnapshot.EMPTY);
 
         public Context {

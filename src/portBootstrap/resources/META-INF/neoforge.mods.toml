@@ -1,0 +1,37 @@
+modLoader="javafml"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
+
+[[mods]]
+modId="wrb_port_bootstrap"
+version="${mod_version}"
+displayName="Weapon Research port dependency check"
+description="Development-only launcher for checking the NeoForge dependency environment."
+
+[[dependencies.wrb_port_bootstrap]]
+modId="neoforge"
+type="required"
+versionRange="${neo_version_range}"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.wrb_port_bootstrap]]
+modId="minecraft"
+type="required"
+versionRange="${minecraft_version_range}"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.wrb_port_bootstrap]]
+modId="tacz"
+type="required"
+versionRange="${tacz_version_range}"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.wrb_port_bootstrap]]
+modId="fzzy_config"
+type="required"
+versionRange="${fzzy_config_version_range}"
+ordering="AFTER"
+side="BOTH"

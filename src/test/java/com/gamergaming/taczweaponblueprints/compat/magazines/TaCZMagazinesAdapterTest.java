@@ -79,8 +79,8 @@ class TaCZMagazinesAdapterTest {
         var current = catalog.rebuild(adapter(source), List.of(newRecipe));
         assertEquals(2, current.revision());
         assertEquals(Set.of(key("9mm_17")), current.catalog().families().keySet());
-        assertEquals(Map.of(newRecipe.getId(), key("9mm_17")), current.catalog().familyByRecipe());
-        assertFalse(current.catalog().familyByRecipe().containsKey(oldRecipe.getId()));
+        assertEquals(Map.of(newRecipe.id(), key("9mm_17")), current.catalog().familyByRecipe());
+        assertFalse(current.catalog().familyByRecipe().containsKey(oldRecipe.id()));
     }
 
     @Test
@@ -88,21 +88,21 @@ class TaCZMagazinesAdapterTest {
         var source = base();
         var recipe = recipe("9mm_17", 0, 17);
         var tagJson = JsonParser.parseString("{\"tag\":\"forge:ingots/iron\"}");
-        recipe.getInputs().clear();
-        recipe.getInputs().add(new GunSmithTableIngredient(Ingredient.of(net.minecraft.tags.TagKey.create(
+        recipe.value().getInputs().clear();
+        recipe.value().getInputs().add(new GunSmithTableIngredient(Ingredient.of(net.minecraft.tags.TagKey.create(
                 net.minecraft.core.registries.Registries.ITEM, id("forge:ingots/iron"))), 12));
-        recipe.getInputs().add(new GunSmithTableIngredient(Ingredient.of(Items.COPPER_INGOT), 3));
-        var before = recipe.getOutput().copy();
+        recipe.value().getInputs().add(new GunSmithTableIngredient(Ingredient.of(Items.COPPER_INGOT), 3));
+        var before = recipe.value().getOutput().copy();
         var descriptor = adapter(source).capture(List.of(recipe)).families().get(key("9mm_17"));
         assertEquals(tagJson, JsonParser.parseString(descriptor.ingredients().get(0).ingredientJson()));
         assertEquals(12, descriptor.ingredients().get(0).count());
         assertEquals(3, descriptor.ingredients().get(1).count());
-        assertTrue(ItemStack.matches(before, recipe.getOutput()));
-        recipe.getInputs().clear();
-        recipe.getOutput().getOrCreateTag().putInt("AmmoCount", 9);
-        descriptor.output().getOrCreateTag().putInt("AmmoCount", 12);
+        assertTrue(ItemStack.matches(before, recipe.value().getOutput()));
+        recipe.value().getInputs().clear();
+        net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, recipe.value().getOutput(), customTag -> customTag.putInt("AmmoCount", 9));
+        net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, descriptor.output(), customTag -> customTag.putInt("AmmoCount", 12));
         source.facts.clear();
-        assertEquals(0, descriptor.output().getOrCreateTag().getInt("AmmoCount"));
+        assertEquals(0, descriptor.output().getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag().getInt("AmmoCount"));
         assertEquals(2, descriptor.ingredients().size());
         assertThrows(UnsupportedOperationException.class, () -> descriptor.compatibleGuns().clear());
     }
@@ -124,12 +124,12 @@ class TaCZMagazinesAdapterTest {
     @Test
     void namespaceAloneCannotAdmitOtherItemsOrUnknownFamilies() {
         var source = base();
-        var unrelated = new GunSmithTableRecipe(id("taczmagazines:magazine/fake"),
-                new GunSmithTableResult(new ItemStack(Items.DIAMOND), TaCZMagazinesAdapter.MAGAZINE_TAB), List.of());
-        var wrongTab = new GunSmithTableRecipe(id("taczmagazines:magazine/wrong_tab"),
-                new GunSmithTableResult(output("9mm_17", 17), id("tacz:ammo")), List.of());
-        var foreign = new GunSmithTableRecipe(id("anothermod:magazine/fake"),
-                new GunSmithTableResult(output("9mm_17", 17), TaCZMagazinesAdapter.MAGAZINE_TAB), List.of());
+        var unrelated = new net.minecraft.world.item.crafting.RecipeHolder<>(id("taczmagazines:magazine/fake"), new GunSmithTableRecipe(
+                new GunSmithTableResult(new ItemStack(Items.DIAMOND), TaCZMagazinesAdapter.MAGAZINE_TAB), List.of()));
+        var wrongTab = new net.minecraft.world.item.crafting.RecipeHolder<>(id("taczmagazines:magazine/wrong_tab"), new GunSmithTableRecipe(
+                new GunSmithTableResult(output("9mm_17", 17), id("tacz:ammo")), List.of()));
+        var foreign = new net.minecraft.world.item.crafting.RecipeHolder<>(id("anothermod:magazine/fake"), new GunSmithTableRecipe(
+                new GunSmithTableResult(output("9mm_17", 17), TaCZMagazinesAdapter.MAGAZINE_TAB), List.of()));
         var capture = adapter(source).capture(List.of(unrelated, wrongTab, foreign, recipe("unknown", 0, 17)));
         assertTrue(capture.families().isEmpty());
         assertEquals(3, capture.rejected().size());
@@ -142,10 +142,10 @@ class TaCZMagazinesAdapterTest {
             source.add("9mm_20", 20, 0, "pack:pistol_c");
             var invalid = recipe("9mm_17", 0, 17);
             switch (corruption) {
-                case "loaded" -> invalid.getOutput().getOrCreateTag().putInt("AmmoCount", 1);
-                case "capacity" -> invalid.getOutput().getOrCreateTag().putInt("MaxCapacity", 99);
-                case "count" -> invalid.getOutput().setCount(2);
-                case "family" -> invalid.getOutput().getOrCreateTag().putString("MagazineFamily", "bad:family");
+                case "loaded" -> net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, invalid.value().getOutput(), customTag -> customTag.putInt("AmmoCount", 1));
+                case "capacity" -> net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, invalid.value().getOutput(), customTag -> customTag.putInt("MaxCapacity", 99));
+                case "count" -> invalid.value().getOutput().setCount(2);
+                case "family" -> net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, invalid.value().getOutput(), customTag -> customTag.putString("MagazineFamily", "bad:family"));
             }
             var capture = adapter(source).capture(List.of(invalid, recipe("9mm_20", 1, 20)));
             assertEquals(Set.of(key("9mm_20")), capture.families().keySet(), corruption);
@@ -205,21 +205,21 @@ class TaCZMagazinesAdapterTest {
         return source;
     }
 
-    private static GunSmithTableRecipe recipe(String family, int ordinal, int capacity) {
-        return new GunSmithTableRecipe(id("taczmagazines:magazine/" + String.format("%04d_", ordinal) + family),
+    private static net.minecraft.world.item.crafting.RecipeHolder<GunSmithTableRecipe> recipe(String family, int ordinal, int capacity) {
+        return new net.minecraft.world.item.crafting.RecipeHolder<>(id("taczmagazines:magazine/" + String.format("%04d_", ordinal) + family), new GunSmithTableRecipe(
                 new GunSmithTableResult(output(family, capacity), TaCZMagazinesAdapter.MAGAZINE_TAB),
-                new ArrayList<>(List.of(new GunSmithTableIngredient(Ingredient.of(Items.IRON_INGOT), 4))));
+                new ArrayList<>(List.of(new GunSmithTableIngredient(Ingredient.of(Items.IRON_INGOT), 4)))));
     }
 
     private static ItemStack output(String family, int capacity) {
         var stack = new ItemStack(Items.PAPER);
-        stack.getOrCreateTag().putString("MagazineFamily", family);
-        stack.getOrCreateTag().putInt("MaxCapacity", capacity);
-        stack.getOrCreateTag().putInt("AmmoCount", 0);
+        net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, stack, customTag -> customTag.putString("MagazineFamily", family));
+        net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, stack, customTag -> customTag.putInt("MaxCapacity", capacity));
+        net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, stack, customTag -> customTag.putInt("AmmoCount", 0));
         return stack;
     }
 
-    private static ResourceLocation id(String value) { return new ResourceLocation(value); }
+    private static ResourceLocation id(String value) { return ResourceLocation.parse(value); }
     @Test void gunRequirementsRemainVisibleWhenFamilyRecipesAreDisabled() {
         var source=base();source.disabled.add("9mm_17");
         var adapter=adapter(source);
@@ -244,9 +244,9 @@ class TaCZMagazinesAdapterTest {
             return extraFamilies.isEmpty() ? facts.keySet() : extraFamilies;
         }
         @Override public boolean isMagazine(ItemStack stack) { return stack.is(Items.PAPER); }
-        @Override public String family(ItemStack stack) { return stack.getOrCreateTag().getString("MagazineFamily"); }
-        @Override public int capacity(ItemStack stack) { return stack.getOrCreateTag().getInt("MaxCapacity"); }
-        @Override public int ammoCount(ItemStack stack) { return stack.getOrCreateTag().getInt("AmmoCount"); }
+        @Override public String family(ItemStack stack) { return stack.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag().getString("MagazineFamily"); }
+        @Override public int capacity(ItemStack stack) { return stack.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag().getInt("MaxCapacity"); }
+        @Override public int ammoCount(ItemStack stack) { return stack.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag().getInt("AmmoCount"); }
         @Override public boolean recipeEnabled(String family) { return !disabled.contains(family); }
         @Override public TaCZMagazinesAdapter.Family describe(String family) { return facts.get(family); }
     }

@@ -56,13 +56,13 @@ class BlueprintAccessConfigSnapshotTest {
                 id.toString(),
                 "item.test.name",
                 "item.test.tooltip",
-                new ResourceLocation("test", "recipe/" + id.getPath()),
+                ResourceLocation.fromNamespaceAndPath("test", "recipe/" + id.getPath()),
                 null,
                 type,
                 id("test:display"));
     }
 
     private static ResourceLocation id(String value) {
-        return new ResourceLocation(value);
+        return ResourceLocation.parse(value);
     }
 }

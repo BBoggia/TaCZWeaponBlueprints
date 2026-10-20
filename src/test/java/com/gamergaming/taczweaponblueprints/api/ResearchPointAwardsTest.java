@@ -14,8 +14,8 @@ import net.minecraft.resources.ResourceLocation;
 class ResearchPointAwardsTest {
     @Test
     void registrationIsIdempotentBoundedAndDeterministicallyPublished() {
-        ResourceLocation later = new ResourceLocation("phase7_test:z_later");
-        ResourceLocation earlier = new ResourceLocation("phase7_test:a_earlier");
+        ResourceLocation later = ResourceLocation.parse("phase7_test:z_later");
+        ResourceLocation earlier = ResourceLocation.parse("phase7_test:a_earlier");
 
         ResearchPointAwards.registerSource(later);
         ResearchPointAwards.registerSource(earlier);

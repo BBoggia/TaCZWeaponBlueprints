@@ -20,7 +20,7 @@ import com.gamergaming.taczweaponblueprints.capabilities.PlayerRecipeData;
 import net.minecraft.resources.ResourceLocation;
 
 class ProgressionCriterionServiceTest {
-    private static final ResourceLocation TRIAL = new ResourceLocation("test:trial");
+    private static final ResourceLocation TRIAL = ResourceLocation.parse("test:trial");
 
     @Test
     void futureWeaponTrialCanMixEventIncrementsWithIdempotentQualification() {
@@ -128,7 +128,7 @@ class ProgressionCriterionServiceTest {
         assertTrue(data.replaceSupplementalProgression(Map.of(), full));
         var overflow = ProgressionCriterionService.prepare(
                 data,
-                new ResourceLocation("test:overflow"),
+                ResourceLocation.parse("test:overflow"),
                 ChangeOperation.GRANT,
                 1);
         assertEquals(ProgressionCriteria.Status.CAPACITY_REACHED,

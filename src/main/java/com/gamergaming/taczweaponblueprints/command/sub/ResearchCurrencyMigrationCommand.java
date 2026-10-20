@@ -39,7 +39,7 @@ public final class ResearchCurrencyMigrationCommand {
     private static long tick(CommandSourceStack source) { return source.getServer().overworld().getGameTime(); }
     private static int inspect(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
         var player = EntityArgument.getPlayer(c, "player");
-        var data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElse(null);
+        var data = ModAttachments.recipeData(player).orElse(null);
         if (data == null) { c.getSource().sendFailure(text("unavailable")); return 0; }
         var live = ResearchCurrencyTransaction.guarded(PlayerResearchCurrencyContext.inventory(player, data),
                 () -> player.server.getPlayerList().getPlayer(player.getUUID()) == player);
@@ -50,7 +50,7 @@ public final class ResearchCurrencyMigrationCommand {
     }
     private static int preview(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
         var player = EntityArgument.getPlayer(c, "player");
-        var data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElse(null);
+        var data = ModAttachments.recipeData(player).orElse(null);
         if (data == null) { c.getSource().sendFailure(text("unavailable")); return 0; }
         var live = ResearchCurrencyTransaction.guarded(PlayerResearchCurrencyContext.inventory(player, data),
                 () -> player.server.getPlayerList().getPlayer(player.getUUID()) == player);

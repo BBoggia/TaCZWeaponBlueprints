@@ -10,8 +10,8 @@ import me.fzzyhmstrs.fzzy_config.validation.number.ValidatedDouble;
 import me.fzzyhmstrs.fzzy_config.validation.number.ValidatedInt;
 import me.fzzyhmstrs.fzzy_config.screen.widget.ValidationBackedNumberFieldWidget;
 import net.minecraft.client.gui.components.AbstractWidget;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.peanuuutz.tomlkt.TomlElement;
 
 /** Edits percentages/seconds while preserving the existing numeric TOML and network values. */

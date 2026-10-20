@@ -56,7 +56,7 @@ class ResearchTreeInspectorTest {
     @Test void historyIsBoundedAndRestoresDomainCameraScrollAndExpansion() {
         var history = new ResearchTreeInspectorHistory();
         var camera = new ResearchTreeViewport.Snapshot(42, 84, .7);
-        for (int i=0;i<40;i++) history.push(new ResearchTreeInspectorHistory.Entry(Domain.AMMO, new ResourceLocation("test:n"+i), camera, i, true));
+        for (int i=0;i<40;i++) history.push(new ResearchTreeInspectorHistory.Entry(Domain.AMMO, ResourceLocation.parse("test:n"+i), camera, i, true));
         assertEquals(ResearchTreeInspectorHistory.LIMIT, history.size());
         var last = history.pop().orElseThrow();
         assertEquals(39,last.scroll()); assertEquals(camera,last.camera()); assertEquals(Domain.AMMO,last.domain()); assertTrue(last.expanded());

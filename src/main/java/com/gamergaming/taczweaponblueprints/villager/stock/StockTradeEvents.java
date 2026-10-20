@@ -1,17 +1,18 @@
 package com.gamergaming.taczweaponblueprints.villager.stock;
 
+import net.neoforged.fml.common.EventBusSubscriber;
+
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.init.ModVillagers;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.npc.*;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.event.village.VillagerTradesEvent;
-import net.minecraftforge.event.server.ServerStoppedEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.village.VillagerTradesEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 
-@Mod.EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID)
+@EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID)
 public final class StockTradeEvents {
     private StockTradeEvents(){}
     @SubscribeEvent public static void trades(VillagerTradesEvent event){

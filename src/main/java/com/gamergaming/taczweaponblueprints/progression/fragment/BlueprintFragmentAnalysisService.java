@@ -9,7 +9,7 @@ import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressValueMutation;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.item.BlueprintFragmentItem;
 import com.gamergaming.taczweaponblueprints.item.BlueprintProvenance;
@@ -34,7 +34,7 @@ public final class BlueprintFragmentAnalysisService {
         var evaluation = evaluateState(player, transaction);
         return player == null ? evaluation : evaluation.withCurrencyBalance(
                 ModConfigs.BLUEPRINT.currencyPolicy(), player.getInventory().items,
-                player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElse(null));
+                ModAttachments.recipeData(player).orElse(null));
     }
 
     private static Evaluation evaluateState(ServerPlayer player, WorkstationTransaction transaction) {
@@ -53,8 +53,7 @@ public final class BlueprintFragmentAnalysisService {
         if (target.isEmpty()) {
             return Evaluation.failure(Status.INVALID_INPUT);
         }
-        IPlayerRecipeData data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
-                .resolve().orElse(null);
+        IPlayerRecipeData data = ModAttachments.recipeData(player).orElse(null);
         if (data == null) {
             return Evaluation.unavailable(
                     Status.PLAYER_DATA_UNAVAILABLE,
@@ -185,8 +184,7 @@ public final class BlueprintFragmentAnalysisService {
         if (!evaluation.ready() || player == null || transaction == null) {
             return Result.from(evaluation);
         }
-        IPlayerRecipeData data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
-                .resolve().orElse(null);
+        IPlayerRecipeData data = ModAttachments.recipeData(player).orElse(null);
         if (data == null) {
             return Result.failure(Status.PLAYER_DATA_UNAVAILABLE, evaluation.target());
         }

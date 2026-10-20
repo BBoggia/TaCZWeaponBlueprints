@@ -12,20 +12,21 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /** Opt-in screen checks, isolated by the launcher's disposable game directory. */
-@Mod.EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID,value=Dist.CLIENT)
+@EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID,value=Dist.CLIENT)
 public final class SettingsReviewProbe {
     private static final String OUTPUT=System.getProperty("tacz.settingsReviewQA.output","");
     private static final AtomicInteger SAVED=new AtomicInteger();
     private static int ticks,step,captures,joinedTicks; private static boolean done, connecting;
-    @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
-        if(OUTPUT.isEmpty()||done||event.phase!=TickEvent.Phase.END)return;
+    @SubscribeEvent public static void tick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event) {
+        if(OUTPUT.isEmpty()||done)return;
         var mc=Minecraft.getInstance();
         try {
             if(mc.getOverlay()!=null)return;
@@ -35,7 +36,7 @@ public final class SettingsReviewProbe {
                     connecting=true;
                     net.minecraft.client.gui.screens.ConnectScreen.startConnecting(new TitleScreen(),mc,
                         net.minecraft.client.multiplayer.resolver.ServerAddress.parseString("127.0.0.1:25577"),
-                        new net.minecraft.client.multiplayer.ServerData("Settings QA","127.0.0.1:25577",false),false);
+                        new net.minecraft.client.multiplayer.ServerData("Settings QA","127.0.0.1:25577",net.minecraft.client.multiplayer.ServerData.Type.OTHER), false, null);
                 }
                 return;
             }
@@ -76,9 +77,9 @@ public final class SettingsReviewProbe {
             if(step>=1&&step<=6 || step==10 || step==14) {
                 event.getGuiGraphics().flush();captures++;
                 AnalyzerNativeCapture.grab(Path.of(OUTPUT),"settings-"+step+".png",SAVED::incrementAndGet,SettingsReviewProbe::fail);
-                if(step<4) mc.screen.mouseScrolled(mc.screen.width/2d,mc.screen.height/2d,-35);
+                if(step<4) mc.screen.mouseScrolled(mc.screen.width/2d,mc.screen.height/2d, 0,-35);
                 else if(step==4) {mc.setScreen(new TitleScreen());ConfigApi.INSTANCE.openScreen("taczweaponblueprints.research_tree_client");}
-                else if(step==5) mc.screen.mouseScrolled(mc.screen.width/2d,mc.screen.height/2d,-35);
+                else if(step==5) mc.screen.mouseScrolled(mc.screen.width/2d,mc.screen.height/2d, 0,-35);
                 step++;ticks=0;
             }
         }catch(Exception e){fail(e);}
@@ -96,7 +97,7 @@ public final class SettingsReviewProbe {
             discountBox=addRenderableWidget((EditBox)discount.widgetEntry(ChoiceValidator.Companion.any()));discountBox.setPosition(width/2,100);
             secondsBox=addRenderableWidget((EditBox)seconds.widgetEntry(ChoiceValidator.Companion.any()));secondsBox.setPosition(width/2,140);
         }
-        @Override public void render(GuiGraphics g,int x,int y,float partial){renderBackground(g);super.render(g,x,y,partial);
+        @Override public void render(GuiGraphics g,int x,int y,float partial){super.render(g,x,y,partial);
             g.drawString(font,"Chance (%)",width/2-130,66,0xffffff);g.drawString(font,"Discount (%)",width/2-130,106,0xffffff);g.drawString(font,"Hold (seconds)",width/2-130,146,0xffffff);}
     }
 }

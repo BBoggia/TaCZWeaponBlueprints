@@ -8,10 +8,8 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.world.item.ItemStack;
 import org.lwjgl.glfw.GLFW;
 import com.gamergaming.taczweaponblueprints.client.ResearchTreeViewport;
-import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
 import com.gamergaming.taczweaponblueprints.research.designer.*;
 import static com.gamergaming.taczweaponblueprints.client.designer.DesignerText.tr;
 
@@ -45,13 +43,13 @@ final class DesignerBuildScreen extends Screen {
     DesignerBuildScreen(ResearchDesignerWorkspaceScreen host){super(Component.literal("Build"));this.host=host;
         var context=host.editingCapture().map(ResearchDesignerCapture::json).orElseGet(JsonObject::new);
         catalog=context.has("catalog")?context.getAsJsonObject("catalog"):new JsonObject();resolved=context.has("resolved_nodes")?context.getAsJsonObject("resolved_nodes"):new JsonObject();
-        host.editingCapture().ifPresent(c->{try{currency=DesignerCapturedSettings.progression(c,new ResourceLocation(project().draft().profile().id())).currencyPolicy().item().map(id->BuiltInRegistries.ITEM.containsKey(id)?BuiltInRegistries.ITEM.get(id).getDescription().getString():id.toString()).orElse("RP");}catch(RuntimeException ignored){currency=tr("build.currency");}});
+        host.editingCapture().ifPresent(c->{try{currency=DesignerCapturedSettings.progression(c,ResourceLocation.parse(project().draft().profile().id())).currencyPolicy().item().map(id->BuiltInRegistries.ITEM.containsKey(id)?BuiltInRegistries.ITEM.get(id).getDescription().getString():id.toString()).orElse("RP");}catch(RuntimeException ignored){currency=tr("build.currency");}});
     }
     private ResearchDesignerSession session(){return host.editingSession();}
     private ResearchDesignerProject project(){return session().project();}
     private String selected(){return host.editingPrimary();}
     private ResearchDesignerDraft.Node selectedNode(){return ResearchDesignerStructure.node(project(),selected());}
-    private String name(String id){var v=catalog.getAsJsonObject(id);return v!=null&&v.has("name_key")?com.gamergaming.taczweaponblueprints.client.DesignerSceneAdapter.name(new ResourceLocation(id),v.get("name_key").getAsString()).getString():id;}
+    private String name(String id){var v=catalog.getAsJsonObject(id);return v!=null&&v.has("name_key")?com.gamergaming.taczweaponblueprints.client.DesignerSceneAdapter.name(ResourceLocation.parse(id),v.get("name_key").getAsString()).getString():id;}
     private Button button(int x,int y,int w,String label,Runnable action){var b=new TextButton(x,y,Math.max(20,w),label,action);b.setTooltip(Tooltip.create(Component.literal(label)));return addRenderableWidget(b);}
     private void go(Pane next){pane=next;query="";page=0;libraryOffset=0;rebuildWidgets();}
     private void commit(ResearchDesignerStructure.Proposal proposal){host.applyQuick(proposal);sync();rebuildWidgets();}
@@ -172,7 +170,7 @@ final class DesignerBuildScreen extends Screen {
     private void applyMaterials(JsonObject c,JsonArray values){c.add("ingredients",values);commit(DesignerResearchProperties.change(project(),selected(),DesignerResearchProperties.Field.COST,Optional.of(c)));}
     private void items(){search(52);var facts=host.editingCapture().map(c->c.json().getAsJsonObject("registry_facts").getAsJsonObject("items")).orElseGet(JsonObject::new);var ids=facts.keySet().stream().filter(id->(itemName(id)+" "+id).toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT))).sorted().toList();int rows=count(78);pages(ids.size(),rows);int y=78;
         for(String id:ids.stream().skip((long)page*rows).limit(rows).toList()){button(formX,y,formW,itemName(id),()->{var c=cost();var values=c.has("ingredients")?c.getAsJsonArray("ingredients"):new JsonArray();var v=new JsonObject();var items=new JsonArray();items.add(id);v.add("items",items);v.addProperty("count",1);values.add(v);applyMaterials(c,values);go(Pane.MATERIALS);});y+=26;}}
-    private String itemName(String id){var key=new ResourceLocation(id);return BuiltInRegistries.ITEM.containsKey(key)?BuiltInRegistries.ITEM.get(key).getDescription().getString():id;}
+    private String itemName(String id){var key=ResourceLocation.parse(id);return BuiltInRegistries.ITEM.containsKey(key)?BuiltInRegistries.ITEM.get(key).getDescription().getString():id;}
     private void problems(){button(formX,52,formW,tr(host.checkingBuild()?"cancel_preview":"retry_preview"),host::toggleBuildCheck);var values=host.buildProblems();int rows=count(78);pages(values.size(),rows);int y=78;for(var d:values.stream().skip((long)page*rows).limit(rows).toList()){button(formX,y,formW,d.cause(),()->{project().draft().nodes().stream().filter(n->n.id().equals(d.objectId())||n.requirements().stream().anyMatch(r->r.id().equals(d.objectId()))).findFirst().ifPresent(n->pick(n.id()));host.buildStatus(d.cause()+" "+d.action());});y+=26;}}
     private void help(){button(formX,52,formW,tr("build.add_root"),()->{addParent=null;go(Pane.LIBRARY);});button(formX,78,formW,tr("build.advanced"),host::openEditing);}
     private void pick(String id){try{if(connectParent!=null){String parent=connectParent;commit(DesignerAuthoringActions.connectRequired(project(),parent,id));connectParent=null;host.buildSelect(id,false);host.buildStatus(tr("build.connected"));}else host.buildSelect(id,hasShiftDown());pane=width<820?Pane.SELECTED:Pane.LIBRARY;focus(id);rebuildWidgets();}catch(RuntimeException e){host.buildStatus(Objects.toString(e.getMessage(),tr("build.failed")));}}
@@ -181,9 +179,9 @@ final class DesignerBuildScreen extends Screen {
     void clearArt(){icons.clear();}
     void fit(){camera.fit();}
     DesignerDraftLayout geometry(){sync();return geometry;}
-    private void icon(GuiGraphics g,String id,int x,int y){if(!catalog.has(id))return;var art=icons.computeIfAbsent(id,bp->DesignerCatalogArt.resolve(new ResourceLocation(bp),catalog.getAsJsonObject(bp)));if(art.texture().isPresent())g.blit(art.texture().get(),x,y,0,0,16,16,16,16);else g.renderItem(art.fallback(),x,y);}
+    private void icon(GuiGraphics g,String id,int x,int y){if(!catalog.has(id))return;var art=icons.computeIfAbsent(id,bp->DesignerCatalogArt.resolve(ResourceLocation.parse(bp),catalog.getAsJsonObject(bp)));if(art.texture().isPresent())g.blit(art.texture().get(),x,y,0,0,16,16,16,16);else g.renderItem(art.fallback(),x,y);}
     private void line(GuiGraphics g,String text,int x,int y,int width,int color){g.drawString(font,font.plainSubstrByWidth(text,Math.max(1,width)),x,y,color,false);}
-    @Override public void render(GuiGraphics g,int mx,int my,float dt){sync();g.fill(0,0,width,height,0xFF0C141D);g.fill(0,TOP,side,height-FOOT,0xFF172633);if(inspect>0)g.fill(width-inspect,TOP,width,height-FOOT,0xFF172633);
+    @Override public void renderBackground(GuiGraphics g,int mx,int my,float dt){g.fill(0,0,width,height,0xFF0C141D);g.fill(0,TOP,side,height-FOOT,0xFF172633);if(inspect>0)g.fill(width-inspect,TOP,width,height-FOOT,0xFF172633);
         line(g,(session().dirty()?"* ":"")+project().title(),246,9,width-252,0xFFA9BEC9);
         g.enableScissor(canvasX,TOP,canvasX+canvasW,TOP+canvasH);g.pose().pushPose();g.pose().translate(canvasX,TOP,0);g.pose().scale((float)camera.scale(),(float)camera.scale(),1);g.pose().translate(-camera.panX(),-camera.panY(),0);
         for(var region:geometry.regions()){g.fill(region.x(),8,region.x()+region.width(),region.height(),0xFF12212B);g.renderOutline(region.x(),8,region.width(),region.height()-8,0xFF314C5B);line(g,region.id().isEmpty()?tr("build.starting_area"):region.title(),region.x()+12,20,region.width()-24,0xFF9EBAC6);}
@@ -203,7 +201,8 @@ final class DesignerBuildScreen extends Screen {
         if(connectParent!=null||addParent!=null)line(g,tr(connectParent!=null?"build.connect_from":"build.add_after",nodes.get(connectParent!=null?connectParent:addParent).blueprintId().map(this::name).orElse("?")),canvasX+4,TOP+28,canvasW-8,0xFF70D8CD);
         String status=host.buildStatus();if(!status.equals(lastStatus)){lastStatus=status;statusChanged=net.minecraft.Util.getMillis();}
         if(net.minecraft.Util.getMillis()-statusChanged<5000&&!List.of(tr("checking"),tr("build.checked"),tr("build.local"),tr("build.changed"),tr("saved"),tr("recovery_saved")).contains(status)){g.fill(canvasX+3,height-40,canvasX+canvasW-3,height-27,0xF0172633);line(g,status,canvasX+6,height-38,canvasW-12,0xFFE7CA88);}
-        super.render(g,mx,my,dt);
+    }
+    @Override public void render(GuiGraphics g,int mx,int my,float dt){sync();super.render(g,mx,my,dt);
         if(my<TOP&&mx>=246)g.renderTooltip(font,font.split(Component.literal(project().title()+" · "+tr(session().dirty()?"unsaved":"saved_short")+"\n"+host.buildStatus()+"\n"+host.buildContext()),Math.min(440,width-20)),mx,my);
         if(pane==Pane.LIBRARY&&libraryTotal>libraryRows){int track=height-104,thumb=Math.max(12,track*libraryRows/libraryTotal);int y=100+(track-thumb)*libraryOffset/Math.max(1,libraryTotal-libraryRows);g.fill(side-7,100,side-3,height-4,0xFF233D4D);g.fill(side-7,y,side-3,y+thumb,0xFF87B6C3);}
         if(costLabelX>=0)line(g,tr("build.cost")+" ("+currency+")",costLabelX,costLabelY,formW,0xFF9BACB9);
@@ -218,7 +217,7 @@ final class DesignerBuildScreen extends Screen {
         if(button==0||button==2){panning=true;moved=false;pressX=x;pressY=y;return true;}return false;}
     @Override public boolean mouseDragged(double x,double y,int button,double dx,double dy){if(scrollingCatalog){dragScrollbar(y);return true;}if(dragNode!=null){dragX=x;dragY=y;moved|=Math.hypot(x-pressX,y-pressY)>5;return true;}if(panning){moved|=Math.hypot(x-pressX,y-pressY)>5;camera.panByScreenDelta(dx,dy);return true;}return super.mouseDragged(x,y,button,dx,dy);}
     @Override public boolean mouseReleased(double x,double y,int button){if(scrollingCatalog){scrollingCatalog=false;return true;}if(panning&&!moved&&button==0){host.buildSelect(null,false);if(pane==Pane.SELECTED)pane=Pane.LIBRARY;rebuildWidgets();}panning=false;if(dragNode!=null){String id=dragNode;dragNode=null;if(!moved){pick(id);return true;}moved=false;if(x>=canvasX&&x<canvasX+canvasW&&y>=TOP&&y<TOP+canvasH)try{var drop=geometry.drop(camera.canvasX(x-canvasX),camera.canvasY(y-TOP));commit(DesignerAuthoringActions.reorder(project(),id,drop.rank(),drop.index(),drop.branch()));host.buildSelect(id,false);}catch(RuntimeException e){host.buildStatus(Objects.toString(e.getMessage(),tr("build.failed")));}return true;}return super.mouseReleased(x,y,button);}
-    @Override public boolean mouseScrolled(double x,double y,double amount){if(pane==Pane.LIBRARY&&x<side&&y>=TOP){scrollLibrary(amount>0?-3:3);return true;}if(x>=canvasX&&x<canvasX+canvasW&&y>=TOP&&y<TOP+canvasH){camera.zoomProportional(amount,x-canvasX,y-TOP);return true;}return super.mouseScrolled(x,y,amount);}
+    @Override public boolean mouseScrolled(double x, double y, double horizontal, double amount){if(amount==0)return false;if(pane==Pane.LIBRARY&&x<side&&y>=TOP){scrollLibrary(amount>0?-3:3);return true;}if(x>=canvasX&&x<canvasX+canvasW&&y>=TOP&&y<TOP+canvasH){camera.zoomProportional(amount,x-canvasX,y-TOP);return true;}return super.mouseScrolled(x,y,horizontal, amount);}
     @Override public boolean keyPressed(int key,int scan,int mods){if(key==GLFW.GLFW_KEY_ESCAPE){if(getFocused() instanceof EditBox box&&box.getMessage().getString().equals(tr("build.cost"))&&selected()!=null){session().discardPending(costKey());rebuildWidgets();return true;}if(connectParent!=null||addParent!=null||assignTarget!=null||dragNode!=null){connectParent=null;addParent=null;assignTarget=null;dragNode=null;moved=false;host.buildStatus(tr("build.local"));rebuildWidgets();return true;}if(pane!=Pane.LIBRARY){go(Pane.LIBRARY);return true;}host.onClose();return true;}
         if(getFocused() instanceof EditBox)return super.keyPressed(key,scan,mods);
         if(pane==Pane.LIBRARY&&getFocused() instanceof IconButton focused&&(key==GLFW.GLFW_KEY_DOWN||key==GLFW.GLFW_KEY_UP)){
@@ -228,7 +227,7 @@ final class DesignerBuildScreen extends Screen {
         if(hasControlDown()&&(key==GLFW.GLFW_KEY_Z||key==GLFW.GLFW_KEY_Y)){host.undoBuild(key==GLFW.GLFW_KEY_Y||hasShiftDown());sync();rebuildWidgets();return true;}
         if(pane==Pane.LIBRARY&&(key==GLFW.GLFW_KEY_PAGE_DOWN||key==GLFW.GLFW_KEY_PAGE_UP)){scrollLibrary(key==GLFW.GLFW_KEY_PAGE_DOWN?libraryRows:-libraryRows);return true;}if(key==GLFW.GLFW_KEY_F){camera.fit();return true;}if(key==GLFW.GLFW_KEY_E){host.openEditing();return true;}
         switch(key){case GLFW.GLFW_KEY_LEFT->camera.panByScreenDelta(40,0);case GLFW.GLFW_KEY_RIGHT->camera.panByScreenDelta(-40,0);case GLFW.GLFW_KEY_UP->camera.panByScreenDelta(0,40);case GLFW.GLFW_KEY_DOWN->camera.panByScreenDelta(0,-40);default->{return super.keyPressed(key,scan,mods);}}return true;}
-    @Override public void tick(){children().stream().filter(EditBox.class::isInstance).map(EditBox.class::cast).forEach(EditBox::tick);if(revision!=session().sequence())sync();}
+    @Override public void tick(){if(revision!=session().sequence())sync();}
     private final class TextButton extends Button {
         TextButton(int x,int y,int w,String label,Runnable action){super(x,y,w,20,Component.literal(label),b->{try{action.run();}catch(RuntimeException e){host.buildStatus(Objects.toString(e.getMessage(),tr("build.failed")));}},DEFAULT_NARRATION);}
         @Override protected void renderWidget(GuiGraphics g,int mx,int my,float dt){

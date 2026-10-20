@@ -47,7 +47,7 @@
 //             }
 //             try (InputStream stream = zipFile.getInputStream(entry)) {
 //                 String json = IOUtils.toString(stream, StandardCharsets.UTF_8);
-//                 ResourceLocation registryName = new ResourceLocation(namespace, id);
+//                 ResourceLocation registryName = ResourceLocation.fromNamespaceAndPath(namespace, id);
 //                 getAttachmentFromJsonString(registryName, json);
 //                 CommonNetworkCache.addData(DataType.ATTACHMENT_INDEX, registryName, json);
 //                 CommonNetworkCache.INSTANCE.attachmentData.put(DataType.ATTACHMENT_INDEX, null)

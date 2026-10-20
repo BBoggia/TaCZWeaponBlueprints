@@ -9,7 +9,7 @@ import java.util.Set;
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.resource.award.ResearchPointAwardBlueprintFacts;
@@ -70,8 +70,7 @@ public final class ResearchPointAwardDispatcher {
         if (player == null || entityTypeId == null || combatFacts == null) {
             return DispatchResult.EMPTY;
         }
-        IPlayerRecipeData data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
-                .resolve().orElse(null);
+        IPlayerRecipeData data = ModAttachments.recipeData(player).orElse(null);
         ResearchPointAwardConfigSnapshot config = ModConfigs.BLUEPRINT.awardSnapshot();
         if (data == null || config == null || !config.awardsEnabled()
                 || !config.combatAwardsEnabled()) {
@@ -110,8 +109,7 @@ public final class ResearchPointAwardDispatcher {
         if (player == null || advancementId == null) {
             return DispatchResult.EMPTY;
         }
-        IPlayerRecipeData data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
-                .resolve().orElse(null);
+        IPlayerRecipeData data = ModAttachments.recipeData(player).orElse(null);
         ResearchPointAwardConfigSnapshot config = ModConfigs.BLUEPRINT.awardSnapshot();
         if (data == null || config == null || !config.awardsEnabled()) {
             return DispatchResult.EMPTY;

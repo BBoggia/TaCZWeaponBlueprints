@@ -9,14 +9,15 @@ import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.storage.LevelResource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /** Opt-in native integration probe, restricted to explicitly allowed disposable QA world copies. */
-@Mod.EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, value = Dist.CLIENT)
 public final class ResearchTreeWorkbenchProbe {
     private static final String OUTPUT = System.getProperty("tacz.treeWorkbenchQA.output");
     private static boolean opened;
@@ -100,7 +101,7 @@ public final class ResearchTreeWorkbenchProbe {
         if (OUTPUT == null) return;
         var mc = Minecraft.getInstance();
         if (!opened && event.getScreen() instanceof TitleScreen && mc.getOverlay() == null) {
-            opened = true; mc.createWorldOpenFlows().loadLevel(event.getScreen(), WORLD); return;
+            opened = true; mc.createWorldOpenFlows().openWorld(WORLD, () -> mc.setScreen(event.getScreen())); return;
         }
         if (event.getScreen() instanceof ResearchBenchScreen active) {
             try { measured(active); } catch(Exception error) { measurement=null;System.err.println("[Workbench QA] measure failed: "+error); }
@@ -115,8 +116,8 @@ public final class ResearchTreeWorkbenchProbe {
         } catch (Exception e) { System.err.println("[Workbench QA] " + e); }
         snapshot = null;
     }
-    @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
-        if (OUTPUT == null || event.phase != TickEvent.Phase.END) return;
+    @SubscribeEvent public static void tick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event) {
+        if (OUTPUT == null) return;
         Path root = Path.of(OUTPUT), command = root.resolve("control.json");
         if (!Files.isRegularFile(command)) return;
         try {
@@ -232,7 +233,7 @@ public final class ResearchTreeWorkbenchProbe {
                                     mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID())));
                     case "scroll-help" -> {
                         var layout=(ResearchTreeWorkbenchLayout)field(screen,"workbenchLayout");var b=layout.help().panel();
-                        screen.mouseScrolled(b.x()+12,b.y()+36,data.get("value").getAsDouble());
+                        screen.mouseScrolled(b.x()+12,b.y()+36, 0,data.get("value").getAsDouble());
                     }
                     case "click-search" -> {
                         var buttons=(java.util.List<net.minecraft.client.gui.components.AbstractWidget>)field(screen,"searchResultButtons");
@@ -263,7 +264,7 @@ public final class ResearchTreeWorkbenchProbe {
                         String region = data.get("region").getAsString();
                         var b = region.equals("inspector") ? layout.body() : region.equals("help") ? layout.help().panel()
                                 : region.equals("search") ? ((ResearchTreeSearchResultLayout.Layout) field(screen, "searchResultLayout")).rows().get(0) : layout.canvas();
-                        screen.mouseScrolled(b.x()+b.width()/2.0,b.y()+b.height()/2.0,data.get("delta").getAsDouble());
+                        screen.mouseScrolled(b.x()+b.width()/2.0,b.y()+b.height()/2.0, 0,data.get("delta").getAsDouble());
                     }
                     case "scrollbar-outside" -> {
                         var body = (ResearchTreeInspectorBody) field(screen,"inspectorBody");
@@ -285,7 +286,7 @@ public final class ResearchTreeWorkbenchProbe {
                     case "inspector-click-link" -> {
                         var body = (ResearchTreeInspectorBody) field(screen, "inspectorBody");
                         if (!body.visible) throw new IllegalStateException("details are closed");
-                        var id = new ResourceLocation(data.get("value").getAsString());
+                        var id = ResourceLocation.parse(data.get("value").getAsString());
                         var lines = (List<?>) field(body, "lines");
                         int lineHeight = ((net.minecraft.client.gui.Font) field(body, "font")).lineHeight + 4;
                         int first = -1;
@@ -341,12 +342,12 @@ public final class ResearchTreeWorkbenchProbe {
                         snapshot = name;
                     }
                     case "select" -> {
-                        var id = new ResourceLocation(data.get("value").getAsString());
+                        var id = ResourceLocation.parse(data.get("value").getAsString());
                         if (canvas.graph().node(id).isEmpty()) throw new IllegalArgumentException("node is not disclosed");
                         invoke(screen, "selectTreeNode", ResourceLocation.class, id); canvas.focusTarget(id);
                     }
                     case "click-node" -> {
-                        var id = new ResourceLocation(data.get("value").getAsString()); canvas.focusTarget(id); canvas.viewport().finishAnimation();
+                        var id = ResourceLocation.parse(data.get("value").getAsString()); canvas.focusTarget(id); canvas.viewport().finishAnimation();
                         var b = canvas.nodeBounds(id).orElseThrow();
                         double x=canvas.bounds().x()+canvas.viewport().viewportX(b.centerX()), y=canvas.bounds().y()+canvas.viewport().viewportY(b.y()+b.height()/2);
                         screen.mouseClicked(x,y,0); screen.mouseReleased(x,y,0);
@@ -367,7 +368,7 @@ public final class ResearchTreeWorkbenchProbe {
                         screen.mouseReleased(button.getX() + 3, button.getY() + 3, 0);
                     }
                     case "click-visible-node" -> {
-                        var id=new ResourceLocation(data.get("value").getAsString());
+                        var id=ResourceLocation.parse(data.get("value").getAsString());
                         var b=canvas.nodeBounds(id).orElseThrow();var v=canvas.viewport();
                         double x=canvas.bounds().x()+v.viewportX(b.centerX()),y=canvas.bounds().y()+v.viewportY(b.centerY());
                         if(canvas.nodeAt(x,y).filter(n -> n.blueprintId().equals(id)).isEmpty())throw new IllegalStateException("Node is not hit-testable in this view");
@@ -395,7 +396,7 @@ public final class ResearchTreeWorkbenchProbe {
                     }
                     case "overview" -> canvas.fit();
                     case "zoom" -> screen.mouseScrolled(canvas.bounds().x()+canvas.bounds().width()/2,
-                            canvas.bounds().y()+canvas.bounds().height()/2,data.get("value").getAsDouble());
+                            canvas.bounds().y()+canvas.bounds().height()/2, 0,data.get("value").getAsDouble());
                     case "minimap-begin", "minimap-drag", "minimap-end" -> {
                         var map=(ResearchTreeMinimap)field(screen,"treeMinimap"); var b=map.panelBounds();
                         if (!map.visible() || b==null) throw new IllegalStateException("minimap is not visible");
@@ -414,7 +415,7 @@ public final class ResearchTreeWorkbenchProbe {
                     case "branch" -> canvas.focusedId().ifPresent(canvas::focusBranch);
                     case "scroll-inspector" -> {
                         var layout = (ResearchTreeWorkbenchLayout) field(screen, "workbenchLayout"); var b = layout.inspectorContent();
-                        screen.mouseScrolled(b.x() + 2, b.y() + 2, data.get("value").getAsDouble());
+                        screen.mouseScrolled(b.x() + 2, b.y() + 2, 0, data.get("value").getAsDouble());
                     }
                     case "dismiss-help" -> invoke(screen, "dismissGuidance", null, null);
                     default -> throw new IllegalArgumentException("unknown QA action");
@@ -442,7 +443,7 @@ public final class ResearchTreeWorkbenchProbe {
                 org.lwjgl.glfw.GLFW.GLFW_KEY_MINUS,org.lwjgl.glfw.GLFW.GLFW_KEY_SLASH,org.lwjgl.glfw.GLFW.GLFW_KEY_TAB})
             screen.keyPressed(key,0,0);
         screen.charTyped('x',0);
-        screen.mouseScrolled(canvas.bounds().x()+8,canvas.bounds().y()+8,-1);
+        screen.mouseScrolled(canvas.bounds().x()+8,canvas.bounds().y()+8, 0,-1);
         screen.mouseDragged(-10,-10,0,30,20);
         invoke(screen,"requestResearch",null,null);
         if (!before.equals(canvas.viewport().renderedSnapshot()) || !selected.equals(screen.getMenu().selectedBlueprint())
@@ -529,7 +530,7 @@ public final class ResearchTreeWorkbenchProbe {
             for (String input : List.of("wheel", "key", "click", "drag")) {
                 pending.set(screen, entry);
                 switch (input) {
-                    case "wheel" -> screen.mouseScrolled(body.getX() + 2, body.getY() + 2, -1);
+                    case "wheel" -> screen.mouseScrolled(body.getX() + 2, body.getY() + 2, 0, -1);
                     case "key" -> { screen.setFocused(body); screen.keyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_PAGE_DOWN, 0, 0); }
                     case "click" -> screen.mouseClicked(-10, -10, 0);
                     case "drag" -> screen.mouseDragged(-10, -10, 0, 20, 10);
@@ -679,7 +680,7 @@ public final class ResearchTreeWorkbenchProbe {
             for (var stack : player.getInventory().items) if (!stack.isEmpty()) items.merge(
                     net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString(),stack.getCount(),Integer::sum);
             authoritative.add("inventory",ResearchTreeBaselineInput.JSON.toJsonTree(items));
-            player.getCapability(com.gamergaming.taczweaponblueprints.init.ModCapabilities.PLAYER_RECIPE_DATA).ifPresent(data -> {
+            com.gamergaming.taczweaponblueprints.init.ModAttachments.recipeData(player).ifPresent(data -> {
                 authoritative.addProperty("research_points",data.getResearchPoints());
                 authoritative.add("awards",ResearchTreeBaselineInput.JSON.toJsonTree(data.getResearchPointAwardLedger()));
             });

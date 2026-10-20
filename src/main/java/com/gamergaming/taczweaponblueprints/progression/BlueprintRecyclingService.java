@@ -10,7 +10,7 @@ import java.util.function.Function;
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
@@ -38,7 +38,7 @@ public final class BlueprintRecyclingService {
         }
 
         Optional<IPlayerRecipeData> resolvedData =
-                player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve();
+                ModAttachments.recipeData(player);
         if (resolvedData.isEmpty()) {
             return Result.failure(Status.PLAYER_DATA_UNAVAILABLE, inputId, 0);
         }
@@ -110,7 +110,7 @@ public final class BlueprintRecyclingService {
             return Evaluation.failure(Status.INVALID_INPUT, inputId, 0, 0, 0);
         }
         Optional<IPlayerRecipeData> resolvedData =
-                player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve();
+                ModAttachments.recipeData(player);
         if (resolvedData.isEmpty()) {
             return Evaluation.failure(Status.PLAYER_DATA_UNAVAILABLE, inputId, 0, 0, 0);
         }

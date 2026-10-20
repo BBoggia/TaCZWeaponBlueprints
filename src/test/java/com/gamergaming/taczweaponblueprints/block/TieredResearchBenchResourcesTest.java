@@ -33,14 +33,14 @@ class TieredResearchBenchResourcesTest {
     void everyTierHasAnIndependentDiscoverableRecipe() throws IOException {
         for (String id : RESEARCH_BENCH_IDS) {
             JsonObject recipe = json(
-                    "src/main/resources/data/taczweaponblueprints/recipes/" + id + ".json");
+                    "src/main/resources/data/taczweaponblueprints/recipe/" + id + ".json");
             assertEquals("minecraft:crafting_shaped", recipe.get("type").getAsString());
             assertEquals(NAMESPACE + id,
-                    recipe.getAsJsonObject("result").get("item").getAsString());
+                    recipe.getAsJsonObject("result").get("id").getAsString());
             assertFalse(recipe.getAsJsonObject("key").toString().contains(NAMESPACE));
 
             JsonObject advancement = json(
-                    "src/main/resources/data/taczweaponblueprints/advancements/recipes/misc/"
+                    "src/main/resources/data/taczweaponblueprints/advancement/recipes/misc/"
                             + id + ".json");
             assertEquals("minecraft:recipes/root", advancement.get("parent").getAsString());
             assertEquals(Set.of(NAMESPACE + id), advancement.getAsJsonObject("rewards")
@@ -65,9 +65,9 @@ class TieredResearchBenchResourcesTest {
         for (String id : REMOVED_UPGRADE_KIT_IDS) {
             assertFalse(items.contains(id));
             assertFalse(Files.exists(PROJECT.resolve(
-                    "src/main/resources/data/taczweaponblueprints/recipes/" + id + ".json")));
+                    "src/main/resources/data/taczweaponblueprints/recipe/" + id + ".json")));
             assertFalse(Files.exists(PROJECT.resolve(
-                    "src/main/resources/data/taczweaponblueprints/advancements/recipes/misc/"
+                    "src/main/resources/data/taczweaponblueprints/advancement/recipes/misc/"
                             + id + ".json")));
             assertFalse(Files.exists(PROJECT.resolve(
                     "src/main/resources/assets/taczweaponblueprints/models/item/" + id + ".json")));

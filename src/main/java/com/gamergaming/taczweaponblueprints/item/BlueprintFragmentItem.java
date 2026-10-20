@@ -37,7 +37,7 @@ public final class BlueprintFragmentItem extends Item {
                 || !(stack.getItem() instanceof BlueprintFragmentItem)) {
             return Optional.empty();
         }
-        return getTarget(stack.getTag());
+        return getTarget(stack.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag());
     }
 
     static Optional<ResourceLocation> getTarget(CompoundTag tag) {
@@ -54,7 +54,7 @@ public final class BlueprintFragmentItem extends Item {
 
     public static Optional<Identity> identity(ItemStack stack) {
         return stack == null || stack.isEmpty() || !(stack.getItem() instanceof BlueprintFragmentItem)
-                ? Optional.empty() : identity(stack.getTag());
+                ? Optional.empty() : identity(stack.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag());
     }
 
     static Optional<Identity> identity(CompoundTag tag) {
@@ -87,7 +87,7 @@ public final class BlueprintFragmentItem extends Item {
         var marker = new CompoundTag();
         marker.putInt("format", ANALYSIS_FORMAT);
         marker.putString("reward_class", reward.serializedName());
-        stack.getOrCreateTag().put(ANALYSIS_TAG, marker);
+        net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, stack, tag -> tag.put(ANALYSIS_TAG, marker));
         return stack;
     }
 
@@ -114,7 +114,7 @@ public final class BlueprintFragmentItem extends Item {
             throw new IllegalArgumentException("Blueprint Fragment target is invalid or oversized");
         }
         ItemStack fragment = new ItemStack(item);
-        fragment.setTag(createTargetTag(target));
+        fragment.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(createTargetTag(target)));
         return fragment;
     }
 
@@ -161,7 +161,7 @@ public final class BlueprintFragmentItem extends Item {
     @Override
     public void appendHoverText(
             ItemStack stack,
-            Level level,
+            net.minecraft.world.item.Item.TooltipContext level,
             List<Component> tooltip,
             TooltipFlag flag) {
         Optional<ResourceLocation> target = getTarget(stack);

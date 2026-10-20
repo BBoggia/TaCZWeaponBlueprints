@@ -14,7 +14,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 class AnalysisFragmentReconstructionTest {
-    static final ResourceLocation TARGET = new ResourceLocation("test:rifle");
+    static final ResourceLocation TARGET = ResourceLocation.parse("test:rifle");
     static BlueprintFragmentItem fragment;
     static BlueprintItem blueprint;
     @BeforeAll static void bootstrap() {
@@ -180,8 +180,8 @@ class AnalysisFragmentReconstructionTest {
         public ItemStack createOutput(ResourceLocation target, BlueprintProvenance provenance) {
             if (invalidOutput) return new ItemStack(Items.PAPER);
             var result = new ItemStack(blueprint);
-            result.getOrCreateTag().putString("bpId", target.toString());
-            result.getOrCreateTag().put(BlueprintProvenance.TAG_KEY, provenance.toTag()); return result;
+            net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, result, customTag -> customTag.putString("bpId", target.toString()));
+            net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, result, customTag -> customTag.put(BlueprintProvenance.TAG_KEY, provenance.toTag())); return result;
         }
         public boolean consumePhysical(ItemStack expected, int count) {
             if (!ItemStack.matches(input, expected)) return false;

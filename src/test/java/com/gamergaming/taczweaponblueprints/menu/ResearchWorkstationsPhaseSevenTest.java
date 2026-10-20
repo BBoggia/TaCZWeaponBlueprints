@@ -13,7 +13,7 @@ class ResearchWorkstationsPhaseSevenTest {
 
     @Test void basicAnalyzerRetainsTheTransparentInspectionLens() throws Exception {
         var model = JsonParser.parseString(Files.readString(ASSETS.resolve("models/block/blueprint_recycler.json"))).getAsJsonObject();
-        assertEquals("forge:composite", model.get("loader").getAsString());
+        assertEquals("neoforge:composite", model.get("loader").getAsString());
         var children = model.getAsJsonObject("children");
         assertEquals("minecraft:cutout", children.getAsJsonObject("body").get("render_type").getAsString());
         assertEquals("minecraft:translucent", children.getAsJsonObject("glass").get("render_type").getAsString());

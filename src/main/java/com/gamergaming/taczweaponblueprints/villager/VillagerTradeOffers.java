@@ -20,10 +20,10 @@ public final class VillagerTradeOffers {
                 || !Float.isFinite(multiplier) || multiplier < 0 || multiplier > 1)
             throw new IllegalArgumentException("Invalid offer contents");
         var counts = VillagerTradePricing.normalize(primary.getCount(), secondary.getCount(),
-                !secondary.isEmpty() && ItemStack.isSameItemSameTags(primary, secondary), primary.getMaxStackSize(),
+                !secondary.isEmpty() && ItemStack.isSameItemSameComponents(primary, secondary), primary.getMaxStackSize(),
                 minimumBasisPoints);
-        var offer = new MerchantOffer(primary.copyWithCount(counts.primary()),
-                counts.secondary() == 0 ? ItemStack.EMPTY : secondary.copyWithCount(counts.secondary()),
+        var offer = new MerchantOffer(OwnedOfferSerialization.cost(primary.copyWithCount(counts.primary())),
+                counts.secondary() == 0 ? java.util.Optional.empty() : java.util.Optional.of(OwnedOfferSerialization.cost(secondary.copyWithCount(counts.secondary()))),
                 output.copy(), uses, xp, multiplier);
         ((OwnedVillagerOffer) offer).taczweaponblueprints$terms(new VillagerOfferTerms(slot, counts.minimumPrimary(), true, 0));
         return offer;

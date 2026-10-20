@@ -8,7 +8,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.function.Supplier;
 
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
@@ -22,10 +21,21 @@ import com.tacz.guns.inventory.GunSmithTableMenu;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 
 /** Bounded, session-scoped recipe access for one exact native crafting menu. */
-public final class SyncCraftingAccessPacket {
+public final class SyncCraftingAccessPacket implements CustomPacketPayload {
+    public static final Type<SyncCraftingAccessPacket> TYPE = new Type<>(
+            com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.loc("sync_crafting_access"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, SyncCraftingAccessPacket> STREAM_CODEC =
+            StreamCodec.ofMember(SyncCraftingAccessPacket::toBytes, SyncCraftingAccessPacket::new);
+
+    @Override
+    public Type<SyncCraftingAccessPacket> type() { return TYPE; }
+
     private static final ClientAccumulator CLIENT_ACCUMULATOR = new ClientAccumulator();
 
     private final int containerId;
@@ -171,47 +181,54 @@ public final class SyncCraftingAccessPacket {
         }
     }
 
-    public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
-        context.enqueueWork(() -> {
-            ClientAccumulator.Acceptance acceptance = CLIENT_ACCUMULATOR.accept(this);
-            Minecraft minecraft = Minecraft.getInstance();
-            if (minecraft.player == null
-                    || minecraft.player.containerMenu.containerId != containerId
-                    || !(minecraft.player.containerMenu instanceof GunSmithTableMenu)) {
-                return;
-            }
-            boolean changed = acceptance.startedSnapshot()
-                    && ClientCraftingAccessState.beginSnapshot(
-                            containerId, requestId, snapshotId, accessIdentity);
-            if (acceptance.completedSnapshot().isPresent()) {
-                Snapshot snapshot = acceptance.completedSnapshot().orElseThrow();
-                boolean accepted = ClientCraftingAccessState.accept(
-                        snapshot.containerId(),
-                        snapshot.requestId(),
-                        snapshot.snapshotId(),
-                        snapshot.accessIdentity(),
-                        snapshot.status(),
-                        snapshot.allowedRecipeIds());
-                changed |= accepted;
-                TaCZWeaponBlueprints.LOGGER.info(
-                        "Workbench recipe diagnostics [packet]: container={}, request={}, "
-                                + "snapshot={}, chunks={}, status={}, receivedRecipes={}, "
-                                + "acceptedByActiveMenu={}, recipeSample={}",
-                        snapshot.containerId(),
-                        snapshot.requestId(),
-                        snapshot.snapshotId(),
-                        chunkCount,
-                        snapshot.status(),
-                        snapshot.allowedRecipeIds().size(),
-                        accepted,
-                        snapshot.allowedRecipeIds().stream().limit(8).toList());
-            }
-            if (changed) {
-                ClientBlueprintCatalog.refreshOpenGunSmithScreen();
-            }
-        });
-        context.setPacketHandled(true);
+    public void handle(IPayloadContext context) {
+        new ClientHandler().handle(context);
+    }
+
+    /** Loaded only when this clientbound payload is handled, never during server registration. */
+    @net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)
+    private final class ClientHandler {
+        void handle(IPayloadContext contextSupplier) {
+            IPayloadContext context = contextSupplier;
+            context.enqueueWork(() -> {
+                ClientAccumulator.Acceptance acceptance = CLIENT_ACCUMULATOR.accept(SyncCraftingAccessPacket.this);
+                Minecraft minecraft = Minecraft.getInstance();
+                if (minecraft.player == null
+                        || minecraft.player.containerMenu.containerId != containerId
+                        || !(minecraft.player.containerMenu instanceof GunSmithTableMenu)) {
+                    return;
+                }
+                boolean changed = acceptance.startedSnapshot()
+                        && ClientCraftingAccessState.beginSnapshot(
+                                containerId, requestId, snapshotId, accessIdentity);
+                if (acceptance.completedSnapshot().isPresent()) {
+                    Snapshot snapshot = acceptance.completedSnapshot().orElseThrow();
+                    boolean accepted = ClientCraftingAccessState.accept(
+                            snapshot.containerId(),
+                            snapshot.requestId(),
+                            snapshot.snapshotId(),
+                            snapshot.accessIdentity(),
+                            snapshot.status(),
+                            snapshot.allowedRecipeIds());
+                    changed |= accepted;
+                    TaCZWeaponBlueprints.LOGGER.info(
+                            "Workbench recipe diagnostics [packet]: container={}, request={}, "
+                                    + "snapshot={}, chunks={}, status={}, receivedRecipes={}, "
+                                    + "acceptedByActiveMenu={}, recipeSample={}",
+                            snapshot.containerId(),
+                            snapshot.requestId(),
+                            snapshot.snapshotId(),
+                            chunkCount,
+                            snapshot.status(),
+                            snapshot.allowedRecipeIds().size(),
+                            accepted,
+                            snapshot.allowedRecipeIds().stream().limit(8).toList());
+                }
+                if (changed) {
+                    ClientBlueprintCatalog.refreshOpenGunSmithScreen();
+                }
+            });
+        }
     }
 
     public static void clearClientState() {

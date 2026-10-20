@@ -10,15 +10,16 @@ import static com.gamergaming.taczweaponblueprints.villager.trade.TradeDefinitio
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.npc.Villager;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
-@Mod.EventBusSubscriber(modid="taczweaponblueprints")
+@EventBusSubscriber(modid="taczweaponblueprints")
 public final class VillagerFallbackRegressionProbe {
     private static boolean done;
     private static final List<String> evidence=new ArrayList<>();
-    private static ResourceLocation id(String s){return new ResourceLocation(s);}
+    private static ResourceLocation id(String s){return ResourceLocation.parse(s);}
     private static TradeDefinition copy(TradeDefinition d, ResourceLocation name, Role role, Output output, List<ResourceLocation> fallbacks) {
         return new TradeDefinition(name,d.profession(),d.level(),d.slot(),role,true,output,d.primary(),d.secondary(),d.uses(),d.xp(),d.demandMultiplier(),d.minimumBasisPoints(),d.requiredMods(),fallbacks);
     }
@@ -30,12 +31,12 @@ public final class VillagerFallbackRegressionProbe {
         if(!condition)throw new AssertionError(text);
         evidence.add(text);
     }
-    @SubscribeEvent public static void tick(TickEvent.ServerTickEvent event) {
-        if(done||!Boolean.getBoolean("tacz.villagerQA.fallbackRegression")||event.phase!=TickEvent.Phase.END||VillagerPrototypeStock.root()==null)return;
+    @SubscribeEvent public static void tick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+        if(done||!Boolean.getBoolean("tacz.villagerQA.fallbackRegression")||VillagerPrototypeStock.root()==null)return;
         StockPublicationCoordinator.settle();
         if(StockPublicationCoordinator.pending()||!StockCatalog.current().coherent())return;
         done=true;
-        net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(new net.minecraftforge.event.OnDatapackSyncEvent(event.getServer().getPlayerList(),null));
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.event.OnDatapackSyncEvent(event.getServer().getPlayerList(),null));
         StockPublicationCoordinator.settle();
         var previous=TradeDataManager.INSTANCE.publication();
         try {
@@ -93,7 +94,7 @@ public final class VillagerFallbackRegressionProbe {
         villager.setVillagerData(villager.getVillagerData().setProfession(profession));level.addFreshEntity(villager);
         try{
             villager.getOffers();
-            net.minecraftforge.fml.util.ObfuscationReflectionHelper.findMethod(Villager.class,"m_35528_").invoke(villager);
+            net.neoforged.fml.util.ObfuscationReflectionHelper.findMethod(Villager.class,"increaseMerchantCareer").invoke(villager);
             check(villager.getOffers().stream().anyMatch(offer->{
                 var owned=(OwnedVillagerOffer)offer;var binding=owned.taczweaponblueprints$binding();
                 return binding!=null&&binding.entry().kind()==kind&&(target==null||binding.entry().target().equals(target))

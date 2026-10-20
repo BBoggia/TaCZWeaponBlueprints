@@ -1,18 +1,28 @@
 package com.gamergaming.taczweaponblueprints.network;
 
 import java.util.Optional;
-import java.util.function.Supplier;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
 import com.gamergaming.taczweaponblueprints.progression.ResearchRouteFingerprint;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 /** Explicit quote-bound review identity, independent of tracked-goal guidance. */
 public record ResearchRouteReviewRequestPacket(int containerId, int requestId, long publicationGeneration,
-        ResourceLocation targetId, ResearchRouteFingerprint fingerprint) {
+        ResourceLocation targetId, ResearchRouteFingerprint fingerprint) implements CustomPacketPayload {
+    public static final Type<ResearchRouteReviewRequestPacket> TYPE = new Type<>(
+            com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.loc("research_route_review_request"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, ResearchRouteReviewRequestPacket> STREAM_CODEC =
+            StreamCodec.ofMember(ResearchRouteReviewRequestPacket::toBytes, ResearchRouteReviewRequestPacket::new);
+
+    @Override
+    public Type<ResearchRouteReviewRequestPacket> type() { return TYPE; }
+
     public ResearchRouteReviewRequestPacket {
         if (containerId < 0 || requestId < 1 || publicationGeneration == Long.MIN_VALUE || targetId == null
                 || targetId.toString().length() > PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH
@@ -29,19 +39,17 @@ public record ResearchRouteReviewRequestPacket(int containerId, int requestId, l
         b.writeUtf(targetId.toString(), PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH);
         b.writeLong(fingerprint.high()); b.writeLong(fingerprint.low());
     }
-    public void handle(Supplier<NetworkEvent.Context> supplier) {
-        var context = supplier.get();
+    public void handle(IPayloadContext supplier) {
+        var context = supplier;
         context.enqueueWork(() -> {
-            var player = context.getSender();
+            var player = NetworkHandler.sender(context);
             if (player == null) return;
             var result = NetworkHandler.matchesResearchGeneration(player, publicationGeneration)
                     && player.containerMenu.containerId == containerId
                     && player.containerMenu instanceof ResearchBenchMenu menu
                     ? menu.handleReviewRequest(player, targetId, fingerprint)
                     : new ResearchBenchMenu.GuidanceResult(ResearchBenchMenu.GuidanceResultCode.REJECTED, Optional.empty());
-            NetworkHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
-                    new ResearchRouteReviewResultPacket(this, result));
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new ResearchRouteReviewResultPacket(this, result));
         });
-        context.setPacketHandled(true);
     }
 }

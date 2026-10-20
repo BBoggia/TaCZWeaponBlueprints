@@ -8,16 +8,17 @@ import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePublicatio
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RegisterClientReloadListenersEvent;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.event.TickEvent;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
+import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.lwjgl.glfw.GLFW;
 
 /** Development-only entry point; no ordinary run or release registers these handlers. */
-@Mod.EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, value = Dist.CLIENT)
 public final class ResearchTreePrototypeEvents {
     private static final boolean ENABLED = Boolean.getBoolean("tacz.treePrototype.enabled");
     private static boolean titleOpened, benchOpened;
@@ -26,8 +27,8 @@ public final class ResearchTreePrototypeEvents {
     private ResearchTreePrototypeEvents() { }
 
     /** Bounded local commands for repeatable native QA; never evaluates code or sends research actions. */
-    @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
-        if (!ENABLED || event.phase != TickEvent.Phase.END) return;
+    @SubscribeEvent public static void tick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event) {
+        if (!ENABLED) return;
         Path root = Path.of(System.getProperty("tacz.treePrototype.output"));
         Path command = root.resolve("control.json");
         if (!Files.isRegularFile(command)) return;
@@ -99,7 +100,7 @@ public final class ResearchTreePrototypeEvents {
         return true;
     }
 
-    @Mod.EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
+    @EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
     public static final class Reload {
         @SubscribeEvent public static void register(RegisterClientReloadListenersEvent event) {
             event.registerReloadListener((ResourceManagerReloadListener) manager -> ResearchTreePrototypeIcons.reloaded());

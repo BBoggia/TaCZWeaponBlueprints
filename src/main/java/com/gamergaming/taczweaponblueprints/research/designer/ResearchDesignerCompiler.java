@@ -96,7 +96,7 @@ public final class ResearchDesignerCompiler {
             else family.add(id, definition.deepCopy());
         }
         void owned(String id, String owner) {
-            if (!new ResourceLocation(id).getNamespace().equals(project.namespace()))
+            if (!ResourceLocation.parse(id).getNamespace().equals(project.namespace()))
                 issue("ownership", owner, "", "Resource is outside the project namespace: " + id, "Use the project namespace for owned resources.");
         }
         Result run() {
@@ -121,7 +121,7 @@ public final class ResearchDesignerCompiler {
                 }
                 String bp = node.blueprintId().orElseThrow();
                 if (!assigned.add(bp)) issue("duplicate_blueprint", node.id(), pointer, "Blueprint is assigned twice: " + bp, "Keep one node per blueprint.");
-                if (!catalog.containsKey(new ResourceLocation(bp))) issue("missing_blueprint", node.id(), pointer + "/blueprint_id", "Blueprint is absent: " + bp, "Restore its content dependency or choose another blueprint.");
+                if (!catalog.containsKey(ResourceLocation.parse(bp))) issue("missing_blueprint", node.id(), pointer + "/blueprint_id", "Blueprint is absent: " + bp, "Restore its content dependency or choose another blueprint.");
                 var target = new JsonObject(); var ids = new JsonArray(); ids.add(bp); target.add("blueprints", ids);
                 var rule = node.policy().json(); rule.addProperty("format", 5); rule.addProperty("profile", profile.id());
                 rule.addProperty("priority", 0); rule.add("target", target);
@@ -130,7 +130,7 @@ public final class ResearchDesignerCompiler {
                     var value = new JsonObject(); var alternatives = new JsonArray();
                     for (String prerequisite : group.anyOf()) {
                         alternatives.add(prerequisite);
-                        if (!catalog.containsKey(new ResourceLocation(prerequisite))) issue("missing_prerequisite", group.id(), pointer + "/requirements", "Prerequisite is absent: " + prerequisite, "Restore its dependency or edit this requirement.");
+                        if (!catalog.containsKey(ResourceLocation.parse(prerequisite))) issue("missing_prerequisite", group.id(), pointer + "/requirements", "Prerequisite is absent: " + prerequisite, "Restore its dependency or edit this requirement.");
                     }
                     if (alternatives.isEmpty()) issue("empty_requirement", group.id(), pointer + "/requirements", "A requirement has no alternatives.", "Add an alternative or remove the requirement.");
                     value.add("any_of", alternatives); requirements.add(value);
@@ -153,19 +153,19 @@ public final class ResearchDesignerCompiler {
             if (hasErrors()) return result(null);
             try {
                 var snapshot = decodeResources(resources);
-                if (!snapshot.profiles().get(new ResourceLocation(profile.id())).techTree().equals(Optional.of(new ResourceLocation(tree.id()))))
+                if (!snapshot.profiles().get(ResourceLocation.parse(profile.id())).techTree().equals(Optional.of(ResourceLocation.parse(tree.id()))))
                     throw new IllegalArgumentException("Project profile must select its owned tree");
-                if (snapshot.techTrees().get(new ResourceLocation(tree.id())).usesAutomaticWeaponPlacement())
+                if (snapshot.techTrees().get(ResourceLocation.parse(tree.id())).usesAutomaticWeaponPlacement())
                     throw new IllegalArgumentException("Custom drafts must use authored_only placement");
                 ResearchTechTreeCatalogValidator.validate(snapshot, catalog);
-                var selectedProfile = snapshot.profiles().get(new ResourceLocation(profile.id()));
+                var selectedProfile = snapshot.profiles().get(ResourceLocation.parse(profile.id()));
                 var domainSettings = capture.map(c -> DesignerCapturedSettings.progression(
-                        c, new ResourceLocation(profile.id())).domainSettings()).orElse(
+                        c, ResourceLocation.parse(profile.id())).domainSettings()).orElse(
                                 com.gamergaming.taczweaponblueprints.progression.ResearchDomainSettings.PROFILE_DEFAULTS);
                 for (var domain : com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain.values()) {
                     var gate = domainSettings.apply(domain, selectedProfile.domainPolicy(domain));
                     if ((!gate.treeEnabled() || !gate.researchEnabled()) && draft.nodes().stream().anyMatch(n -> n.blueprintId()
-                            .map(ResourceLocation::new).map(catalog::get).filter(Objects::nonNull)
+                            .map(ResourceLocation::parse).map(catalog::get).filter(Objects::nonNull)
                             .map(data -> com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain.forKind(data.getKind()) == domain).orElse(false)))
                         diagnostics.add(new Diagnostic("domain_disabled", Severity.WARNING, "profile", "/draft/profile/definition/domain_policies",
                                 domain.name().toLowerCase(Locale.ROOT) + " contains nodes but its effective category gate hides or disables research.",
@@ -178,7 +178,7 @@ public final class ResearchDesignerCompiler {
                 diagnostics.add(new Diagnostic("scenario_validation_required", Severity.INFO, "project", "",
                         "Compilation validates definitions and structure; inventory readiness, route budgets and capture equivalence require scenario evaluation.",
                         "Run detached scenario checks before exporting or activating this candidate."));
-                return result(new Candidate(project.digest(), new ResourceLocation(profile.id()), roundTrip, new DesignerJson.ObjectValue(resources)));
+                return result(new Candidate(project.digest(), ResourceLocation.parse(profile.id()), roundTrip, new DesignerJson.ObjectValue(resources)));
             } catch (java.util.concurrent.CancellationException cancelled) { throw cancelled;
             } catch (RuntimeException e) {
                 issue("runtime_validation", "project", "/draft", message(e), "Correct the referenced definition or dependency and validate again.");
@@ -244,7 +244,7 @@ public final class ResearchDesignerCompiler {
                 issue("settings_mismatch", "project", "/settings_assumptions/" + key,
                         "Project settings assumptions differ from the capture.", "Choose a matching context or explicitly rebase the assumptions.");
             if (capturedSettings.has("effective") && capturedSettings.getAsJsonObject("effective").has("progression")) {
-                var progression = DesignerCapturedSettings.progression(capture.orElseThrow(), new ResourceLocation(project.draft().profile().id()));
+                var progression = DesignerCapturedSettings.progression(capture.orElseThrow(), ResourceLocation.parse(project.draft().profile().id()));
                 var items = context.getAsJsonObject("registry_facts").getAsJsonObject("items");
                 progression.currencyPolicy().item().ifPresent(id -> {
                     if (items != null && (!items.has(id.toString()) || items.get(id.toString()).getAsInt() < 1 || items.get(id.toString()).getAsInt() > 64))
@@ -302,11 +302,11 @@ public final class ResearchDesignerCompiler {
     }
     private static <T> Map<ResourceLocation, T> family(JsonObject resources, String name, Codec<T> codec) {
         var result = new TreeMap<ResourceLocation, T>(); var source = resources.getAsJsonObject(name);
-        if (source != null) source.entrySet().forEach(e -> { checkCancelled(); result.put(new ResourceLocation(e.getKey()), decode(codec, e.getValue())); });
+        if (source != null) source.entrySet().forEach(e -> { checkCancelled(); result.put(ResourceLocation.parse(e.getKey()), decode(codec, e.getValue())); });
         return result;
     }
     private static <T> T decode(Codec<T> codec, JsonElement value) {
-        return codec.parse(JsonOps.INSTANCE, value).getOrThrow(false, ignored -> {});
+        return codec.parse(JsonOps.INSTANCE, value).getOrThrow(IllegalArgumentException::new);
     }
     private static String message(RuntimeException error) {
         String text = Objects.toString(error.getMessage(), "Invalid definition");

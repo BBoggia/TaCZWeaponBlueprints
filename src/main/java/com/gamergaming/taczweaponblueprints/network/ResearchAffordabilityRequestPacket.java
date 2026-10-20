@@ -3,7 +3,6 @@ package com.gamergaming.taczweaponblueprints.network;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Supplier;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
@@ -12,10 +11,21 @@ import com.gamergaming.taczweaponblueprints.progression.ResearchAffordabilitySna
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 
 /** Requests one bounded progressive Affordable Now batch from the open Bench. */
-public final class ResearchAffordabilityRequestPacket {
+public final class ResearchAffordabilityRequestPacket implements CustomPacketPayload {
+    public static final Type<ResearchAffordabilityRequestPacket> TYPE = new Type<>(
+            com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.loc("research_affordability_request"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, ResearchAffordabilityRequestPacket> STREAM_CODEC =
+            StreamCodec.ofMember(ResearchAffordabilityRequestPacket::toBytes, ResearchAffordabilityRequestPacket::new);
+
+    @Override
+    public Type<ResearchAffordabilityRequestPacket> type() { return TYPE; }
+
     private final int containerId;
     private final int requestId;
     private final long publicationGeneration;
@@ -67,9 +77,9 @@ public final class ResearchAffordabilityRequestPacket {
                 id.toString(), PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH));
     }
 
-    public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
-        ServerPlayer sender = context.getSender();
+    public void handle(IPayloadContext contextSupplier) {
+        IPayloadContext context = contextSupplier;
+        ServerPlayer sender = NetworkHandler.sender(context);
         context.enqueueWork(() -> {
             Optional<ResearchBenchMenu.AffordabilityResult> immediate = sender != null
                     && NetworkHandler.matchesResearchGeneration(
@@ -94,7 +104,6 @@ public final class ResearchAffordabilityRequestPacket {
                         result);
             }
         });
-        context.setPacketHandled(true);
     }
 
     int containerId() {

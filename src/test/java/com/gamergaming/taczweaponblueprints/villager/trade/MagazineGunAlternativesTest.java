@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static com.gamergaming.taczweaponblueprints.villager.trade.TradeDefinition.*;
 
 class MagazineGunAlternativesTest {
-    private static ResourceLocation id(String value){return new ResourceLocation("test",value);}
+    private static ResourceLocation id(String value){return ResourceLocation.fromNamespaceAndPath("test", value);}
     private static TradeDefinition gun(String name,Role role,boolean enabled,String target,Selection selection,String... fallbacks){
         return new TradeDefinition(id(name),Profession.GUNSMITH,1,id(name),role,enabled,
                 new Output(Kind.GUN,1,1,selection,List.of(new Choice(id(target),1))),

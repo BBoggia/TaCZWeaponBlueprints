@@ -36,10 +36,10 @@ class BlueprintOnboardingPlanTest {
         BlueprintJournalEntry learned = new BlueprintJournalEntry(
                 0,
                 JournalVisibility.FULL,
-                Optional.of(new ResourceLocation("test:learned")),
+                Optional.of(ResourceLocation.parse("test:learned")),
                 Optional.of("item.test.learned"),
                 Optional.of("rifle"),
-                Optional.of(new ResourceLocation("test:display")),
+                Optional.of(ResourceLocation.parse("test:display")),
                 true, true, false, false, false,
                 0, 0, 0, 0);
         BlueprintJournalSnapshot journal = new BlueprintJournalSnapshot(

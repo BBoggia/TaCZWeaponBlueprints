@@ -35,8 +35,8 @@ class BlueprintRecipeViewerInfoTest {
 
     @Test
     void concreteBlueprintPagesUseOnlySortedServerDisclosedIds() {
-        ResourceLocation later = new ResourceLocation("zeta", "rifle");
-        ResourceLocation earlier = new ResourceLocation("alpha", "pistol");
+        ResourceLocation later = ResourceLocation.fromNamespaceAndPath("zeta", "rifle");
+        ResourceLocation earlier = ResourceLocation.fromNamespaceAndPath("alpha", "pistol");
         BlueprintJournalSnapshot journal = new BlueprintJournalSnapshot(
                 List.of(
                         namedEntry(0),
@@ -78,7 +78,7 @@ class BlueprintRecipeViewerInfoTest {
                 Optional.of(blueprintId),
                 Optional.of("test." + blueprintId.getPath()),
                 Optional.of("gun"),
-                Optional.of(new ResourceLocation("tacz", "gun")),
+                Optional.of(ResourceLocation.fromNamespaceAndPath("tacz", "gun")),
                 false, false, false, false, false,
                 0, 0, 0, 0);
     }

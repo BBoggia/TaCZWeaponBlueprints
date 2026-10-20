@@ -1,0 +1,40 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "DCD",
+    "OGO",
+    "IHI"
+  ],
+  "key": {
+    "I": {
+      "tag": "c:ingots/iron"
+    },
+    "C": {
+      "item": "minecraft:comparator"
+    },
+    "G": {
+      "item": "minecraft:grindstone"
+    },
+    "H": {
+      "item": "minecraft:hopper"
+    },
+    "D": {
+      "tag": "c:gems/diamond"
+    },
+    "O": {
+      "item": "minecraft:obsidian"
+    }
+  },
+  "result": {
+    "id": "taczweaponblueprints:experimental_blueprint_analyzer"
+  },
+  "show_notification": true,
+  "neoforge:conditions": [
+    {
+      "type": "taczweaponblueprints:station_setup",
+      "analyzer": true,
+      "tier": 3
+    }
+  ]
+}

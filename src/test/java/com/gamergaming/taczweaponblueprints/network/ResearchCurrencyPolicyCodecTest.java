@@ -69,7 +69,7 @@ class ResearchCurrencyPolicyCodecTest {
                 "{\"format\":1,\"kind\":\"physical_item\",\"point_cap\":0,\"revision\":1}",
                 "{\"format\":1,\"kind\":\"banked_rp\",\"point_cap\":1,\"revision\":1,\"extra\":true}"))
             assertTrue(ResearchCurrencyPolicyCodec.CODEC.parse(JsonOps.INSTANCE,JsonParser.parseString(raw)).error().isPresent(),raw);
-        assertThrows(IllegalArgumentException.class,()->ResearchCurrencyPolicy.physical(new ResourceLocation("minecraft:air"),1));
+        assertThrows(IllegalArgumentException.class,()->ResearchCurrencyPolicy.physical(ResourceLocation.parse("minecraft:air"),1));
         var b=new FriendlyByteBuf(Unpooled.buffer());
         try { b.writeVarInt(1); b.writeVarInt(999); assertThrows(IllegalArgumentException.class,()->ResearchCurrencyPolicyCodec.read(b)); }
         finally { b.release(); }
@@ -93,7 +93,7 @@ class ResearchCurrencyPolicyCodecTest {
                 "version = 4\nresearchCurrencyKind = \"PHYSICAL_ITEM\"\nresearchCurrencyItem = \"minecraft:iron_ingot\"\nresearchPointCap = 0\n").get();
         loaded.initializeLoadedSnapshots();
         assertEquals(ResearchCurrencyPolicy.Kind.PHYSICAL_ITEM, loaded.currencyPolicy().kind());
-        assertEquals(new ResourceLocation("minecraft:iron_ingot"), loaded.currencyPolicy().item().orElseThrow());
+        assertEquals(ResourceLocation.parse("minecraft:iron_ingot"), loaded.currencyPolicy().item().orElseThrow());
         assertEquals(0, loaded.currencyPolicy().pointCap());
         assertEquals(loaded.currencyPolicy(), loaded.progressionSnapshot().currencyPolicy());
         var client = ConfigApi.deserializeConfig(new BlueprintConfig(), ConfigApi.serializeConfig(loaded).get()).get();
@@ -102,7 +102,7 @@ class ResearchCurrencyPolicyCodecTest {
         assertEquals(loaded.currencyPolicy().item(), client.currencyPolicy().item());
     }
     @Test void currencyPublicationPacketUsesAnExplicitPolicyAndBoundedCount() {
-        var packet = new SyncResearchCurrencyPacket(ResearchCurrencyPolicy.physical(new ResourceLocation("minecraft:iron_ingot"), 7), 129);
+        var packet = new SyncResearchCurrencyPacket(ResearchCurrencyPolicy.physical(ResourceLocation.parse("minecraft:iron_ingot"), 7), 129);
         var buffer = new FriendlyByteBuf(Unpooled.buffer());
         try { packet.toBytes(buffer); assertEquals(packet, new SyncResearchCurrencyPacket(buffer)); assertFalse(buffer.isReadable()); }
         finally { buffer.release(); }

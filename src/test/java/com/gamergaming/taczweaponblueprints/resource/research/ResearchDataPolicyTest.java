@@ -15,7 +15,7 @@ import org.junit.jupiter.params.provider.*;
 class ResearchDataPolicyTest {
     static final ResourceLocation PROFILE = BlueprintAnalyzerPolicyTest.PROFILE, POLICY = id("test:data"), SHARED = id("test:shared");
     static final ResearchDataPoolResolver.PlayerView EMPTY_PLAYER = new ResearchDataPoolResolver.PlayerView(Set.of(), Set.of(), Map.of());
-    static ResourceLocation id(String id) { return new ResourceLocation(id); }
+    static ResourceLocation id(String id) { return ResourceLocation.parse(id); }
     static JsonObject json(String name) {
         try (var input = ResearchDataPolicyTest.class.getResourceAsStream("/research-data-policy/" + name + ".json")) {
             return JsonParser.parseString(new String(Objects.requireNonNull(input).readAllBytes(), StandardCharsets.UTF_8)).getAsJsonObject();
@@ -53,7 +53,7 @@ class ResearchDataPolicyTest {
     @ParameterizedTest @CsvSource({"note,1", "report,2", "dossier,3"})
     void defaultPoolsAndRoundTrips(String name, int tierCount) {
         var p = policy(name);
-        assertEquals(p, decode(ResearchDataPolicy.CODEC, ResearchDataPolicy.CODEC.encodeStart(JsonOps.INSTANCE, p).getOrThrow(false, ignored -> {})));
+        assertEquals(p, decode(ResearchDataPolicy.CODEC, ResearchDataPolicy.CODEC.encodeStart(JsonOps.INSTANCE, p).getOrThrow()));
         var resolved = pool(context(p, threeTiers()), EMPTY_PLAYER);
         assertTrue(resolved.ready()); assertEquals(tierCount, resolved.tiers().size());
         assertTrue(resolved.tiers().stream().allMatch(t -> t.tier().level() <= tierCount));

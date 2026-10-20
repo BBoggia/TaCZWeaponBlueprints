@@ -12,8 +12,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 
 class ResearchWorkbenchDomainTest {
-    private static final ResourceLocation DIMENSION = new ResourceLocation("test", "range");
-    private static final ResourceLocation WORKSTATION = new ResourceLocation("test", "bench");
+    private static final ResourceLocation DIMENSION = ResourceLocation.fromNamespaceAndPath("test", "range");
+    private static final ResourceLocation WORKSTATION = ResourceLocation.fromNamespaceAndPath("test", "bench");
 
     @Test
     void tierOrderingIsExhaustiveAndHigherTiersInheritLowerWork() {

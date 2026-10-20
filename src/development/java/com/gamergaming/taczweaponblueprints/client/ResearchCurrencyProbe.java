@@ -25,7 +25,7 @@ import net.minecraft.world.phys.*;
 
 /** Opt-in assertions on the real server, inventory, registered Scrap, and Blueprint Analyzer menu. */
 final class ResearchCurrencyProbe {
-    private static final ResourceLocation TARGET = new ResourceLocation("tacz:ak47");
+    private static final ResourceLocation TARGET = ResourceLocation.parse("tacz:ak47");
     private static final List<String> checks = new ArrayList<>();
     private ResearchCurrencyProbe() { }
     private static void verifyWithdrawal(ServerPlayer player, IPlayerRecipeData data) throws Exception {
@@ -36,14 +36,14 @@ final class ResearchCurrencyProbe {
         check(plan.quote().ready() && data.getResearchPoints() == 137, "withdrawal preview preserves live bank and inventory");
         var source = player.createCommandSourceStack().withPermission(2).withSuppressedOutput();
         var commands = player.server.getCommands();
-        check(commands.performPrefixedCommand(source, "gg progression currency inspect " + player.getGameProfile().getName()) == 1, "native currency inspection command");
-        check(commands.performPrefixedCommand(source, "gg progression currency withdraw preview " + player.getGameProfile().getName() + " 70") == 1, "native withdrawal preview command");
+        check(com.gamergaming.taczweaponblueprints.acceptance.ResearchEconomyServerProbe.commandResult(commands, source, "gg progression currency inspect " + player.getGameProfile().getName()) == 1, "native currency inspection command");
+        check(com.gamergaming.taczweaponblueprints.acceptance.ResearchEconomyServerProbe.commandResult(commands, source, "gg progression currency withdraw preview " + player.getGameProfile().getName() + " 70") == 1, "native withdrawal preview command");
         var registry = com.gamergaming.taczweaponblueprints.command.sub.ResearchCurrencyMigrationCommand.PENDING;
         var token = registry.preview(player.getUUID().toString(), player.getUUID(), player.server.overworld().getGameTime(), plan, live);
         String confirm = "gg progression currency withdraw confirm " + token;
-        check(commands.performPrefixedCommand(source, confirm) == 1, "native withdrawal confirmation command");
+        check(com.gamergaming.taczweaponblueprints.acceptance.ResearchEconomyServerProbe.commandResult(commands, source, confirm) == 1, "native withdrawal confirmation command");
         check(data.getResearchPoints() == 67 && ResearchCurrencyPayments.balance(live.policy(),player.getInventory().items,data) == 70, "native withdrawal conserves RP plus Scrap");
-        check(commands.performPrefixedCommand(source, confirm) == 0, "native withdrawal token retry rejected");
+        check(com.gamergaming.taczweaponblueprints.acceptance.ResearchEconomyServerProbe.commandResult(commands, source, confirm) == 0, "native withdrawal token retry rejected");
         var after = data.serializeNBT().copy();
         var expectedData = original.copy(); expectedData.putInt("ResearchPoints",67);
         check(expectedData.equals(after), "withdrawal preserves all noncurrency player data");
@@ -51,13 +51,13 @@ final class ResearchCurrencyProbe {
         check(data.getResearchPoints() == 67, "withdrawn balance survives native data reload");
         for(int i=0;i<36;i++)player.getInventory().items.set(i,new ItemStack(Items.STONE,64));
         check(!ResearchCurrencyPlanner.prepareWithdrawal(live.policy(),live.read(),1).quote().ready(), "native full inventory prevents withdrawal");
-        check(commands.performPrefixedCommand(source, "gg progression currency withdraw preview MissingOfflinePlayer 1") == 0, "native offline player conversion rejected");
+        check(com.gamergaming.taczweaponblueprints.acceptance.ResearchEconomyServerProbe.commandResult(commands, source, "gg progression currency withdraw preview MissingOfflinePlayer 1") == 0, "native offline player conversion rejected");
         registry.clear();
-        var configPath=net.minecraftforge.fml.loading.FMLPaths.CONFIGDIR.get().resolve("taczweaponblueprints/blueprint.toml");
+        var configPath=net.neoforged.fml.loading.FMLPaths.CONFIGDIR.get().resolve("taczweaponblueprints/blueprint.toml");
         byte[] configBytes=Files.readAllBytes(configPath);
         var kind=ModConfigs.BLUEPRINT.researchCurrencyKind.get(); var mode=ModConfigs.BLUEPRINT.researchDataBehavior.get();
         try {
-            check(commands.performPrefixedCommand(source,"gg progression currency legacy apply")==1,"native legacy preset saved and verified");
+            check(com.gamergaming.taczweaponblueprints.acceptance.ResearchEconomyServerProbe.commandResult(commands, source,"gg progression currency legacy apply")==1,"native legacy preset saved and verified");
             check(ModConfigs.BLUEPRINT.currencyPolicy().kind()==ResearchCurrencyPolicy.Kind.BANKED_RP
                     && ModConfigs.BLUEPRINT.dataSettings().behavior()==com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPolicy.Behavior.LEGACY_CURRENCY,"legacy preset selects independent banked and Data modes");
         } finally {
@@ -76,7 +76,7 @@ final class ResearchCurrencyProbe {
             config.researchPointCap = new ValidatedCondition<>(new ValidatedInt(0, 1_000_000_000, 0), () -> 0);
             config.foundWeaponRecoveryMode = new ValidatedCondition<>(new ValidatedEnum<>(FoundWeaponRecoveryMode.PLAYER_CHOICE), () -> FoundWeaponRecoveryMode.PLAYER_CHOICE);
             publish();
-            var data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElseThrow();
+            var data = com.gamergaming.taczweaponblueprints.init.ModAttachments.recipeData(player).orElseThrow();
             var menu = open(player, pos); reset(player, data, menu);
             ResearchEconomySupplyProbe.verify(player, menu, output);
             reset(player, data, menu);
@@ -84,14 +84,14 @@ final class ResearchCurrencyProbe {
             reset(player, data, menu);
             menu.getSlot(0).set(new ItemStack(ModItems.RESEARCH_REPORT.get(), 3)); menu.refreshAuthoritativePreview(player);
             check(menu.preview().actionable(), "Research Report is redeemable at zero bank cap");
-            var redeemed = ResearchDataRedemptionService.redeemInput(player, menu.inputStack(), new ResourceLocation("taczweaponblueprints:research_report"), 3, true);
+            var redeemed = ResearchDataRedemptionService.redeemInput(player, menu.inputStack(), ResourceLocation.parse("taczweaponblueprints:research_report"), 3, true);
             check(redeemed.successful() && redeemed.consumedItems() == 3 && redeemed.awardedPoints() == 9, "bulk Report redemption delivers all nine Scrap");
             check(menu.inputStack().isEmpty() && menu.outputStack().is(ModItems.SCRAP.get()) && menu.outputStack().getCount() == 9, "Research Data uses the extract-only output slot");
             check(data.getResearchPoints() == 137, "Research Data preserves dormant RP");
             reset(player, data, menu); menu.getSlot(0).set(new ItemStack(ModItems.RESEARCH_NOTE.get())); menu.getSlot(1).set(new ItemStack(Items.STONE));
             check(!ResearchDataRedemptionService.evaluateInput(player, menu.inputStack()).redeemable(), "occupied output blocks Data preview");
             var before = data.serializeNBT().copy();
-            redeemed = ResearchDataRedemptionService.redeemInput(player, menu.inputStack(), new ResourceLocation("taczweaponblueprints:research_note"), 1, false);
+            redeemed = ResearchDataRedemptionService.redeemInput(player, menu.inputStack(), ResourceLocation.parse("taczweaponblueprints:research_note"), 1, false);
             check(!redeemed.successful() && menu.inputStack().getCount() == 1 && before.equals(data.serializeNBT()), "blocked Data retains input and claims");
             check(redeemed.newBalance() == 0, "failed Data return reports carried Scrap instead of dormant RP");
             check(ResearchDataRedemptionService.evaluateInput(player, ItemStack.EMPTY).pointBalance() == 0,
@@ -135,14 +135,14 @@ final class ResearchCurrencyProbe {
                  "presentation":{"visibility":"public","name":"qa.currency"}}
                 """.formatted(profile))).result().orElseThrow();
             var context = ResearchPointAwardContext.simple(ResearchPointAwardTrigger.Type.BLUEPRINT_DISCOVERED, profile, TARGET);
-            var resolution = ResearchPointAwardResolver.resolve(ResearchPointAwardSnapshot.create(Map.of(new ResourceLocation("qa:currency"), definition)), context);
+            var resolution = ResearchPointAwardResolver.resolve(ResearchPointAwardSnapshot.create(Map.of(ResourceLocation.parse("qa:currency"), definition)), context);
             var existingDrops = player.serverLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, player.getBoundingBox().inflate(3)).stream().map(net.minecraft.world.entity.Entity::getUUID).collect(java.util.stream.Collectors.toSet());
-            var listener = new CancelCurrencyDrop(); net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(listener);
+            var listener = new CancelCurrencyDrop(); net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(listener);
             try {
                 var canceled = ResearchPointAwardService.awardResolved(player, data, resolution, context, config.awardSnapshot(), player.serverLevel().getGameTime());
                 check(!canceled.changed() && data.getResearchPointAwardLedger().isEmpty() && data.getResearchPoints() == 137, "canceled native entity spawn restores the claim and bank");
                 check(player.serverLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, player.getBoundingBox().inflate(3), e -> e.getItem().is(ModItems.SCRAP.get()) && !existingDrops.contains(e.getUUID())).isEmpty(), "canceled native spawn leaves no Scrap entity");
-            } finally { net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(listener); }
+            } finally { net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(listener); }
             var result = ResearchPointAwardService.awardResolved(player, data, resolution, context, config.awardSnapshot(), player.serverLevel().getGameTime());
             check(result.awardedPoints() == 129 && data.getResearchPoints() == 137, "full inventory award delivers physical overflow without touching RP");
             var dropped = player.serverLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, player.getBoundingBox().inflate(3), e -> e.getItem().is(ModItems.SCRAP.get()) && !existingDrops.contains(e.getUUID()));
@@ -156,27 +156,27 @@ final class ResearchCurrencyProbe {
             publish(); data.getResearchPointAwardLedger().clear();
             var bankedConfig = config.awardSnapshot();
             var switching = new SwitchCurrencyBeforeAward();
-            net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(switching);
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(switching);
             try {
                 var switched = ResearchPointAwardService.awardResolved(player, data, resolution, context, bankedConfig, player.serverLevel().getGameTime());
                 check(switching.called && !switched.changed() && data.getResearchPoints() == 137,
                         "banked pre-award currency switch aborts without changing dormant RP");
                 check(data.getResearchPointAwardLedger().isEmpty(), "banked pre-award switch does not claim the reward");
-            } finally { net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(switching); }
+            } finally { net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(switching); }
             ResearchDataTransactionProbe.verify(player, open(player, pos), output);
             Files.createDirectories(output); Files.writeString(output.resolve("currency-complete.json"), new GsonBuilder().setPrettyPrinting().create().toJson(Map.of("passed", true, "assertions", checks.size(), "checks", checks)));
         } finally { config.researchDataBehavior = oldMode; config.researchCurrencyKind = oldKind; config.researchPointCap = oldCap; config.foundWeaponRecoveryMode = oldRecovery; publish(); player.closeContainer(); }
     }
     private static final class SwitchCurrencyBeforeAward {
         boolean called;
-        @net.minecraftforge.eventbus.api.SubscribeEvent public void change(com.gamergaming.taczweaponblueprints.api.event.ResearchPointAwardEvent.Pre event) {
+        @net.neoforged.bus.api.SubscribeEvent public void change(com.gamergaming.taczweaponblueprints.api.event.ResearchPointAwardEvent.Pre event) {
             called = true;
             ModConfigs.BLUEPRINT.researchCurrencyKind = new ValidatedEnum<>(ResearchCurrencyPolicy.Kind.PHYSICAL_ITEM);
             try { publish(); } catch (Exception failure) { throw new IllegalStateException(failure); }
         }
     }
     private static final class CancelCurrencyDrop {
-        @net.minecraftforge.eventbus.api.SubscribeEvent public void cancel(net.minecraftforge.event.entity.EntityJoinLevelEvent event) {
+        @net.neoforged.bus.api.SubscribeEvent public void cancel(net.neoforged.neoforge.event.entity.EntityJoinLevelEvent event) {
             if (event.getEntity() instanceof net.minecraft.world.entity.item.ItemEntity item && item.getItem().is(ModItems.SCRAP.get())) event.setCanceled(true);
         }
     }
@@ -187,12 +187,12 @@ final class ResearchCurrencyProbe {
     static BlueprintRecyclerMenu open(ServerPlayer player, BlockPos pos) {
         player.closeContainer(); var block = (BlueprintRecyclerBlock) ModBlocks.BLUEPRINT_RECYCLER.get(); player.serverLevel().removeBlock(pos, false);
         check(BlueprintRecyclerBlock.placeCompleteStructure(player.serverLevel(), pos, block.defaultBlockState()), "place native Analyzer");
-        block.use(player.serverLevel().getBlockState(pos), player.serverLevel(), pos, player, InteractionHand.MAIN_HAND, new BlockHitResult(Vec3.atCenterOf(pos), Direction.NORTH, pos, false));
+        player.serverLevel().getBlockState(pos).useWithoutItem(player.serverLevel(), player, new BlockHitResult(Vec3.atCenterOf(pos), Direction.NORTH, pos, false));
         return (BlueprintRecyclerMenu) player.containerMenu;
     }
     private static ItemStack gun() {
-        var stack = new ItemStack(net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(new ResourceLocation("tacz:modern_kinetic_gun")));
-        IGun.getIGunOrNull(stack).setGunId(stack, TARGET); PhysicalWeaponProvenance.stampLootGenerated(stack, new ResourceLocation("minecraft:chests/simple_dungeon")); return stack;
+        var stack = new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(ResourceLocation.parse("tacz:modern_kinetic_gun")));
+        IGun.getIGunOrNull(stack).setGunId(stack, TARGET); PhysicalWeaponProvenance.stampLootGenerated(stack, ResourceLocation.parse("minecraft:chests/simple_dungeon")); return stack;
     }
     private static void publish() throws Exception { var method = ModConfigs.BLUEPRINT.getClass().getDeclaredMethod("publishProgressionSnapshot"); method.setAccessible(true); method.invoke(ModConfigs.BLUEPRINT); }
     private static void check(boolean valid, String message) { if (!valid) throw new IllegalStateException(message); checks.add(message); }

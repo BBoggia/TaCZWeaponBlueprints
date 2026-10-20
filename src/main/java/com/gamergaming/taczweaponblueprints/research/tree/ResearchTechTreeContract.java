@@ -238,7 +238,7 @@ public final class ResearchTechTreeContract {
         if (tier == null) {
             throw new IllegalArgumentException("Research Tech Tree legacy tier cannot be null");
         }
-        return new ResourceLocation(
+        return ResourceLocation.fromNamespaceAndPath(
                 "taczweaponblueprints",
                 "legacy_tier/" + tier.name().toLowerCase(Locale.ROOT));
     }

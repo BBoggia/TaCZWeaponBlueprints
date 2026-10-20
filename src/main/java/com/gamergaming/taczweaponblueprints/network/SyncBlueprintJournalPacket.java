@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
-import java.util.function.Supplier;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.client.ClientResearchState;
@@ -19,10 +18,21 @@ import com.gamergaming.taczweaponblueprints.resource.research.BlueprintCraftingD
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 
 /** Chunked atomic synchronization for the disclosure-filtered Journal model. */
-public final class SyncBlueprintJournalPacket {
+public final class SyncBlueprintJournalPacket implements CustomPacketPayload {
+    public static final Type<SyncBlueprintJournalPacket> TYPE = new Type<>(
+            com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.loc("sync_blueprint_journal"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, SyncBlueprintJournalPacket> STREAM_CODEC =
+            StreamCodec.ofMember(SyncBlueprintJournalPacket::toBytes, SyncBlueprintJournalPacket::new);
+
+    @Override
+    public Type<SyncBlueprintJournalPacket> type() { return TYPE; }
+
     private static final int JOURNAL_HEADER_RESERVE = 64;
     private static final int JOURNAL_ENTRY_FIXED_RESERVE = 56;
     private static final ClientAccumulator CLIENT_ACCUMULATOR = new ClientAccumulator();
@@ -159,10 +169,17 @@ public final class SyncBlueprintJournalPacket {
         }
     }
 
-    public void handle(Supplier<NetworkEvent.Context> context) {
-        context.get().enqueueWork(() -> CLIENT_ACCUMULATOR.accept(this).ifPresent(snapshot ->
-                ClientResearchState.acceptJournal(syncId, snapshot, reuseExistingTree)));
-        context.get().setPacketHandled(true);
+    public void handle(IPayloadContext context) {
+        new ClientHandler().handle(context);
+    }
+
+    /** Loaded only when this clientbound payload is handled, never during server registration. */
+    @net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)
+    private final class ClientHandler {
+        void handle(IPayloadContext context) {
+            context.enqueueWork(() -> CLIENT_ACCUMULATOR.accept(SyncBlueprintJournalPacket.this).ifPresent(snapshot ->
+                    ClientResearchState.acceptJournal(syncId, snapshot, reuseExistingTree)));
+        }
     }
 
     public static void clearClientState() {

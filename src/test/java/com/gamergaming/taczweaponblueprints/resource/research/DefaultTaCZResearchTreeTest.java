@@ -382,7 +382,7 @@ class DefaultTaCZResearchTreeTest {
         Map<Integer, Set<ResearchWorkbenchTier>> tiersByScore = new LinkedHashMap<>();
         automatic.candidates().eligibleProposals().forEach((id, proposal) -> {
             ResolvedBlueprintProgressionPolicy policy = progression.policy(
-                    PROFILE_ID, new ResourceLocation(id)).orElseThrow();
+                    PROFILE_ID, ResourceLocation.parse(id)).orElseThrow();
             if (proposal.reviewRequired()) {
                 assertEquals(
                         ResolvedBlueprintProgressionPolicy.TierSource.REVIEW_FALLBACK,

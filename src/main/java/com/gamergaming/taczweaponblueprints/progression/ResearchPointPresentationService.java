@@ -10,7 +10,7 @@ import java.util.function.Predicate;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.capabilities.ResearchPointAwardLedger.ClaimKey;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.resource.award.ResearchPointAwardContext;
@@ -28,7 +28,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 /** Produces bounded disclosure-filtered player presentation from award state. */
 public final class ResearchPointPresentationService {
@@ -180,8 +180,7 @@ public final class ResearchPointPresentationService {
         if (player == null) {
             return HelpSnapshot.EMPTY;
         }
-        IPlayerRecipeData data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
-                .resolve().orElse(null);
+        IPlayerRecipeData data = ModAttachments.recipeData(player).orElse(null);
         ResearchPointAwardConfigSnapshot config = ModConfigs.BLUEPRINT.awardSnapshot();
         ResearchPointAwardDataManager.Publication publication =
                 ResearchPointAwardDataManager.INSTANCE.publication();
@@ -282,8 +281,7 @@ public final class ResearchPointPresentationService {
     }
 
     private static boolean blueprintVisible(ServerPlayer player, ResourceLocation id) {
-        IPlayerRecipeData data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
-                .resolve().orElse(null);
+        IPlayerRecipeData data = ModAttachments.recipeData(player).orElse(null);
         return blueprintVisible(data, id);
     }
 
@@ -304,7 +302,7 @@ public final class ResearchPointPresentationService {
             if (stack.isEmpty()) {
                 continue;
             }
-            ResourceLocation itemId = ForgeRegistries.ITEMS.getKey(stack.getItem());
+            ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
             if (itemId != null && target.ids().contains(itemId)) {
                 return true;
             }

@@ -19,7 +19,7 @@ import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.capabilities.ResearchPointAwardLedger.ClaimKey;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
@@ -35,7 +35,7 @@ import com.gamergaming.taczweaponblueprints.resource.award.ResearchPointAwardTri
 import com.gamergaming.taczweaponblueprints.resource.award.ResearchPointAwardTrigger.Type;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchDataManager;
 
-import net.minecraft.advancements.Advancement;
+import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -93,8 +93,7 @@ public final class ResearchPointAwardReconciliationScheduler {
         if (session == null) {
             return;
         }
-        IPlayerRecipeData data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
-                .resolve().orElse(null);
+        IPlayerRecipeData data = ModAttachments.recipeData(player).orElse(null);
         if (data == null) {
             SESSIONS.remove(player.getUUID());
             return;
@@ -179,8 +178,7 @@ public final class ResearchPointAwardReconciliationScheduler {
         if (config == null || !config.awardsEnabled() || !hasRetroactiveDefinitions(awards.snapshot())) {
             return null;
         }
-        IPlayerRecipeData data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
-                .resolve().orElse(null);
+        IPlayerRecipeData data = ModAttachments.recipeData(player).orElse(null);
         if (data == null) {
             return null;
         }
@@ -212,9 +210,9 @@ public final class ResearchPointAwardReconciliationScheduler {
         ResourceLocation target = work.context().targetId().orElse(null);
         return switch (work.context().triggerType()) {
             case ADVANCEMENT_COMPLETED -> {
-                Advancement advancement = target == null
+                AdvancementHolder advancement = target == null
                         ? null
-                        : player.server.getAdvancements().getAdvancement(target);
+                        : player.server.getAdvancements().get(target);
                 yield advancement != null && player.getAdvancements()
                         .getOrStartProgress(advancement).isDone();
             }
@@ -320,9 +318,9 @@ public final class ResearchPointAwardReconciliationScheduler {
         private final ResearchPointAwardSnapshot awards;
         private final Map<ResourceLocation, ResearchPointAwardBlueprintFacts> facts;
         private final PlayerState playerState;
-        private final Iterator<Advancement> advancements;
-        private final PriorityQueue<Advancement> sortedAdvancements = new PriorityQueue<>(
-                Comparator.comparing(value -> value.getId().toString()));
+        private final Iterator<AdvancementHolder> advancements;
+        private final PriorityQueue<AdvancementHolder> sortedAdvancements = new PriorityQueue<>(
+                Comparator.comparing(value -> value.id().toString()));
         private final List<ResourceLocation> discovered;
         private final List<ResourceLocation> learned;
         private final Deque<WorkItem> ready = new ArrayDeque<>();
@@ -344,7 +342,7 @@ public final class ResearchPointAwardReconciliationScheduler {
                 ResearchPointAwardSnapshot awards,
                 Map<ResourceLocation, ResearchPointAwardBlueprintFacts> facts,
                 PlayerState playerState,
-                Iterator<Advancement> advancements) {
+                Iterator<AdvancementHolder> advancements) {
             this.awardRevision = awardRevision;
             this.catalogRevision = catalogRevision;
             this.researchRevision = researchRevision;
@@ -447,12 +445,12 @@ public final class ResearchPointAwardReconciliationScheduler {
                             stage = PlanningStage.DISCOVERED;
                             continue;
                         }
-                        Advancement advancement = sortedAdvancements.remove();
+                        AdvancementHolder advancement = sortedAdvancements.remove();
                         if (player.getAdvancements().getOrStartProgress(advancement).isDone()) {
                             addResolution(data, simpleContext(
                                     Type.ADVANCEMENT_COMPLETED,
                                     config.activeProfileId(),
-                                    advancement.getId()));
+                                    advancement.id()));
                         }
                         return true;
                     }

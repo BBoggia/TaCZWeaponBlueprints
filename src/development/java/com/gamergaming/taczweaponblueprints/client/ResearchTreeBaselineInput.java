@@ -154,7 +154,7 @@ public record ResearchTreeBaselineInput(
         }
 
         public ResourceLocation deserialize(JsonElement json, Type type, JsonDeserializationContext context) {
-            return new ResourceLocation(json.getAsString());
+            return ResourceLocation.parse(json.getAsString());
         }
     }
 

@@ -161,6 +161,6 @@ class ResearchProgressionConnectivityTest {
     }
 
     private static ResourceLocation id(String value) {
-        return new ResourceLocation(value);
+        return ResourceLocation.parse(value);
     }
 }

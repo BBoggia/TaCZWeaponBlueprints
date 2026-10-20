@@ -31,14 +31,13 @@ class ResearchWorkstationsPhaseThreeTest {
         assertEquals(
                 BlueprintRecyclerBlock.class,
                 BlueprintRecyclerBlock.class.getMethod(
-                        "use",
+                        "useWithoutItem",
                         BlockState.class,
                         Level.class,
                         BlockPos.class,
                         Player.class,
-                        InteractionHand.class,
                         BlockHitResult.class).getDeclaringClass());
-        assertEquals("70", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("neoforge-1", NetworkHandler.PROTOCOL_VERSION);
     }
 
     @Test

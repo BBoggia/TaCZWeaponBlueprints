@@ -100,7 +100,7 @@ class WorkstationModelAssetsTest {
         for (String id : IDS.subList(3, 6)) {
             for (String domain : List.of("block", "item")) {
                 JsonObject model = json(ASSETS.resolve("models/" + domain + "/" + id + ".json"));
-                assertEquals("forge:composite", model.get("loader").getAsString());
+                assertEquals("neoforge:composite", model.get("loader").getAsString());
                 JsonObject children = model.getAsJsonObject("children");
                 assertEquals(Set.of("body", "glass"), children.keySet());
                 JsonObject body = children.getAsJsonObject("body"), glass = children.getAsJsonObject("glass");

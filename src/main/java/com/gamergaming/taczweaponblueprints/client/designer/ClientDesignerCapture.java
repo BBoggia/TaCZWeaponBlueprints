@@ -1,18 +1,19 @@
 package com.gamergaming.taczweaponblueprints.client.designer;
 
+import net.neoforged.fml.common.EventBusSubscriber;
+
 import com.gamergaming.taczweaponblueprints.research.designer.*;
 import com.gamergaming.taczweaponblueprints.research.designer.DesignerCaptureTransfer.*;
 import com.gamergaming.taczweaponblueprints.network.*;
 import net.minecraft.client.Minecraft;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 import java.util.*;
 
 /** Client facade for the later Designer screen. Never uses the ordinary player's disclosed tree stream. */
-@Mod.EventBusSubscriber(modid="taczweaponblueprints",value=Dist.CLIENT,bus=Mod.EventBusSubscriber.Bus.FORGE)
+@EventBusSubscriber(modid="taczweaponblueprints",value=Dist.CLIENT,bus=EventBusSubscriber.Bus.GAME)
 public final class ClientDesignerCapture {
     private static UUID request; private static DesignerCaptureTransfer.Receiver receiver;
     private static ResearchDesignerCapture captured; private static Status status;
@@ -26,7 +27,7 @@ public final class ClientDesignerCapture {
         send(new Request(request,Action.START,0));
     }
     public static void cancel(){if(request!=null&&Minecraft.getInstance().getConnection()!=null)send(new Request(request,Action.CANCEL,0));clearPending();}
-    private static void send(Request value){NetworkHandler.INSTANCE.sendToServer(new DesignerCaptureRequestPacket(value));}
+    private static void send(Request value){net.neoforged.neoforge.network.PacketDistributor.sendToServer(new DesignerCaptureRequestPacket(value));}
     public static void accept(Reply reply){
         if(request==null||!request.equals(reply.id()))return;
         if(!authorized()){clear();status=Status.DENIED;return;}
@@ -42,8 +43,8 @@ public final class ClientDesignerCapture {
     private static void clearPending(){if(receiver!=null)receiver.clear();receiver=null;request=null;}
     public static void clear(){clearPending();captured=null;status=null;}
     @SubscribeEvent public static void logout(ClientPlayerNetworkEvent.LoggingOut event){clear();}
-    @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event){
-        if(event.phase!=TickEvent.Phase.END)return;
+    @SubscribeEvent public static void tick(ClientTickEvent.Post event){
+
         if(!authorized()){clearPending();captured=null;status=Minecraft.getInstance().getConnection()==null?null:Status.DENIED;return;}
         if(receiver!=null&&receiver.expired(now())){cancel();status=Status.EXPIRED;}
     }

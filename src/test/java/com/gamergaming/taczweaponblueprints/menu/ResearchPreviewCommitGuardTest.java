@@ -49,14 +49,14 @@ class ResearchPreviewCommitGuardTest {
                     direct, ResearchSelectionPreview.EMPTY, Optional.empty()));
             assertFalse(ResearchPreviewCommitGuard.accepts(direct,
                     ResearchSelectionPreviewFactory.unavailable(
-                            new ResourceLocation("test:target"), ResearchCostMode.POINTS_ONLY),
+                            ResourceLocation.parse("test:target"), ResearchCostMode.POINTS_ONLY),
                     Optional.of(CURRENT)));
         }
     }
 
     private static ResearchSelectionPreview preview(ResearchRouteFingerprint fingerprint) {
         return new ResearchSelectionPreview(
-                Optional.of(new ResourceLocation("test:target")),
+                Optional.of(ResourceLocation.parse("test:target")),
                 4,
                 10,
                 true,

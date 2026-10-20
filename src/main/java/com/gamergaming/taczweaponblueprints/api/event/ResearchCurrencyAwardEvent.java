@@ -4,8 +4,8 @@ import com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrenc
 import com.gamergaming.taczweaponblueprints.resource.award.ResearchPointAwardContext;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.eventbus.api.Cancelable;
-import net.minecraftforge.eventbus.api.Event;
+import net.neoforged.bus.api.ICancellableEvent;
+import net.neoforged.bus.api.Event;
 
 /** Physical currency event boundary. Banked mode retains ResearchPointAwardEvent. */
 public abstract class ResearchCurrencyAwardEvent extends Event {
@@ -26,7 +26,7 @@ public abstract class ResearchCurrencyAwardEvent extends Event {
     public ResearchPointAwardContext getAwardContext() { return context; }
     public ResearchCurrencyPolicy getCurrency() { return currency; }
     public int getUnits() { return units; }
-    @Cancelable public static final class Pre extends ResearchCurrencyAwardEvent {
+    public static final class Pre extends ResearchCurrencyAwardEvent implements ICancellableEvent {
         public Pre(ServerPlayer player, ResourceLocation id, ResearchPointAwardContext context, ResearchCurrencyPolicy currency, int units) {
             super(player, id, context, currency, units);
         }

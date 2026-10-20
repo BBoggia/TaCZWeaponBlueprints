@@ -1,18 +1,19 @@
 package com.gamergaming.taczweaponblueprints.villager.stock;
 
+import net.neoforged.fml.common.EventBusSubscriber;
+
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.villager.trade.TradeDataManager;
 import com.gamergaming.taczweaponblueprints.resource.loot.BlueprintLootDataManager;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchDataManager;
 import com.gamergaming.taczweaponblueprints.resource.award.ResearchPointAwardDataManager;
 import net.minecraft.server.MinecraftServer;
-import net.minecraftforge.event.OnDatapackSyncEvent;
-import net.minecraftforge.event.server.*;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.OnDatapackSyncEvent;
+import net.neoforged.neoforge.event.server.*;
+import net.neoforged.bus.api.SubscribeEvent;
 
 /** Transfers wait for complete server reload attempts, including failure recovery. */
-@Mod.EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID)
+@EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID)
 public final class StockPublicationCoordinator {
     private static final StockReloadBarrier BARRIER=new StockReloadBarrier();
     private record Committed(TradeDataManager.Publication trades,
@@ -66,7 +67,7 @@ public final class StockPublicationCoordinator {
                 if(player.containerMenu instanceof net.minecraft.world.inventory.MerchantMenu)player.closeContainer();
         }
     }
-    @SubscribeEvent(priority=net.minecraftforge.eventbus.api.EventPriority.LOWEST)
+    @SubscribeEvent(priority=net.neoforged.bus.api.EventPriority.LOWEST)
     public static void synced(OnDatapackSyncEvent event){
         // Later sync handlers can still fail this reload. Its complete future,
         // not this event, decides when these publications become committed.

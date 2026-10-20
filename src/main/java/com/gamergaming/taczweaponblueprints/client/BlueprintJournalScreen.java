@@ -1,6 +1,5 @@
 package com.gamergaming.taczweaponblueprints.client;
 
-import com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyText;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -330,7 +329,7 @@ public final class BlueprintJournalScreen extends Screen {
     @Override
     public void tick() {
         if (searchBox.visible) {
-            searchBox.tick();
+
         }
         BlueprintJournalSnapshot latest = ClientBlueprintJournal.snapshot();
         if (latest != snapshot) {
@@ -351,8 +350,8 @@ public final class BlueprintJournalScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics);
+    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        super.renderBackground(graphics, mouseX, mouseY, partialTick);
         graphics.fill(panelX, panelY, panelX + panelWidth, panelBottom, 0xE510151C);
         graphics.renderOutline(panelX, panelY, panelWidth, panelBottom - panelY, 0xFF6B7C8F);
         renderHeader(graphics);
@@ -364,6 +363,10 @@ public final class BlueprintJournalScreen extends Screen {
             }
             renderDetails(graphics);
         }
+    }
+
+    @Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
         if (!onboardingView && !compactDetailsOpen()) {
             renderRowIcons(graphics);
@@ -940,7 +943,7 @@ public final class BlueprintJournalScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double delta) {
         if (onboardingView && mouseX >= panelX && mouseX <= panelX + panelWidth
                 && mouseY >= panelY + 39 && mouseY <= panelBottom - 38 && delta != 0) {
             onboardingScroll = net.minecraft.util.Mth.clamp(onboardingScroll - (int)Math.signum(delta) * 24, 0, onboardingScrollMax);
@@ -955,7 +958,7 @@ public final class BlueprintJournalScreen extends Screen {
             changePage(delta > 0.0D ? -1 : 1);
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, delta);
+        return super.mouseScrolled(mouseX, mouseY, horizontal, delta);
     }
 
     @Override

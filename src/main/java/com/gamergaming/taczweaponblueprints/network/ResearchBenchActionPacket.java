@@ -1,7 +1,6 @@
 package com.gamergaming.taczweaponblueprints.network;
 
 import java.util.Optional;
-import java.util.function.Supplier;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
@@ -11,10 +10,21 @@ import com.gamergaming.taczweaponblueprints.progression.ResearchRouteFingerprint
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 
 /** A bounded request; the open server menu remains the sole authority. */
-public final class ResearchBenchActionPacket {
+public final class ResearchBenchActionPacket implements CustomPacketPayload {
+    public static final Type<ResearchBenchActionPacket> TYPE = new Type<>(
+            com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.loc("research_bench_action"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, ResearchBenchActionPacket> STREAM_CODEC =
+            StreamCodec.ofMember(ResearchBenchActionPacket::toBytes, ResearchBenchActionPacket::new);
+
+    @Override
+    public Type<ResearchBenchActionPacket> type() { return TYPE; }
+
     private final int containerId;
     private final int requestId;
     private final ResearchBenchResearchAction action;
@@ -88,9 +98,9 @@ public final class ResearchBenchActionPacket {
         });
     }
 
-    public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
-        ServerPlayer sender = context.getSender();
+    public void handle(IPayloadContext contextSupplier) {
+        IPayloadContext context = contextSupplier;
+        ServerPlayer sender = NetworkHandler.sender(context);
         context.enqueueWork(() -> {
             if (sender != null
                     && sender.containerMenu.containerId == containerId
@@ -105,7 +115,6 @@ public final class ResearchBenchActionPacket {
                 });
             }
         });
-        context.setPacketHandled(true);
     }
 
     int containerId() {

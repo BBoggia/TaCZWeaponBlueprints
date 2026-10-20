@@ -9,21 +9,31 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.function.Supplier;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.client.ClientBlueprintCatalog;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 
 /**
  * Atomically synchronizes the durable, client-presentable player progression
  * that is independent of the active TaCZ recipe-filter snapshot.
  */
-public final class SyncPlayerProgressionPacket {
+public final class SyncPlayerProgressionPacket implements CustomPacketPayload {
+    public static final Type<SyncPlayerProgressionPacket> TYPE = new Type<>(
+            com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.loc("sync_player_progression"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, SyncPlayerProgressionPacket> STREAM_CODEC =
+            StreamCodec.ofMember(SyncPlayerProgressionPacket::toBytes, SyncPlayerProgressionPacket::new);
+
+    @Override
+    public Type<SyncPlayerProgressionPacket> type() { return TYPE; }
+
     private static final ClientAccumulator CLIENT_ACCUMULATOR = new ClientAccumulator();
 
     private final long syncId;
@@ -129,22 +139,29 @@ public final class SyncPlayerProgressionPacket {
         }
     }
 
-    public void handle(Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> CLIENT_ACCUMULATOR.accept(this).ifPresent(completed -> {
-            Minecraft minecraft = Minecraft.getInstance();
-            if (minecraft.player != null) {
-                minecraft.player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).ifPresent(capability -> {
-                    if (!capability.replaceProgression(
-                            completed.learnedBlueprints(),
-                            completed.discoveredBlueprints(),
-                            completed.researchPoints())) {
-                        throw new IllegalArgumentException("Completed player progression snapshot is invalid");
-                    }
-                    ClientBlueprintCatalog.refreshOpenGunSmithScreen();
-                });
-            }
-        }));
-        ctx.get().setPacketHandled(true);
+    public void handle(IPayloadContext context) {
+        new ClientHandler().handle(context);
+    }
+
+    /** Loaded only when this clientbound payload is handled, never during server registration. */
+    @net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)
+    private final class ClientHandler {
+        void handle(IPayloadContext ctx) {
+            ctx.enqueueWork(() -> CLIENT_ACCUMULATOR.accept(SyncPlayerProgressionPacket.this).ifPresent(completed -> {
+                Minecraft minecraft = Minecraft.getInstance();
+                if (minecraft.player != null) {
+                    ModAttachments.recipeData(minecraft.player).ifPresent(capability -> {
+                        if (!capability.replaceProgression(
+                                completed.learnedBlueprints(),
+                                completed.discoveredBlueprints(),
+                                completed.researchPoints())) {
+                            throw new IllegalArgumentException("Completed player progression snapshot is invalid");
+                        }
+                        ClientBlueprintCatalog.refreshOpenGunSmithScreen();
+                    });
+                }
+            }));
+        }
     }
 
     /** Drops any partial or completed snapshot retained from the previous connection. */

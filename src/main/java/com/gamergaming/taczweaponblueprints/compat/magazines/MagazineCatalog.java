@@ -2,7 +2,6 @@ package com.gamergaming.taczweaponblueprints.compat.magazines;
 
 import java.util.Collection;
 
-import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.ItemStack;
 
 /** Server-owned publication, rebuilt after upstream generation and cleared between worlds. */
@@ -19,7 +18,7 @@ public final class MagazineCatalog {
                         ? TaCZMagazinesAdapter.Status.WAITING_FOR_RECIPES : adapter.status()));
     }
 
-    Publication rebuild(TaCZMagazinesAdapter adapter, Collection<? extends Recipe<?>> recipes) {
+    Publication rebuild(TaCZMagazinesAdapter adapter, Collection<? extends net.minecraft.world.item.crafting.RecipeHolder<?>> recipes) {
         var captured = adapter.capture(recipes);
         if (!sameContent(publication.catalog(), captured))
             publication = new Publication(Math.incrementExact(publication.revision()), captured);

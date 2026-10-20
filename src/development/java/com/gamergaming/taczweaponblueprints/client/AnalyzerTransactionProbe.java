@@ -21,17 +21,17 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 /** Native A4 acceptance against a disposable world's tiered profile fixture. */
 final class AnalyzerTransactionProbe {
-    private static final ResourceLocation TARGET = new ResourceLocation("tacz:ak47");
+    private static final ResourceLocation TARGET = ResourceLocation.parse("tacz:ak47");
     private static int checks;
     private AnalyzerTransactionProbe() { }
     static void verify(ServerPlayer player, BlockPos pos, Path output) throws Exception {
         var blocks = List.of((BlueprintRecyclerBlock)ModBlocks.BLUEPRINT_RECYCLER.get(),
                 ModBlocks.ADVANCED_BLUEPRINT_ANALYZER.get(), ModBlocks.EXPERIMENTAL_BLUEPRINT_ANALYZER.get());
-        var data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElseThrow();
+        var data = com.gamergaming.taczweaponblueprints.init.ModAttachments.recipeData(player).orElseThrow();
         for (int tier = 1; tier <= 3; tier++) {
             player.closeContainer(); player.getInventory().clearContent();
             data.replaceProgression(Set.of(), Set.of(TARGET.toString()), 20);
@@ -41,7 +41,7 @@ final class AnalyzerTransactionProbe {
             player.serverLevel().removeBlock(pos, false);
         if (!com.gamergaming.taczweaponblueprints.block.BlueprintRecyclerBlock.placeCompleteStructure(
                 player.serverLevel(), pos, block.defaultBlockState())) throw new IllegalStateException("Analyzer fixture needs two blocks");
-            block.use(player.serverLevel().getBlockState(pos), player.serverLevel(), pos, player, InteractionHand.MAIN_HAND,
+            player.serverLevel().getBlockState(pos).useWithoutItem(player.serverLevel(), player,
                     new BlockHitResult(Vec3.atCenterOf(pos), Direction.NORTH, pos, false));
             var menu = (BlueprintRecyclerMenu)player.containerMenu;
             menu.getSlot(0).set(gun()); menu.refreshAuthoritativePreview(player);
@@ -102,7 +102,7 @@ final class AnalyzerTransactionProbe {
                 var overstacked = partial.copy(); overstacked.setCount(65);
                 menu.getSlot(0).set(overstacked); menu.inputStack().setCount(65); menu.refreshAuthoritativePreview(player);
                 check(!menu.preview().actionable(), "overstacked analysis input rejected safely");
-                var malformed = partial.copy(); malformed.getOrCreateTag().putString(BlueprintFragmentItem.ANALYSIS_TAG, "bad");
+                var malformed = partial.copy(); net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, malformed, tag -> tag.putString(BlueprintFragmentItem.ANALYSIS_TAG, "bad"));
                 menu.getSlot(0).set(malformed); menu.refreshAuthoritativePreview(player);
                 check(!menu.preview().actionable(), "malformed analysis cannot fall into another reward route");
             }
@@ -111,9 +111,9 @@ final class AnalyzerTransactionProbe {
         Files.writeString(output.resolve("transactions.json"), "{\"assertions\":" + checks + ",\"passed\":true}\n");
     }
     private static ItemStack gun() {
-        var item = ForgeRegistries.ITEMS.getValues().stream().filter(value -> value instanceof IGun).findFirst().orElseThrow();
+        var item = BuiltInRegistries.ITEM.stream().filter(value -> value instanceof IGun).findFirst().orElseThrow();
         var stack = new ItemStack(item); ((IGun)item).setGunId(stack,TARGET);
-        PhysicalWeaponProvenance.stampLootGenerated(stack,new ResourceLocation("minecraft:chests/simple_dungeon"));
+        PhysicalWeaponProvenance.stampLootGenerated(stack,ResourceLocation.parse("minecraft:chests/simple_dungeon"));
         return stack;
     }
     private static void check(boolean value,String message) { if (!value) throw new IllegalStateException(message); checks++; }

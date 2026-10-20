@@ -1,5 +1,11 @@
 # TaCZ Magazines integration
 
+On the Minecraft 1.21.1 NeoForge development branch, no compatible TaCZ
+Magazines dependency is configured or validated. The adapter remains optional
+and rejects unrecognized versions. The existing stored-magazine protection
+still prevents an Analyzer from consuming a gun with a stored magazine. The
+integration contract below describes the preserved Forge release.
+
 The optional integration targets **TaCZ Magazines 0.2.0-Beta** on Minecraft
 1.20.1. With that version installed, empty magazines are available in the
 Magazines tab at all three crafting Workbench tiers and TaCZ's original ammo

@@ -1,18 +1,19 @@
 package com.gamergaming.taczweaponblueprints.research.designer.server;
 
+import net.neoforged.fml.common.EventBusSubscriber;
+
 import com.gamergaming.taczweaponblueprints.research.designer.*;
 import com.gamergaming.taczweaponblueprints.research.designer.DesignerCaptureTransfer.*;
 import com.gamergaming.taczweaponblueprints.network.*;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.event.server.ServerStoppedEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.network.PacketDistributor;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 import java.util.*;
 
-@Mod.EventBusSubscriber(modid="taczweaponblueprints",bus=Mod.EventBusSubscriber.Bus.FORGE)
+@EventBusSubscriber(modid="taczweaponblueprints",bus=EventBusSubscriber.Bus.GAME)
 public final class DesignerCaptureRequests {
     private record Pending(UUID request,DesignerCaptureTransfer transfer){}
     private static final Map<UUID,Pending> ACTIVE=new HashMap<>();
@@ -45,9 +46,9 @@ public final class DesignerCaptureRequests {
         var reply=pending.transfer().handle(request,player.hasPermissions(2),now);
         if(pending.transfer().closed())ACTIVE.remove(playerId);send(player,reply);
     }
-    private static void send(ServerPlayer player,Reply reply){NetworkHandler.INSTANCE.send(PacketDistributor.PLAYER.with(()->player),new DesignerCaptureReplyPacket(reply));}
-    @SubscribeEvent public static void tick(TickEvent.ServerTickEvent event){
-        if(event.phase!=TickEvent.Phase.END)return;
+    private static void send(ServerPlayer player,Reply reply){net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new DesignerCaptureReplyPacket(reply));}
+    @SubscribeEvent public static void tick(ServerTickEvent.Post event){
+
         var iterator=ACTIVE.entrySet().iterator();while(iterator.hasNext()){
             var entry=iterator.next();var player=event.getServer().getPlayerList().getPlayer(entry.getKey());
             if(player==null||!player.hasPermissions(2)||entry.getValue().transfer().expired(now())){

@@ -68,7 +68,7 @@ final class BlueprintProgressionCodecs {
                     "mode",
                     "value");
 
-    private static final Codec<ProgressionGateCondition.Criterion> CRITERION =
+    private static final com.mojang.serialization.MapCodec<ProgressionGateCondition.Criterion> CRITERION =
             StrictMapCodec.wrap(
                     "criterion Progression Gate",
                     RecordCodecBuilder.<ProgressionGateCondition.Criterion>mapCodec(instance -> instance.group(
@@ -85,9 +85,9 @@ final class BlueprintProgressionCodecs {
                                             java.util.Optional::of)
                                     .forGetter(ProgressionGateCondition.Criterion::disclosure))
                             .apply(instance, ProgressionGateCondition.Criterion::new)),
-                    "type", "id", "value", "scope", "message", "disclosure").codec();
+                    "type", "id", "value", "scope", "message", "disclosure");
 
-    private static final Codec<ProgressionGateCondition.Advancement> ADVANCEMENT =
+    private static final com.mojang.serialization.MapCodec<ProgressionGateCondition.Advancement> ADVANCEMENT =
             StrictMapCodec.wrap(
                     "advancement Progression Gate",
                     RecordCodecBuilder.<ProgressionGateCondition.Advancement>mapCodec(instance -> instance.group(
@@ -102,9 +102,9 @@ final class BlueprintProgressionCodecs {
                                             java.util.Optional::of)
                                     .forGetter(ProgressionGateCondition.Advancement::disclosure))
                             .apply(instance, ProgressionGateCondition.Advancement::new)),
-                    "type", "id", "scope", "message", "disclosure").codec();
+                    "type", "id", "scope", "message", "disclosure");
 
-    private static final Codec<ProgressionGateCondition.WorkbenchTier> WORKBENCH_GATE =
+    private static final com.mojang.serialization.MapCodec<ProgressionGateCondition.WorkbenchTier> WORKBENCH_GATE =
             StrictMapCodec.wrap(
                     "workbench-tier Progression Gate",
                     RecordCodecBuilder.<ProgressionGateCondition.WorkbenchTier>mapCodec(instance -> instance.group(
@@ -119,7 +119,7 @@ final class BlueprintProgressionCodecs {
                                             java.util.Optional::of)
                                     .forGetter(ProgressionGateCondition.WorkbenchTier::disclosure))
                             .apply(instance, ProgressionGateCondition.WorkbenchTier::new)),
-                    "type", "tier", "scope", "message", "disclosure").codec();
+                    "type", "tier", "scope", "message", "disclosure");
 
     static final Codec<ProgressionGateCondition> GATE_CONDITION = GATE_TYPE
             .dispatch(
@@ -154,7 +154,7 @@ final class BlueprintProgressionCodecs {
     private BlueprintProgressionCodecs() {
     }
 
-    private static Codec<? extends ProgressionGateCondition> gateCodec(
+    private static com.mojang.serialization.MapCodec<? extends ProgressionGateCondition> gateCodec(
             ProgressionGateCondition.Type type) {
         return switch (type) {
             case CRITERION -> CRITERION;

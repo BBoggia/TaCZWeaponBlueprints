@@ -1,16 +1,26 @@
 package com.gamergaming.taczweaponblueprints.network;
 
-import java.util.function.Supplier;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCost;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 
 /** Browses the current selection only; the server prepares a new complete quote. */
 public record ResearchMaterialPageRequestPacket(int containerId, long generation,
-        ResourceLocation targetId, int fromOffset, int toOffset) {
+        ResourceLocation targetId, int fromOffset, int toOffset) implements CustomPacketPayload {
+    public static final Type<ResearchMaterialPageRequestPacket> TYPE = new Type<>(
+            com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.loc("research_material_page_request"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, ResearchMaterialPageRequestPacket> STREAM_CODEC =
+            StreamCodec.ofMember(ResearchMaterialPageRequestPacket::toBytes, ResearchMaterialPageRequestPacket::new);
+
+    @Override
+    public Type<ResearchMaterialPageRequestPacket> type() { return TYPE; }
+
     public ResearchMaterialPageRequestPacket {
         int size = BlueprintResearchCost.MAX_INGREDIENT_TYPES;
         int limit = PlayerProgressionLimits.MAX_IDS_PER_COLLECTION * size;
@@ -31,16 +41,15 @@ public record ResearchMaterialPageRequestPacket(int containerId, long generation
         b.writeUtf(targetId.toString(), PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH);
         b.writeVarInt(fromOffset); b.writeVarInt(toOffset);
     }
-    public void handle(Supplier<NetworkEvent.Context> supplier) {
-        var context = supplier.get();
+    public void handle(IPayloadContext supplier) {
+        var context = supplier;
         context.enqueueWork(() -> {
-            var player = context.getSender();
+            var player = NetworkHandler.sender(context);
             if (player != null && NetworkHandler.matchesResearchGeneration(player, generation)
                     && player.containerMenu.containerId == containerId
                     && player.containerMenu instanceof ResearchBenchMenu menu) {
                 menu.requestMaterialPage(player, targetId, fromOffset, toOffset);
             }
         });
-        context.setPacketHandled(true);
     }
 }

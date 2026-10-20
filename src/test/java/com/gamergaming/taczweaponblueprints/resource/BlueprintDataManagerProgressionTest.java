@@ -16,8 +16,8 @@ import org.junit.jupiter.api.Test;
 class BlueprintDataManagerProgressionTest {
     @Test
     void catalogReplacementAdvancesRevisionAndDropsStaleRecipeMappings() {
-        ResourceLocation oldBlueprintId = new ResourceLocation("test", "old");
-        ResourceLocation newBlueprintId = new ResourceLocation("test", "new");
+        ResourceLocation oldBlueprintId = ResourceLocation.fromNamespaceAndPath("test", "old");
+        ResourceLocation newBlueprintId = ResourceLocation.fromNamespaceAndPath("test", "new");
         BlueprintData oldBlueprint = blueprint(oldBlueprintId, "recipe/old");
         BlueprintData newBlueprint = blueprint(newBlueprintId, "recipe/new");
 
@@ -43,8 +43,8 @@ class BlueprintDataManagerProgressionTest {
 
     @Test
     void catalogMigrationDiscoversLegacyRecipeOutputsAndRetainsCanonicalRecipes() {
-        ResourceLocation blueprintId = new ResourceLocation("test", "ak47");
-        ResourceLocation recipeId = new ResourceLocation("test", "gun/ak47");
+        ResourceLocation blueprintId = ResourceLocation.fromNamespaceAndPath("test", "ak47");
+        ResourceLocation recipeId = ResourceLocation.fromNamespaceAndPath("test", "gun/ak47");
         BlueprintData blueprint = new BlueprintData(
                 blueprintId.toString(),
                 "item.test.ak47",
@@ -52,7 +52,7 @@ class BlueprintDataManagerProgressionTest {
                 recipeId,
                 null,
                 "rifle",
-                new ResourceLocation("test", "display/rifle"));
+                ResourceLocation.fromNamespaceAndPath("test", "display/rifle"));
         PlayerRecipeData data = new PlayerRecipeData();
         data.addRecipe(recipeId.toString());
 
@@ -70,8 +70,8 @@ class BlueprintDataManagerProgressionTest {
 
     @Test
     void catalogMigrationRepairsMissingLegacyRecipeWithoutNewLearning() {
-        ResourceLocation blueprintId = new ResourceLocation("test", "repair");
-        ResourceLocation recipeId = new ResourceLocation("test", "gun/repair");
+        ResourceLocation blueprintId = ResourceLocation.fromNamespaceAndPath("test", "repair");
+        ResourceLocation recipeId = ResourceLocation.fromNamespaceAndPath("test", "gun/repair");
         BlueprintData blueprint = new BlueprintData(
                 blueprintId.toString(),
                 "item.test.repair",
@@ -79,7 +79,7 @@ class BlueprintDataManagerProgressionTest {
                 recipeId,
                 null,
                 "rifle",
-                new ResourceLocation("test", "display/rifle"));
+                ResourceLocation.fromNamespaceAndPath("test", "display/rifle"));
         PlayerRecipeData data = new PlayerRecipeData();
         assertTrue(data.addBlueprint(blueprintId.toString()));
         assertTrue(!data.hasRecipe(recipeId.toString()));
@@ -110,9 +110,9 @@ class BlueprintDataManagerProgressionTest {
                 blueprintId.toString(),
                 "item.test." + blueprintId.getPath(),
                 "item.test.blueprint.tooltip",
-                new ResourceLocation(blueprintId.getNamespace(), recipePath),
+                ResourceLocation.fromNamespaceAndPath(blueprintId.getNamespace(), recipePath),
                 null,
                 "rifle",
-                new ResourceLocation("test", "display/rifle"));
+                ResourceLocation.fromNamespaceAndPath("test", "display/rifle"));
     }
 }

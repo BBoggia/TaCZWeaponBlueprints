@@ -81,7 +81,7 @@ public final class AnalyzerBalanceReport {
                     row.addProperty("estimate_status", "not_configured"); rows.add(row); continue;
                 }
                 var table = AnalyzerOutcomeTable.CODEC.parse(JsonOps.INSTANCE, object(quote, "outcomes"))
-                        .getOrThrow(false, message -> { throw new IllegalArgumentException(message); });
+                        .getOrThrow(IllegalArgumentException::new);
                 int threshold = integer(quote, "fragment_threshold", 0, AnalyzerBalanceModel.MAX_THRESHOLD);
                 int cap = integer(quote, "retained_progress_cap", 0, 1_000_000_000);
                 if (cap < threshold) throw new IllegalArgumentException("archive cap is below threshold");

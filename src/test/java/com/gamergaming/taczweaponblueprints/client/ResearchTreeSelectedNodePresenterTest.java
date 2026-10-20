@@ -72,7 +72,7 @@ class ResearchTreeSelectedNodePresenterTest {
         ResearchSelectionPreview preview = ResearchTreeUxPhaseZeroFixture.missingMaterialsPreview();
         ResearchTreeSelectedNodePresenter.Presentation presentation =
                 ResearchTreeSelectedNodePresenter.present(input(
-                        availableNode(new ResourceLocation("phase_zero:other")),
+                        availableNode(ResourceLocation.parse("phase_zero:other")),
                         true,
                         preview.blueprintId(),
                         preview));
@@ -127,7 +127,7 @@ class ResearchTreeSelectedNodePresenterTest {
 
     @Test
     void authoritativePathPreviewCanMakeAHigherLockedNodeActionable() {
-        ResourceLocation nodeId = new ResourceLocation("test:path_target");
+        ResourceLocation nodeId = ResourceLocation.parse("test:path_target");
         ResearchSelectionPreview preview = new ResearchSelectionPreview(
                 Optional.of(nodeId),
                 24,
@@ -156,7 +156,7 @@ class ResearchTreeSelectedNodePresenterTest {
 
     @Test
     void authoritativeAccessBlockerTakesPriorityOverAnAffordablePath() {
-        ResourceLocation nodeId = new ResourceLocation("test:tier_three_target");
+        ResourceLocation nodeId = ResourceLocation.parse("test:tier_three_target");
         for (var blocked : List.of(
                 new AccessFixture(
                         ResearchAccessSummary.workbench(
@@ -201,7 +201,7 @@ class ResearchTreeSelectedNodePresenterTest {
 
     @Test
     void authoritativePreviewExplainsBoundedPlannerFailures() {
-        ResourceLocation nodeId = new ResourceLocation("test:complex_path_target");
+        ResourceLocation nodeId = ResourceLocation.parse("test:complex_path_target");
         for (ResearchSelectionPreview.PathPlanningState state : List.of(
                 ResearchSelectionPreview.PathPlanningState.PATH_TOO_LARGE,
                 ResearchSelectionPreview.PathPlanningState.ROUTE_TOO_COMPLEX,
@@ -253,7 +253,7 @@ class ResearchTreeSelectedNodePresenterTest {
 
     @Test
     void authoritativePreviewCarriesTheEffectiveCostChannels() {
-        ResourceLocation nodeId = new ResourceLocation("test:materials_only");
+        ResourceLocation nodeId = ResourceLocation.parse("test:materials_only");
         ResearchSelectionPreview preview = new ResearchSelectionPreview(
                 Optional.of(nodeId),
                 0,
@@ -264,7 +264,7 @@ class ResearchTreeSelectedNodePresenterTest {
                 true,
                 false,
                 List.of(new ResearchSelectionPreview.IngredientPreview(
-                        List.of(new ResourceLocation("minecraft:paper")),
+                        List.of(ResourceLocation.parse("minecraft:paper")),
                         Optional.empty(),
                         2,
                         2)),
@@ -285,13 +285,13 @@ class ResearchTreeSelectedNodePresenterTest {
 
     @Test
     void publishedPresentationCarriesMaterialsOnlyModeBeforeExactPreviewArrives() {
-        ResourceLocation nodeId = new ResourceLocation("test:published_materials_only");
+        ResourceLocation nodeId = ResourceLocation.parse("test:published_materials_only");
         ResearchTreeGraph.Node node = new ResearchTreeGraph.Node(
                 0,
                 nodeId,
                 "fixture.materials_only",
                 "rifle",
-                new ResourceLocation("minecraft:paper"),
+                ResourceLocation.parse("minecraft:paper"),
                 com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility.FULL,
                 false,
                 true,
@@ -325,7 +325,7 @@ class ResearchTreeSelectedNodePresenterTest {
 
     @Test
     void combinedShortagesKeepBothCostChannelsAndTheirPurchaseScope() {
-        var id = new ResourceLocation("test:path_shortages");
+        var id = ResourceLocation.parse("test:path_shortages");
         var preview = shortagePreview(id, ResearchCostMode.POINTS_AND_ITEMS, ResearchAccessSummary.NONE);
         var details = ResearchTreeSelectedNodePresenter.present(input(availableNode(id), false, Optional.of(id), preview));
         assertEquals(ResearchTreeSelectedNodePresenter.Message.POINTS_AND_MATERIALS_REQUIRED, details.message());
@@ -345,7 +345,7 @@ class ResearchTreeSelectedNodePresenterTest {
 
     @Test
     void disabledCostChannelsAndAccessRestrictionsDoNotBecomeShortages() {
-        var id = new ResourceLocation("test:cost_modes");
+        var id = ResourceLocation.parse("test:cost_modes");
         for (var mode : ResearchCostMode.values()) {
             var preview = shortagePreview(id, mode, ResearchAccessSummary.NONE);
             var details = ResearchTreeSelectedNodePresenter.present(input(availableNode(id), false, Optional.of(id), preview));
@@ -368,7 +368,7 @@ class ResearchTreeSelectedNodePresenterTest {
 
     @Test
     void unboundOrFailedPreviewCannotDescribeAPurchaseOrItsSecondaryDetails() {
-        var id = new ResourceLocation("test:private_quote");
+        var id = ResourceLocation.parse("test:private_quote");
         var preview = shortagePreview(id, ResearchCostMode.POINTS_AND_ITEMS,
                 ResearchAccessSummary.gate("gate.test.secret"));
         var unbound = ResearchTreeSelectedNodePresenter.present(input(availableNode(id), true, Optional.empty(), preview));
@@ -388,7 +388,7 @@ class ResearchTreeSelectedNodePresenterTest {
     private static ResearchSelectionPreview shortagePreview(ResourceLocation id, ResearchCostMode mode,
             ResearchAccessSummary access) {
         var ingredients = mode.itemsEnabled() ? List.of(new ResearchSelectionPreview.IngredientPreview(
-                List.of(new ResourceLocation("minecraft:paper")), Optional.empty(), 36, 3))
+                List.of(ResourceLocation.parse("minecraft:paper")), Optional.empty(), 36, 3))
                 : List.<ResearchSelectionPreview.IngredientPreview>of();
         return new ResearchSelectionPreview(Optional.of(id), mode.pointsEnabled() ? 72 : 0, 0,
                 access.equals(ResearchAccessSummary.NONE), !mode.itemsEnabled(), true, false, false,
@@ -461,7 +461,7 @@ class ResearchTreeSelectedNodePresenterTest {
                 id,
                 "fixture.phase_zero.available",
                 "rifle",
-                new ResourceLocation("minecraft:paper"),
+                ResourceLocation.parse("minecraft:paper"),
                 com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility.FULL,
                 availability == ResearchTreeGraph.Availability.LEARNED,
                 true,

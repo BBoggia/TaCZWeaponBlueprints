@@ -4,7 +4,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -34,7 +34,7 @@ public final class PlayerResearchCurrencyContext implements ResearchCurrencyTran
     @Override public boolean valid() {
         return player.server != null && player.server.isSameThread() && !player.level().isClientSide
                 && player.isAlive() && !player.hasDisconnected()
-                && player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElse(null) == data && lease.getAsBoolean();
+                && ModAttachments.recipeData(player).orElse(null) == data && lease.getAsBoolean();
     }
     @Override public ResearchCurrencyPolicy policy() { return ModConfigs.BLUEPRINT.currencyPolicy(); }
     @Override public ResearchCurrencyState read() {
@@ -65,7 +65,7 @@ public final class PlayerResearchCurrencyContext implements ResearchCurrencyTran
         var level = player.serverLevel();
         var entity = new ItemEntity(level, player.getX(), player.getY() + 0.5, player.getZ(), stack.copy());
         entity.setDefaultPickUpDelay();
-        entity.setThrower(player.getUUID());
+        entity.setThrower(player);
         return new ResearchCurrencyTransaction.StagedDrop() {
             @Override public boolean publish() { return level.addFreshEntity(entity); }
             @Override public boolean matches(ItemStack expected) {

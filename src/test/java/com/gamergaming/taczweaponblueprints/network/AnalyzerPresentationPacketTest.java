@@ -13,7 +13,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 
 class AnalyzerPresentationPacketTest {
-    private static final ResourceLocation ID = new ResourceLocation("test:rifle");
+    private static final ResourceLocation ID = ResourceLocation.parse("test:rifle");
     private static BlueprintRecyclerPreview physical() {
         return new BlueprintRecyclerPreview(BlueprintRecyclerPreview.InputKind.PHYSICAL_ITEM, Optional.of(ID), 1, 0, 10, 100,
                 Optional.empty(), Optional.empty(), 1L, Optional.of(ID), 1, 3, true, true, false, false,
@@ -25,7 +25,7 @@ class AnalyzerPresentationPacketTest {
                     AnalyzerPolicyQuote.Status.CONFIGURED, Optional.of(new AnalyzerOutcomeTable(1,1_000_000_000,1_000_000_000,1,64)),
                     Optional.of(AnalysisRewardClass.PROTECTED_PREREQUISITES), 9, 11, 5, 10)), Optional.empty(),
                     Optional.of(new AnalyzerPresentation.RecoveryCost(2, 7, List.of(new BlueprintRecyclerPreview.IngredientPreview(
-                            List.of(new ResourceLocation("minecraft:iron_ingot")), Optional.empty(), 3, 2)), BlueprintReverseEngineeringService.Status.INGREDIENTS_REQUIRED)));
+                            List.of(ResourceLocation.parse("minecraft:iron_ingot")), Optional.empty(), 3, 2)), BlueprintReverseEngineeringService.Status.INGREDIENTS_REQUIRED)));
             var p=physical().withPresentation(details).withStateToken(89);
             var b=new FriendlyByteBuf(Unpooled.buffer());
             try { new SyncBlueprintRecyclerPreviewPacket(7,p).toBytes(b); assertEquals(p,new SyncBlueprintRecyclerPreviewPacket(b).preview()); assertEquals(0,b.readableBytes()); }

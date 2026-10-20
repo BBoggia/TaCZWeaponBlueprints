@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.google.common.base.Suppliers;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
@@ -14,8 +15,8 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
-import net.minecraftforge.common.loot.IGlobalLootModifier;
-import net.minecraftforge.common.loot.LootModifier;
+import net.neoforged.neoforge.common.loot.IGlobalLootModifier;
+import net.neoforged.neoforge.common.loot.LootModifier;
 
 /**
  * Small, independently replaceable loot injection for physical Research Data.
@@ -27,8 +28,8 @@ public final class ResearchDataLootModifier extends LootModifier {
             ResearchDataLootModifier::validateChance,
             ResearchDataLootModifier::validateChance);
 
-    public static final Supplier<Codec<ResearchDataLootModifier>> CODEC = Suppliers.memoize(() ->
-            RecordCodecBuilder.create(instance ->
+    public static final Supplier<MapCodec<ResearchDataLootModifier>> CODEC = Suppliers.memoize(() ->
+            RecordCodecBuilder.mapCodec(instance ->
                     codecStart(instance)
                             .and(ItemStack.CODEC.fieldOf("item").forGetter(value -> value.item))
                             .and(CHANCE_CODEC.fieldOf("chance").forGetter(value -> value.chance))
@@ -53,7 +54,7 @@ public final class ResearchDataLootModifier extends LootModifier {
     }
 
     @Override
-    public Codec<? extends IGlobalLootModifier> codec() {
+    public MapCodec<? extends IGlobalLootModifier> codec() {
         return CODEC.get();
     }
 

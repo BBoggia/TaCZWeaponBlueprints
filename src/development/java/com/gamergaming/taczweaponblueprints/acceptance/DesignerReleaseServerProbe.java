@@ -12,23 +12,24 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.*;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /** Local file coordination for marked disposable release acceptance only. */
-@Mod.EventBusSubscriber(modid="taczweaponblueprints")
+@EventBusSubscriber(modid="taczweaponblueprints")
 public final class DesignerReleaseServerProbe {
-    @SubscribeEvent public static void tick(TickEvent.ServerTickEvent event)throws Exception {
+    @SubscribeEvent public static void tick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event)throws Exception {
         String setting=System.getProperty("tacz.designerReleaseQA.root","");
-        if(setting.isEmpty()||event.phase!=TickEvent.Phase.END)return;
+        if(setting.isEmpty())return;
         Path root=Path.of(setting);if(!Files.isRegularFile(root.resolve(".designer-disposable")))return;
         Path file=root.resolve("server-control.json");if(!Files.isRegularFile(file)||Files.size(file)>4096)return;
         var result=new JsonObject();
         try {
             var input=JsonParser.parseString(Files.readString(file)).getAsJsonObject();Files.delete(file);var server=event.getServer();
             var player=server.getPlayerList().getPlayers().stream().findFirst().orElseThrow(()->new IllegalStateException("Waiting for real client"));
-            var data=player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElseThrow();
+            var data=com.gamergaming.taczweaponblueprints.init.ModAttachments.recipeData(player).orElseThrow();
             switch(input.get("action").getAsString()) {
                 case "op" -> server.getPlayerList().op(player.getGameProfile());
                 case "deop" -> server.getPlayerList().deop(player.getGameProfile());
@@ -42,7 +43,7 @@ public final class DesignerReleaseServerProbe {
                     player.closeContainer();player.teleportTo(player.serverLevel(),30.5,100,.5,0,0);var pos=new BlockPos(32,100,0);
                     for(int x=28;x<36;x++)for(int z=-3;z<4;z++)player.serverLevel().setBlockAndUpdate(new BlockPos(x,99,z),Blocks.STONE.defaultBlockState());
                     if(!(player.serverLevel().getBlockState(pos).getBlock() instanceof ResearchBenchBlock))ResearchBenchBlock.placeCompleteStructure(player.serverLevel(),pos,ModBlocks.EXPERIMENTAL_RESEARCH_BENCH.get().defaultBlockState());
-                    var state=player.serverLevel().getBlockState(pos);state.getBlock().use(state,player.serverLevel(),pos,player,InteractionHand.MAIN_HAND,new BlockHitResult(Vec3.atCenterOf(pos),Direction.NORTH,pos,false));
+                    var state=player.serverLevel().getBlockState(pos);state.useWithoutItem(player.serverLevel(),player,new BlockHitResult(Vec3.atCenterOf(pos),Direction.NORTH,pos,false));
                     if(!(player.containerMenu instanceof ResearchBenchMenu))throw new IllegalStateException("Research Bench did not open");
                 }
                 case "stop" -> server.halt(false);

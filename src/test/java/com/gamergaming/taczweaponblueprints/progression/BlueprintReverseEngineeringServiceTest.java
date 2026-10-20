@@ -64,10 +64,10 @@ class BlueprintReverseEngineeringServiceTest {
         assertEquals(1, transaction.inventory.get(0).getCount());
         assertEquals(7, data.getResearchPoints());
         assertTrue(data.hasDiscoveredBlueprint(AMMO.toString()));
-        assertEquals(AMMO.toString(), transaction.output.getTag().getString("bpId"));
-        assertFalse(BlueprintProvenance.allowsRecycling(transaction.output.getTag()));
+        assertEquals(AMMO.toString(), transaction.output.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag().getString("bpId"));
+        assertFalse(BlueprintProvenance.allowsRecycling(transaction.output.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag()));
         BlueprintProvenance provenance = BlueprintProvenance.fromTag(
-                transaction.output.getTag()).orElseThrow();
+                transaction.output.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag()).orElseThrow();
         assertEquals(BlueprintProvenance.Source.REVERSE_ENGINEERING, provenance.source());
         assertEquals(
                 PhysicalBlueprintLearningMode.BYPASS_TREE_PREREQUISITES,
@@ -206,7 +206,7 @@ class BlueprintReverseEngineeringServiceTest {
                 commit(evaluation, data, transaction);
 
         assertTrue(result.successful());
-        assertTrue(BlueprintProvenance.allowsRecycling(transaction.output.getTag()));
+        assertTrue(BlueprintProvenance.allowsRecycling(transaction.output.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag()));
     }
 
     @Test
@@ -343,9 +343,10 @@ class BlueprintReverseEngineeringServiceTest {
             ResourceLocation id,
             BlueprintProvenance provenance) {
         ItemStack output = new ItemStack(Items.PAPER);
-        CompoundTag tag = output.getOrCreateTag();
+        CompoundTag tag = new CompoundTag();
         tag.putString("bpId", id.toString());
         tag.put(BlueprintProvenance.TAG_KEY, provenance.toTag());
+        output.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(tag));
         return output;
     }
 
@@ -359,13 +360,13 @@ class BlueprintReverseEngineeringServiceTest {
                 transaction,
                 (output, expectedId) -> !output.isEmpty()
                         && output.getCount() == 1
-                        && output.hasTag()
-                        && expectedId.toString().equals(output.getTag().getString("bpId"))
-                        && BlueprintProvenance.fromTag(output.getTag()).isPresent());
+                        && output.has(net.minecraft.core.component.DataComponents.CUSTOM_DATA)
+                        && expectedId.toString().equals(output.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag().getString("bpId"))
+                        && BlueprintProvenance.fromTag(output.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag()).isPresent());
     }
 
     private static ResourceLocation id(String value) {
-        return new ResourceLocation(value);
+        return ResourceLocation.parse(value);
     }
 
     private static final class TestTransaction

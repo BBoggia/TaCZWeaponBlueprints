@@ -38,7 +38,7 @@ class EmiBlueprintStackIdentityTest {
     @Test
     void blankBlueprintTargetIsExplicitAndCanonical() {
         CompoundTag tag = new CompoundTag();
-        ResourceLocation blueprintId = new ResourceLocation("addon", "pistol");
+        ResourceLocation blueprintId = ResourceLocation.fromNamespaceAndPath("addon", "pistol");
 
         EmiBlueprintStackIdentity.targetBlankBlueprint(tag, blueprintId);
 

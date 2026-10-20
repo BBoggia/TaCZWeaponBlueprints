@@ -243,10 +243,10 @@ class BlueprintLootPhase5Test {
                 id.toString(),
                 "item.test.name",
                 "item.test.tooltip",
-                new ResourceLocation("test", "recipe/" + id.getPath()),
+                ResourceLocation.fromNamespaceAndPath("test", "recipe/" + id.getPath()),
                 null,
                 itemType,
-                new ResourceLocation("test", "display/" + itemType));
+                ResourceLocation.fromNamespaceAndPath("test", "display/" + itemType));
     }
 
     private static <T> T decode(Codec<T> codec, String json) {

@@ -13,7 +13,7 @@ class ProgressionIdsTest {
     @Test
     void stringIdsAreTrimmedLowercasedAndBounded() {
         assertEquals(
-                new ResourceLocation("example", "weapon/trial"),
+                ResourceLocation.fromNamespaceAndPath("example", "weapon/trial"),
                 ProgressionIds.parse("  EXAMPLE:Weapon/Trial  ", "test ID"));
 
         assertThrows(IllegalArgumentException.class,
@@ -30,7 +30,7 @@ class ProgressionIdsTest {
                 () -> ProgressionIds.require(null, "test ID"));
         assertThrows(IllegalArgumentException.class,
                 () -> ProgressionIds.require(
-                        new ResourceLocation("test", "a".repeat(
+                        ResourceLocation.fromNamespaceAndPath("test", "a".repeat(
                                 PlayerProgressionLimits.MAX_RESOURCE_ID_LENGTH)),
                         "test ID"));
     }

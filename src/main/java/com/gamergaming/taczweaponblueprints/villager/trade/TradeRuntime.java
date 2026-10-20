@@ -11,8 +11,8 @@ import com.gamergaming.taczweaponblueprints.resource.research.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.fml.ModList;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.fml.ModList;
+import net.minecraft.core.registries.BuiltInRegistries;
 import static com.gamergaming.taczweaponblueprints.villager.trade.TradeDefinition.*;
 
 /** Server-thread inspection against current publications; no spawning, sampling, or cached permissions. */
@@ -50,8 +50,8 @@ public final class TradeRuntime {
         }
         @Override public boolean modLoaded(String id) { return ModList.get().isLoaded(id); }
         @Override public int stackLimit(ResourceLocation id) {
-            if (!ForgeRegistries.ITEMS.containsKey(id)) return 0;
-            var item = ForgeRegistries.ITEMS.getValue(id);
+            if (!BuiltInRegistries.ITEM.containsKey(id)) return 0;
+            var item = BuiltInRegistries.ITEM.get(id);
             if (item == null || item == Items.AIR) return 0;
             int limit = new ItemStack(item).getMaxStackSize();
             return limit > 0 && limit <= 64 ? limit : 0;
@@ -59,7 +59,7 @@ public final class TradeRuntime {
         @Override public String unavailable(Output output,ResourceLocation id,TradeResolver.Price price) {
             if(output.kind()==Kind.RESEARCH_DATA && ResearchDataAnalysisService.legacyAllowed(id)) {
                 if(stackLimit(id)<output.count())return "missing_or_oversized_data_item";
-                return LegacyDataTradeSafety.unavailable(output,id,price,new ItemStack(ForgeRegistries.ITEMS.getValue(id)));
+                return LegacyDataTradeSafety.unavailable(output,id,price,new ItemStack(BuiltInRegistries.ITEM.get(id)));
             }
             return unavailable(output,id);
         }
@@ -119,7 +119,7 @@ public final class TradeRuntime {
         private String dataReason(ResourceLocation item) {
             var config = ModConfigs.BLUEPRINT;
             if (!config.progressionSnapshot().blueprintsEnabled()) return "blueprints_disabled";
-            var stack = new ItemStack(ForgeRegistries.ITEMS.getValue(item));
+            var stack = new ItemStack(BuiltInRegistries.ITEM.get(item));
             var owner = ResearchDataAnalysisService.owner(stack);
             if (owner.isEmpty()) return "missing_data_policy";
             var poolContext = ResearchDataAnalysisService.context();

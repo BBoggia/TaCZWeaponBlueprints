@@ -18,7 +18,7 @@ import net.minecraft.server.Bootstrap;
 /** Keeps the original workstation registry and layout anchors stable across the split. */
 class ResearchWorkstationsPhaseZeroTest {
     private static final ResourceLocation RESEARCH_BENCH =
-            new ResourceLocation("taczweaponblueprints:research_bench");
+            ResourceLocation.parse("taczweaponblueprints:research_bench");
 
     @BeforeAll
     static void bootstrapMinecraftRegistries() {
@@ -31,7 +31,7 @@ class ResearchWorkstationsPhaseZeroTest {
         assertEquals(RESEARCH_BENCH, ModBlocks.RESEARCH_BENCH.getId());
         assertEquals(RESEARCH_BENCH, ModItems.RESEARCH_BENCH_ITEM.getId());
         assertEquals(RESEARCH_BENCH, ModMenus.RESEARCH_BENCH.getId());
-        assertEquals("70", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("neoforge-1", NetworkHandler.PROTOCOL_VERSION);
     }
 
     @Test

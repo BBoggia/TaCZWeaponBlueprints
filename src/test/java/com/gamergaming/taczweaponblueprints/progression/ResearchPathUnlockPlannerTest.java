@@ -1927,7 +1927,7 @@ class ResearchPathUnlockPlannerTest {
                 id,
                 "name." + id.getPath(),
                 "gun",
-                new ResourceLocation("test:slot/" + id.getPath()),
+                ResourceLocation.parse("test:slot/" + id.getPath()),
                 JournalVisibility.FULL,
                 availability == ResearchTreeGraph.Availability.LEARNED,
                 true,
@@ -2418,7 +2418,7 @@ class ResearchPathUnlockPlannerTest {
             net.minecraft.world.item.Item item,
             int count) {
         return new BlueprintResearchIngredient(
-                List.of(net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(item)),
+                List.of(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item)),
                 Optional.empty(),
                 count);
     }
@@ -2437,7 +2437,7 @@ class ResearchPathUnlockPlannerTest {
     }
 
     private static ResourceLocation id(String value) {
-        return new ResourceLocation(value);
+        return ResourceLocation.parse(value);
     }
 
     private record PolicySpec(

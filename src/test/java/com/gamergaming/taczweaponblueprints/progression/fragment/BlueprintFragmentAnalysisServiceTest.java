@@ -31,7 +31,7 @@ class BlueprintFragmentAnalysisServiceTest {
         var inventory = new java.util.ArrayList<ItemStack>(java.util.Collections.nCopies(36, ItemStack.EMPTY));
         inventory.set(0, new ItemStack(Items.IRON_INGOT, 12));
         var physical = com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy.physical(
-                new ResourceLocation("minecraft:iron_ingot"), 1);
+                ResourceLocation.parse("minecraft:iron_ingot"), 1);
         for (var status : java.util.List.of(BlueprintFragmentAnalysisService.Status.POLICY_UNAVAILABLE,
                 BlueprintFragmentAnalysisService.Status.FRAGMENTS_DISABLED,
                 BlueprintFragmentAnalysisService.Status.PLAYER_DATA_UNAVAILABLE,
@@ -47,8 +47,8 @@ class BlueprintFragmentAnalysisServiceTest {
         assertEquals(137, data.getResearchPoints());
     }
 
-    private static final ResourceLocation TARGET = new ResourceLocation("test:rifle");
-    private static final ResourceLocation PROFILE = new ResourceLocation("test:profile");
+    private static final ResourceLocation TARGET = ResourceLocation.parse("test:rifle");
+    private static final ResourceLocation PROFILE = ResourceLocation.parse("test:profile");
 
     @BeforeAll
     static void bootstrap() {
@@ -171,7 +171,7 @@ class BlueprintFragmentAnalysisServiceTest {
 
         assertTrue(result.successful());
         BlueprintProvenance provenance = BlueprintProvenance
-                .fromTag(fixture.transaction().output.getTag()).orElseThrow();
+                .fromTag(fixture.transaction().output.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag()).orElseThrow();
         assertEquals(BlueprintProvenance.Source.FRAGMENT_RECONSTRUCTION, provenance.source());
         assertFalse(provenance.recyclable());
         assertTrue(provenance.learningMode().prerequisitesRequired());
@@ -293,7 +293,7 @@ class BlueprintFragmentAnalysisServiceTest {
         ItemStack stack = new ItemStack(Items.PAPER, count);
         CompoundTag tag = new CompoundTag();
         tag.putString(BlueprintFragmentItem.TARGET_TAG, TARGET.toString());
-        stack.setTag(tag);
+        stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(tag));
         return stack;
     }
 
@@ -340,7 +340,7 @@ class BlueprintFragmentAnalysisServiceTest {
             ItemStack created = new ItemStack(Items.PAPER);
             CompoundTag root = new CompoundTag();
             root.put(BlueprintProvenance.TAG_KEY, provenance.toTag());
-            created.setTag(root);
+            created.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(root));
             return created;
         }
 

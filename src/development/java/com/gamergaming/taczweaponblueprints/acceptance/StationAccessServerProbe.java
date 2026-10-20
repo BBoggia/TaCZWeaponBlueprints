@@ -10,23 +10,23 @@ import com.gamergaming.taczweaponblueprints.progression.StationSetup;
 import com.gamergaming.taczweaponblueprints.progression.workbench.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.common.util.FakePlayerFactory;
-import net.minecraftforge.event.server.ServerStartedEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.common.util.FakePlayerFactory;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /** Opt-in authority checks in a disposable dedicated-server world; excluded from releases. */
-@Mod.EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID)
+@EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID)
 public final class StationAccessServerProbe {
     private static Pending pending;
     private record Pending(String output, List<String> results, StationSetup.ResearchAccess previous,
             StationSetup.AnalyzerMode previousAnalyzer, int deadline, int stage) { }
-    @SubscribeEvent public static void tick(net.minecraftforge.event.TickEvent.ServerTickEvent event) {
-        if (event.phase != net.minecraftforge.event.TickEvent.Phase.END || pending == null) return;
+    @SubscribeEvent public static void tick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+        if (pending == null) return;
         var server = event.getServer(); var p = pending; var config = ModConfigs.BLUEPRINT;
-        boolean basic = server.getRecipeManager().byKey(new ResourceLocation("taczweaponblueprints", "research_bench")).isPresent();
-        boolean advanced = server.getRecipeManager().byKey(new ResourceLocation("taczweaponblueprints", "advanced_research_bench")).isPresent();
-        boolean analyzer = server.getRecipeManager().byKey(new ResourceLocation("taczweaponblueprints", "advanced_blueprint_analyzer")).isPresent();
+        boolean basic = server.getRecipeManager().byKey(ResourceLocation.fromNamespaceAndPath("taczweaponblueprints", "research_bench")).isPresent();
+        boolean advanced = server.getRecipeManager().byKey(ResourceLocation.fromNamespaceAndPath("taczweaponblueprints", "advanced_research_bench")).isPresent();
+        boolean analyzer = server.getRecipeManager().byKey(ResourceLocation.fromNamespaceAndPath("taczweaponblueprints", "advanced_blueprint_analyzer")).isPresent();
         boolean ready = p.stage() == 0 ? basic && !advanced && !analyzer : p.stage() == 1 ? !basic && !advanced : basic && advanced && analyzer;
         if (!ready && server.getTickCount() < p.deadline()) return;
         if (!ready) { p.results().add("FAIL: live recipe reload timeout at stage " + p.stage()); finish(server, p); return; }
@@ -44,7 +44,7 @@ public final class StationAccessServerProbe {
         try { Files.write(Path.of(p.output()), p.results()); } catch (Exception error) { throw new RuntimeException(error); }
         server.halt(false);
     }
-    @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.LOWEST) public static void started(ServerStartedEvent event) {
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST) public static void started(ServerStartedEvent event) {
         String output = System.getProperty("tacz.stationAccessQA", "");
         if (output.isEmpty()) return;
         event.getServer().execute(() -> {
@@ -57,7 +57,7 @@ public final class StationAccessServerProbe {
                 config.researchAccess.validateAndSet(StationSetup.ResearchAccess.PORTABLE); config.onSyncServer();
                 var menu = ResearchBenchMenu.portable(7, player.getInventory()); player.containerMenu = menu;
                 var context = new ResearchWorkbenchContext(player.blockPosition(), player.level().dimension().location(),
-                        new ResourceLocation("taczweaponblueprints", "portable_research"), ResearchWorkbenchTier.TIER_3,
+                        ResourceLocation.fromNamespaceAndPath("taczweaponblueprints", "portable_research"), ResearchWorkbenchTier.TIER_3,
                         ResearchInteractionMode.RESEARCH, 8);
                 require(ResearchWorkbenchAuthority.validForResearch(player, context), "portable session accepted", results);
                 player.moveTo(500.5, 100, 500.5);

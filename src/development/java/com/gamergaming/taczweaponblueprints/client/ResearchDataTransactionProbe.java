@@ -21,8 +21,8 @@ final class ResearchDataTransactionProbe {
         var config = ModConfigs.BLUEPRINT; var oldMode = config.researchDataBehavior;
         var oldLearned = config.researchDataAllowLearned.getUnconditional(); var original = BlueprintResearchDataManager.INSTANCE.snapshot();
         var checks = new ArrayList<String>();
-        var target = new ResourceLocation("tacz:ak47"); var item = new ResourceLocation("taczweaponblueprints:research_report");
-        var data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElseThrow();
+        var target = ResourceLocation.parse("tacz:ak47"); var item = ResourceLocation.parse("taczweaponblueprints:research_report");
+        var data = com.gamergaming.taczweaponblueprints.init.ModAttachments.recipeData(player).orElseThrow();
         try {
             config.researchDataBehavior = new ValidatedEnum<>(ResearchDataPolicy.Behavior.ANALYSIS);
             config.researchDataAllowLearned.validateAndSet(true); publishConfig();
@@ -56,9 +56,9 @@ final class ResearchDataTransactionProbe {
     static void install(BlueprintResearchSnapshot base, ResourceLocation target, boolean fragments) throws Exception {
         String outcome=fragments?"{\"blueprint_weight\":0,\"fragment_weight\":1,\"no_result_weight\":0,\"min_fragments\":2,\"max_fragments\":2}":"{\"blueprint_weight\":1,\"fragment_weight\":0,\"no_result_weight\":0,\"min_fragments\":0,\"max_fragments\":0}";
         String json="{\"format\":1,\"input\":{\"item\":\"taczweaponblueprints:research_report\"},\"behavior\":\"analysis\",\"reconstruction\":\"qa:shared\",\"pool\":{\"tier_weights\":{\"tier_1\":1},\"include\":{\"blueprints\":[\""+target+"\"]},\"tier_overrides\":{\""+target+"\":\"tier_1\"}},\"rows\":{\"tier_1\":{\"default\":"+outcome+"},\"tier_2\":{\"default\":"+outcome+"},\"tier_3\":{\"default\":"+outcome+"}}}";
-        var policy=ResearchDataPolicy.CODEC.parse(JsonOps.INSTANCE,JsonParser.parseString(json)).getOrThrow(false,s->{});
-        var shared=AnalysisReconstructionDefinition.CODEC.parse(JsonOps.INSTANCE,JsonParser.parseString("{\"format\":1,\"fragments\":{\"thresholds\":{\"tier_1\":2,\"tier_2\":2,\"tier_3\":2},\"retained_progress_cap\":1000}}")).getOrThrow(false,s->{});
-        apply(base.withResearchData(new ResearchDataSnapshot(Map.of(new ResourceLocation("qa:data"),policy),Map.of(new ResourceLocation("qa:shared"),shared))));
+        var policy=ResearchDataPolicy.CODEC.parse(JsonOps.INSTANCE,JsonParser.parseString(json)).getOrThrow();
+        var shared=AnalysisReconstructionDefinition.CODEC.parse(JsonOps.INSTANCE,JsonParser.parseString("{\"format\":1,\"fragments\":{\"thresholds\":{\"tier_1\":2,\"tier_2\":2,\"tier_3\":2},\"retained_progress_cap\":1000}}")).getOrThrow();
+        apply(base.withResearchData(new ResearchDataSnapshot(Map.of(ResourceLocation.parse("qa:data"),policy),Map.of(ResourceLocation.parse("qa:shared"),shared))));
     }
     static void apply(BlueprintResearchSnapshot snapshot) throws Exception {
         var method=BlueprintResearchDataManager.class.getDeclaredMethod("applySnapshot",BlueprintResearchSnapshot.class,BlueprintDataManager.CatalogPublication.class,ResourceLocation.class,java.util.function.Predicate.class);

@@ -40,10 +40,10 @@ public final class BlueprintAnalyzerDiagnostics {
             row.addProperty("fragment_threshold", quote.fragmentThreshold());
             row.addProperty("retained_progress_cap", quote.retainedProgressCap());
             quote.attempt().ifPresent(value -> row.add("attempt", BlueprintReverseEngineeringPolicy.CODEC
-                    .encodeStart(JsonOps.INSTANCE, value).getOrThrow(false, message -> { throw new IllegalArgumentException(message); })));
+                    .encodeStart(JsonOps.INSTANCE, value).getOrThrow(IllegalArgumentException::new)));
             quote.outcomes().ifPresent(value -> {
                 row.add("outcomes", com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerOutcomeTable.CODEC
-                        .encodeStart(JsonOps.INSTANCE, value).getOrThrow(false, message -> { throw new IllegalArgumentException(message); }));
+                        .encodeStart(JsonOps.INSTANCE, value).getOrThrow(IllegalArgumentException::new));
                 row.addProperty("total_weight", value.totalWeight());
                 row.addProperty("blueprint_probability", value.blueprintProbability());
                 row.addProperty("fragment_probability", value.fragmentProbability());

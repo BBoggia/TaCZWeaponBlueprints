@@ -92,7 +92,7 @@ class AnalysisReconstructionResolverTest {
         public ItemStack outputStack() { return output; }
         public ItemStack createOutput(ResourceLocation target, BlueprintProvenance provenance) {
             var stack = new ItemStack(com.gamergaming.taczweaponblueprints.testing.AnalysisTestItems.blueprint);
-            stack.getOrCreateTag().putString("bpId", target.toString()); stack.getOrCreateTag().put(BlueprintProvenance.TAG_KEY, provenance.toTag()); return stack;
+            net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, stack, customTag -> customTag.putString("bpId", target.toString())); net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, stack, customTag -> customTag.put(BlueprintProvenance.TAG_KEY, provenance.toTag())); return stack;
         }
         public boolean consumePhysical(ItemStack expected, int count) { if (!ItemStack.matches(input, expected)) return false; input.shrink(count); return true; }
         public boolean placeOutput(ItemStack stack, ItemStack expected) { if (!ItemStack.matches(output, expected)) return false; output = stack.copy(); return true; }

@@ -23,9 +23,9 @@ class AnalyzerPresetTest {
     private static BlueprintData gun(ResourceLocation id) {
         return new BlueprintData(id.toString(), "test.gun", "test.tooltip", id("test:recipe"), null, "rifle", id("tacz:slot"), BlueprintKind.GUN, 1);
     }
-    private static ResourceLocation id(String value) { return new ResourceLocation(value); }
+    private static ResourceLocation id(String value) { return ResourceLocation.parse(value); }
     private static JsonObject json(Path path) throws Exception { return JsonParser.parseString(Files.readString(path)).getAsJsonObject(); }
-    private static <T> T decode(Codec<T> codec, JsonElement value) { return codec.parse(JsonOps.INSTANCE, value).getOrThrow(false, m -> { throw new AssertionError(m); }); }
+    private static <T> T decode(Codec<T> codec, JsonElement value) { return codec.parse(JsonOps.INSTANCE, value).getOrThrow(AssertionError::new); }
     private static BlueprintAnalyzerPolicyResolver.Context context(BlueprintResearchSnapshot snapshot) {
         return new BlueprintAnalyzerPolicyResolver.Context(snapshot, CATALOG, 1, 1, BlueprintProgressionPolicySnapshot.EMPTY);
     }

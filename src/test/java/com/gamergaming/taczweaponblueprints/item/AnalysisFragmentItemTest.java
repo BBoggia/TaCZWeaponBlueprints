@@ -10,31 +10,31 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 class AnalysisFragmentItemTest {
-    static final ResourceLocation TARGET = new ResourceLocation("test:rifle");
+    static final ResourceLocation TARGET = ResourceLocation.parse("test:rifle");
     @BeforeAll static void initialize() { AnalysisTestItems.initialize(); }
     @Test void allClassesRoundTripThroughItemSaveCopyAndSplitWithExactStackIdentity() {
         for (var reward : AnalysisRewardClass.values()) {
             var stack = BlueprintFragmentItem.createAnalysis(AnalysisTestItems.fragment, TARGET, reward); stack.setCount(12);
-            var restored = ItemStack.of(stack.save(new CompoundTag()));
+            var restored = ItemStack.parse(net.minecraft.core.RegistryAccess.fromRegistryOfRegistries(net.minecraft.core.registries.BuiltInRegistries.REGISTRY), stack.save(net.minecraft.core.RegistryAccess.fromRegistryOfRegistries(net.minecraft.core.registries.BuiltInRegistries.REGISTRY))).orElseThrow();
             var split = restored.split(3);
             assertEquals(reward, BlueprintFragmentItem.identity(split).orElseThrow().analysisClass().orElseThrow());
-            assertTrue(ItemStack.isSameItemSameTags(stack, split)); assertEquals(9, restored.getCount());
+            assertTrue(ItemStack.isSameItemSameComponents(stack, split)); assertEquals(9, restored.getCount());
             assertTrue(BlueprintFragmentItem.getOrdinaryTarget(stack).isEmpty());
             for (var other : AnalysisRewardClass.values()) {
                 var candidate = BlueprintFragmentItem.createAnalysis(AnalysisTestItems.fragment, TARGET, other);
-                assertEquals(reward == other, ItemStack.isSameItemSameTags(stack, candidate));
+                assertEquals(reward == other, ItemStack.isSameItemSameComponents(stack, candidate));
             }
-            var different = BlueprintFragmentItem.createAnalysis(AnalysisTestItems.fragment, new ResourceLocation("test:other"), reward);
-            assertFalse(ItemStack.isSameItemSameTags(stack, different));
+            var different = BlueprintFragmentItem.createAnalysis(AnalysisTestItems.fragment, ResourceLocation.parse("test:other"), reward);
+            assertFalse(ItemStack.isSameItemSameComponents(stack, different));
         }
         var ordinary = BlueprintFragmentItem.create(AnalysisTestItems.fragment, TARGET);
         assertTrue(BlueprintFragmentItem.getOrdinaryTarget(ordinary).isPresent());
-        assertFalse(ItemStack.isSameItemSameTags(ordinary, BlueprintFragmentItem.createAnalysis(AnalysisTestItems.fragment, TARGET, AnalysisRewardClass.PROTECTED_PREREQUISITES)));
+        assertFalse(ItemStack.isSameItemSameComponents(ordinary, BlueprintFragmentItem.createAnalysis(AnalysisTestItems.fragment, TARGET, AnalysisRewardClass.PROTECTED_PREREQUISITES)));
     }
     @Test void presentMalformedMarkersNeverBecomeOrdinaryFragments() {
         var valid = BlueprintFragmentItem.createAnalysis(AnalysisTestItems.fragment, TARGET, AnalysisRewardClass.PROTECTED_PREREQUISITES);
         for (int mutation=0; mutation<7; mutation++) {
-            var stack=valid.copy(); var root=stack.getOrCreateTag(); var marker=root.getCompound(BlueprintFragmentItem.ANALYSIS_TAG);
+            var stack=valid.copy(); var root=stack.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag(); var marker=root.getCompound(BlueprintFragmentItem.ANALYSIS_TAG);
             switch(mutation) {
                 case 0 -> marker.putInt("format",2);
                 case 1 -> marker.remove("reward_class");
@@ -44,6 +44,7 @@ class AnalysisFragmentItemTest {
                 case 5 -> marker.putInt("seed",1);
                 case 6 -> root.putInt("extra",1);
             }
+            stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(root));
             assertTrue(BlueprintFragmentItem.identity(stack).isEmpty());
             assertTrue(BlueprintFragmentItem.getTarget(stack).isEmpty());
             assertTrue(BlueprintFragmentItem.getOrdinaryTarget(stack).isEmpty());

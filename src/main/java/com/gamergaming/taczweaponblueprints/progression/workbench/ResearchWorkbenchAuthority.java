@@ -6,7 +6,7 @@ import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 /** Revalidates a menu-derived workstation context against live server world state. */
 public final class ResearchWorkbenchAuthority {
@@ -36,7 +36,7 @@ public final class ResearchWorkbenchAuthority {
             return false;
         }
         BlockState root = player.level().getBlockState(context.rootPosition());
-        ResourceLocation liveId = ForgeRegistries.BLOCKS.getKey(root.getBlock());
+        ResourceLocation liveId = BuiltInRegistries.BLOCK.getKey(root.getBlock());
         return context.workstationId().equals(liveId);
     }
 }

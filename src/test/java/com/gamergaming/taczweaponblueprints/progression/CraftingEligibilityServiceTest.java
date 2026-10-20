@@ -302,7 +302,7 @@ class CraftingEligibilityServiceTest {
     }
 
     private static ResourceLocation id(String value) {
-        return new ResourceLocation(value);
+        return ResourceLocation.parse(value);
     }
 
     private static CraftingEligibilityService.AccessIdentity activeIdentity() {

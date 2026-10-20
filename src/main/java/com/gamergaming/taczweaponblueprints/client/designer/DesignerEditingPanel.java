@@ -106,10 +106,11 @@ final class DesignerEditingPanel extends Screen {
     void review(Proposal value){proposal=value;returnPage=Page.MENU;show(Page.REVIEW);}
     @Override public void onClose(){host.closeEditing();}
     @Override public boolean isPauseScreen(){return false;}
-    @Override public void tick(){children().stream().filter(EditBox.class::isInstance).map(EditBox.class::cast).forEach(EditBox::tick);}
-    @Override public void render(GuiGraphics g,int mx,int my,float delta){g.fill(0,0,width,height,0xFF101C27);g.drawString(font,page==Page.REVIEW?proposal.label():getTitle().getString(),x,12,0x70D8CD,false);
+    @Override public void tick(){}
+    @Override public void renderBackground(GuiGraphics g,int mx,int my,float delta){g.fill(0,0,width,height,0xFF101C27);g.drawString(font,page==Page.REVIEW?proposal.label():getTitle().getString(),x,12,0x70D8CD,false);
         String caption=switch(page){case MENU->host.editingSelection().size()+" selected • Shift-click or Shift+N/P to add to selection";case MOVE->DesignerText.tr("edit.row_and_sibling_order_costs_and_requirements_stay_unchanged");case GROUPS->DesignerText.tr("edit.every_group_is_required_select_a_group_to_edit_its_alternatives");case CONNECTIONS->DesignerText.tr("edit.several_connections_overlap_here_choose_the_requirement_group");case CONNECT->DesignerText.tr("edit.choose_prerequisites_from_any_domain");case SELECT->DesignerText.tr("edit.choose_nodes_from_any_domain_selection_does_not_edit_the_tree");case CATALOG->DesignerText.tr("edit.unused_blueprints_from_the_captured_catalog");case BRANCH->DesignerText.tr("edit.name_domain_parent_and_sibling_order");case REVIEW->DesignerText.tr("edit.review_all_changes_before_applying_one_undo_restores_this_edit");default->DesignerText.tr("edit.select_a_branch_to_rename_nest_reorder_or_copy");};
-        g.drawString(font,font.plainSubstrByWidth(caption,w),x,28,0x9BACB9,false);super.render(g,mx,my,delta);
+        g.drawString(font,font.plainSubstrByWidth(caption,w),x,28,0x9BACB9,false);}
+    @Override public void render(GuiGraphics g,int mx,int my,float delta){super.render(g,mx,my,delta);
         if(page==Page.MOVE){g.drawString(font,DesignerText.tr("edit.row"),x,46,0x9BACB9,false);g.drawString(font,DesignerText.tr("edit.sibling_order"),x+w/2+3,46,0x9BACB9,false);}
         if(!error.isEmpty()){g.drawString(font,font.plainSubstrByWidth(error,w-84),x+80,height-21,0xFFCA88,false);if(mx>=x&&mx<x+w&&my>=height-34&&my<height)g.renderTooltip(font,font.split(Component.literal(error),w-12),mx,my);}
     }

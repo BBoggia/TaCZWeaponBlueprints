@@ -5,6 +5,7 @@ import java.util.function.Supplier;
 import com.google.common.base.Suppliers;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minecraft.resources.ResourceLocation;
@@ -12,7 +13,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
-import net.minecraftforge.common.loot.LootModifier;
+import net.neoforged.neoforge.common.loot.LootModifier;
 
 /** One table-indexed supply modifier. Existing currency in the roll counts toward its budget. */
 public final class ScrapSupplyLootModifier extends LootModifier {
@@ -24,13 +25,13 @@ public final class ScrapSupplyLootModifier extends LootModifier {
                 Codec.BOOL.optionalFieldOf("player_kill",false).forGetter(Row::playerKill)).apply(i,Row::new));
         public Row { if(!Float.isFinite(chance)||chance<=0||chance>1||minimum<1||maximum<minimum||maximum>64)throw new IllegalArgumentException("invalid Scrap supply row"); }
     }
-    public static final Supplier<Codec<ScrapSupplyLootModifier>> CODEC=Suppliers.memoize(() -> RecordCodecBuilder.create(i ->
+    public static final Supplier<MapCodec<ScrapSupplyLootModifier>> CODEC=Suppliers.memoize(() -> RecordCodecBuilder.mapCodec(i ->
             codecStart(i).and(Codec.unboundedMap(ResourceLocation.CODEC,Row.CODEC).fieldOf("tables").forGetter(v->v.tables)).apply(i,ScrapSupplyLootModifier::new)));
     private final Map<ResourceLocation,Row> tables;
     public ScrapSupplyLootModifier(LootItemCondition[] conditions,Map<ResourceLocation,Row> tables) {
         super(conditions); if(tables.size()>1024)throw new IllegalArgumentException("too many supply tables");this.tables=Map.copyOf(tables);
     }
-    @Override public Codec<ScrapSupplyLootModifier> codec(){return CODEC.get();}
+    @Override public MapCodec<ScrapSupplyLootModifier> codec(){return CODEC.get();}
     @Override protected ObjectArrayList<ItemStack> doApply(ObjectArrayList<ItemStack> loot,LootContext context) {
         var config=ModConfigs.BLUEPRINT;var row=tables.get(context.getQueriedLootTableId());
         if(!config.enableScrapLoot.get()||row==null||row.playerKill()&&!context.hasParam(LootContextParams.LAST_DAMAGE_PLAYER))return loot;
@@ -48,9 +49,9 @@ public final class ScrapSupplyLootModifier extends LootModifier {
     }
     public static Map<ResourceLocation,Row> defaults(){
         var tables=new TreeMap<ResourceLocation,Row>();
-        for(String id:List.of("chests/village/village_toolsmith","chests/village/village_weaponsmith","chests/abandoned_mineshaft","chests/simple_dungeon","chests/shipwreck_supply","chests/pillager_outpost"))tables.put(new ResourceLocation("minecraft",id),new Row(1,8,16,false));
-        for(String id:List.of("chests/stronghold_library","chests/woodland_mansion","chests/bastion_treasure","chests/ancient_city","chests/end_city_treasure"))tables.put(new ResourceLocation("minecraft",id),new Row(1,16,32,false));
-        for(String id:List.of("entities/zombie","entities/husk","entities/skeleton","entities/stray","entities/pillager"))tables.put(new ResourceLocation("minecraft",id),new Row(.25f,1,2,true));
+        for(String id:List.of("chests/village/village_toolsmith","chests/village/village_weaponsmith","chests/abandoned_mineshaft","chests/simple_dungeon","chests/shipwreck_supply","chests/pillager_outpost"))tables.put(ResourceLocation.fromNamespaceAndPath("minecraft",id),new Row(1,8,16,false));
+        for(String id:List.of("chests/stronghold_library","chests/woodland_mansion","chests/bastion_treasure","chests/ancient_city","chests/end_city_treasure"))tables.put(ResourceLocation.fromNamespaceAndPath("minecraft",id),new Row(1,16,32,false));
+        for(String id:List.of("entities/zombie","entities/husk","entities/skeleton","entities/stray","entities/pillager"))tables.put(ResourceLocation.fromNamespaceAndPath("minecraft",id),new Row(.25f,1,2,true));
         return Map.copyOf(tables);
     }
 }

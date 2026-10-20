@@ -7,20 +7,30 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
-import java.util.function.Supplier;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.client.ClientBlueprintCatalog;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import com.gamergaming.taczweaponblueprints.progression.PlayerSupplementalProgressionView;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 
 /** Atomically synchronizes disclosure-filtered fragment and criterion progress. */
-public final class SyncPlayerSupplementalProgressionPacket {
+public final class SyncPlayerSupplementalProgressionPacket implements CustomPacketPayload {
+    public static final Type<SyncPlayerSupplementalProgressionPacket> TYPE = new Type<>(
+            com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.loc("sync_player_supplemental_progression"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, SyncPlayerSupplementalProgressionPacket> STREAM_CODEC =
+            StreamCodec.ofMember(SyncPlayerSupplementalProgressionPacket::toBytes, SyncPlayerSupplementalProgressionPacket::new);
+
+    @Override
+    public Type<SyncPlayerSupplementalProgressionPacket> type() { return TYPE; }
+
     private static final ClientAccumulator CLIENT_ACCUMULATOR = new ClientAccumulator();
 
     private final long syncId;
@@ -167,22 +177,29 @@ public final class SyncPlayerSupplementalProgressionPacket {
         }
     }
 
-    public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
-        contextSupplier.get().enqueueWork(() -> CLIENT_ACCUMULATOR.accept(this).ifPresent(snapshot -> {
-            Minecraft minecraft = Minecraft.getInstance();
-            if (minecraft.player != null) {
-                minecraft.player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).ifPresent(data -> {
-                    if (!data.replaceSupplementalProgression(
-                            snapshot.archivedFragments(),
-                            snapshot.publicCriteria(), snapshot.analysisFragments())) {
-                        throw new IllegalArgumentException(
-                                "Completed supplemental progression snapshot is invalid");
-                    }
-                    ClientBlueprintCatalog.refreshOpenGunSmithScreen();
-                });
-            }
-        }));
-        contextSupplier.get().setPacketHandled(true);
+    public void handle(IPayloadContext context) {
+        new ClientHandler().handle(context);
+    }
+
+    /** Loaded only when this clientbound payload is handled, never during server registration. */
+    @net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)
+    private final class ClientHandler {
+        void handle(IPayloadContext contextSupplier) {
+            contextSupplier.enqueueWork(() -> CLIENT_ACCUMULATOR.accept(SyncPlayerSupplementalProgressionPacket.this).ifPresent(snapshot -> {
+                Minecraft minecraft = Minecraft.getInstance();
+                if (minecraft.player != null) {
+                    ModAttachments.recipeData(minecraft.player).ifPresent(data -> {
+                        if (!data.replaceSupplementalProgression(
+                                snapshot.archivedFragments(),
+                                snapshot.publicCriteria(), snapshot.analysisFragments())) {
+                            throw new IllegalArgumentException(
+                                    "Completed supplemental progression snapshot is invalid");
+                        }
+                        ClientBlueprintCatalog.refreshOpenGunSmithScreen();
+                    });
+                }
+            }));
+        }
     }
 
     public static void clearClientState() {

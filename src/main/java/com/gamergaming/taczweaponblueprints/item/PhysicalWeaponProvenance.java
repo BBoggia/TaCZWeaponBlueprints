@@ -55,11 +55,11 @@ public record PhysicalWeaponProvenance(
                 || provenance == null) {
             return false;
         }
-        CompoundTag root = stack.getOrCreateTag();
+        CompoundTag root = stack.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag();
         if (!replaceExisting && root.contains(TAG_KEY)) {
             return false;
         }
-        root.put(TAG_KEY, provenance.toTag());
+        net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, stack, tag -> tag.put(TAG_KEY, provenance.toTag()));
         return true;
     }
 
@@ -74,7 +74,7 @@ public record PhysicalWeaponProvenance(
     public static Optional<PhysicalWeaponProvenance> from(ItemStack stack) {
         return stack == null || stack.isEmpty()
                 ? Optional.empty()
-                : fromTag(stack.getTag());
+                : fromTag(stack.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag());
     }
 
     public static Optional<PhysicalWeaponProvenance> fromTag(CompoundTag root) {

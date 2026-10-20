@@ -14,9 +14,9 @@ import net.minecraft.resources.ResourceLocation;
 public final class AuthoredBranchFixture {
     public static final ResourceLocation TREE = id("example:nested");
     public static final Path ROOT = Path.of("examples/authored-branches-datapack/data/example/taczweaponblueprints");
-    public static ResourceLocation id(String s) { return new ResourceLocation(s); }
+    public static ResourceLocation id(String s) { return ResourceLocation.parse(s); }
     public static <T> T read(Codec<T> codec,String file) {
-        try { return codec.parse(JsonOps.INSTANCE,JsonParser.parseString(Files.readString(ROOT.resolve(file)))).getOrThrow(false,message -> {}); }
+        try { return codec.parse(JsonOps.INSTANCE,JsonParser.parseString(Files.readString(ROOT.resolve(file)))).getOrThrow(); }
         catch (Exception e) { throw new IllegalArgumentException(file + ": " + e.getMessage(),e); }
     }
     public static ResearchTechTreeDefinition definition() { return read(ResearchTechTreeDefinition.CODEC,"research_tech_trees/nested.json"); }

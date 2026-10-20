@@ -450,11 +450,11 @@ public class ResearchTreeV1RedesignBaselineTest {
                     blueprintId.toString(),
                     "name." + blueprintId.getNamespace() + "." + blueprintId.getPath(),
                     "tooltip." + blueprintId.getNamespace() + "." + blueprintId.getPath(),
-                    new ResourceLocation(
+                    ResourceLocation.fromNamespaceAndPath(
                             blueprintId.getNamespace(), "recipe/" + blueprintId.getPath()),
                     null,
                     itemType,
-                    new ResourceLocation(
+                    ResourceLocation.fromNamespaceAndPath(
                             blueprintId.getNamespace(), "slot/" + blueprintId.getPath()),
                     kind));
             assertTrue(previous == null, "duplicate fixture catalog ID " + blueprintId);
@@ -486,7 +486,7 @@ public class ResearchTreeV1RedesignBaselineTest {
     }
 
     private static ResourceLocation id(String value) {
-        return new ResourceLocation(value);
+        return ResourceLocation.parse(value);
     }
 
     private record Baseline(

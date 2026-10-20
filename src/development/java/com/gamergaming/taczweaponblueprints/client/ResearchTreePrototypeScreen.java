@@ -417,7 +417,7 @@ final class ResearchTreePrototypeScreen extends Screen {
         }
         return true;
     }
-    @Override public boolean mouseScrolled(double x, double y, double delta) {
+    @Override public boolean mouseScrolled(double x, double y, double horizontal, double delta) {
         interruptCapture();
         if (boxes.inspector().contains(x, y)) { scroll -= (int) Math.signum(delta) * 3; return true; }
         if (!boxes.canvas().contains(x, y) || scene == null) return false;
@@ -509,7 +509,7 @@ final class ResearchTreePrototypeScreen extends Screen {
             case "world" -> quiet = false;
             case "sample" -> sample(value);
             case "select" -> {
-                var id = new ResourceLocation(value);
+                var id = ResourceLocation.parse(value);
                 if (projection.graph().node(id).isEmpty()) throw new IllegalArgumentException("node is not in this public sample");
                 select(id, true);
             }

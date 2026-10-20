@@ -35,7 +35,7 @@ public final class ResearchTreeGraph {
             "gui.taczweaponblueprints.research_bench.tree.undisclosed";
     public static final String REDACTED_ITEM_TYPE = "undisclosed";
     public static final ResourceLocation REDACTED_DISPLAY_SLOT =
-            new ResourceLocation("minecraft", "paper");
+            ResourceLocation.fromNamespaceAndPath("minecraft", "paper");
 
     private static final Comparator<Edge> EDGE_ORDER = Comparator
             .comparing((Edge edge) -> edge.dependentId().toString())
@@ -266,7 +266,7 @@ public final class ResearchTreeGraph {
         if (disambiguator < 0 || disambiguator > MAX_NODES) {
             throw new IllegalArgumentException("redacted research tree disambiguator is invalid");
         }
-        return new ResourceLocation(
+        return ResourceLocation.fromNamespaceAndPath(
                 "taczweaponblueprints",
                 "undisclosed/" + ordinal + (disambiguator == 0 ? "" : "/" + disambiguator));
     }

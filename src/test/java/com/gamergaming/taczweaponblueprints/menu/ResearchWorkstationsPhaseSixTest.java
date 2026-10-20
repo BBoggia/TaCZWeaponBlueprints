@@ -26,7 +26,7 @@ class ResearchWorkstationsPhaseSixTest {
     void survivalRecipeIsOrdinaryTaggedAndDoesNotConsumeTheResearchBench()
             throws IOException {
         JsonObject recipe = readJson(
-                "src/main/resources/data/taczweaponblueprints/recipes/blueprint_recycler.json");
+                "src/main/resources/data/taczweaponblueprints/recipe/blueprint_recycler.json");
 
         assertEquals("minecraft:crafting_shaped", recipe.get("type").getAsString());
         assertEquals("misc", recipe.get("category").getAsString());
@@ -34,11 +34,11 @@ class ResearchWorkstationsPhaseSixTest {
         assertEquals("IGI", recipe.getAsJsonArray("pattern").get(1).getAsString());
         assertEquals("IHI", recipe.getAsJsonArray("pattern").get(2).getAsString());
         JsonObject key = recipe.getAsJsonObject("key");
-        assertEquals("forge:ingots/iron", key.getAsJsonObject("I").get("tag").getAsString());
+        assertEquals("c:ingots/iron", key.getAsJsonObject("I").get("tag").getAsString());
         assertEquals("minecraft:redstone", key.getAsJsonObject("R").get("item").getAsString());
         assertEquals("minecraft:grindstone", key.getAsJsonObject("G").get("item").getAsString());
         assertEquals("minecraft:hopper", key.getAsJsonObject("H").get("item").getAsString());
-        assertEquals(RECIPE, recipe.getAsJsonObject("result").get("item").getAsString());
+        assertEquals(RECIPE, recipe.getAsJsonObject("result").get("id").getAsString());
         assertTrue(recipe.get("show_notification").getAsBoolean());
         assertTrue(recipe.toString().indexOf("research_bench") < 0);
     }
@@ -47,7 +47,7 @@ class ResearchWorkstationsPhaseSixTest {
     void relevantItemsUnlockOneRecipeBookNotificationThroughAnOrRequirement()
             throws IOException {
         JsonObject advancement = readJson(
-                "src/main/resources/data/taczweaponblueprints/advancements/recipes/misc/blueprint_recycler.json");
+                "src/main/resources/data/taczweaponblueprints/advancement/recipes/misc/blueprint_recycler.json");
         assertEquals("minecraft:recipes/root", advancement.get("parent").getAsString());
         JsonObject criteria = advancement.getAsJsonObject("criteria");
         assertEquals(

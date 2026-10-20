@@ -33,7 +33,7 @@ public final class AnalyzerBalanceTool {
                     if(Files.size(path)>1024*1024)throw new IllegalArgumentException("supply exceeds 1 MiB");
                     var rows=JsonParser.parseString(Files.readString(path)).getAsJsonObject().getAsJsonObject("tables");
                     if(rows.size()>1024)throw new IllegalArgumentException("too many supply tables");tables.clear();
-                    for(var entry:rows.entrySet())tables.put(new net.minecraft.resources.ResourceLocation(entry.getKey()),com.gamergaming.taczweaponblueprints.loot.ScrapSupplyLootModifier.Row.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE,entry.getValue()).getOrThrow(false,m->{}));
+                    for(var entry:rows.entrySet())tables.put(net.minecraft.resources.ResourceLocation.parse(entry.getKey()),com.gamergaming.taczweaponblueprints.loot.ScrapSupplyLootModifier.Row.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE,entry.getValue()).getOrThrow(IllegalArgumentException::new));
                 }
                 report.add("research_economy",ResearchEconomyReport.create(catalog,tables,Integer.parseInt(options.getOrDefault("--supply-budget","32"))));
             }

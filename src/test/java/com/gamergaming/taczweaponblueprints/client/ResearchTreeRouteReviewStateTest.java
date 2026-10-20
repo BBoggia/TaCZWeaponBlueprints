@@ -14,7 +14,7 @@ import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
 import net.minecraft.resources.ResourceLocation;
 
 class ResearchTreeRouteReviewStateTest {
-    private static final ResourceLocation A = new ResourceLocation("test:a"), B = new ResourceLocation("test:b"), C = new ResourceLocation("test:c");
+    private static final ResourceLocation A = ResourceLocation.parse("test:a"), B = ResourceLocation.parse("test:b"), C = ResourceLocation.parse("test:c");
     private static final ResearchRouteFingerprint FP = new ResearchRouteFingerprint(1,2);
     @AfterEach void clear() { ClientResearchPlannerState.clear(); }
     private ResearchTreeGraph graph() {
@@ -69,7 +69,7 @@ class ResearchTreeRouteReviewStateTest {
         assertTrue(state.accept(result(request),ResearchTreeGraph.EMPTY,501));assertTrue(state.snapshot().isEmpty());
     }
     @Test void sameFingerprintCannotKeepOldMaterialAllocationCurrent() {
-        var paper = new ResourceLocation("minecraft:paper");
+        var paper = ResourceLocation.parse("minecraft:paper");
         var preview = new ResearchSelectionPreview(Optional.of(B),3,0,true,false,true,false,false,
                 List.of(new ResearchSelectionPreview.IngredientPreview(List.of(paper),Optional.empty(),4,1)),1,1,
                 ResearchSelectionPreview.PathPlanningState.NONE,ResearchCostMode.POINTS_AND_ITEMS,Optional.of(FP),ResearchAccessSummary.NONE,
@@ -88,8 +88,8 @@ class ResearchTreeRouteReviewStateTest {
     }
 
     @Test void materialIdentityCompletenessAndCapacityMustMatchTheQuote() {
-        var paper = new ResourceLocation("minecraft:paper");
-        var iron = new ResourceLocation("minecraft:iron_ingot");
+        var paper = ResourceLocation.parse("minecraft:paper");
+        var iron = ResourceLocation.parse("minecraft:iron_ingot");
         var preview = new ResearchSelectionPreview(Optional.of(B),3,0,true,false,true,false,false,
                 List.of(new ResearchSelectionPreview.IngredientPreview(List.of(paper),Optional.empty(),4,1)),1,1,
                 ResearchSelectionPreview.PathPlanningState.NONE,ResearchCostMode.POINTS_AND_ITEMS,Optional.of(FP),
@@ -104,9 +104,9 @@ class ResearchTreeRouteReviewStateTest {
         }
     }
     @Test void tagExamplesAndBoundedMaterialTruncationRemainValid() {
-        var tag = new ResourceLocation("forge:ingots/iron");
+        var tag = ResourceLocation.parse("forge:ingots/iron");
         var preview = new ResearchSelectionPreview(Optional.of(B),3,0,true,false,true,false,false,
-                List.of(new ResearchSelectionPreview.IngredientPreview(List.of(new ResourceLocation("minecraft:iron_ingot")),
+                List.of(new ResearchSelectionPreview.IngredientPreview(List.of(ResourceLocation.parse("minecraft:iron_ingot")),
                         Optional.of(tag),4,1)),1,33,ResearchSelectionPreview.PathPlanningState.NONE,
                 ResearchCostMode.POINTS_AND_ITEMS,Optional.of(FP),ResearchAccessSummary.NONE,ResearchSelectionProgressionPreview.EMPTY);
         var material = new ResearchGuidanceSnapshot.MaterialProgress(List.of(),Optional.of(tag),4,1);
@@ -118,7 +118,7 @@ class ResearchTreeRouteReviewStateTest {
     @Test void materialPagesCompareAgainstTheirActualGuidanceOffset() {
         var materials = java.util.stream.IntStream.range(0, 40)
                 .mapToObj(i -> new ResearchGuidanceSnapshot.MaterialProgress(
-                        List.of(new ResourceLocation("test:material_" + i)), Optional.empty(), 1, 0)).toList();
+                        List.of(ResourceLocation.parse("test:material_" + i)), Optional.empty(), 1, 0)).toList();
         var value = new ResearchGuidanceSnapshot(B, ResearchGuidanceSnapshot.State.MISSING_POINTS_AND_MATERIALS,
                 3, 0, ResearchCostMode.POINTS_AND_ITEMS, false, true, 40, 40, 0, 40,
                 materials.subList(0, 32), List.of(B), List.of(B), List.of(), Optional.of(B));

@@ -19,11 +19,11 @@ class AnalysisFragmentCurrencyPreviewTest {
 
     @ParameterizedTest @ValueSource(ints = {1, 5, 7})
     void partialAndCompleteSetsUseCarriedCurrencyWithoutChangingReconstruction(int offered) {
-        var target = new ResourceLocation("test:rifle");
+        var target = ResourceLocation.parse("test:rifle");
         var data = new PlayerRecipeData(); data.setResearchPoints(137);
         var inventory = new ArrayList<ItemStack>(Collections.nCopies(36, ItemStack.EMPTY));
         inventory.set(0, new ItemStack(Items.IRON_INGOT, 12));
-        var physical = ResearchCurrencyPolicy.physical(new ResourceLocation("minecraft:iron_ingot"), 1);
+        var physical = ResearchCurrencyPolicy.physical(ResourceLocation.parse("minecraft:iron_ingot"), 1);
         var input = BlueprintFragmentItem.createAnalysis(AnalysisTestItems.fragment, target, AnalysisRewardClass.PROTECTED_PREREQUISITES);
         input.setCount(offered);
         var policy = new AnalysisFragmentReconstructionService.Policy(target, true, 5, 1000, false,

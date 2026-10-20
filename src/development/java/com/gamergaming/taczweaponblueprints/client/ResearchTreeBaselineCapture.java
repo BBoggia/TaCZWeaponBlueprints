@@ -17,14 +17,14 @@ import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreePublicatio
 import com.google.gson.JsonObject;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.ModList;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModList;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /** Opt-in native observer, compiled into the development run only. Never sends research actions. */
-@Mod.EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, value = Dist.CLIENT)
 public final class ResearchTreeBaselineCapture {
     private static final boolean ENABLED = System.getProperty("tacz.treeBaseline.output") != null;
     private static final boolean MOTION = Boolean.getBoolean("tacz.treeBaseline.motion");

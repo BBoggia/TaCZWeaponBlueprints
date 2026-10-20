@@ -95,10 +95,10 @@ class ResearchTreeLayeredLayoutEngineTest {
         ResearchTreeLayoutInput input = new ResearchTreeLayoutInput(
                 List.of(
                         new ResearchTreeLayoutInput.Node(
-                                0, new net.minecraft.resources.ResourceLocation("test", "a"),
+                                0, net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("test", "a"),
                                 0, 0, 0, 0),
                         new ResearchTreeLayoutInput.Node(
-                                1, new net.minecraft.resources.ResourceLocation("test", "b"),
+                                1, net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("test", "b"),
                                 0, 0, 1, 1)),
                 List.of());
         ResearchTreeLayoutPolicy base = ResearchTreeLayoutPolicy.UNIFIED_OVERVIEW;
@@ -117,8 +117,8 @@ class ResearchTreeLayeredLayoutEngineTest {
 
     @Test
     void skippedRanksCreateInternalCorridorWaypointsWithoutPublishingDummyNodes() {
-        ResourceLocation bottom = new ResourceLocation("test", "bottom");
-        ResourceLocation top = new ResourceLocation("test", "top");
+        ResourceLocation bottom = ResourceLocation.fromNamespaceAndPath("test", "bottom");
+        ResourceLocation top = ResourceLocation.fromNamespaceAndPath("test", "top");
         ResearchTreeLayoutInput input = new ResearchTreeLayoutInput(
                 List.of(
                         new ResearchTreeLayoutInput.Node(0, bottom, 0, 0, 0, 0),
@@ -139,8 +139,8 @@ class ResearchTreeLayeredLayoutEngineTest {
 
     @Test
     void anExtremeAuthoredRankGapFallsBackWithoutCreatingAnOversizedRouteHint() {
-        ResourceLocation bottom = new ResourceLocation("test", "wide_gap_bottom");
-        ResourceLocation top = new ResourceLocation("test", "wide_gap_top");
+        ResourceLocation bottom = ResourceLocation.fromNamespaceAndPath("test", "wide_gap_bottom");
+        ResourceLocation top = ResourceLocation.fromNamespaceAndPath("test", "wide_gap_top");
         ResearchTreeLayoutInput input = new ResearchTreeLayoutInput(
                 List.of(
                         new ResearchTreeLayoutInput.Node(0, bottom, 0, 0, 0, 0),
@@ -161,13 +161,13 @@ class ResearchTreeLayeredLayoutEngineTest {
         for (int ordinal = 0; ordinal < 5; ordinal++) {
             nodes.add(new ResearchTreeLayoutInput.Node(
                     ordinal,
-                    new ResourceLocation("test", "wide/" + ordinal),
+                    ResourceLocation.fromNamespaceAndPath("test", "wide/" + ordinal),
                     0,
                     0,
                     ordinal,
                     0));
         }
-        ResourceLocation sparse = new ResourceLocation("test", "sparse");
+        ResourceLocation sparse = ResourceLocation.fromNamespaceAndPath("test", "sparse");
         nodes.add(new ResearchTreeLayoutInput.Node(5, sparse, 1, 0, 0, 0));
 
         ResearchTreeLayout layout = ResearchTreeLayeredLayoutEngine.layoutInput(
@@ -186,17 +186,17 @@ class ResearchTreeLayeredLayoutEngineTest {
 
     @Test
     void maximumRankWidthAlsoBoundsInvisibleRoutingWaypoints() {
-        ResourceLocation bottom = new ResourceLocation("test", "bounded_bottom");
-        ResourceLocation top = new ResourceLocation("test", "bounded_top");
+        ResourceLocation bottom = ResourceLocation.fromNamespaceAndPath("test", "bounded_bottom");
+        ResourceLocation top = ResourceLocation.fromNamespaceAndPath("test", "bounded_top");
         ResearchTreeLayoutInput input = new ResearchTreeLayoutInput(
                 List.of(
                         new ResearchTreeLayoutInput.Node(0, bottom, 0, 0, 0, 0),
                         new ResearchTreeLayoutInput.Node(
-                                1, new ResourceLocation("test", "filler_1"), 1, 0, 0, 0),
+                                1, ResourceLocation.fromNamespaceAndPath("test", "filler_1"), 1, 0, 0, 0),
                         new ResearchTreeLayoutInput.Node(
-                                2, new ResourceLocation("test", "filler_2"), 2, 0, 0, 0),
+                                2, ResourceLocation.fromNamespaceAndPath("test", "filler_2"), 2, 0, 0, 0),
                         new ResearchTreeLayoutInput.Node(
-                                3, new ResourceLocation("test", "filler_3"), 3, 0, 0, 0),
+                                3, ResourceLocation.fromNamespaceAndPath("test", "filler_3"), 3, 0, 0, 0),
                         new ResearchTreeLayoutInput.Node(4, top, 4, 0, 0, 0)),
                 List.of(new ResearchTreeLayoutInput.Edge(bottom, top)));
         ResearchTreeLayoutPolicy base = ResearchTreeLayoutPolicy.UNIFIED_OVERVIEW;

@@ -26,7 +26,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 
 class ResearchBenchPacketTest {
-    private static final ResourceLocation BLUEPRINT = new ResourceLocation("test:rifle");
+    private static final ResourceLocation BLUEPRINT = ResourceLocation.parse("test:rifle");
 
     @Test
     void actionRoundTripsOnlyContainerActionAndBoundedBlueprintId() {
@@ -85,7 +85,7 @@ class ResearchBenchPacketTest {
         assertThrows(IllegalArgumentException.class, () -> new ResearchBenchActionPacket(
                 1,
                 ResearchBenchResearchAction.SELECT,
-                Optional.of(new ResourceLocation("test", "x".repeat(252)))));
+                Optional.of(ResourceLocation.fromNamespaceAndPath("test", "x".repeat(252)))));
         assertThrows(IllegalArgumentException.class, () -> new ResearchBenchActionPacket(
                 1,
                 1,
@@ -211,13 +211,13 @@ class ResearchBenchPacketTest {
                 false,
                 List.of(
                         new ResearchSelectionPreview.IngredientPreview(
-                                List.of(new ResourceLocation("minecraft:paper")),
+                                List.of(ResourceLocation.parse("minecraft:paper")),
                                 Optional.empty(),
                                 4,
                                 4),
                         new ResearchSelectionPreview.IngredientPreview(
-                                List.of(new ResourceLocation("minecraft:iron_ingot")),
-                                Optional.of(new ResourceLocation("forge:ingots/iron")),
+                                List.of(ResourceLocation.parse("minecraft:iron_ingot")),
+                                Optional.of(ResourceLocation.parse("forge:ingots/iron")),
                                 2,
                                 1)));
         SyncResearchBenchPreviewPacket packet = new SyncResearchBenchPreviewPacket(4, preview);
@@ -245,7 +245,7 @@ class ResearchBenchPacketTest {
                 false,
                 false,
                 List.of(new ResearchSelectionPreview.IngredientPreview(
-                        List.of(new ResourceLocation("minecraft:paper")),
+                        List.of(ResourceLocation.parse("minecraft:paper")),
                         Optional.empty(),
                         12,
                         12)),
@@ -299,7 +299,7 @@ class ResearchBenchPacketTest {
                 true,
                 false,
                 List.of(new ResearchSelectionPreview.IngredientPreview(
-                        List.of(new ResourceLocation("minecraft:paper")),
+                        List.of(ResourceLocation.parse("minecraft:paper")),
                         Optional.empty(),
                         3,
                         3)),
@@ -406,7 +406,7 @@ class ResearchBenchPacketTest {
     @Test
     void previewRejectsOverstatedOrMisleadingMaterialSummaries() {
         assertThrows(IllegalArgumentException.class, () -> new ResearchSelectionPreview.IngredientPreview(
-                List.of(new ResourceLocation("minecraft:paper")),
+                List.of(ResourceLocation.parse("minecraft:paper")),
                 Optional.empty(),
                 4,
                 5));
@@ -421,7 +421,7 @@ class ResearchBenchPacketTest {
                 false,
                 false,
                 List.of(new ResearchSelectionPreview.IngredientPreview(
-                        List.of(new ResourceLocation("minecraft:paper")),
+                        List.of(ResourceLocation.parse("minecraft:paper")),
                         Optional.empty(),
                         1,
                         0))));

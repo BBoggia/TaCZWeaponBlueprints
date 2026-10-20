@@ -5,14 +5,14 @@ import com.gamergaming.taczweaponblueprints.item.BlueprintFragmentItem;
 import com.gamergaming.taczweaponblueprints.progression.analyzer.AnalysisRewardClass;
 import com.tacz.guns.api.item.*;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 /** New output stacks only: copying recipe attachments never grants their loaded ammunition. */
 public final class StockOutputs {
     private StockOutputs(){}
     public static ItemStack create(StockPlan.Entry entry){
         ItemStack output=switch(entry.kind()){
-            case CURRENCY,RESEARCH_DATA -> ForgeRegistries.ITEMS.containsKey(entry.target())?new ItemStack(ForgeRegistries.ITEMS.getValue(entry.target())):ItemStack.EMPTY;
+            case CURRENCY,RESEARCH_DATA -> BuiltInRegistries.ITEM.containsKey(entry.target())?new ItemStack(BuiltInRegistries.ITEM.get(entry.target())):ItemStack.EMPTY;
             case ANALYSIS_FRAGMENTS -> BlueprintFragmentItem.createAnalysis(entry.target(),AnalysisRewardClass.PROTECTED_PREREQUISITES);
             case BLUEPRINT -> com.gamergaming.taczweaponblueprints.item.BlueprintItem.createBlueprint(entry.target().toString(), com.gamergaming.taczweaponblueprints.item.BlueprintProvenance.traded());
             case MAGAZINE -> {var family=MagazineCatalog.INSTANCE.publication().catalog().families().get(entry.target());yield family==null?ItemStack.EMPTY:family.output();}

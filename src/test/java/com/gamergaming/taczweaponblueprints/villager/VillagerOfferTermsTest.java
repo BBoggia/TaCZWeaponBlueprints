@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class VillagerOfferTermsTest {
     private static VillagerOfferTerms terms() {
-        return new VillagerOfferTerms(new ResourceLocation("taczweaponblueprints", "test/slot"),22,false,8);
+        return new VillagerOfferTerms(ResourceLocation.fromNamespaceAndPath("taczweaponblueprints", "test/slot"),22,false,8);
     }
     @Test void savesIndependentOfferIdentityFloorAvailabilityAndRevision() {
         var value=terms();assertEquals(value,VillagerOfferTerms.read(value.save(),64));
@@ -16,7 +16,7 @@ class VillagerOfferTermsTest {
         tag.putInt("version",1);tag.remove("available");assertThrows(IllegalArgumentException.class,()->VillagerOfferTerms.read(tag,64));
     }
     @Test void packNamespaceSlotsRoundTripAndNoncanonicalSavedIdsReject() {
-        var terms = new VillagerOfferTerms(new ResourceLocation("example", "gunsmith/apprentice"), 18, true, 1);
+        var terms = new VillagerOfferTerms(ResourceLocation.fromNamespaceAndPath("example", "gunsmith/apprentice"), 18, true, 1);
         assertEquals(terms, VillagerOfferTerms.read(terms.save(), 64));
         var tag = terms.save(); tag.putString("slot", "unnamespaced");
         assertThrows(IllegalArgumentException.class, () -> VillagerOfferTerms.read(tag, 64));

@@ -24,10 +24,9 @@ import com.gamergaming.taczweaponblueprints.client.BlueprintRecipeFilter;
 import com.gamergaming.taczweaponblueprints.client.ClientCraftingAccessState;
 import com.gamergaming.taczweaponblueprints.client.IBlueprintRecipeScreen;
 import com.gamergaming.taczweaponblueprints.client.MagazineWorkbenchTabs;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.network.CraftingAccessRequestPacket;
-import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.tacz.guns.client.gui.GunSmithTableScreen;
 import com.tacz.guns.crafting.GunSmithTableRecipe;
 import com.tacz.guns.resource.pojo.data.block.TabConfig;
@@ -93,7 +92,7 @@ public abstract class GunSmithTableScreenMixin
     private List<ResourceLocation> selectedRecipeList;
 
     @Shadow(remap = false)
-    private GunSmithTableRecipe selectedRecipe;
+    private net.minecraft.world.item.crafting.RecipeHolder<GunSmithTableRecipe> selectedRecipe;
 
     @Shadow(remap = false)
     private ResourceLocation selectedType;
@@ -151,7 +150,7 @@ public abstract class GunSmithTableScreenMixin
         this.selectedRecipeList = filtered.selectedRecipeList();
 
         if (this.selectedRecipe != null) {
-            String selectedRecipeId = this.selectedRecipe.getId().toString();
+            String selectedRecipeId = this.selectedRecipe.id().toString();
             if (!BlueprintRecipeFilter.isVisibleForCraftingAccessState(
                     selectedRecipeId,
                     learnedRecipes,
@@ -246,7 +245,7 @@ public abstract class GunSmithTableScreenMixin
     private void requestCraftingAccess(CallbackInfo ci) {
         long requestId = ClientCraftingAccessState.beginRequest(menu.containerId, menu);
         if (requestId > 0L) {
-            NetworkHandler.INSTANCE.sendToServer(
+            net.neoforged.neoforge.network.PacketDistributor.sendToServer(
                     new CraftingAccessRequestPacket(menu.containerId, requestId));
         }
     }
@@ -265,7 +264,7 @@ public abstract class GunSmithTableScreenMixin
         long retryRequestId = ClientCraftingAccessState.retryRequestIfTimedOut(
                 menu.containerId, menu, System.nanoTime());
         if (retryRequestId > 0L) {
-            NetworkHandler.INSTANCE.sendToServer(
+            net.neoforged.neoforge.network.PacketDistributor.sendToServer(
                     new CraftingAccessRequestPacket(menu.containerId, retryRequestId));
         }
         if (enabled != this.taczweaponblueprints$lastEnabled
@@ -296,8 +295,7 @@ public abstract class GunSmithTableScreenMixin
         LocalPlayer player = Minecraft.getInstance().player;
         return player == null
                 ? Set.of()
-                : player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
-                        .resolve()
+                : ModAttachments.recipeData(player)
                         .map(recipeData -> Set.copyOf(recipeData.getLearnedRecipes()))
                         .orElse(Set.of());
     }
@@ -370,7 +368,7 @@ public abstract class GunSmithTableScreenMixin
     @Inject(method = "getSelectedRecipe", at = @At("HEAD"), cancellable = true, remap = false)
     private void handleEmptyRecipeSelection(
             ResourceLocation recipeId,
-            CallbackInfoReturnable<GunSmithTableRecipe> cir) {
+            CallbackInfoReturnable<net.minecraft.world.item.crafting.RecipeHolder<GunSmithTableRecipe>> cir) {
         ClientCraftingAccessState.Snapshot access = ClientCraftingAccessState.snapshot(
                 menu.containerId, menu);
         boolean enabled = ModConfigs.BLUEPRINT.enableBlueprints.get();

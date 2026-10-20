@@ -22,9 +22,9 @@ import net.minecraft.resources.ResourceLocation;
 class TaCZRuntimeWeaponEvidenceAdapterTest {
     @Test
     void captureUsesOnlyRecipeBackedGunsAndIsolatesMissingIndexes() {
-        ResourceLocation accepted = new ResourceLocation("addon", "accepted");
-        ResourceLocation missing = new ResourceLocation("addon", "missing");
-        ResourceLocation ammo = new ResourceLocation("addon", "ammo");
+        ResourceLocation accepted = ResourceLocation.fromNamespaceAndPath("addon", "accepted");
+        ResourceLocation missing = ResourceLocation.fromNamespaceAndPath("addon", "missing");
+        ResourceLocation ammo = ResourceLocation.fromNamespaceAndPath("addon", "ammo");
         Map<ResourceLocation, BlueprintData> catalog = new LinkedHashMap<>();
         catalog.put(missing, blueprint(missing, BlueprintKind.GUN));
         catalog.put(ammo, blueprint(ammo, BlueprintKind.AMMO));
@@ -245,8 +245,8 @@ class TaCZRuntimeWeaponEvidenceAdapterTest {
 
     @Test
     void oneMalformedGunDoesNotDiscardOtherRuntimeEvidence() {
-        ResourceLocation valid = new ResourceLocation("addon", "valid");
-        ResourceLocation invalid = new ResourceLocation("addon", "invalid");
+        ResourceLocation valid = ResourceLocation.fromNamespaceAndPath("addon", "valid");
+        ResourceLocation invalid = ResourceLocation.fromNamespaceAndPath("addon", "invalid");
         Map<ResourceLocation, BlueprintData> catalog = Map.of(
                 valid, blueprint(valid, BlueprintKind.GUN),
                 invalid, blueprint(invalid, BlueprintKind.GUN));
@@ -277,10 +277,10 @@ class TaCZRuntimeWeaponEvidenceAdapterTest {
                 id.toString(),
                 "name." + id.getPath(),
                 "tooltip",
-                new ResourceLocation(id.getNamespace(), "recipe/" + id.getPath()),
+                ResourceLocation.fromNamespaceAndPath(id.getNamespace(), "recipe/" + id.getPath()),
                 null,
                 kind == BlueprintKind.GUN ? "rifle" : "ammo",
-                new ResourceLocation(id.getNamespace(), "display/" + id.getPath()),
+                ResourceLocation.fromNamespaceAndPath(id.getNamespace(), "display/" + id.getPath()),
                 kind);
     }
 

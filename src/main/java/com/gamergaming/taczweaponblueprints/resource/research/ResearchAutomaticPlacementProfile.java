@@ -554,7 +554,7 @@ public record ResearchAutomaticPlacementProfile(
             String title,
             Optional<String> translationKey) {
         return new AutomaticWeaponProgressionBand(
-                new ResourceLocation("taczweaponblueprints", "validation"),
+                ResourceLocation.fromNamespaceAndPath("taczweaponblueprints", "validation"),
                 ResearchTechTreeContract.SCORE_MAX,
                 title,
                 translationKey);

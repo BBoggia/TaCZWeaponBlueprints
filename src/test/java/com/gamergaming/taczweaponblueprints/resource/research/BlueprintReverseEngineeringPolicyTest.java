@@ -245,7 +245,7 @@ class BlueprintReverseEngineeringPolicyTest {
                 id.toString(),
                 "item.test",
                 "tooltip.test",
-                new ResourceLocation(id.getNamespace(), "recipe/" + id.getPath()),
+                ResourceLocation.fromNamespaceAndPath(id.getNamespace(), "recipe/" + id.getPath()),
                 null,
                 "rifle",
                 id("tacz:slot"),
@@ -254,6 +254,6 @@ class BlueprintReverseEngineeringPolicyTest {
     }
 
     private static ResourceLocation id(String value) {
-        return new ResourceLocation(value);
+        return ResourceLocation.parse(value);
     }
 }

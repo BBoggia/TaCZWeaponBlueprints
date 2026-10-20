@@ -1729,7 +1729,7 @@ class ResearchTechTreeLayoutEngineTest {
                 nodeId,
                 "name." + ordinal,
                 "gun",
-                new ResourceLocation("minecraft", "paper"),
+                ResourceLocation.fromNamespaceAndPath("minecraft", "paper"),
                 JournalVisibility.FULL,
                 false,
                 true,
@@ -1742,6 +1742,6 @@ class ResearchTechTreeLayoutEngineTest {
     }
 
     private static ResourceLocation id(String value) {
-        return new ResourceLocation(value);
+        return ResourceLocation.parse(value);
     }
 }

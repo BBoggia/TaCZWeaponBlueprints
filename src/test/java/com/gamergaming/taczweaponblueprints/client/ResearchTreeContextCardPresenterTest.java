@@ -46,7 +46,7 @@ class ResearchTreeContextCardPresenterTest {
                 320,
                 240,
                 node,
-                Optional.of(new ResourceLocation("test:other")),
+                Optional.of(ResourceLocation.parse("test:other")),
                 preview,
                 new ResearchTreeContextCardLayout.Anchor(120, 80, 24, 24),
                 List.of());

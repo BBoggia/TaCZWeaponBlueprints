@@ -20,7 +20,7 @@ public final class ResearchDesignerConversion {
         String sourceTree = profile.get("tech_tree").getAsString();
         var tree = definition(definitions,"research_tech_trees",sourceTree);
         var decodedProfile = com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchProfile.CODEC
-                .parse(com.mojang.serialization.JsonOps.INSTANCE,profile).getOrThrow(false, ignored -> {});
+                .parse(com.mojang.serialization.JsonOps.INSTANCE,profile).getOrThrow(IllegalArgumentException::new);
         var domains=new JsonObject();
         for(var domain:com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain.values())
             domains.add(domain.name().toLowerCase(Locale.ROOT),DesignerValues.encode(com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchProfile.DomainPolicy.CODEC,decodedProfile.domainPolicy(domain)));
@@ -111,8 +111,8 @@ public final class ResearchDesignerConversion {
             dependencies.getAsJsonArray("resources").add(dep);
         }));
         notes.add("Custom draft requires validation against its captured context before export.");
-        com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchProfile.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE,profile).getOrThrow(false, ignored -> {});
-        com.gamergaming.taczweaponblueprints.resource.research.ResearchTechTreeDefinition.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE,tree).getOrThrow(false, ignored -> {});
+        com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchProfile.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE,profile).getOrThrow(IllegalArgumentException::new);
+        com.gamergaming.taczweaponblueprints.resource.research.ResearchTechTreeDefinition.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE,tree).getOrThrow(IllegalArgumentException::new);
         return new Result(ResearchDesignerProject.fromJson(root),notes);
     }
     private static JsonObject definition(JsonObject definitions,String kind,String id) {

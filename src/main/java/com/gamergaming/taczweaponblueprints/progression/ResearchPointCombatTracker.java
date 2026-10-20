@@ -29,8 +29,8 @@ import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
 import net.minecraft.world.entity.boss.wither.WitherBoss;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
-import net.minecraftforge.common.util.FakePlayer;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.neoforge.common.util.FakePlayer;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 /** Captures persistent spawn facts and normalizes one authoritative death. */
 public final class ResearchPointCombatTracker {
@@ -38,12 +38,12 @@ public final class ResearchPointCombatTracker {
     private static final String BORN_AT_KEY = DATA_PREFIX + "born_at";
     private static final String PROVENANCE_KEY = DATA_PREFIX + "spawn_provenance";
     private static final Set<ResourceLocation> COMMON_BOSS_TAGS = Set.of(
-            new ResourceLocation("forge", "bosses"),
-            new ResourceLocation("forge", "boss"),
-            new ResourceLocation("c", "bosses"),
-            new ResourceLocation("c", "boss"));
+            ResourceLocation.fromNamespaceAndPath("forge", "bosses"),
+            ResourceLocation.fromNamespaceAndPath("forge", "boss"),
+            ResourceLocation.fromNamespaceAndPath("c", "bosses"),
+            ResourceLocation.fromNamespaceAndPath("c", "boss"));
     private static final TagKey<net.minecraft.world.damagesource.DamageType> TACZ_BULLETS =
-            TagKey.create(Registries.DAMAGE_TYPE, new ResourceLocation("tacz", "bullets"));
+            TagKey.create(Registries.DAMAGE_TYPE, ResourceLocation.fromNamespaceAndPath("tacz", "bullets"));
     private static final ResearchPointCombatRecentEvents RECENT_DEATHS =
             new ResearchPointCombatRecentEvents();
 
@@ -95,7 +95,7 @@ public final class ResearchPointCombatTracker {
         }
 
         CreditedPlayer credit = creditedPlayer(victim, source).orElse(null);
-        ResourceLocation targetId = ForgeRegistries.ENTITY_TYPES.getKey(victim.getType());
+        ResourceLocation targetId = BuiltInRegistries.ENTITY_TYPE.getKey(victim.getType());
         if (credit == null || credit.player() == victim || targetId == null) {
             return Optional.empty();
         }

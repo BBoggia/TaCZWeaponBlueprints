@@ -53,7 +53,7 @@ class BlueprintKnowledgeFlowPhaseZeroTest {
         BlueprintResearchCost cost = new BlueprintResearchCost(
                 3,
                 List.of(new BlueprintResearchIngredient(
-                        List.of(new ResourceLocation("minecraft:paper")),
+                        List.of(ResourceLocation.parse("minecraft:paper")),
                         Optional.empty(),
                         1)));
 
@@ -106,7 +106,7 @@ class BlueprintKnowledgeFlowPhaseZeroTest {
         assertEquals(2, BlueprintRecyclerMenu.FIRST_PLAYER_SLOT);
         assertTrue(Arrays.stream(BlueprintResearchService.Status.values())
                 .anyMatch(status -> status == BlueprintResearchService.Status.OUTPUT_FULL));
-        assertEquals("70", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("neoforge-1", NetworkHandler.PROTOCOL_VERSION);
     }
 
     private static BlueprintResearchPolicy policy(
@@ -139,7 +139,7 @@ class BlueprintKnowledgeFlowPhaseZeroTest {
     }
 
     private static ResourceLocation id(String value) {
-        return new ResourceLocation(value);
+        return ResourceLocation.parse(value);
     }
 
     private static final class TestResearchInput implements ResearchInput {

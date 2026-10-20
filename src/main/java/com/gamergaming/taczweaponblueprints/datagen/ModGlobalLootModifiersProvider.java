@@ -22,9 +22,9 @@ import net.minecraft.data.PackOutput;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
-import net.minecraftforge.common.data.GlobalLootModifierProvider;
-import net.minecraftforge.common.loot.LootTableIdCondition;
-import net.minecraftforge.fml.ModList;
+import net.neoforged.neoforge.common.data.GlobalLootModifierProvider;
+import net.neoforged.neoforge.common.loot.LootTableIdCondition;
+import net.neoforged.fml.ModList;
 
 
 public class ModGlobalLootModifiersProvider extends GlobalLootModifierProvider {
@@ -33,19 +33,19 @@ public class ModGlobalLootModifiersProvider extends GlobalLootModifierProvider {
     private static final float LEGACY_POOL_PROBABILITY = 0.2f;
 
     private static final List<ResourceLocation> NOTE_LOOT_TABLES = List.of(
-            new ResourceLocation("minecraft:chests/abandoned_mineshaft"),
-            new ResourceLocation("minecraft:chests/simple_dungeon"),
-            new ResourceLocation("minecraft:chests/pillager_outpost"));
+            ResourceLocation.parse("minecraft:chests/abandoned_mineshaft"),
+            ResourceLocation.parse("minecraft:chests/simple_dungeon"),
+            ResourceLocation.parse("minecraft:chests/pillager_outpost"));
     private static final List<ResourceLocation> REPORT_LOOT_TABLES = List.of(
-            new ResourceLocation("minecraft:chests/stronghold_library"),
-            new ResourceLocation("minecraft:chests/woodland_mansion"),
-            new ResourceLocation("minecraft:chests/bastion_treasure"));
+            ResourceLocation.parse("minecraft:chests/stronghold_library"),
+            ResourceLocation.parse("minecraft:chests/woodland_mansion"),
+            ResourceLocation.parse("minecraft:chests/bastion_treasure"));
     private static final List<ResourceLocation> DOSSIER_LOOT_TABLES = List.of(
-            new ResourceLocation("minecraft:chests/ancient_city"),
-            new ResourceLocation("minecraft:chests/end_city_treasure"));
+            ResourceLocation.parse("minecraft:chests/ancient_city"),
+            ResourceLocation.parse("minecraft:chests/end_city_treasure"));
 
-    public ModGlobalLootModifiersProvider(PackOutput output) {
-        super(output, TaCZWeaponBlueprints.MODID);
+    public ModGlobalLootModifiersProvider(PackOutput output, java.util.concurrent.CompletableFuture<net.minecraft.core.HolderLookup.Provider> registries) {
+        super(output, registries, TaCZWeaponBlueprints.MODID);
         TaCZWeaponBlueprints.LOGGER.info("Creating global loot modifiers");
     }
 

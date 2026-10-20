@@ -28,7 +28,7 @@ class EmiSyntheticRecipeIdTest {
     @Test
     void concreteBlueprintPagesHaveUniqueSyntheticIds() {
         var id = EmiSyntheticRecipeId.forBlueprint(
-                new ResourceLocation("addon", "weapons/carbine"));
+                ResourceLocation.fromNamespaceAndPath("addon", "weapons/carbine"));
 
         assertEquals("taczweaponblueprints", id.getNamespace());
         assertEquals("/emi_info/blueprint/addon/weapons/carbine", id.getPath());

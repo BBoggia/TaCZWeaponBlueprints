@@ -37,7 +37,7 @@ class ResearchAutomaticPlacementFixtureTest {
             Set<ResourceLocation> blueprintIds = new LinkedHashSet<>();
             for (var weaponElement : catalog.getAsJsonArray("weapons")) {
                 JsonObject weapon = weaponElement.getAsJsonObject();
-                assertTrue(blueprintIds.add(new ResourceLocation(
+                assertTrue(blueprintIds.add(ResourceLocation.parse(
                         weapon.get("blueprint").getAsString())));
                 assertTrue(!weapon.get("archetype").getAsString().isBlank());
                 assertTrue(weapon.getAsJsonObject("stats").size() > 0);

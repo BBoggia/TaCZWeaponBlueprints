@@ -11,7 +11,7 @@ public final class ResearchCurrencySyncTracker {
     private ResearchCurrencySyncTracker() { }
     private record State(ResearchCurrencyPolicy policy,int available,ResearchDataSettings data) { }
     public static void tick(ServerPlayer player) {
-        player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).ifPresent(data -> {
+        ModAttachments.recipeData(player).ifPresent(data -> {
             var policy=ModConfigs.BLUEPRINT.currencyPolicy();
             var now=new State(policy,ResearchCurrencyPayments.balance(policy,player.getInventory().items,data),ModConfigs.BLUEPRINT.dataSettings());
             var before=LAST.put(player.getUUID(),now);

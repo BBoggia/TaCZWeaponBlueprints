@@ -16,13 +16,13 @@ class BlueprintKnowledgeFlowPhaseSevenTest {
 
     @Test
     void recipeViewersRemainOptionalAndUnbundled() throws IOException {
-        String build = read("build.gradle");
-        String mods = read("src/main/resources/META-INF/mods.toml");
-        assertTrue(build.contains("compileOnly fg.deobf(\"dev.emi:emi-forge:"));
-        assertTrue(build.contains("runtimeOnly fg.deobf(\"dev.emi:emi-forge:${emi_version}\")"));
-        assertTrue(build.contains("compileOnly fg.deobf(\"mezz.jei:jei-${minecraft_version}-common-api:"));
-        assertTrue(mods.contains("modId=\"jei\"\n    mandatory=false"));
-        assertTrue(mods.contains("modId=\"emi\"\n    mandatory=false"));
+        String build = read("build.gradle") + read("gradle/release.gradle");
+        String mods = read("src/main/resources/META-INF/neoforge.mods.toml");
+        assertTrue(build.contains("compileOnly \"dev.emi:emi-neoforge:"));
+        assertTrue(build.contains("runtimeOnly \"dev.emi:emi-neoforge:${emi_version}\""));
+        assertTrue(build.contains("compileOnly \"mezz.jei:jei-${minecraft_version}-common-api:"));
+        assertTrue(mods.contains("modId=\"jei\"\ntype=\"optional\""));
+        assertTrue(mods.contains("modId=\"emi\"\ntype=\"optional\""));
     }
 
     @Test
@@ -49,7 +49,7 @@ class BlueprintKnowledgeFlowPhaseSevenTest {
 
     @Test
     void artifactAndCandidateGatesRecordTheGuidanceBoundary() throws IOException {
-        String build = read("build.gradle");
+        String build = read("build.gradle") + read("gradle/release.gradle");
         for (String required : List.of(
                 "client/BlueprintOnboardingPlan.class",
                 "compat/recipeviewer/BlueprintRecipeViewerInfo.class",

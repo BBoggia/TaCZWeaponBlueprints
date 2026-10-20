@@ -3,7 +3,6 @@ package com.gamergaming.taczweaponblueprints.network;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Supplier;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
@@ -23,9 +22,20 @@ import com.gamergaming.taczweaponblueprints.resource.research.BlueprintCraftingD
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 
-public final class SyncResearchBenchPreviewPacket {
+public final class SyncResearchBenchPreviewPacket implements CustomPacketPayload {
+    public static final Type<SyncResearchBenchPreviewPacket> TYPE = new Type<>(
+            com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.loc("sync_research_bench_preview"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, SyncResearchBenchPreviewPacket> STREAM_CODEC =
+            StreamCodec.ofMember(SyncResearchBenchPreviewPacket::toBytes, SyncResearchBenchPreviewPacket::new);
+
+    @Override
+    public Type<SyncResearchBenchPreviewPacket> type() { return TYPE; }
+
     private final int containerId;
     private final ResearchSelectionPreview preview;
 
@@ -131,22 +141,29 @@ public final class SyncResearchBenchPreviewPacket {
         buffer.writeVarInt(preview.ingredientOffset());
     }
 
-    public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
-        context.enqueueWork(() -> {
-            Minecraft minecraft = Minecraft.getInstance();
-            if (minecraft.player != null
-                    && minecraft.player.containerMenu.containerId == containerId
-                    && minecraft.player.containerMenu instanceof ResearchBenchMenu menu) {
-                if (minecraft.screen instanceof com.gamergaming.taczweaponblueprints.client.ResearchBenchScreen screen
-                        && screen.getMenu() == menu) {
-                    screen.acceptPreview(preview);
-                } else {
-                    menu.acceptPreview(preview);
+    public void handle(IPayloadContext context) {
+        new ClientHandler().handle(context);
+    }
+
+    /** Loaded only when this clientbound payload is handled, never during server registration. */
+    @net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)
+    private final class ClientHandler {
+        void handle(IPayloadContext contextSupplier) {
+            IPayloadContext context = contextSupplier;
+            context.enqueueWork(() -> {
+                Minecraft minecraft = Minecraft.getInstance();
+                if (minecraft.player != null
+                        && minecraft.player.containerMenu.containerId == containerId
+                        && minecraft.player.containerMenu instanceof ResearchBenchMenu menu) {
+                    if (minecraft.screen instanceof com.gamergaming.taczweaponblueprints.client.ResearchBenchScreen screen
+                            && screen.getMenu() == menu) {
+                        screen.acceptPreview(preview);
+                    } else {
+                        menu.acceptPreview(preview);
+                    }
                 }
-            }
-        });
-        context.setPacketHandled(true);
+            });
+        }
     }
 
     int containerId() {

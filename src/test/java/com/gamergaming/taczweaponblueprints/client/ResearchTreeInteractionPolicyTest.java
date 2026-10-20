@@ -60,9 +60,9 @@ class ResearchTreeInteractionPolicyTest {
         assertFalse(ResearchTreeInteractionPolicy.allowsServerSelection(
                 node(JournalVisibility.NAME, ResearchTreeGraph.redactedNodeId(0))));
         assertTrue(ResearchTreeInteractionPolicy.allowsServerSelection(
-                node(JournalVisibility.PREVIEW, new ResourceLocation("test:preview"))));
+                node(JournalVisibility.PREVIEW, ResourceLocation.parse("test:preview"))));
         assertTrue(ResearchTreeInteractionPolicy.allowsServerSelection(
-                node(JournalVisibility.FULL, new ResourceLocation("test:full"))));
+                node(JournalVisibility.FULL, ResourceLocation.parse("test:full"))));
     }
 
     @Test
@@ -170,7 +170,7 @@ class ResearchTreeInteractionPolicyTest {
                 visibility.revealsName() ? "name.test" : ResearchTreeGraph.REDACTED_NAME_KEY,
                 visibility.revealsIdentity() ? "rifle" : ResearchTreeGraph.REDACTED_ITEM_TYPE,
                 visibility.revealsIcon()
-                        ? new ResourceLocation("test:slot/test")
+                        ? ResourceLocation.parse("test:slot/test")
                         : ResearchTreeGraph.REDACTED_DISPLAY_SLOT,
                 visibility,
                 false,

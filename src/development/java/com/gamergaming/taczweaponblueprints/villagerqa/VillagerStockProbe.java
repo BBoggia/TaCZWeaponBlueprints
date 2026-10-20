@@ -21,16 +21,16 @@ import net.minecraft.world.entity.monster.*;
 import net.minecraft.world.entity.npc.*;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.trading.*;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.OnDatapackSyncEvent;
-import net.minecraftforge.event.server.ServerStartedEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.util.ObfuscationReflectionHelper;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.OnDatapackSyncEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.util.ObfuscationReflectionHelper;
 import static com.gamergaming.taczweaponblueprints.villager.trade.TradeDefinition.*;
 
 /** Uses production factories and mixins; only the disposable test harness is development-only. */
-@Mod.EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID)
+@EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID)
 public final class VillagerStockProbe {
     private static final List<String> checks=new ArrayList<>();
     private static ServerLevel level;
@@ -47,10 +47,10 @@ public final class VillagerStockProbe {
                 var early=villager(ModVillagers.GUNSMITH.get());var earlyOffers=early.getOffers();
                 if(MagazineCatalog.INSTANCE.publication().catalog().status()==TaCZMagazinesAdapter.Status.WAITING_FOR_RECIPES){
                     require(state(early).plan==null&&earlyOffers.isEmpty(),"Unpublished magazine recipes keep the whole equipment plan pending");
-                    var foreign=new MerchantOffer(new ItemStack(Items.EMERALD),new ItemStack(Items.APPLE),4,2,.05F);earlyOffers.add(foreign);
-                    MinecraftForge.EVENT_BUS.post(new OnDatapackSyncEvent(server.getPlayerList(),null));StockPublicationCoordinator.settle();
+                    var foreign=new MerchantOffer(new net.minecraft.world.item.trading.ItemCost(Items.EMERALD),new ItemStack(Items.APPLE),4,2,.05F);earlyOffers.add(foreign);
+                    NeoForge.EVENT_BUS.post(new OnDatapackSyncEvent(server.getPlayerList(),null));StockPublicationCoordinator.settle();
                     require(early.getOffers().contains(foreign)&&early.getOffers().size()==3,"Publication retries pending native choices once, preserving foreign offers");
-                }else MinecraftForge.EVENT_BUS.post(new OnDatapackSyncEvent(server.getPlayerList(),null));StockPublicationCoordinator.settle();
+                }else NeoForge.EVENT_BUS.post(new OnDatapackSyncEvent(server.getPlayerList(),null));StockPublicationCoordinator.settle();
                 var cache=StockCatalog.current();for(int n=0;n<50;n++)early.getOffers();
                 require(cache==StockCatalog.current(),"Repeated interaction reuses the shared catalog publication");early.discard();
                 var guns=villager(ModVillagers.GUNSMITH.get());guns.getOffers();var savedPlan=state(guns).plan;
@@ -78,7 +78,7 @@ public final class VillagerStockProbe {
         server.reloadResources(server.getPackRepository().getSelectedIds()).whenCompleteAsync((ignored,failure)->{
             try{
                 if(failure!=null)throw new AssertionError("Native reload failed",failure);
-                MinecraftForge.EVENT_BUS.post(new OnDatapackSyncEvent(server.getPlayerList(),null));StockPublicationCoordinator.settle();
+                NeoForge.EVENT_BUS.post(new OnDatapackSyncEvent(server.getPlayerList(),null));StockPublicationCoordinator.settle();
                 require(StockCatalog.current()!=catalog,"Native datapack reload replaces the shared stock snapshot");
                 require(v.getOffers().size()==2&&state(v).plan.equals(plan)&&v.getOffers().get(0).getUses()==1&&v.getVillagerXp()==9,
                         "Native datapack reload preserves established targets, uses, XP and offer count");
@@ -89,12 +89,12 @@ public final class VillagerStockProbe {
         },server);
     }
     private static void purchase()throws Exception{
-        var player=net.minecraftforge.common.util.FakePlayerFactory.get(level,new com.mojang.authlib.GameProfile(UUID.fromString("4d46a778-09b6-401c-a1c0-d6b86e0e0578"),"StockCustomer"));
+        var player=net.neoforged.neoforge.common.util.FakePlayerFactory.get(level,new com.mojang.authlib.GameProfile(UUID.fromString("4d46a778-09b6-401c-a1c0-d6b86e0e0578"),"StockCustomer"));
         player.moveTo(.5,85,.5);player.setHealth(20);player.getInventory().clearContent();
         var v=villager(ModVillagers.GUNSMITH.get());v.getOffers();advance(v);var offers=v.getOffers();
         int index=0;while(binding(offers.get(index)).entry().kind()!=Kind.GUN)index++;
         var offer=offers.get(index);var plan=state(v).plan;
-        player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElseThrow().addBlueprint(binding(offer).entry().target().toString());
+        com.gamergaming.taczweaponblueprints.init.ModAttachments.recipeData(player).orElseThrow().addBlueprint(binding(offer).entry().target().toString());
         v.setTradingPlayer(player);var menu=new net.minecraft.world.inventory.MerchantMenu(1,player.getInventory(),v);player.containerMenu=menu;
         menu.setSelectionHint(index);menu.getSlot(0).set(offer.getCostA().copy());menu.getSlot(1).set(offer.getCostB().copy());
         menu.clicked(2,0,net.minecraft.world.inventory.ClickType.PICKUP,player);
@@ -108,7 +108,7 @@ public final class VillagerStockProbe {
     private static StockState state(Villager v){return ((StockVillagerBridge)v).taczweaponblueprints$stock();}
     private static StockOfferBinding binding(MerchantOffer o){return ((OwnedVillagerOffer)o).taczweaponblueprints$binding();}
     private static boolean available(MerchantOffer o){return ((OwnedVillagerOffer)o).taczweaponblueprints$terms().available();}
-    private static void advance(Villager v)throws Exception{ObfuscationReflectionHelper.findMethod(Villager.class,"m_35528_").invoke(v);}
+    private static void advance(Villager v)throws Exception{ObfuscationReflectionHelper.findMethod(Villager.class,"increaseMerchantCareer").invoke(v);}
     private static Map<ResourceLocation,MerchantOffer> owned(Villager v){var map=new HashMap<ResourceLocation,MerchantOffer>();for(var o:v.getOffers())if(binding(o)!=null)map.put(binding(o).entry().slot(),o);return map;}
     private static void verifyGuns(Villager v){
         var offers=owned(v);var catalog=StockCatalog.current();
@@ -146,7 +146,7 @@ public final class VillagerStockProbe {
         new Zombie(EntityType.ZOMBIE,level).killedEntity(level,v);
         var infected=level.getEntitiesOfClass(ZombieVillager.class,v.getBoundingBox().inflate(2)).stream().filter(e->!beforeIds.contains(e.getUUID())).findFirst().orElseThrow();
         var existing=new HashSet<UUID>();level.getEntitiesOfClass(Villager.class,infected.getBoundingBox().inflate(2)).forEach(e->existing.add(e.getUUID()));
-        ObfuscationReflectionHelper.findMethod(ZombieVillager.class,"m_34398_",ServerLevel.class).invoke(infected,level);
+        ObfuscationReflectionHelper.findMethod(ZombieVillager.class,"finishConversion",ServerLevel.class).invoke(infected,level);
         var cured=level.getEntitiesOfClass(Villager.class,infected.getBoundingBox().inflate(2)).stream().filter(e->!existing.contains(e.getUUID())).findFirst().orElseThrow();
         require(cured.getOffers().get(0).getUses()==1&&cured.getVillagerXp()==37&&state(cured).plan.equals(plan),"Actual zombification and cure preserve stock, XP and future choices");
         cured.restock();require(cured.getOffers().get(0).getUses()==0&&state(cured).plan.equals(plan),"Only native restock replenishes uses and retains merchandise");cured.discard();restored.discard();
@@ -159,7 +159,7 @@ public final class VillagerStockProbe {
         v.getOffers();require(!available(gun)&&state(v).plan.equals(plan),"Repeated interaction cannot reactivate suspended merchandise");
         ModConfigs.BLUEPRINT.gunBlacklist.validateAndSet(Set.of());ModConfigs.BLUEPRINT.onSyncServer();v.getOffers();require(available(gun),"Restored content resumes the same saved gun");
         // Changed recipe/result NBT must remain rejected across repeated calls in one publication.
-        gun.getResult().getOrCreateTag().putBoolean("qa_changed_output",true);v.getOffers();v.getOffers();require(!available(gun),"Unexpected saved output NBT remains suspended on repeated interaction");
+        net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, gun.getResult(), tag -> tag.putBoolean("qa_changed_output",true));v.getOffers();v.getOffers();require(!available(gun),"Unexpected saved output NBT remains suspended on repeated interaction");
         ModConfigs.BLUEPRINT.villagerMaterialPurchases.validateAndSet(false);ModConfigs.BLUEPRINT.villagerDataSales.validateAndSet(false);ModConfigs.BLUEPRINT.onSyncServer();
         var dead=villager(ModVillagers.BALLISTICS_RESEARCHER.get());require(dead.getOffers().isEmpty()&&!state(dead).plan.reachable(),"Disabled Novice paths cannot generate unreachable later-level stock");
         researcher.getOffers();require(researcher.getOffers().stream().filter(o->binding(o).entry().kind()==Kind.RESEARCH_DATA).noneMatch(VillagerStockProbe::available),"Existing Research Data offers follow current category restrictions");
@@ -169,7 +169,7 @@ public final class VillagerStockProbe {
         var v=villager(ModVillagers.GUNSMITH.get());v.getOffers();advance(v);
         var rows=v.getOffers();var gun=rows.stream().filter(o->binding(o).entry().kind()==Kind.GUN).findFirst().orElseThrow();var deps=binding(gun).entry().dependencies();
         rows.removeIf(o->binding(o)!=null&&deps.contains(binding(o).entry().slot()));
-        var foreign=new MerchantOffer(new ItemStack(Items.EMERALD),new ItemStack(Items.APPLE),4,2,.05F);rows.add(foreign);
+        var foreign=new MerchantOffer(new net.minecraft.world.item.trading.ItemCost(Items.EMERALD),new ItemStack(Items.APPLE),4,2,.05F);rows.add(foreign);
         var trades=VillagerTrades.TRADES.get(ModVillagers.GUNSMITH.get());var old=trades.get(1);trades.put(1,new VillagerTrades.ItemListing[]{old[0],(entity,random)->foreign});
         try{v.getOffers();require(!available(gun)&&rows.contains(foreign)&&state(v).interferenceLogged,"Removed supplies suspend owned gun while foreign stock and altered factory list remain intact");
             v.getOffers();require(rows.stream().noneMatch(o->binding(o)!=null&&deps.contains(binding(o).entry().slot())),"Deleted issued supplies are not silently recreated");}

@@ -19,13 +19,13 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 class BlueprintWeaponAnalysisServiceTest {
-    private static final ResourceLocation TARGET = new ResourceLocation("test:weapon"), PROFILE = new ResourceLocation("test:profile");
+    private static final ResourceLocation TARGET = ResourceLocation.parse("test:weapon"), PROFILE = ResourceLocation.parse("test:profile");
     @BeforeAll static void bootstrap() { AnalysisTestItems.initialize(); }
     static BlueprintData weapon() { return new BlueprintData(TARGET.toString(), "test.weapon", "test.tooltip",
-            new ResourceLocation("test:weapon_recipe"), null, "rifle", new ResourceLocation("tacz:slot"), BlueprintKind.GUN, 1); }
+            ResourceLocation.parse("test:weapon_recipe"), null, "rifle", ResourceLocation.parse("tacz:slot"), BlueprintKind.GUN, 1); }
     static BlueprintReverseEngineeringPolicy policy() {
         return new BlueprintReverseEngineeringPolicy(true, Optional.of(1), new BlueprintResearchCost(3,
-                List.of(new BlueprintResearchIngredient(List.of(new ResourceLocation("minecraft:iron_ingot")), Optional.empty(), 2))),
+                List.of(new BlueprintResearchIngredient(List.of(ResourceLocation.parse("minecraft:iron_ingot")), Optional.empty(), 2))),
                 false, false, PhysicalBlueprintLearningMode.REQUIRE_TREE_PREREQUISITES, false, false);
     }
     static BlueprintResearchSnapshot snapshot() {
@@ -82,9 +82,9 @@ class BlueprintWeaponAnalysisServiceTest {
         var data=data(); var tx=new Tx(); var prepared=prepare(tx,data,mixed());
         switch(change) {
             case "points" -> data.setResearchPoints(19);
-            case "input_nbt" -> tx.input.getOrCreateTag().putString("changed","yes");
+            case "input_nbt" -> net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, tx.input, customTag -> customTag.putString("changed","yes"));
             case "input_count" -> tx.input.shrink(1);
-            case "inventory_nbt" -> tx.inventory.get(0).getOrCreateTag().putInt("quality",2);
+            case "inventory_nbt" -> net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, tx.inventory.get(0), customTag -> customTag.putInt("quality",2));
             case "output" -> tx.output=new ItemStack(Items.DIRT);
             case "discovery" -> data.discoverBlueprint("test:other");
             case "learned" -> data.addBlueprint(TARGET.toString());
@@ -149,7 +149,7 @@ class BlueprintWeaponAnalysisServiceTest {
     @ParameterizedTest @ValueSource(strings={"", "materials_false", "physical_throw", "output_false", "lease_after_write"})
     void physicalAttemptsPreserveOddsAndCompensateInputCurrencyAndDiscovery(String fault) {
         var data = data(); data.setResearchPoints(137); var tx = new Tx();
-        tx.currency = ResearchCurrencyPolicy.physical(new ResourceLocation("minecraft:iron_ingot"), 1);
+        tx.currency = ResearchCurrencyPolicy.physical(ResourceLocation.parse("minecraft:iron_ingot"), 1);
         tx.inventory.get(0).setCount(8); while (tx.inventory.size() < 36) tx.inventory.add(ItemStack.EMPTY);
         tx.fault = fault; var before = data.serializeNBT().copy();
         var prepared = prepare(tx, data, new AnalyzerOutcomeTable(0, 1, 0, 2, 2));
@@ -165,10 +165,10 @@ class BlueprintWeaponAnalysisServiceTest {
     }
 
     @Test void physicalQuoteIsInvalidatedByChangingCurrencyIdentityBeforeRandomness() {
-        var data = data(); var tx = new Tx(); tx.currency = ResearchCurrencyPolicy.physical(new ResourceLocation("minecraft:iron_ingot"), 1);
+        var data = data(); var tx = new Tx(); tx.currency = ResearchCurrencyPolicy.physical(ResourceLocation.parse("minecraft:iron_ingot"), 1);
         tx.inventory.get(0).setCount(8); while (tx.inventory.size() < 36) tx.inventory.add(ItemStack.EMPTY);
         var prepared = prepare(tx, data, mixed());
-        tx.currency = ResearchCurrencyPolicy.physical(new ResourceLocation("minecraft:paper"), 2);
+        tx.currency = ResearchCurrencyPolicy.physical(ResourceLocation.parse("minecraft:paper"), 2);
         assertFalse(BlueprintWeaponAnalysisService.commit(prepared, data, tx, bound -> fail("stale quote rolled")).transaction().successful());
         assertEquals(8, tx.inventory.get(0).getCount());
     }
@@ -198,9 +198,9 @@ class BlueprintWeaponAnalysisServiceTest {
         public ItemStack createOutput(ResourceLocation target, BlueprintProvenance provenance) {
             if(fault.equals("builder_throw")) throw new IllegalStateException("builder");
             if(fault.equals("bad_blueprint")) return new ItemStack(Items.PAPER);
-            var stack=new ItemStack(AnalysisTestItems.blueprint); stack.getOrCreateTag().putString("bpId",target.toString());
-            stack.getOrCreateTag().put(BlueprintProvenance.TAG_KEY, (fault.equals("bad_blueprint_protection") ? BlueprintProvenance.reverseEngineered(true,
-                    PhysicalBlueprintLearningMode.BYPASS_TREE_PREREQUISITES) : provenance).toTag());
+            var stack=new ItemStack(AnalysisTestItems.blueprint); net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, stack, customTag -> customTag.putString("bpId",target.toString()));
+            net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, stack, customTag -> customTag.put(BlueprintProvenance.TAG_KEY, (fault.equals("bad_blueprint_protection") ? BlueprintProvenance.reverseEngineered(true,
+                    PhysicalBlueprintLearningMode.BYPASS_TREE_PREREQUISITES) : provenance).toTag()));
             if(fault.equals("bad_blueprint_count")) stack.setCount(2);
             return stack;
         }

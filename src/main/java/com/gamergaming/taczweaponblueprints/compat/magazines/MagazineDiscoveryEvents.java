@@ -1,22 +1,23 @@
 package com.gamergaming.taczweaponblueprints.compat.magazines;
 
+import net.neoforged.fml.common.EventBusSubscriber;
+
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 import com.tacz.guns.inventory.GunSmithTableMenu;
 import net.minecraft.network.protocol.game.ClientboundUpdateRecipesPacket;
 
-import net.minecraftforge.event.OnDatapackSyncEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.server.ServerAboutToStartEvent;
-import net.minecraftforge.event.server.ServerStoppedEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.ModList;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.OnDatapackSyncEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModList;
 
 /** Captures upstream recipes and refreshes open Workbenches after native recipe synchronization. */
-@Mod.EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+@EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, bus = EventBusSubscriber.Bus.GAME)
 public final class MagazineDiscoveryEvents {
     private static TaCZMagazinesAdapter adapter;
     private static boolean refreshAccess;
@@ -80,8 +81,8 @@ public final class MagazineDiscoveryEvents {
     }
 
     @SubscribeEvent
-    public static void tick(TickEvent.ServerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END || !refreshAccess) return;
+    public static void tick(ServerTickEvent.Post event) {
+        if (!refreshAccess) return;
         refreshAccess = false;
         boolean sendRecipes = resendRecipes;
         resendRecipes = false;

@@ -1,16 +1,26 @@
 package com.gamergaming.taczweaponblueprints.network;
 
-import java.util.function.Supplier;
 
 import com.gamergaming.taczweaponblueprints.compat.tacz.TaCZWorkbenchMenuBridge;
 import com.tacz.guns.inventory.GunSmithTableMenu;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 
 /** Requests the disclosure-safe recipe allow-list for one exact native menu. */
-public final class CraftingAccessRequestPacket {
+public final class CraftingAccessRequestPacket implements CustomPacketPayload {
+    public static final Type<CraftingAccessRequestPacket> TYPE = new Type<>(
+            com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.loc("crafting_access_request"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, CraftingAccessRequestPacket> STREAM_CODEC =
+            StreamCodec.ofMember(CraftingAccessRequestPacket::toBytes, CraftingAccessRequestPacket::new);
+
+    @Override
+    public Type<CraftingAccessRequestPacket> type() { return TYPE; }
+
     private final int containerId;
     private final long requestId;
 
@@ -31,9 +41,9 @@ public final class CraftingAccessRequestPacket {
         buffer.writeLong(requestId);
     }
 
-    public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
-        ServerPlayer sender = context.getSender();
+    public void handle(IPayloadContext contextSupplier) {
+        IPayloadContext context = contextSupplier;
+        ServerPlayer sender = NetworkHandler.sender(context);
         context.enqueueWork(() -> {
             if (sender != null
                     && sender.containerMenu.containerId == containerId
@@ -43,6 +53,5 @@ public final class CraftingAccessRequestPacket {
                 NetworkHandler.sendCraftingAccess(sender, menu);
             }
         });
-        context.setPacketHandled(true);
     }
 }

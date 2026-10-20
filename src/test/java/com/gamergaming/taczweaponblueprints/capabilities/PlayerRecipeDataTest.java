@@ -80,8 +80,8 @@ class PlayerRecipeDataTest {
         original.discoverBlueprint("tacz:m4a1");
         assertTrue(original.setResearchPoints(125));
         ClaimKey claim = ClaimKey.targeted(
-                new net.minecraft.resources.ResourceLocation("test:first_discovery"),
-                new net.minecraft.resources.ResourceLocation("tacz:ak47"));
+                net.minecraft.resources.ResourceLocation.parse("test:first_discovery"),
+                net.minecraft.resources.ResourceLocation.parse("tacz:ak47"));
         assertTrue(original.applyResearchPointTransaction(0, 1000, Mutation.claim(claim)));
         assertTrue(original.recordRecentUnlockBatch(
                 RecentBlueprintUnlockBatch.Source.TREE_RESEARCH,
@@ -341,7 +341,7 @@ class PlayerRecipeDataTest {
         versionOne.putInt("ResearchPoints", 37);
         ResearchPointAwardLedger unexpectedLedger = new ResearchPointAwardLedger();
         assertTrue(unexpectedLedger.apply(Mutation.claim(
-                ClaimKey.once(new net.minecraft.resources.ResourceLocation("test:unexpected")))));
+                ClaimKey.once(net.minecraft.resources.ResourceLocation.parse("test:unexpected")))));
         versionOne.put("ResearchPointAwards", unexpectedLedger.serializeNBT());
 
         PlayerRecipeData restored = new PlayerRecipeData();
@@ -461,7 +461,7 @@ class PlayerRecipeDataTest {
         assertEquals(25, data.getResearchPoints());
 
         ClaimKey preserved = ClaimKey.once(
-                new net.minecraft.resources.ResourceLocation("test:preserved_claim"));
+                net.minecraft.resources.ResourceLocation.parse("test:preserved_claim"));
         assertTrue(data.applyResearchPointTransaction(0, 100, Mutation.claim(preserved)));
         assertTrue(data.replaceProgression(List.of(), List.of(), 5));
         assertTrue(data.spendResearchPoints(2));

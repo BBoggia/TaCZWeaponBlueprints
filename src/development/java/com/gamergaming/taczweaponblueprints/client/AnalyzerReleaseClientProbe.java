@@ -10,14 +10,15 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.*;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.resolver.ServerAddress;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /** Real multiplayer connection, authoritative previews, button requests, result feedback and reconnect. */
-@Mod.EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, value = Dist.CLIENT)
 public final class AnalyzerReleaseClientProbe {
     private static boolean opened, connected, finished, disconnected, clicked, confirmed;
     private static int total, ticks, scale, assertions, captures;
@@ -25,8 +26,8 @@ public final class AnalyzerReleaseClientProbe {
     private static final AtomicInteger SAVED = new AtomicInteger();
     private AnalyzerReleaseClientProbe() { }
     private static void verify(boolean condition, String message) { check(condition, message); assertions++; }
-    @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
-        if (!ENABLED || finished || event.phase != TickEvent.Phase.END) return;
+    @SubscribeEvent public static void tick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event) {
+        if (!ENABLED || finished) return;
         var mc = Minecraft.getInstance();
         try {
             if (++total > 12000) throw new IllegalStateException("Analyzer multiplayer QA timeout");
@@ -37,10 +38,10 @@ public final class AnalyzerReleaseClientProbe {
                 if (!opened) { scale = mc.options.guiScale().get(); opened = true; mc.options.guiScale().set(3); mc.resizeDisplay(); }
                 disconnected = false;
                 ConnectScreen.startConnecting(new TitleScreen(), mc, ServerAddress.parseString("127.0.0.1:25577"),
-                        new ServerData("Disposable Analyzer acceptance", "127.0.0.1:25577", false), false);
+                        new ServerData("Disposable Analyzer acceptance", "127.0.0.1:25577", net.minecraft.client.multiplayer.ServerData.Type.OTHER), false, null);
             }
             if (command.equals("disconnect") && mc.player != null) {
-                mc.level.disconnect(); mc.clearLevel(); mc.setScreen(new TitleScreen()); disconnected = true;
+                mc.level.disconnect(); mc.disconnect(); mc.setScreen(new TitleScreen()); disconnected = true;
             }
             if (command.equals("failed")) throw new IllegalStateException("Dedicated probe failed: " + read("server-error.txt"));
             if (command.equals("complete") && SAVED.get() == captures) {

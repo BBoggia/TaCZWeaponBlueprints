@@ -1,5 +1,7 @@
 package com.gamergaming.taczweaponblueprints.event;
 
+import net.neoforged.fml.common.EventBusSubscriber;
+
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
@@ -10,12 +12,11 @@ import com.gamergaming.taczweaponblueprints.progression.ResearchPointAwardReconc
 import com.gamergaming.taczweaponblueprints.progression.ResearchPointPresentationService;
 import com.gamergaming.taczweaponblueprints.progression.StartingBlueprintGrantService;
 
-import net.minecraftforge.event.AddReloadListenerEvent;
-import net.minecraftforge.event.OnDatapackSyncEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.AddReloadListenerEvent;
+import net.neoforged.neoforge.event.OnDatapackSyncEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 
-@Mod.EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+@EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, bus = EventBusSubscriber.Bus.GAME)
 public final class BlueprintResourceEvents {
     private BlueprintResourceEvents() {
     }
@@ -40,7 +41,7 @@ public final class BlueprintResourceEvents {
         boolean catalogUpdated = BlueprintDataManager.SERVER.initialize(event.getPlayerList().getServer());
         BlueprintResearchDataManager.INSTANCE.logActiveProfileAudit();
         if (catalogUpdated) {
-            event.getPlayers().forEach(player -> {
+            event.getRelevantPlayers().forEach(player -> {
                 StartingBlueprintGrantService.applyConfiguredGrants(player);
                 NetworkHandler.syncAllPlayerData(player);
                 ResearchPointPresentationService.syncHelp(player);
@@ -58,7 +59,7 @@ public final class BlueprintResourceEvents {
                         "Unable to reconcile progression policy with the retained blueprint "
                                 + "catalog; research remains fail-closed until a successful reload");
             }
-            event.getPlayers().forEach(player -> {
+            event.getRelevantPlayers().forEach(player -> {
                 var grants = StartingBlueprintGrantService.applyConfiguredGrants(player);
                 if (grants.changed()) {
                     NetworkHandler.syncPlayerRecipeData(player);

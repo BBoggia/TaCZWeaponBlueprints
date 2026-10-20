@@ -25,13 +25,14 @@ import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.phys.*;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.server.ServerStartingEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /** Real dedicated-server acceptance, fenced to a marked disposable world. */
-@Mod.EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID)
+@EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID)
 public final class ResearchEconomyServerProbe {
     private static MinecraftServer server;
     private static int age, warmup, step;
@@ -41,9 +42,9 @@ public final class ResearchEconomyServerProbe {
     private static long oldToken;
     private static BlueprintRecyclerMenu oldMenu;
     private static CompoundTag beforeDeath;
-    private static final ResourceLocation NOTE = new ResourceLocation("taczweaponblueprints:research_note");
+    private static final ResourceLocation NOTE = ResourceLocation.parse("taczweaponblueprints:research_note");
     private static void verify(boolean value, String message) { check(value, message); checks.add(message); }
-    private static IPlayerRecipeData data(ServerPlayer p) { return p.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElseThrow(); }
+    private static IPlayerRecipeData data(ServerPlayer p) { return com.gamergaming.taczweaponblueprints.init.ModAttachments.recipeData(p).orElseThrow(); }
     @SubscribeEvent public static void start(ServerStartingEvent event) {
         if (!ENABLED) return;
         server = event.getServer();
@@ -58,18 +59,18 @@ public final class ResearchEconomyServerProbe {
             if (PHASE.equals("upgrade")) for (var role : List.of("Alice", "Bob")) {
                 var uuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + role).getBytes(java.nio.charset.StandardCharsets.UTF_8));
                 var path = server.getWorldPath(LevelResource.PLAYER_DATA_DIR).resolve(uuid + ".dat");
-                var tag = NbtIo.readCompressed(path.toFile());
+                var tag = NbtIo.readCompressed(path, net.minecraft.nbt.NbtAccounter.unlimitedHeap());
                 var cap = tag.getCompound("ForgeCaps").getCompound("taczweaponblueprints:player_recipe_data");
                 verify(cap.getInt("DataVersion") == 5, "existing player saved before upgrade fixture");
                 cap.putInt("DataVersion", 4); cap.remove("ArchivedAnalysisFragments");
-                NbtIo.writeCompressed(tag, path.toFile());
+                NbtIo.writeCompressed(tag, path);
             }
             server.getGameRules().getRule(GameRules.RULE_DOMOBSPAWNING).set(false, server);
             write("command", "connect");
         } catch (Exception e) { fail(e); }
     }
-    @SubscribeEvent public static void tick(TickEvent.ServerTickEvent event) {
-        if (!ENABLED || finished || server == null || event.phase != TickEvent.Phase.END) return;
+    @SubscribeEvent public static void tick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+        if (!ENABLED || finished || server == null) return;
         try {
             if (++age > 12000) throw new IllegalStateException("Economy dedicated timeout at step " + step);
             for (var role : List.of("Alice", "Bob")) check(read(role + "-error.txt").isEmpty(), read(role + "-error.txt"));
@@ -140,7 +141,7 @@ public final class ResearchEconomyServerProbe {
                 // Seed through the real award path before recording a fixed
                 // inventory. Otherwise login correctly grants a missed first
                 // discovery reward and invalidates an artificial snapshot.
-                ResearchPointAwardDispatcher.blueprintTransitions(a, data(a), new ResourceLocation("tacz:ak47"), true, true);
+                ResearchPointAwardDispatcher.blueprintTransitions(a, data(a), ResourceLocation.parse("tacz:ak47"), true, true);
                 a.getInventory().clearContent();
                 a.getInventory().setItem(0, new ItemStack(ModItems.SCRAP.get(), 23));
                 beforeDeath = data(a).serializeNBT().copy();
@@ -173,7 +174,7 @@ public final class ResearchEconomyServerProbe {
         var pos = new BlockPos(x + 2, 100, 0); var block = (BlueprintRecyclerBlock)ModBlocks.BLUEPRINT_RECYCLER.get();
         p.serverLevel().removeBlock(pos, false); p.serverLevel().removeBlock(pos.above(), false);
         check(BlueprintRecyclerBlock.placeCompleteStructure(p.serverLevel(), pos, block.defaultBlockState()), "place Analyzer");
-        block.use(p.serverLevel().getBlockState(pos), p.serverLevel(), pos, p, InteractionHand.MAIN_HAND,
+        p.serverLevel().getBlockState(pos).useWithoutItem(p.serverLevel(), p,
                 new BlockHitResult(Vec3.atCenterOf(pos), Direction.NORTH, pos, false));
         return (BlueprintRecyclerMenu)p.containerMenu;
     }
@@ -212,16 +213,21 @@ public final class ResearchEconomyServerProbe {
         verify(data(a).getResearchPoints() == 117, "failed withdrawal preserves bank");
         a.getInventory().clearContent(); data(a).setResearchPoints(137);
         var commands = server.getCommands(); var source = a.createCommandSourceStack().withPermission(2).withSuppressedOutput();
-        verify(commands.performPrefixedCommand(source, "gg progression currency inspect Alice") == 1, "native operator currency inspection");
-        verify(commands.performPrefixedCommand(source, "gg progression currency withdraw preview Alice 70") == 1, "native operator withdrawal preview");
+        verify(commandResult(commands, source, "gg progression currency inspect Alice") == 1, "native operator currency inspection");
+        verify(commandResult(commands, source, "gg progression currency withdraw preview Alice 70") == 1, "native operator withdrawal preview");
         var plan = ResearchCurrencyPlanner.prepareWithdrawal(context.policy(), context.read(), 70);
         var registry = com.gamergaming.taczweaponblueprints.command.sub.ResearchCurrencyMigrationCommand.PENDING;
         var token = registry.preview(a.getUUID().toString(), a.getUUID(), server.overworld().getGameTime(), plan, context);
         var command = "gg progression currency withdraw confirm " + token;
-        verify(commands.performPrefixedCommand(source, command) == 1 && data(a).getResearchPoints() == 67
+        verify(commandResult(commands, source, command) == 1 && data(a).getResearchPoints() == 67
                 && a.getInventory().countItem(ModItems.SCRAP.get()) == 70, "operator confirmation conserves bank plus Scrap");
-        verify(commands.performPrefixedCommand(source, command) == 0, "operator token is single-use");
+        verify(commandResult(commands, source, command) == 0, "operator token is single-use");
         registry.clear(); a.getInventory().clearContent(); data(a).setResearchPoints(137);
+    }
+    public static int commandResult(net.minecraft.commands.Commands commands, net.minecraft.commands.CommandSourceStack source, String command) {
+        int[] result = {0};
+        commands.performPrefixedCommand(source.withCallback((success, value) -> result[0] = success ? value : 0), command);
+        return result[0];
     }
     private static void exerciseFilters(ServerPlayer a, ServerPlayer b) throws Exception {
         ModConfigs.BLUEPRINT.researchDataAllowLearned.validateAndSet(false);

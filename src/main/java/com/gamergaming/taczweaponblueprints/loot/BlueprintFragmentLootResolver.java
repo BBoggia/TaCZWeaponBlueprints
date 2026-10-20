@@ -8,7 +8,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.progression.ResearchFeatureConfigSnapshot;
 import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchTier;
@@ -61,7 +61,7 @@ public final class BlueprintFragmentLootResolver {
         Map<ResourceLocation, ResolvedBlueprintProgressionPolicy> profilePolicies =
                 policyAccess.profilePolicies();
         Optional<Set<String>> learned = player
-                .flatMap(value -> value.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve())
+                .flatMap(value -> ModAttachments.recipeData(value))
                 .map(IPlayerRecipeData::getLearnedBlueprints)
                 .map(Set::copyOf);
         return resolve(candidates, profilePolicies, replacementBasisPoints, learned);
@@ -129,7 +129,7 @@ public final class BlueprintFragmentLootResolver {
                 instanceof ServerPlayer player) {
             return Optional.of(player);
         }
-        Entity killer = context.getParamOrNull(LootContextParams.KILLER_ENTITY);
+        Entity killer = context.getParamOrNull(LootContextParams.ATTACKING_ENTITY);
         if (killer instanceof ServerPlayer player) {
             return Optional.of(player);
         }

@@ -8,7 +8,7 @@ import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.capabilities.BlueprintLearningMutation;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
@@ -50,9 +50,7 @@ public final class BlueprintLearningService {
                     BlueprintUnlockOrigin.PHYSICAL_BLUEPRINT,
                     Optional.ofNullable(blueprintId));
         }
-        IPlayerRecipeData playerData = player
-                .getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
-                .resolve()
+        IPlayerRecipeData playerData = ModAttachments.recipeData(player)
                 .orElse(null);
         if (playerData == null) {
             return Result.failure(

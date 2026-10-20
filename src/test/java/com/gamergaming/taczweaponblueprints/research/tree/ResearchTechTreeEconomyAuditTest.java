@@ -339,14 +339,14 @@ class ResearchTechTreeEconomyAuditTest {
                 id.toString(),
                 "name." + id.getPath(),
                 "tooltip." + id.getPath(),
-                new ResourceLocation(id.getNamespace(), "recipe/" + id.getPath()),
+                ResourceLocation.fromNamespaceAndPath(id.getNamespace(), "recipe/" + id.getPath()),
                 null,
                 "pistol",
-                new ResourceLocation(id.getNamespace(), "slot/" + id.getPath()),
+                ResourceLocation.fromNamespaceAndPath(id.getNamespace(), "slot/" + id.getPath()),
                 BlueprintKind.GUN);
     }
 
     private static ResourceLocation id(String value) {
-        return new ResourceLocation(value);
+        return ResourceLocation.parse(value);
     }
 }

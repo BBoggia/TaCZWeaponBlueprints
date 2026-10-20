@@ -1,33 +1,34 @@
 package com.gamergaming.taczweaponblueprints.event;
 
+import net.neoforged.fml.common.EventBusSubscriber;
+
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintDiscoveryService;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionSyncScheduler;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.progression.ResearchPointAwardReconciliationScheduler;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 
-@Mod.EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+@EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, bus = EventBusSubscriber.Bus.GAME)
 public final class BlueprintDiscoveryEvents {
     private BlueprintDiscoveryEvents() {
     }
 
     @SubscribeEvent
-    public static void onItemPickup(PlayerEvent.ItemPickupEvent event) {
-        if (event.getEntity() instanceof ServerPlayer serverPlayer) {
-            // Forge fires this event after the picked-up stack has been inserted.
+    public static void onItemPickup(net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent.Post event) {
+        if (event.getPlayer() instanceof ServerPlayer serverPlayer) {
+            // NeoForge fires this event after the picked-up stack has been inserted.
             // Unopened loot and failed/cancelled pickup attempts never reach it.
-            BlueprintDiscoveryService.discoverInventoryBlueprint(serverPlayer, event.getStack());
+            BlueprintDiscoveryService.discoverInventoryBlueprint(serverPlayer, event.getOriginalStack());
         }
     }
 
     @SubscribeEvent
-    public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
-        if (event.phase == TickEvent.Phase.END && event.player instanceof ServerPlayer serverPlayer) {
+    public static void onPlayerTick(PlayerTickEvent.Post event) {
+        if (event.getEntity() instanceof ServerPlayer serverPlayer) {
             com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencySyncTracker.tick(serverPlayer);
             ResearchPointAwardReconciliationScheduler.process(serverPlayer);
             BlueprintProgressionSyncScheduler.flush(serverPlayer);

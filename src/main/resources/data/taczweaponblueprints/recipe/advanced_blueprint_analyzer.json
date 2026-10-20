@@ -1,0 +1,37 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "ICI",
+    "RGR",
+    "IHI"
+  ],
+  "key": {
+    "I": {
+      "tag": "c:ingots/iron"
+    },
+    "C": {
+      "item": "minecraft:comparator"
+    },
+    "G": {
+      "item": "minecraft:grindstone"
+    },
+    "H": {
+      "item": "minecraft:hopper"
+    },
+    "R": {
+      "item": "minecraft:redstone_block"
+    }
+  },
+  "result": {
+    "id": "taczweaponblueprints:advanced_blueprint_analyzer"
+  },
+  "show_notification": true,
+  "neoforge:conditions": [
+    {
+      "type": "taczweaponblueprints:station_setup",
+      "analyzer": true,
+      "tier": 2
+    }
+  ]
+}

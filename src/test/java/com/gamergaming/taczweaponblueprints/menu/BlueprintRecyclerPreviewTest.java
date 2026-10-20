@@ -18,9 +18,9 @@ import com.gamergaming.taczweaponblueprints.progression.ResearchDataRedemptionSe
 import net.minecraft.resources.ResourceLocation;
 
 class BlueprintRecyclerPreviewTest {
-    private static final ResourceLocation BLUEPRINT = new ResourceLocation("test:rifle");
+    private static final ResourceLocation BLUEPRINT = ResourceLocation.parse("test:rifle");
     private static final ResourceLocation RESEARCH_NOTE =
-            new ResourceLocation("taczweaponblueprints:research_note");
+            ResourceLocation.parse("taczweaponblueprints:research_note");
 
     @Test
     void blueprintDecisionUsesTheDedicatedSmartSlotContract() {
@@ -61,14 +61,14 @@ class BlueprintRecyclerPreviewTest {
     void emptyAndInvalidInputsRemainNonActionable() {
         assertFalse(BlueprintRecyclerPreview.empty(4, 20).actionable());
         assertFalse(BlueprintRecyclerPreview.invalid(
-                Optional.of(new ResourceLocation("minecraft:dirt")), 1, 4, 20).actionable());
+                Optional.of(ResourceLocation.parse("minecraft:dirt")), 1, 4, 20).actionable());
     }
 
     @Test
     void physicalItemDecisionCarriesTheExactServerCostAndOutput() {
         BlueprintRecyclerPreview.IngredientPreview iron =
                 new BlueprintRecyclerPreview.IngredientPreview(
-                        List.of(new ResourceLocation("minecraft:iron_ingot")),
+                        List.of(ResourceLocation.parse("minecraft:iron_ingot")),
                         Optional.empty(),
                         2,
                         3);

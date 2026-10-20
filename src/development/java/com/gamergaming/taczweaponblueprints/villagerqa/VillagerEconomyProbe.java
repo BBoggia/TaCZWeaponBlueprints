@@ -22,17 +22,17 @@ import net.minecraft.world.entity.npc.*;
 import net.minecraft.world.inventory.*;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.trading.*;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.OnDatapackSyncEvent;
-import net.minecraftforge.event.server.ServerStartedEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.util.ObfuscationReflectionHelper;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.OnDatapackSyncEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.util.ObfuscationReflectionHelper;
 import static com.gamergaming.taczweaponblueprints.villager.trade.TradeDefinition.*;
 import static com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerActionContract.Action.*;
 
 /** Native merchant, Analyzer and player capability checks; excluded from production artifacts. */
-@Mod.EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID)
+@EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID)
 public final class VillagerEconomyProbe {
     private static final List<String> checks=new ArrayList<>();
     private static ServerLevel level;
@@ -42,14 +42,14 @@ public final class VillagerEconomyProbe {
         var root=VillagerPrototypeStock.root();if(root==null||!Boolean.getBoolean("tacz.villagerQA.economy"))return;
         var server=event.getServer();server.execute(()->{
             try{
-                level=server.overworld();MinecraftForge.EVENT_BUS.post(new OnDatapackSyncEvent(server.getPlayerList(),null));StockPublicationCoordinator.settle();
+                level=server.overworld();NeoForge.EVENT_BUS.post(new OnDatapackSyncEvent(server.getPlayerList(),null));StockPublicationCoordinator.settle();
                 var customer=player("MarketBuyer");var recipient=player("ResearchRecipient");
                 var v=villager(ModVillagers.GUNSMITH.get(),2);var offer=find(v,Kind.GUN);
                 var target=binding(offer).entry().target();var bought=buy(customer,v,offer);
                 require(PhysicalWeaponProvenance.from(bought).orElseThrow().origin()==PhysicalWeaponProvenance.Origin.TRADED,"Purchased gun has explicit traded provenance");
-                require(!PhysicalWeaponProvenance.stampLootGenerated(bought,new ResourceLocation("test:loot")),"Loot stamping cannot launder a traded gun");
+                require(!PhysicalWeaponProvenance.stampLootGenerated(bought,ResourceLocation.parse("test:loot")),"Loot stamping cannot launder a traded gun");
                 require(!data(customer).hasBlueprint(target.toString()),"Native purchase does not grant knowledge");
-                var restored=ItemStack.of(bought.save(new net.minecraft.nbt.CompoundTag()));require(ItemStack.matches(bought,restored),"Traded gun survives item save/load");
+                var restored=ItemStack.parse(level.registryAccess(), bought.save(level.registryAccess())).orElseThrow();require(ItemStack.matches(bought,restored),"Traded gun survives item save/load");
                 customer.closeContainer();var analyzer=analyzer(recipient,bought.copy());
                 require(analyzer.preview().weaponOrigin()==BlueprintRecyclerPreview.WeaponOrigin.TRADED,"Transferred gun previews as purchased for a second player");
                 require(!act(analyzer,recipient,RECOVER_POINTS).successful(),"Purchased gun cannot recover verified-found currency");
@@ -62,13 +62,13 @@ public final class VillagerEconomyProbe {
                 var claims=Set.copyOf(data(recipient).getResearchPointAwardLedger().claims());
                 require(data(recipient).hasDiscoveredBlueprint(target.toString())&&!claims.isEmpty(),"First analysis records discovery and its finite award claim");
                 recipient.closeContainer();var loaded=bought.copy();IGun.getIGunOrNull(loaded).setCurrentAmmoCount(loaded,3);
-                loaded.setHoverName(net.minecraft.network.chat.Component.literal("Modified market weapon"));
+                loaded.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, net.minecraft.network.chat.Component.literal("Modified market weapon"));
                 analyzer=analyzer(recipient,loaded);fund(recipient);analyzer.refreshAuthoritativePreview(recipient);
                 int paid=analyzer.preview().pointCost();
                 require(act(analyzer,recipient,REVERSE_ENGINEER).successful(),"Loaded, renamed purchased gun uses existing paid analysis handling");
                 require(data(recipient).getResearchPointAwardLedger().claims().equals(claims),"Repeated purchased-gun analysis cannot repeat discovery award claims");
                 require(recipient.getInventory().countItem(ModItems.SCRAP.get())==64-paid&&recipient.getInventory().countItem(Items.IRON_INGOT)==62,"Repeat analysis charges the displayed currency and materials without another discovery payout");
-                recipient.closeContainer();var inserted=bought.copy();inserted.getOrCreateTag().put("TaCZMag_StoredMagazine",new net.minecraft.nbt.CompoundTag());
+                recipient.closeContainer();var inserted=bought.copy();net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, inserted, tag -> tag.put("TaCZMag_StoredMagazine",new net.minecraft.nbt.CompoundTag()));
                 analyzer=analyzer(recipient,inserted);fund(recipient);analyzer.refreshAuthoritativePreview(recipient);
                 require(!act(analyzer,recipient,REVERSE_ENGINEER).successful()&&ItemStack.matches(analyzer.getSlot(0).getItem(),inserted),"Inserted magazine rejects analysis without consuming the gun");
                 recipient.closeContainer();fragments(customer,recipient);currencies(customer);strict();
@@ -102,7 +102,7 @@ public final class VillagerEconomyProbe {
         server.getPackRepository().reload();var packs=new ArrayList<>(server.getPackRepository().getSelectedIds());if(!packs.contains("file/villager-economy-qa"))packs.add("file/villager-economy-qa");
         server.reloadResources(packs).whenCompleteAsync((ignored,failure)->{
             try{
-                if(failure!=null)throw new AssertionError(failure);MinecraftForge.EVENT_BUS.post(new OnDatapackSyncEvent(server.getPlayerList(),null));StockPublicationCoordinator.settle();
+                if(failure!=null)throw new AssertionError(failure);NeoForge.EVENT_BUS.post(new OnDatapackSyncEvent(server.getPlayerList(),null));StockPublicationCoordinator.settle();
                 var c=ModConfigs.BLUEPRINT;c.villagerMaterialPurchases.validateAndSet(true);c.onSyncServer();
                 require(villager(ModVillagers.BALLISTICS_RESEARCHER.get(),5).getOffers().stream().noneMatch(o->binding(o).entry().kind()==Kind.BLUEPRINT),"Full blueprints remain disabled by default even with authored rows");
                 require(villager(ModVillagers.GUNSMITH.get(),4).getOffers().stream().noneMatch(o->binding(o).entry().target().equals(tier3)),"Tier 3 fixture remains excluded at the default tier cap");
@@ -124,10 +124,10 @@ public final class VillagerEconomyProbe {
         },server);
     }
     private static void crafting(ServerPlayer p,ResourceLocation target){
-        var recipe=BlueprintDataManager.SERVER.getBlueprintDataMap().get(target).getRecipe().getId();
+        var recipe=BlueprintDataManager.SERVER.getBlueprintDataMap().get(target).getRecipeId();
         for(int tier:new int[]{1,3}){
-            p.closeContainer();var pos=new BlockPos(-2,85,tier);var station=new ResourceLocation("taczweaponblueprints:workbench_lvl"+tier);
-            require(com.gamergaming.taczweaponblueprints.block.CraftingWorkbenchBlock.placeCompleteStructure(level,pos,net.minecraftforge.registries.ForgeRegistries.BLOCKS.getValue(station).defaultBlockState()),"Complete crafting Workbench placed");
+            p.closeContainer();var pos=new BlockPos(-2,85,tier);var station=ResourceLocation.parse("taczweaponblueprints:workbench_lvl"+tier);
+            require(com.gamergaming.taczweaponblueprints.block.CraftingWorkbenchBlock.placeCompleteStructure(level,pos,net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(station).defaultBlockState()),"Complete crafting Workbench placed");
             var menu=new com.tacz.guns.inventory.GunSmithTableMenu(++sequence,p.getInventory(),station);p.containerMenu=menu;
             ((com.gamergaming.taczweaponblueprints.compat.tacz.TaCZWorkbenchMenuBridge)menu).taczweaponblueprints$attachWorkbenchContext(new com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchContext(pos,level.dimension().location(),station,
                     com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchTier.fromLevel(tier),com.gamergaming.taczweaponblueprints.progression.workbench.ResearchInteractionMode.CRAFTING,(long)sequence+1));
@@ -139,7 +139,7 @@ public final class VillagerEconomyProbe {
     }
     private static void legacyData(){
         var c=ModConfigs.BLUEPRINT;c.researchDataBehavior.validateAndSet(com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPolicy.Behavior.LEGACY_CURRENCY);c.onSyncServer();
-        var rows=TradeRuntime.inspect().resolution().slots();var note=rows.get(new ResourceLocation("taczweaponblueprints:ballistics_researcher/note"));
+        var rows=TradeRuntime.inspect().resolution().slots();var note=rows.get(ResourceLocation.parse("taczweaponblueprints:ballistics_researcher/note"));
         require(note.ready(),"Explicit same-currency legacy Research Note sale passes conservative pricing");
         require(rows.values().stream().filter(r->r.output().kind()==Kind.RESEARCH_DATA&&!r.output().allowLegacyExchange()).noneMatch(TradeResolver.Row::ready),"Legacy Data rows without explicit opt-in stay unavailable");
         c.villagerPricePercent.validateAndSet(1);c.onSyncServer();require(!TradeRuntime.inspect().resolution().slots().get(note.slot()).ready(),"Cheap legacy exchange is rejected at its minimum discounted price");
@@ -150,7 +150,7 @@ public final class VillagerEconomyProbe {
         var profile=bundled("research_profiles/duplicate_recovery");var analyzer=new com.google.gson.JsonObject();analyzer.addProperty("mode","legacy");profile.add("analyzer",analyzer);profile.getAsJsonObject("reverse_engineering").getAsJsonObject("cost").addProperty("points",3);writeFixture(pack,"research_profiles/duplicate_recovery",profile);
         var server=level.getServer();server.reloadResources(packs).whenCompleteAsync((ignored,failure)->{
             try{
-                if(failure!=null)throw new AssertionError(failure);MinecraftForge.EVENT_BUS.post(new OnDatapackSyncEvent(server.getPlayerList(),null));StockPublicationCoordinator.settle();
+                if(failure!=null)throw new AssertionError(failure);NeoForge.EVENT_BUS.post(new OnDatapackSyncEvent(server.getPlayerList(),null));StockPublicationCoordinator.settle();
                 var p=player("LegacyBuyer");var v=villager(ModVillagers.GUNSMITH.get(),2);var gun=buy(p,v,find(v,Kind.GUN));var menu=analyzer(p,gun);fund(p);menu.refreshAuthoritativePreview(p);
                 require(act(menu,p,REVERSE_ENGINEER).successful(),"Legacy paid reverse engineering accepts a purchased gun");protectedBlueprint(menu.getSlot(1).getItem(),"Legacy purchased-gun analysis");checks.add("PASS");
             }catch(Throwable error){checks.add("FAIL: "+error);TaCZWeaponBlueprints.LOGGER.error("Legacy economy QA failed",error);}finally{finish(root);}
@@ -202,9 +202,9 @@ public final class VillagerEconomyProbe {
     private static BlueprintRecyclerMenu analyzer(ServerPlayer p,ItemStack input){p.closeContainer();p.getInventory().clearContent();var pos=new BlockPos(1,85,0);require(com.gamergaming.taczweaponblueprints.block.BlueprintRecyclerBlock.isComplete(level,pos)||com.gamergaming.taczweaponblueprints.block.BlueprintRecyclerBlock.placeCompleteStructure(level,pos,ModBlocks.EXPERIMENTAL_BLUEPRINT_ANALYZER.get().defaultBlockState()),"Complete physical Analyzer placed");var m=BlueprintRecyclerMenu.server(++sequence,p.getInventory(),level,pos);p.containerMenu=m;m.getSlot(0).set(input);m.refreshAuthoritativePreview(p);return m;}
     private static BlueprintRecyclerActionContract.ActionResult act(BlueprintRecyclerMenu m,ServerPlayer p,BlueprintRecyclerActionContract.Action action){m.refreshAuthoritativePreview(p);var q=m.preview();return m.handleRecyclerAction(p,action,q.inputId().orElseThrow(),q.inputCount(),q.stateToken());}
     private static ItemStack buy(ServerPlayer p,Villager v,MerchantOffer offer){p.closeContainer();p.getInventory().clearContent();v.setTradingPlayer(p);var m=new MerchantMenu(++sequence,p.getInventory(),v);p.containerMenu=m;int uses=offer.getUses();m.setSelectionHint(v.getOffers().indexOf(offer));m.getSlot(0).set(offer.getCostA().copy());m.getSlot(1).set(offer.getCostB().copy());m.clicked(2,0,ClickType.PICKUP,p);var out=m.getCarried().copy();require(ItemStack.matches(out,offer.getResult())&&offer.getUses()==uses+1&&m.getSlot(0).getItem().isEmpty()&&m.getSlot(1).getItem().isEmpty(),"Native purchase consumes the displayed payment exactly once");m.setCarried(ItemStack.EMPTY);p.closeContainer();return out;}
-    private static com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData data(ServerPlayer p){return p.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElseThrow();}
-    private static ServerPlayer player(String name){var p=net.minecraftforge.common.util.FakePlayerFactory.get(level,new com.mojang.authlib.GameProfile(UUID.nameUUIDFromBytes(name.getBytes(java.nio.charset.StandardCharsets.UTF_8)),name));p.moveTo(.5,85,.5);p.setHealth(20);p.getAbilities().instabuild=false;return p;}
-    private static Villager villager(VillagerProfession profession,int tier){var v=new Villager(EntityType.VILLAGER,level);v.moveTo(.5,85,.5);v.setNoAi(true);v.setVillagerData(v.getVillagerData().setProfession(profession));level.addFreshEntity(v);v.getOffers();for(int n=2;n<=tier;n++)try{ObfuscationReflectionHelper.findMethod(Villager.class,"m_35528_").invoke(v);}catch(Exception e){throw new RuntimeException(e);}return v;}
+    private static com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData data(ServerPlayer p){return com.gamergaming.taczweaponblueprints.init.ModAttachments.recipeData(p).orElseThrow();}
+    private static ServerPlayer player(String name){var p=net.neoforged.neoforge.common.util.FakePlayerFactory.get(level,new com.mojang.authlib.GameProfile(UUID.nameUUIDFromBytes(name.getBytes(java.nio.charset.StandardCharsets.UTF_8)),name));p.moveTo(.5,85,.5);p.setHealth(20);p.getAbilities().instabuild=false;return p;}
+    private static Villager villager(VillagerProfession profession,int tier){var v=new Villager(EntityType.VILLAGER,level);v.moveTo(.5,85,.5);v.setNoAi(true);v.setVillagerData(v.getVillagerData().setProfession(profession));level.addFreshEntity(v);v.getOffers();for(int n=2;n<=tier;n++)try{ObfuscationReflectionHelper.findMethod(Villager.class,"increaseMerchantCareer").invoke(v);}catch(Exception e){throw new RuntimeException(e);}return v;}
     private static StockOfferBinding binding(MerchantOffer o){return ((OwnedVillagerOffer)o).taczweaponblueprints$binding();}
     private static MerchantOffer find(Villager v,Kind kind){return v.getOffers().stream().filter(o->binding(o).entry().kind()==kind).findFirst().orElseThrow();}
     private static void require(boolean ok,String message){if(!ok)throw new AssertionError(message);checks.add(message);}

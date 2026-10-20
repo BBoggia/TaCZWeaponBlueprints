@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.function.Supplier;
 
 import com.gamergaming.taczweaponblueprints.client.ClientResearchState;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeGraph;
@@ -30,13 +29,24 @@ import com.gamergaming.taczweaponblueprints.resource.research.ResearchTreeGroupD
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeBranch;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 
 /**
  * Chunked synchronization for one disclosure-safe graph, its matching branch
  * groups, and its optional Tech Tree presentation metadata.
  */
-public final class SyncResearchTreePacket {
+public final class SyncResearchTreePacket implements CustomPacketPayload {
+    public static final Type<SyncResearchTreePacket> TYPE = new Type<>(
+            com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.loc("sync_research_tree"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, SyncResearchTreePacket> STREAM_CODEC =
+            StreamCodec.ofMember(SyncResearchTreePacket::toBytes, SyncResearchTreePacket::new);
+
+    @Override
+    public Type<SyncResearchTreePacket> type() { return TYPE; }
+
     private static final int HEADER_RESERVE = 104;
     private static final int NODE_FIXED_RESERVE = 40;
     private static final int EDGE_RESERVE = 10;
@@ -217,11 +227,18 @@ public final class SyncResearchTreePacket {
         }
     }
 
-    public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
-        context.enqueueWork(() -> CLIENT_ACCUMULATOR.accept(this).ifPresent(publication ->
-                ClientResearchState.acceptTree(syncId, publication)));
-        context.setPacketHandled(true);
+    public void handle(IPayloadContext context) {
+        new ClientHandler().handle(context);
+    }
+
+    /** Loaded only when this clientbound payload is handled, never during server registration. */
+    @net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)
+    private final class ClientHandler {
+        void handle(IPayloadContext contextSupplier) {
+            IPayloadContext context = contextSupplier;
+            context.enqueueWork(() -> CLIENT_ACCUMULATOR.accept(SyncResearchTreePacket.this).ifPresent(publication ->
+                    ClientResearchState.acceptTree(syncId, publication)));
+        }
     }
 
     public static void clearClientState() {
@@ -1341,8 +1358,8 @@ public final class SyncResearchTreePacket {
             }
             var branchRecords = branches;
             ResearchTechTreeBranch.validate(branches.stream().map(branch -> branch.resolve(branchRecords,
-                    ordinal -> new ResourceLocation("wire",Integer.toString(ordinal)))).toList(),
-                    memberOrdinals.stream().map(ordinal -> new ResourceLocation("wire",Integer.toString(ordinal))).collect(java.util.stream.Collectors.toSet()));
+                    ordinal -> ResourceLocation.fromNamespaceAndPath("wire",Integer.toString(ordinal)))).toList(),
+                    memberOrdinals.stream().map(ordinal -> ResourceLocation.fromNamespaceAndPath("wire",Integer.toString(ordinal))).collect(java.util.stream.Collectors.toSet()));
         }
 
         private static WireTechDomain from(

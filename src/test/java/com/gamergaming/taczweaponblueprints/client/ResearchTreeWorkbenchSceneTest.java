@@ -22,7 +22,7 @@ class ResearchTreeWorkbenchSceneTest {
         var result = new ResearchTreeSceneCache.Result(new Object(),1,ResearchTechTreeClientFixture.publication(),Domain.WEAPONS,
                 Optional.of(projection),ResearchTreeSceneCache.Status.VALID,Optional.of(scene),List.of(),false);
         assertTrue(canvas.setSceneContent(result,Map.of(),null,null)); assertEquals(287,canvas.graph().nodes().size());
-        var inspected = new net.minecraft.resources.ResourceLocation("ccrp:sai_gry_lite_black");
+        var inspected = net.minecraft.resources.ResourceLocation.parse("ccrp:sai_gry_lite_black");
         canvas.setPinnedNode(inspected);
         assertEquals(canvas.graph().edges().stream().filter(e -> e.dependentId().equals(inspected)).count(),
                 canvas.graph().edges().stream().filter(e -> canvas.sceneEdgeStyle(e)==ResearchTreeConnectorStyle.DIRECT).count());

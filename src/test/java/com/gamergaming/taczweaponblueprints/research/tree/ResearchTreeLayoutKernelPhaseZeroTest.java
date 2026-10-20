@@ -215,7 +215,7 @@ class ResearchTreeLayoutKernelPhaseZeroTest {
     }
 
     private static ResourceLocation tacz(String path) {
-        return new ResourceLocation("tacz", path);
+        return ResourceLocation.fromNamespaceAndPath("tacz", path);
     }
 
     private static ResearchTreeGraph.Edge taczEdge(String prerequisite, String dependent) {
@@ -223,7 +223,7 @@ class ResearchTreeLayoutKernelPhaseZeroTest {
     }
 
     private static ResourceLocation id(String path) {
-        return new ResourceLocation("phase_zero", path);
+        return ResourceLocation.fromNamespaceAndPath("phase_zero", path);
     }
 
     private record GroupDirection(ResourceLocation source, ResourceLocation target) {

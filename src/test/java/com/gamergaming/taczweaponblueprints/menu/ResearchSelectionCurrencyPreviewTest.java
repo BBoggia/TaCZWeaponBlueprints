@@ -69,7 +69,7 @@ class ResearchSelectionCurrencyPreviewTest {
     @Test void currencyReservationSpansStacksAndPreservesNamedCurrency() {
         var f = overlap();
         var named = new ItemStack(Items.IRON_INGOT, 2);
-        named.setHoverName(net.minecraft.network.chat.Component.literal("Named currency"));
+        named.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, net.minecraft.network.chat.Component.literal("Named currency"));
         f.inventory.set(1, named); f.inventory.set(8, new ItemStack(Items.IRON_INGOT, 5));
         verify(f, 4, true, true, ResearchGuidanceSnapshot.State.AFFORDABLE);
     }
@@ -115,7 +115,7 @@ class ResearchSelectionCurrencyPreviewTest {
                 List.of(id("minecraft:" + name)), Optional.empty(), 2)).toList();
         f.rootMaterials = all.subList(0, 4); f.materials = all.subList(4, 8);
         for (int i = 0; i < names.size(); i++) f.inventory.set(i,
-                new ItemStack(net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(id("minecraft:" + names.get(i))), 2));
+                new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(id("minecraft:" + names.get(i))), 2));
         var e = verify(f, 16, true, false, ResearchGuidanceSnapshot.State.MISSING_POINTS);
         var preview = ResearchSelectionPreviewFactory.create(e, f.mode, tag -> List.of(), () -> ResearchSelectionProgressionPreview.EMPTY);
         assertEquals(BlueprintResearchCost.MAX_INGREDIENT_TYPES, preview.ingredients().size());
@@ -212,7 +212,7 @@ class ResearchSelectionCurrencyPreviewTest {
             assertEquals(original, encoded);
         } finally { original.release(); encoded.release(); }
     }
-    private static ResourceLocation id(String s) { return new ResourceLocation(s); }
+    private static ResourceLocation id(String s) { return ResourceLocation.parse(s); }
     private static final class Fixture {
         PlayerRecipeData data = new PlayerRecipeData();
         List<ItemStack> inventory = new ArrayList<>(Collections.nCopies(36, ItemStack.EMPTY));

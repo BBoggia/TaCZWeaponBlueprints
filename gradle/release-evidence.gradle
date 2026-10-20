@@ -1,0 +1,56 @@
+import groovy.json.JsonOutput
+
+// Keep evidence lifecycle checks independent of the loader so they can be exercised
+// in small Gradle TestKit builds, including failed prerequisites and cached tests.
+def reportDirectory = layout.buildDirectory.dir('reports/release')
+def invalidateReports = tasks.register('invalidateReleaseReports') {
+    doLast {
+        for (name in ['artifact', 'regression', 'runtime', 'candidate', 'publication']) {
+            delete new File(reportDirectory.get().asFile, "${name}.json")
+        }
+    }
+}
+
+// A doFirst on the certificate is too late: compilation or another prerequisite
+// may fail before it runs. Order the invalidator before every task in this build.
+// mustRunAfter alone never schedules it during ordinary development commands.
+tasks.configureEach {
+    if (name != 'invalidateReleaseReports') mustRunAfter invalidateReports
+    if (name in ['verifyReleaseArtifact', 'verifyRegressionEvidence',
+                 'verifyPackagedRuntimeEvidence', 'certifyReleaseCandidate', 'verifyPublicationReadiness']) {
+        dependsOn invalidateReports
+    }
+}
+
+tasks.register('verifyRegressionEvidence') {
+    group = 'verification'
+    dependsOn tasks.named('test')
+    doLast {
+        def tests = tasks.named('test', Test).get()
+        // Gradle validates current inputs/outputs before declaring UP-TO-DATE or
+        // FROM-CACHE. Old XML alone is never evidence of a successful current test task.
+        if (!gradle.taskGraph.hasTask(tests) || !tests.enabled || !tests.state.executed
+                || tests.state.failure != null || tests.state.noSource
+                || (tests.state.skipped && !tests.state.upToDate)) {
+            throw new GradleException('Release verification requires a successful test task; excluded, disabled, or skipped tests are not evidence.')
+        }
+        if (!tests.filter.includePatterns.empty || !tests.filter.commandLineIncludePatterns.empty
+                || !tests.filter.excludePatterns.empty || !tests.includes.empty || !tests.excludes.empty) {
+            throw new GradleException('Release verification requires the complete test suite without --tests filters.')
+        }
+        if (!tests.reports.junitXml.required.get()) throw new GradleException('Release verification requires JUnit XML reports.')
+        def suites = fileTree(tests.reports.junitXml.outputLocation).matching { include 'TEST-*.xml' }.files
+        int count = 0
+        suites.each { f ->
+            def suite = new XmlSlurper().parse(f)
+            count += suite.@tests.toInteger()
+            if (suite.@failures.toInteger() != 0 || suite.@errors.toInteger() != 0 || suite.@skipped.toInteger() != 0)
+                throw new GradleException("Incomplete regression suite: ${f.name}")
+        }
+        if (count < 2700) throw new GradleException("Incomplete regression evidence: ${count} tests")
+        def destination = new File(reportDirectory.get().asFile, 'regression.json')
+        destination.parentFile.mkdirs()
+        destination.text = JsonOutput.prettyPrint(JsonOutput.toJson([passed: true, tests: count,
+                suites: suites.size(), testTask: tests.path, outcome: tests.state.skipMessage ?: 'EXECUTED'])) + '\n'
+    }
+}

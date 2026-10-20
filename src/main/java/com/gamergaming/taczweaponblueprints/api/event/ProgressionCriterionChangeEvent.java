@@ -6,8 +6,8 @@ import com.gamergaming.taczweaponblueprints.progression.gate.ProgressionCriterio
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.eventbus.api.Cancelable;
-import net.minecraftforge.eventbus.api.Event;
+import net.neoforged.bus.api.ICancellableEvent;
+import net.neoforged.bus.api.Event;
 
 /** Server-only observation boundary around one custom criterion transition. */
 public abstract class ProgressionCriterionChangeEvent extends Event {
@@ -77,8 +77,7 @@ public abstract class ProgressionCriterionChangeEvent extends Event {
     }
 
     /** Fired after preflight and before any player data changes. */
-    @Cancelable
-    public static final class Pre extends ProgressionCriterionChangeEvent {
+    public static final class Pre extends ProgressionCriterionChangeEvent implements ICancellableEvent {
         public Pre(
                 ServerPlayer player,
                 ResourceLocation criterionId,

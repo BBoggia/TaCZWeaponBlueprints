@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Test;
 class MagazineWorkbenchTabsTest {
     @Test
     void emptyInitialMagazineViewStillOffersANamespaceFilterWhenRecipesReturn() {
-        var gunTab = new ResourceLocation("tacz:rifle");
-        var gun = new ResourceLocation("tacz:gun/ak47");
+        var gunTab = ResourceLocation.parse("tacz:rifle");
+        var gun = ResourceLocation.parse("tacz:gun/ak47");
         Map<ResourceLocation, List<ResourceLocation>> recipes = Map.of(gunTab, List.of(gun));
         var scaffold = MagazineWorkbenchTabs.namespaceScaffold(recipes, true);
         assertEquals(List.of(TaCZMagazinesAdapter.MAGAZINE_TAB), scaffold.get(TaCZMagazinesAdapter.MAGAZINE_TAB));

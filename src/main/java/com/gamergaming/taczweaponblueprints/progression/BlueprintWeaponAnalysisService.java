@@ -9,7 +9,7 @@ import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.LongUnaryOperator;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.item.BlueprintFragmentItem;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
@@ -56,7 +56,7 @@ public final class BlueprintWeaponAnalysisService {
     /** Empty means the legacy evaluator owns this input; blocked tiered inputs never fall back. */
     public static Optional<Prepared> prepare(ServerPlayer player, WorkstationTransaction station) {
         if (player == null || !player.isAlive() || station == null) return Optional.empty();
-        var data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve();
+        var data = ModAttachments.recipeData(player);
         if (data.isEmpty()) return Optional.empty();
         var context = context();
         var physical = PhysicalItemBlueprintResolver.resolve(station.physicalInput(), context.catalog());

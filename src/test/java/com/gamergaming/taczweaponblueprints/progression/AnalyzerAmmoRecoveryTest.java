@@ -39,8 +39,8 @@ class AnalyzerAmmoRecoveryTest {
         assertEquals(64,slots.get(0).getCount());assertEquals(64,slots.get(1).getCount());assertEquals(12,ammo.getCount());
     }
     @Test void ammunitionWithDifferentTagsDoesNotMerge() {
-        var existing=new ItemStack(Items.ARROW,60);existing.getOrCreateTag().putString("AmmoId","test:a");
-        var incoming=new ItemStack(Items.ARROW,4);incoming.getOrCreateTag().putString("AmmoId","test:b");
+        var existing=new ItemStack(Items.ARROW,60);net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, existing, customTag -> customTag.putString("AmmoId","test:a"));
+        var incoming=new ItemStack(Items.ARROW,4);net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, incoming, customTag -> customTag.putString("AmmoId","test:b"));
         AnalyzerAmmoRecovery.insert(new ArrayList<>(List.of(existing)),incoming,64);
         assertEquals(4,incoming.getCount());assertEquals(60,existing.getCount());
     }

@@ -12,8 +12,8 @@ import com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerActionContract
 import net.minecraft.resources.ResourceLocation;
 
 class BlueprintRecyclerRequestTrackerTest {
-    private static final ResourceLocation INPUT = new ResourceLocation("minecraft:paper");
-    private static final ResourceLocation OTHER = new ResourceLocation("minecraft:book");
+    private static final ResourceLocation INPUT = ResourceLocation.parse("minecraft:paper");
+    private static final ResourceLocation OTHER = ResourceLocation.parse("minecraft:book");
 
     @Test
     void permitsOnlyOneRequestAtATime() {

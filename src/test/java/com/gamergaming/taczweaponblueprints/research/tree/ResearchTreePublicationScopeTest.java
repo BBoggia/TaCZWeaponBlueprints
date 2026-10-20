@@ -105,7 +105,7 @@ class ResearchTreePublicationScopeTest {
                 id,
                 "name." + id.getPath(),
                 "test",
-                new ResourceLocation("test", "slot/" + id.getPath()),
+                ResourceLocation.fromNamespaceAndPath("test", "slot/" + id.getPath()),
                 JournalVisibility.FULL,
                 availability == ResearchTreeGraph.Availability.LEARNED,
                 true,
@@ -118,6 +118,6 @@ class ResearchTreePublicationScopeTest {
     }
 
     private static ResourceLocation id(String value) {
-        return new ResourceLocation(value);
+        return ResourceLocation.parse(value);
     }
 }

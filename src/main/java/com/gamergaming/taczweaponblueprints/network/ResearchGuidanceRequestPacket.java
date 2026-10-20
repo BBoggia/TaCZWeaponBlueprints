@@ -1,6 +1,5 @@
 package com.gamergaming.taczweaponblueprints.network;
 
-import java.util.function.Supplier;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
@@ -8,10 +7,21 @@ import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 
 /** Requests authoritative guidance for one public target in the open Research Bench. */
-public final class ResearchGuidanceRequestPacket {
+public final class ResearchGuidanceRequestPacket implements CustomPacketPayload {
+    public static final Type<ResearchGuidanceRequestPacket> TYPE = new Type<>(
+            com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.loc("research_guidance_request"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, ResearchGuidanceRequestPacket> STREAM_CODEC =
+            StreamCodec.ofMember(ResearchGuidanceRequestPacket::toBytes, ResearchGuidanceRequestPacket::new);
+
+    @Override
+    public Type<ResearchGuidanceRequestPacket> type() { return TYPE; }
+
     private final int containerId;
     private final int requestId;
     private final long publicationGeneration;
@@ -47,9 +57,9 @@ public final class ResearchGuidanceRequestPacket {
         writeId(buffer, targetId);
     }
 
-    public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
-        ServerPlayer sender = context.getSender();
+    public void handle(IPayloadContext contextSupplier) {
+        IPayloadContext context = contextSupplier;
+        ServerPlayer sender = NetworkHandler.sender(context);
         context.enqueueWork(() -> {
             ResearchBenchMenu.GuidanceResult result = sender != null
                     && NetworkHandler.matchesResearchGeneration(
@@ -70,7 +80,6 @@ public final class ResearchGuidanceRequestPacket {
                         result);
             }
         });
-        context.setPacketHandled(true);
     }
 
     int containerId() {

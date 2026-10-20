@@ -15,7 +15,7 @@ import net.minecraft.world.item.crafting.Recipe;
 
 /** Access to validated, current upstream recipes at supported Workbenches. */
 public final class MagazineCraftingAccess {
-    public static final ResourceLocation AMMO_WORKBENCH = new ResourceLocation("tacz:ammo_workbench");
+    public static final ResourceLocation AMMO_WORKBENCH = ResourceLocation.parse("tacz:ammo_workbench");
 
     private MagazineCraftingAccess() { }
 
@@ -63,7 +63,6 @@ public final class MagazineCraftingAccess {
     static boolean matchesRecipe(MagazineDescriptor descriptor, Recipe<?> recipe) {
         try {
             if (!(recipe instanceof GunSmithTableRecipe table)
-                    || !descriptor.recipeId().equals(table.getId())
                     || !TaCZMagazinesAdapter.MAGAZINE_TAB.equals(table.getTab())
                     || !ItemStack.matches(descriptor.output(), table.getOutput())
                     || descriptor.ingredients().size() != table.getInputs().size()) return false;
@@ -71,7 +70,7 @@ public final class MagazineCraftingAccess {
                 var captured = descriptor.ingredients().get(i);
                 var current = table.getInputs().get(i);
                 if (captured.count() != current.getCount()
-                        || !captured.ingredientJson().equals(current.getIngredient().toJson().toString())) return false;
+                        || !captured.ingredientJson().equals(net.minecraft.world.item.crafting.Ingredient.CODEC.encodeStart(com.mojang.serialization.JsonOps.INSTANCE, current.getIngredient()).getOrThrow().toString())) return false;
             }
             return true;
         } catch (RuntimeException | LinkageError unavailableRecipe) {
@@ -82,8 +81,6 @@ public final class MagazineCraftingAccess {
     /** Native tab membership only; doCraft separately authenticates workstation and player access. */
     public static boolean hasMagazineTab(TaCZMagazinesAdapter.Capture catalog, GunSmithTableRecipe recipe) {
         if (recipe == null || catalog.status() != TaCZMagazinesAdapter.Status.READY) return false;
-        var key = catalog.familyByRecipe().get(recipe.getId());
-        var descriptor = key == null ? null : catalog.families().get(key);
-        return descriptor != null && matchesRecipe(descriptor, recipe);
+        return catalog.families().values().stream().anyMatch(descriptor -> matchesRecipe(descriptor, recipe));
     }
 }

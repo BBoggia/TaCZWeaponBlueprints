@@ -25,12 +25,12 @@ public final class DesignerCapturedContext {
         source = ResearchDesignerCompiler.decodeResources(resources);
         var values = new TreeMap<ResourceLocation, BlueprintData>();
         json.getAsJsonObject("catalog").entrySet().forEach(e -> {
-            var fact = e.getValue().getAsJsonObject(); var id = new ResourceLocation(e.getKey());
+            var fact = e.getValue().getAsJsonObject(); var id = ResourceLocation.parse(e.getKey());
             if (!fact.get("blueprint_id").getAsString().equals(e.getKey())) throw new IllegalArgumentException("Captured blueprint identity differs");
             // Metadata only. Recipe execution and output-stack construction are deliberately unavailable here.
             values.put(id, new BlueprintData(id.toString(), fact.get("name_key").getAsString(), "",
-                    new ResourceLocation(fact.get("recipe_id").getAsString()), null, fact.get("item_type").getAsString(),
-                    new ResourceLocation(fact.get("display_slot").getAsString()),
+                    ResourceLocation.parse(fact.get("recipe_id").getAsString()), null, fact.get("item_type").getAsString(),
+                    ResourceLocation.parse(fact.get("display_slot").getAsString()),
                     BlueprintKind.valueOf(fact.get("kind").getAsString().toUpperCase(Locale.ROOT)),
                     fact.get("output_count").getAsBigDecimal().intValueExact()));
         });
@@ -39,7 +39,7 @@ public final class DesignerCapturedContext {
     public ResearchDesignerCapture capture() { return capture; }
     public Map<ResourceLocation, BlueprintData> catalog() { return catalog; }
     public BlueprintResearchSnapshot source() { return source; }
-    public ResourceLocation profile() { return new ResourceLocation(json.get("profile_id").getAsString()); }
+    public ResourceLocation profile() { return ResourceLocation.parse(json.get("profile_id").getAsString()); }
     public boolean blocked(String id) { return flag(id, "blocked"); }
     public boolean exempt(ResourceLocation id) { return flag(id.toString(), "exempt"); }
     private boolean flag(String id, String key) {

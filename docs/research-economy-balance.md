@@ -30,7 +30,7 @@ Pack authors can replace
 `data/taczweaponblueprints/loot_modifiers/scrap_supply.json`. Its `tables` map
 uses canonical loot-table IDs and rows containing `chance`, `minimum`, `maximum`,
 and `player_kill`. Chances must be finite and in (0,1], quantities 1–64, and at
-most 1,024 tables are accepted. Forge `conditions` remain available for further
+most 1,024 tables are accepted. Standard loot `conditions` remain available for further
 filtering. A table absent from the map receives no injection. The generated file
 is reproduced by the normal loot-modifier data provider.
 

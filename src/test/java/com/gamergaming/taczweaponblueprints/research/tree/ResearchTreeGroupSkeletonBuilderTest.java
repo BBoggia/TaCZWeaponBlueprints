@@ -52,10 +52,10 @@ class ResearchTreeGroupSkeletonBuilderTest {
                 publication.graph(), pistols.localLayout());
         ResearchTreeLayout.EdgeRouteHint rhinoRoute = pistols.edgeRouteHints().stream()
                 .filter(hint -> hint.prerequisiteId().equals(
-                        new ResourceLocation("tacz", "rhino357")))
+                        ResourceLocation.fromNamespaceAndPath("tacz", "rhino357")))
                 .findFirst()
                 .orElseThrow();
-        assertEquals(new ResourceLocation("tacz", "taurus500"), rhinoRoute.dependentId());
+        assertEquals(ResourceLocation.fromNamespaceAndPath("tacz", "taurus500"), rhinoRoute.dependentId());
         assertEquals(1, rhinoRoute.waypoints().size());
         ResearchTreeLayout.RouteWaypoint waypoint = rhinoRoute.waypoints().get(0);
         assertEquals(3, waypoint.rank());
@@ -172,13 +172,13 @@ class ResearchTreeGroupSkeletonBuilderTest {
         List<ResearchTreePresentation.Group> groups = new ArrayList<>(
                 ResearchTreePresentation.MAX_GROUPS);
         for (int ordinal = 0; ordinal < ResearchTreeGraph.MAX_NODES; ordinal++) {
-            ResourceLocation nodeId = new ResourceLocation("phase_two", "maximum/" + ordinal);
+            ResourceLocation nodeId = ResourceLocation.fromNamespaceAndPath("phase_two", "maximum/" + ordinal);
             nodes.add(new ResearchTreeGraph.Node(
                     ordinal,
                     nodeId,
                     "fixture.phase_two.maximum",
                     "rifle",
-                    new ResourceLocation("minecraft", "paper"),
+                    ResourceLocation.fromNamespaceAndPath("minecraft", "paper"),
                     JournalVisibility.FULL,
                     false,
                     false,
@@ -189,7 +189,7 @@ class ResearchTreeGroupSkeletonBuilderTest {
                     0,
                     ResearchTreeGraph.Availability.AVAILABLE));
             groups.add(new ResearchTreePresentation.Group(
-                    new ResourceLocation("phase_two", "maximum_group/" + ordinal),
+                    ResourceLocation.fromNamespaceAndPath("phase_two", "maximum_group/" + ordinal),
                     "Group " + ordinal,
                     Optional.empty(),
                     Optional.of(nodeId),
@@ -218,6 +218,6 @@ class ResearchTreeGroupSkeletonBuilderTest {
     }
 
     private static ResourceLocation id(String path) {
-        return new ResourceLocation("phase_zero", path);
+        return ResourceLocation.fromNamespaceAndPath("phase_zero", path);
     }
 }

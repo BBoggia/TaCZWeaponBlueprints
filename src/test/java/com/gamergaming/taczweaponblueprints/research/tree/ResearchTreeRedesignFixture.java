@@ -17,7 +17,7 @@ final class ResearchTreeRedesignFixture {
     static final int CURATED_DEFAULT_NODES = 54;
     static final int GENERATED_NODES = ACTIVE_CATALOG_NODES - CURATED_DEFAULT_NODES;
     static final ResourceLocation PISTOL_GROUP_ID =
-            new ResourceLocation("taczweaponblueprints", "pistols");
+            ResourceLocation.fromNamespaceAndPath("taczweaponblueprints", "pistols");
 
     private static final int[] AUTHORED_GROUP_SIZES = {4, 14, 17, 6, 5, 6, 2};
     private static final List<String> DISCLOSED_LANES = List.of(
@@ -293,7 +293,7 @@ final class ResearchTreeRedesignFixture {
                 id,
                 "fixture." + id.getPath(),
                 itemType,
-                new ResourceLocation("minecraft", "paper"),
+                ResourceLocation.fromNamespaceAndPath("minecraft", "paper"),
                 JournalVisibility.FULL,
                 false,
                 false,
@@ -329,10 +329,10 @@ final class ResearchTreeRedesignFixture {
     }
 
     private static ResourceLocation taczId(String path) {
-        return new ResourceLocation("tacz", path);
+        return ResourceLocation.fromNamespaceAndPath("tacz", path);
     }
 
     private static ResourceLocation id(String path) {
-        return new ResourceLocation("phase_zero", path);
+        return ResourceLocation.fromNamespaceAndPath("phase_zero", path);
     }
 }

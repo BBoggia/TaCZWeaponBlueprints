@@ -5,7 +5,7 @@ import java.util.List;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy;
 import net.minecraft.world.item.ItemStack;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.item.BlueprintFragmentItem;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
@@ -34,14 +34,14 @@ public final class BlueprintAnalysisFragmentService {
 
     public static AnalysisFragmentReconstructionService.Evaluation evaluate(ServerPlayer player,
             BlueprintFragmentAnalysisService.WorkstationTransaction station, AnalyzerTier tier) {
-        var data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElseThrow();
+        var data = ModAttachments.recipeData(player).orElseThrow();
         return AnalysisFragmentReconstructionService.evaluate(station.physicalInput(), station.outputStack(), data, policy(player, station, tier));
     }
 
     /** The shared fragment wire fields describe reconstruction accurately without an RP conversion. */
     public static BlueprintFragmentAnalysisService.Evaluation preview(ServerPlayer player,
             BlueprintFragmentAnalysisService.WorkstationTransaction station, AnalyzerTier tier) {
-        var playerData = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve();
+        var playerData = ModAttachments.recipeData(player);
         if (playerData.isEmpty()) {
             var identity = BlueprintFragmentItem.identity(station.physicalInput()).orElseThrow();
             int count = station.physicalInput().getCount();
@@ -71,7 +71,7 @@ public final class BlueprintAnalysisFragmentService {
 
     public static BlueprintFragmentAnalysisService.Status analyze(ServerPlayer player,
             BlueprintFragmentAnalysisService.WorkstationTransaction station, AnalyzerTier tier) {
-        var resolved = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve();
+        var resolved = ModAttachments.recipeData(player);
         if (resolved.isEmpty()) return BlueprintFragmentAnalysisService.Status.PLAYER_DATA_UNAVAILABLE;
         var data = resolved.orElseThrow();
         var e = evaluate(player, station, tier);

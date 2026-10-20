@@ -19,7 +19,7 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.*;
 
 class ResearchCurrencyPlannerTest {
-    static final ResourceLocation IRON = new ResourceLocation("minecraft:iron_ingot");
+    static final ResourceLocation IRON = ResourceLocation.parse("minecraft:iron_ingot");
     static final ResearchCurrencyPolicy PHYSICAL = ResearchCurrencyPolicy.physical(IRON,1);
     @BeforeAll static void bootstrap() { SharedConstants.tryDetectVersion(); Bootstrap.bootStrap(); }
     static List<ItemStack> inventory(ItemStack... stacks) {
@@ -42,18 +42,20 @@ class ResearchCurrencyPlannerTest {
         assertEquals(INSUFFICIENT_MATERIALS,shortByOne.quote().status()); assertEquals(72,ironCount(shortByOne.after()));
     }
 
-    @Test void overlappingTagAndAlternativeMaterialUseExactAllocation() {
-        var tag = TagKey.create(Registries.ITEM,new ResourceLocation("currency_test:payment_material"));
+    @Test void overlappingTagAndAlternativeMaterialUseExactAllocation() throws Exception {
+        var tag = TagKey.create(Registries.ITEM,ResourceLocation.parse("currency_test:payment_material"));
         var holder = Items.IRON_INGOT.builtInRegistryHolder();
         var old = holder.tags().toList();
+        var bind = net.minecraft.core.Holder.Reference.class.getDeclaredMethod("bindTags", java.util.Collection.class);
+        bind.setAccessible(true);
         try {
-            holder.bindTags(List.of(tag));
+            bind.invoke(holder, List.of(tag));
             var tagged = new Requirement(List.of(),Optional.of(tag.location()),3);
-            var alternative = new Requirement(List.of(IRON,new ResourceLocation("minecraft:gold_ingot")),Optional.empty(),2);
+            var alternative = new Requirement(List.of(IRON,ResourceLocation.parse("minecraft:gold_ingot")),Optional.empty(),2);
             var plan = ResearchCurrencyPlanner.prepare(PHYSICAL,state(0,new ItemStack(Items.IRON_INGOT,5),new ItemStack(Items.GOLD_INGOT,2)),
                     request(2,0,Destination.INVENTORY_ONLY,tagged,alternative));
             assertTrue(plan.quote().ready()); assertTrue(plan.after().inventory().stream().allMatch(ItemStack::isEmpty));
-        } finally { holder.bindTags(old); }
+        } finally { bind.invoke(holder, old); }
     }
 
     @Test void grossPaymentIsRequiredBeforeAwardAndPostPaymentCapacityIsUsed() {
@@ -69,14 +71,14 @@ class ResearchCurrencyPlannerTest {
     }
 
     @Test void manualOutputBlocksIncompatibleItemsAndPreservesTaggedCurrency() {
-        var named = new ItemStack(Items.IRON_INGOT,3); named.getOrCreateTag().putString("test","keep");
+        var named = new ItemStack(Items.IRON_INGOT,3); net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, named, customTag -> customTag.putString("test","keep"));
         var before = new ResearchCurrencyState(inventory(),named,0);
         assertEquals(OUTPUT_BLOCKED,ResearchCurrencyPlanner.prepare(PHYSICAL,before,request(0,1,Destination.MANUAL_OUTPUT)).quote().status());
         // Item identity determines debit value; tags still determine safe stacking for newly minted output.
         var plan = ResearchCurrencyPlanner.prepare(PHYSICAL,state(0,named),request(1,1,Destination.INVENTORY_ONLY));
         assertTrue(plan.quote().ready()); assertEquals(2,plan.after().inventory().get(0).getCount());
-        assertEquals("keep",plan.after().inventory().get(0).getTag().getString("test"));
-        assertFalse(plan.after().inventory().get(1).hasTag());
+        assertEquals("keep",plan.after().inventory().get(0).getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag().getString("test"));
+        assertFalse(plan.after().inventory().get(1).has(net.minecraft.core.component.DataComponents.CUSTOM_DATA));
     }
 
     @ParameterizedTest @ValueSource(ints={1,63,64,65,128,2304,2368})
@@ -105,7 +107,7 @@ class ResearchCurrencyPlannerTest {
     }
 
     @Test void replacementCurrencyUsesItsRealStackSize() {
-        var pearl = ResearchCurrencyPolicy.physical(new ResourceLocation("minecraft:ender_pearl"),1);
+        var pearl = ResearchCurrencyPolicy.physical(ResourceLocation.parse("minecraft:ender_pearl"),1);
         var plan = ResearchCurrencyPlanner.prepare(pearl,state(0),request(0,17,Destination.MANUAL_OUTPUT));
         assertEquals(16,plan.quote().outputUnits()); assertEquals(1,plan.quote().inventoryUnits());
         assertEquals(DELIVERY_LIMIT,ResearchCurrencyPlanner.prepare(pearl,state(0),request(0,1025,Destination.EVENT)).quote().status());
@@ -136,7 +138,7 @@ class ResearchCurrencyPlannerTest {
     }
 
     @Test void unknownCurrencyInvalidInventoryAndMutatingReadbackCannotCorruptPlans() {
-        assertEquals(INVALID_CURRENCY,ResearchCurrencyPlanner.prepare(ResearchCurrencyPolicy.physical(new ResourceLocation("missing:item"),1),state(0),request(0,0,Destination.EVENT)).quote().status());
+        assertEquals(INVALID_CURRENCY,ResearchCurrencyPlanner.prepare(ResearchCurrencyPolicy.physical(ResourceLocation.parse("missing:item"),1),state(0),request(0,0,Destination.EVENT)).quote().status());
         assertThrows(IllegalArgumentException.class,()->new ResearchCurrencyState(Collections.nCopies(37,ItemStack.EMPTY),ItemStack.EMPTY,0));
         assertThrows(IllegalArgumentException.class,()->state(0,new ItemStack(Items.IRON_INGOT,65)));
         var input=new ItemStack(Items.IRON_INGOT,3); var s=state(0,input); input.setCount(1);

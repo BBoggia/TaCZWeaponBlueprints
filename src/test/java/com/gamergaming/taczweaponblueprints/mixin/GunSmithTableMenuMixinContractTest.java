@@ -30,7 +30,7 @@ import com.tacz.guns.inventory.GunSmithTableMenu;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.items.IItemHandler;
+import net.neoforged.neoforge.items.IItemHandler;
 
 /** Pins the third-party TaCZ bytecode surface used to mark crafted guns. */
 class GunSmithTableMenuMixinContractTest {
@@ -121,7 +121,7 @@ class GunSmithTableMenuMixinContractTest {
     private static final String CRAFT_LAMBDA_DESCRIPTOR =
             "(Lnet/minecraft/world/entity/player/Player;"
                     + "Lcom/tacz/guns/crafting/GunSmithTableRecipe;"
-                    + "Lnet/minecraftforge/items/IItemHandler;)V";
+                    + "Lnet/neoforged/neoforge/items/IItemHandler;)V";
     private static final String COPY_DESCRIPTOR =
             "()Lnet/minecraft/world/item/ItemStack;";
 

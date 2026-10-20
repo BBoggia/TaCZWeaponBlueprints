@@ -6,7 +6,7 @@ Shared reconstruction settings already apply to owned analysis fragments and to 
 
 ## Start from the shipped definitions
 
-For Minecraft 1.20.1, create a datapack with `pack_format: 15` in `pack.mcmeta`.
+For Minecraft 1.21.1, create a datapack with `pack_format: 48` in `pack.mcmeta`.
 Place it in the world's `datapacks` directory with that file at the archive root.
 Copy the existing file into your higher-priority datapack to replace it:
 

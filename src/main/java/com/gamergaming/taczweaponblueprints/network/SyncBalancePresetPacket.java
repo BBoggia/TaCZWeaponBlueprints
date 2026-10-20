@@ -1,15 +1,25 @@
 package com.gamergaming.taczweaponblueprints.network;
 
-import java.util.function.Supplier;
 
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintBalancePreset;
 
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 
 /** Keeps command-driven server preset changes visible in the synced client config. */
-public final class SyncBalancePresetPacket {
+public final class SyncBalancePresetPacket implements CustomPacketPayload {
+    public static final Type<SyncBalancePresetPacket> TYPE = new Type<>(
+            com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.loc("sync_balance_preset"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, SyncBalancePresetPacket> STREAM_CODEC =
+            StreamCodec.ofMember(SyncBalancePresetPacket::toBytes, SyncBalancePresetPacket::new);
+
+    @Override
+    public Type<SyncBalancePresetPacket> type() { return TYPE; }
+
     private final BlueprintBalancePreset preset;
 
     public SyncBalancePresetPacket(BlueprintBalancePreset preset) {
@@ -32,11 +42,18 @@ public final class SyncBalancePresetPacket {
         buffer.writeVarInt(preset.ordinal());
     }
 
-    public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
-        context.enqueueWork(() ->
-                ModConfigs.BLUEPRINT.acceptSynchronizedBalancePreset(preset));
-        context.setPacketHandled(true);
+    public void handle(IPayloadContext context) {
+        new ClientHandler().handle(context);
+    }
+
+    /** Loaded only when this clientbound payload is handled, never during server registration. */
+    @net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)
+    private final class ClientHandler {
+        void handle(IPayloadContext contextSupplier) {
+            IPayloadContext context = contextSupplier;
+            context.enqueueWork(() ->
+                    ModConfigs.BLUEPRINT.acceptSynchronizedBalancePreset(preset));
+        }
     }
 
     BlueprintBalancePreset preset() {

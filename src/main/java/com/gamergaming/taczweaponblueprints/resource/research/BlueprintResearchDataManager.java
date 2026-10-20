@@ -46,7 +46,7 @@ import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 public final class BlueprintResearchDataManager extends SimplePreparableReloadListener<BlueprintResearchSnapshot> {
     public static final BlueprintResearchDataManager INSTANCE = new BlueprintResearchDataManager();
@@ -121,8 +121,8 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
                     automaticPlacementProfiles).withResearchData(data);
             BlueprintResearchIngredientValidator.validateExactItems(
                     snapshot,
-                    id -> ForgeRegistries.ITEMS.containsKey(id)
-                            && ForgeRegistries.ITEMS.getValue(id) != Items.AIR);
+                    id -> BuiltInRegistries.ITEM.containsKey(id)
+                            && BuiltInRegistries.ITEM.get(id) != Items.AIR);
             return snapshot;
         } catch (IllegalArgumentException exception) {
             throw new IllegalStateException("Invalid blueprint research data: " + exception.getMessage(), exception);
@@ -133,19 +133,21 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
     protected void apply(BlueprintResearchSnapshot prepared, ResourceManager resourceManager, ProfilerFiller profiler) {
         BlueprintDataManager.CatalogPublication catalog =
                 BlueprintDataManager.SERVER.catalogPublication();
-        applySnapshot(prepared, catalog, progressionConfig().activeProfileId(),
-                id -> !ForgeRegistries.ITEMS.tags().getTag(TagKey.create(Registries.ITEM, id)).isEmpty());
+        var config = progressionConfig();
+        applySnapshot(prepared, catalog, config.activeProfileId(), config.domainSettings(),
+                id -> BuiltInRegistries.ITEM.getTag(TagKey.create(Registries.ITEM, id)).map(tag -> tag.size() > 0).orElse(false));
     }
 
     /** Publishes validated data using explicitly captured reload dependencies. */
     void applySnapshot(BlueprintResearchSnapshot prepared, BlueprintDataManager.CatalogPublication catalog,
-            ResourceLocation activeProfile, Predicate<ResourceLocation> resolvedIngredientTag) {
+            ResourceLocation activeProfile, com.gamergaming.taczweaponblueprints.progression.ResearchDomainSettings domains,
+            Predicate<ResourceLocation> resolvedIngredientTag) {
         ResearchTechTreeCatalogValidator.validate(prepared, catalog.blueprints());
         Set<ResourceLocation> unresolvedIngredientTags = BlueprintResearchIngredientValidator.unresolvedTags(
                 prepared, resolvedIngredientTag);
         Publication previous = publication;
         publication = new Publication(
-                prepared.withDomainSettings(progressionConfig().domainSettings()),
+                prepared.withDomainSettings(domains),
                 PublicationRevision.next(previous.revision()));
         AutomaticWeaponPlacementCandidateManager.INSTANCE.invalidateForRevisions(
                 catalog.revision(), publication.revision());
@@ -778,7 +780,7 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
             return result.result().orElseThrow(() -> new IllegalStateException(
                     "Invalid blueprint " + typeName + " " + resourceId + " from pack "
                             + resource.sourcePackId() + ": "
-                            + result.error().map(DataResult.PartialResult::message).orElse("unknown codec error")));
+                            + result.error().map(DataResult.Error::message).orElse("unknown codec error")));
         } catch (IOException | RuntimeException exception) {
             if (exception instanceof IllegalStateException illegalStateException) {
                 throw illegalStateException;

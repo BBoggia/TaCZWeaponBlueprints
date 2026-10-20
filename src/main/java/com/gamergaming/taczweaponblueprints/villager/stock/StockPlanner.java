@@ -219,7 +219,7 @@ public final class StockPlanner {
                 && r.role()==Role.SUPPORT && r.level()==gun.level() && has(r,family))
                 .min(Comparator.comparing(TradeResolver.Row::slot)).filter(r -> supportSlot(r.slot(),family).toString().length()<=TradeLimits.ID_LENGTH).orElse(null);
     }
-    private static ResourceLocation supportSlot(ResourceLocation slot,ResourceLocation family){return new ResourceLocation(slot.getNamespace(),slot.getPath()+"/"+family.getNamespace()+"/"+family.getPath());}
+    private static ResourceLocation supportSlot(ResourceLocation slot,ResourceLocation family){return ResourceLocation.fromNamespaceAndPath(slot.getNamespace(),slot.getPath()+"/"+family.getNamespace()+"/"+family.getPath());}
     private static ResourceLocation familySlot(Map<ResourceLocation,StockPlan.Entry> chosen,ResourceLocation family){return chosen.values().stream().filter(e->e.kind()==Kind.MAGAZINE&&e.target().equals(family)).map(StockPlan.Entry::slot).findFirst().orElse(null);}
     private static boolean has(TradeResolver.Row row,ResourceLocation id){return row.candidates().stream().anyMatch(c->c.id().equals(id));}
     private static Optional<ResourceLocation> choose(List<Choice> choices,long seed,ResourceLocation slot){

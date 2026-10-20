@@ -16,7 +16,7 @@ public final class DesignerSimulation {
             TreeResearchResultMode resultMode,List<String> outputs) {
         public State { learned=Set.copyOf(learned);discovered=Set.copyOf(discovered);exempt=Set.copyOf(exempt);inventory=List.copyOf(inventory);outputs=List.copyOf(outputs);
             if(learned.size()>4096||discovered.size()>4096||exempt.size()>4096||inventory.size()>256||points<0||points>1_000_000_000||bench<1||bench>3||outputs.size()>256||resultMode==null)throw new IllegalArgumentException("Scenario exceeds supported limits");
-            learned.forEach(ResourceLocation::new);discovered.forEach(ResourceLocation::new);exempt.forEach(ResourceLocation::new);
+            learned.forEach(ResourceLocation::parse);discovered.forEach(ResourceLocation::parse);exempt.forEach(ResourceLocation::parse);
         }
         public static State empty(TreeResearchResultMode mode){return new State(Set.of(),Set.of(),Set.of(),List.of(),0,1,false,mode,List.of());}
     }
@@ -24,7 +24,7 @@ public final class DesignerSimulation {
     public static List<ResearchIngredientPlanner.SlotFact> testSupplies(ResearchDesignerProject project,ResearchDesignerCapture capture){
         var facts=capture.json().getAsJsonObject("registry_facts");var items=facts.getAsJsonObject("items");var tags=facts.getAsJsonObject("item_tags");
         var wanted=new LinkedHashSet<String>();
-        DesignerCapturedSettings.progression(capture,new ResourceLocation(project.draft().profile().id())).currencyPolicy().item().ifPresent(id->wanted.add(id.toString()));
+        DesignerCapturedSettings.progression(capture,ResourceLocation.parse(project.draft().profile().id())).currencyPolicy().item().ifPresent(id->wanted.add(id.toString()));
         var policies=new ArrayList<com.google.gson.JsonObject>();policies.add(project.draft().profile().definition().json());project.draft().nodes().forEach(n->policies.add(n.policy().json()));
         for(var policy:policies){var cost=policy.getAsJsonObject("research_cost");if(cost==null||!cost.has("ingredients"))continue;
             for(var element:cost.getAsJsonArray("ingredients")){var ingredient=element.getAsJsonObject();
@@ -34,8 +34,8 @@ public final class DesignerSimulation {
         }
         var slots=new ArrayList<ResearchIngredientPlanner.SlotFact>();
         for(String item:wanted){if(slots.size()==256)break;if(!items.has(item)||items.get(item).getAsInt()<1)continue;
-            var membership=new HashSet<ResourceLocation>();tags.entrySet().forEach(e->{if(e.getValue().getAsJsonArray().asList().stream().anyMatch(v->v.getAsString().equals(item)))membership.add(new ResourceLocation(e.getKey()));});
-            slots.add(new ResearchIngredientPlanner.SlotFact(new ResourceLocation(item),Math.min(64,items.get(item).getAsInt()),membership));
+            var membership=new HashSet<ResourceLocation>();tags.entrySet().forEach(e->{if(e.getValue().getAsJsonArray().asList().stream().anyMatch(v->v.getAsString().equals(item)))membership.add(ResourceLocation.parse(e.getKey()));});
+            slots.add(new ResearchIngredientPlanner.SlotFact(ResourceLocation.parse(item),Math.min(64,items.get(item).getAsInt()),membership));
         }
         return List.copyOf(slots);
     }

@@ -92,6 +92,6 @@ class ResearchTreeLayoutInputTest {
     }
 
     private static ResourceLocation id(String path) {
-        return new ResourceLocation("phase_two", path);
+        return ResourceLocation.fromNamespaceAndPath("phase_two", path);
     }
 }

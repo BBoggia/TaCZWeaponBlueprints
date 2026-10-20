@@ -10,7 +10,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleMenuProvider;
@@ -33,9 +32,12 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.network.NetworkHooks;
 
 public final class ResearchBenchBlock extends HorizontalDirectionalBlock {
+    public static final com.mojang.serialization.MapCodec<ResearchBenchBlock> CODEC = com.mojang.serialization.codecs.RecordCodecBuilder.mapCodec(instance -> instance.group(
+            com.mojang.serialization.Codec.STRING.xmap(ResearchWorkbenchTier::parse, ResearchWorkbenchTier::serializedName).fieldOf("tier").forGetter(ResearchBenchBlock::tier), propertiesCodec()).apply(instance, ResearchBenchBlock::new));
+    @Override public com.mojang.serialization.MapCodec<ResearchBenchBlock> codec() { return CODEC; }
+
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
     public static final BooleanProperty EXTENSION = BooleanProperty.create("extension");
     private static final VoxelShape BASE_SHAPE = Block.box(0, 0, 0, 16, 14, 16);
@@ -177,7 +179,7 @@ public final class ResearchBenchBlock extends HorizontalDirectionalBlock {
     }
 
     @Override
-    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide && state.getValue(EXTENSION)) {
             BlockPos rootPos = counterpartPos(pos, state);
             BlockState rootState = level.getBlockState(rootPos);
@@ -185,7 +187,7 @@ public final class ResearchBenchBlock extends HorizontalDirectionalBlock {
                 level.destroyBlock(rootPos, !player.isCreative(), player);
             }
         }
-        super.playerWillDestroy(level, pos, state, player);
+        return super.playerWillDestroy(level, pos, state, player);
     }
 
     @Override
@@ -226,19 +228,16 @@ public final class ResearchBenchBlock extends HorizontalDirectionalBlock {
     }
 
     @Override
-    public InteractionResult use(
+    public InteractionResult useWithoutItem(
             BlockState state,
             Level level,
             BlockPos pos,
             Player player,
-            InteractionHand hand,
             BlockHitResult hit) {
         if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
             BlockPos rootPos = rootPosition(pos, state);
             if (isValidRoot(level, rootPos, tier)) {
-                NetworkHooks.openScreen(
-                        serverPlayer,
-                        menuProvider(level, rootPos),
+                serverPlayer.openMenu(menuProvider(level, rootPos),
                         buffer -> {
                             buffer.writeBlockPos(rootPos);
                             buffer.writeVarInt(tier.level());

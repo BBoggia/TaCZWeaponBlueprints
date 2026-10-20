@@ -10,14 +10,14 @@ import com.google.gson.GsonBuilder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.OnDatapackSyncEvent;
-import net.minecraftforge.event.server.ServerStartedEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.OnDatapackSyncEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /** Opt-in native reload/config checks without spawning or opening a villager. */
-@Mod.EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID)
+@EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID)
 public final class VillagerTradeDefinitionProbe {
     private static final List<String> results=new ArrayList<>();
     private static Path root,override; private static String original; private static long revision;
@@ -25,7 +25,7 @@ public final class VillagerTradeDefinitionProbe {
         root=VillagerPrototypeStock.root();if(root==null||Boolean.getBoolean("tacz.villagerQA.stock")||!Boolean.getBoolean("tacz.villagerQA.trades"))return;
         var server=event.getServer();server.execute(()->{
             try {
-                MinecraftForge.EVENT_BUS.post(new OnDatapackSyncEvent(server.getPlayerList(),null));
+                NeoForge.EVENT_BUS.post(new OnDatapackSyncEvent(server.getPlayerList(),null));
                 var report=TradeRuntime.inspect();save("baseline",report);
                 require(report.definitionsRevision()>0,"Bundled definitions published");
                 require(report.resolution().slots().size()==23,"Twenty core and three conditional support slots inspect without villagers");
@@ -88,7 +88,7 @@ public final class VillagerTradeDefinitionProbe {
             finish(server,null);
         }catch(Throwable error){finish(server,error);}
     }
-    private static ResourceLocation id(String value){return new ResourceLocation("taczweaponblueprints",value);}
+    private static ResourceLocation id(String value){return ResourceLocation.fromNamespaceAndPath("taczweaponblueprints", value);}
     private static void require(boolean ok,String message){if(!ok)throw new AssertionError(message);results.add(message);}
     private static void save(String name,TradeRuntime.Inspection report)throws Exception{Files.writeString(root.resolve("trades-"+name+".json"),new GsonBuilder().setPrettyPrinting().create().toJson(TradeDiagnostics.json(report)));}
     private static void finish(MinecraftServer server,Throwable failure){

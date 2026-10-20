@@ -320,7 +320,7 @@ final class ResearchTechTreePresentationBuilder {
         int bandCount = divideRoundUp(occupiedRanks.size(), ranksPerBand);
         List<ResearchTechTreePresentation.BandLabel> labels = new ArrayList<>(bandCount);
         for (int index = 0; index < bandCount; index++) {
-            ResourceLocation id = new ResourceLocation(
+            ResourceLocation id = ResourceLocation.fromNamespaceAndPath(
                     "taczweaponblueprints", "dynamic_band/" + index);
             labels.add(new ResearchTechTreePresentation.BandLabel(
                     id,

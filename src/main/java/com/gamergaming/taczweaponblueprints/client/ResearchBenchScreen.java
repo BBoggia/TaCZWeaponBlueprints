@@ -19,7 +19,6 @@ import com.gamergaming.taczweaponblueprints.journal.BlueprintJournalEntry;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchResearchAction;
 import com.gamergaming.taczweaponblueprints.menu.ResearchSelectionPreview;
-import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.network.ResearchAffordabilityRequestPacket;
 import com.gamergaming.taczweaponblueprints.network.ResearchBenchActionPacket;
 import com.gamergaming.taczweaponblueprints.network.ResearchGuidanceRequestPacket;
@@ -56,7 +55,7 @@ import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 /** Permanent Research-only tree backed entirely by the open server menu. */
 public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchBenchMenu> {
@@ -1317,7 +1316,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         ClientResearchPlannerState.targetId().ifPresent(target ->
                 ClientResearchGuidanceState.begin(
                                 graph, target, publication.generation())
-                        .ifPresent(request -> NetworkHandler.INSTANCE.sendToServer(
+                        .ifPresent(request -> net.neoforged.neoforge.network.PacketDistributor.sendToServer(
                                 new ResearchGuidanceRequestPacket(
                                         menu.containerId,
                                         request.requestId(),
@@ -1468,7 +1467,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         ClientResearchState.Publication publication = ClientResearchState.publication();
         ClientResearchAffordabilityState.beginNext(
                         treeProjections.publication().graph(), publication.generation())
-                .ifPresent(request -> NetworkHandler.INSTANCE.sendToServer(
+                .ifPresent(request -> net.neoforged.neoforge.network.PacketDistributor.sendToServer(
                         new ResearchAffordabilityRequestPacket(
                                 menu.containerId,
                                 request.requestId(),
@@ -2064,7 +2063,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 && quote.blueprintId().filter(id -> id.equals(target)).isPresent() && quote.routeFingerprint().isPresent()
                 ? new ResearchTreeRouteReviewState.Binding(menu.containerId, ClientResearchState.publication().generation(),
                         target, quote, captureGuidanceInventory(playerInventory)) : null);
-        if (routeReviewOpen) routeReview.request(Util.getMillis()).ifPresent(NetworkHandler.INSTANCE::sendToServer);
+        if (routeReviewOpen) routeReview.request(Util.getMillis()).ifPresent(net.neoforged.neoforge.network.PacketDistributor::sendToServer);
         treeCanvas.setReviewedRoute(routeReviewOpen ? routeReview.snapshot().orElse(null) : null);
     }
 
@@ -2128,7 +2127,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         int next = preview.ingredientOffset() + direction
                 * com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCost.MAX_INGREDIENT_TYPES;
         if (!preview.acceptsMaterialPage(target, preview.ingredientOffset(), next)) return;
-        NetworkHandler.INSTANCE.sendToServer(new com.gamergaming.taczweaponblueprints.network.ResearchMaterialPageRequestPacket(
+        net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.gamergaming.taczweaponblueprints.network.ResearchMaterialPageRequestPacket(
                 menu.containerId, ClientResearchState.publication().generation(), target, preview.ingredientOffset(), next));
     }
 
@@ -2638,7 +2637,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             int requestId,
             ResearchBenchResearchAction action,
             Optional<ResourceLocation> id) {
-        NetworkHandler.INSTANCE.sendToServer(
+        net.neoforged.neoforge.network.PacketDistributor.sendToServer(
                 new ResearchBenchActionPacket(
                         menu.containerId,
                         requestId,
@@ -3064,6 +3063,27 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        // The graph sits 300 units behind its controls to contain item-model
+        // depth. Keep that entire range in front of the world HUD on 1.21.
+        graphics.pose().pushPose();
+        graphics.pose().translate(0, 0, 400);
+        try {
+            renderResearchContents(graphics, mouseX, mouseY, partialTick);
+            graphics.flush();
+        } finally {
+            graphics.pose().popPose();
+        }
+    }
+
+    @Override
+    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        // This view paints an opaque backdrop below the graph. The inherited
+        // transparent backdrop writes depth at the controls' Z and hides it.
+        if (isTechTreeView()) renderBg(graphics, partialTick, mouseX, mouseY);
+        else super.renderBackground(graphics, mouseX, mouseY, partialTick);
+    }
+
+    private void renderResearchContents(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         reconcileScenePresentation();
         if (minecraft != null && !minecraft.isWindowActive()) { closeInspectorViewMenu(); cancelTreeInteraction(); }
         refreshDisplayPolicy();
@@ -3104,9 +3124,6 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             treeCanvas.updateHover(mouseX, mouseY);
         } else {
             treeCanvas.clearHover();
-        }
-        if (!fullscreen) {
-            renderBackground(graphics);
         }
         super.render(graphics, inspectorViewMenuOpen() ? -1 : mouseX, inspectorViewMenuOpen() ? -1 : mouseY, partialTick);
         if (!inspectorViewMenuOpen()) {
@@ -4379,7 +4396,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
 
     private ItemStack ingredientIcon(ResearchSelectionPreview.IngredientPreview ingredient) {
         if (!ingredient.items().isEmpty()) {
-            Item item = ForgeRegistries.ITEMS.getValue(ingredient.items().get(0));
+            Item item = BuiltInRegistries.ITEM.get(ingredient.items().get(0));
             if (item != null) {
                 return new ItemStack(item);
             }
@@ -5486,7 +5503,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double delta) {
         // A newer input owns navigation; a late Back preview must not replay the old view.
         inspectorReturn = null;
         reconcileScenePresentation();
@@ -5542,14 +5559,14 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                     || scrollTarget == ResearchTreeInteractionPolicy.ScrollTarget.CONTEXT_CARD) {
                 return true;
             } else if (scrollTarget == ResearchTreeInteractionPolicy.ScrollTarget.NONE) {
-                return super.mouseScrolled(mouseX, mouseY, delta);
+                return super.mouseScrolled(mouseX, mouseY, horizontal, delta);
             }
         }
         if (treeCanvas.mouseScrolled(mouseX, mouseY, delta)) {
             updateWidgets();
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, delta);
+        return super.mouseScrolled(mouseX, mouseY, horizontal, delta);
     }
 
     @Override

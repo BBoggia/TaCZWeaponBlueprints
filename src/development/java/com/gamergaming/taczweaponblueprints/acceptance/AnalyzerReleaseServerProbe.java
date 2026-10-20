@@ -25,14 +25,15 @@ import net.minecraft.world.item.*;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.phys.*;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.server.ServerStartingEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 /** Opt-in dedicated-server acceptance. No client classes may be referenced here. */
-@Mod.EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID)
+@EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID)
 public final class AnalyzerReleaseServerProbe {
     private static MinecraftServer server;
     private static int step, age, warmup, assertions, attempts, reconnect;
@@ -57,18 +58,18 @@ public final class AnalyzerReleaseServerProbe {
             if (PHASE.equals("migration")) {
                 var uuid = Files.readString(ROOT.resolve("player-uuid.txt")).trim();
                 var path = server.getWorldPath(LevelResource.PLAYER_DATA_DIR).resolve(uuid + ".dat");
-                var player = NbtIo.readCompressed(path.toFile());
+                var player = NbtIo.readCompressed(path, net.minecraft.nbt.NbtAccounter.unlimitedHeap());
                 var cap = player.getCompound("ForgeCaps").getCompound("taczweaponblueprints:player_recipe_data");
                 verify(cap.getInt("DataVersion") == 5, "version-5 saved player exists before migration fixture");
                 cap.putInt("DataVersion", 4); cap.remove("ArchivedAnalysisFragments");
-                NbtIo.writeCompressed(player, path.toFile());
+                NbtIo.writeCompressed(player, path);
                 write("migration-fixture.snbt", cap.toString());
             }
             write("command", "connect");
         } catch (Exception e) { fail(e); }
     }
-    @SubscribeEvent public static void tick(TickEvent.ServerTickEvent event) {
-        if (!ENABLED || finished || server == null || event.phase != TickEvent.Phase.END) return;
+    @SubscribeEvent public static void tick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+        if (!ENABLED || finished || server == null) return;
         try {
             if (++age > 12000) throw new IllegalStateException("Dedicated Analyzer acceptance timed out");
             if (!read("client-error.txt").isEmpty()) throw new IllegalStateException("Client acceptance failed: " + read("client-error.txt"));
@@ -98,12 +99,12 @@ public final class AnalyzerReleaseServerProbe {
             var row = new JsonObject(); row.addProperty("case", name(step)); row.addProperty("attempt", attempts);
             row.addProperty("preview", before.toString());
             if (LOADED_AMMO && !loadedInput.isEmpty()) {
-                row.addProperty("loadedInput", loadedInput.save(new CompoundTag()).toString());
+                row.addProperty("loadedInput", loadedInput.save(server.registryAccess()).toString());
                 row.addProperty("expectedReturnedRounds", action(step) ? expectedAmmo : 0);
                 row.addProperty("physicalCurrency", physicalCurrency());
             }
             var menu = (BlueprintRecyclerMenu)player.containerMenu;
-            row.addProperty("output", menu.outputStack().save(new CompoundTag()).toString());
+            row.addProperty("output", menu.outputStack().save(server.registryAccess()).toString());
             cases.add(row);
             if (step == 10 && !(menu.outputStack().getItem() instanceof BlueprintFragmentItem)) {
                 verify(++attempts < 64, "observe partial result within bounded genuine attempts");
@@ -145,12 +146,12 @@ public final class AnalyzerReleaseServerProbe {
         p.serverLevel().removeBlock(pos, false);
         if (!com.gamergaming.taczweaponblueprints.block.BlueprintRecyclerBlock.placeCompleteStructure(
                 p.serverLevel(), pos, block.defaultBlockState())) throw new IllegalStateException("Analyzer fixture needs two blocks");
-        block.use(p.serverLevel().getBlockState(pos), p.serverLevel(), pos, p, InteractionHand.MAIN_HAND,
+        p.serverLevel().getBlockState(pos).useWithoutItem(p.serverLevel(), p,
                 new BlockHitResult(Vec3.atCenterOf(pos), Direction.NORTH, pos, false));
         var menu = (BlueprintRecyclerMenu)p.containerMenu;
-        var item = ForgeRegistries.ITEMS.getValues().stream().filter(i -> i instanceof IGun).findFirst().orElseThrow();
+        var item = BuiltInRegistries.ITEM.stream().filter(i -> i instanceof IGun).findFirst().orElseThrow();
         var input = new ItemStack(item); ((IGun)item).setGunId(input, target);
-        PhysicalWeaponProvenance.stampLootGenerated(input, new ResourceLocation("minecraft:chests/simple_dungeon"));
+        PhysicalWeaponProvenance.stampLootGenerated(input, ResourceLocation.parse("minecraft:chests/simple_dungeon"));
         if (n == 11) {
             input = BlueprintFragmentItem.createAnalysis(target, AnalysisRewardClass.PROTECTED_PREREQUISITES);
             data.applyAnalysisFragmentMutation(new AnalysisFragmentMutation(PlayerProgressValueMutation.Operation.COMMIT,
@@ -158,7 +159,7 @@ public final class AnalyzerReleaseServerProbe {
         }
         if (n == 13) menu.getSlot(1).set(new ItemStack(Items.STONE));
         if (n == 16) input = new ItemStack(ModItems.RESEARCH_NOTE.get(), 3);
-        if (n == 17) { input = new ItemStack(ModItems.BLUEPRINT_FRAGMENT.get(), 5); input.getOrCreateTag().putString("BlueprintTarget", target.toString()); }
+        if (n == 17) { input = new ItemStack(ModItems.BLUEPRINT_FRAGMENT.get(), 5); net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, input, tag -> tag.putString("BlueprintTarget", target.toString())); }
         if (n == 18) input = BlueprintItem.createBlueprint(target.toString());
         if (n == 19) {
             originalRecovery = ModConfigs.BLUEPRINT.foundWeaponRecoveryMode;
@@ -199,7 +200,7 @@ public final class AnalyzerReleaseServerProbe {
             verify(ammunitionCount(p, returnedAmmo) == ammoBefore + (action(step) ? expectedAmmo : 0),
                     "loaded ammo conserved for " + name(step) + ": " + expectedAmmo + " returned on success");
             if (!action(step)) verify(ItemStack.matches(loadedInput, menu.inputStack()), "blocked action preserves complete loaded gun NBT");
-            if (step == 9 && expectedAmmo > 0) verify(p.getInventory().items.stream().noneMatch(stack -> ItemStack.isSameItemSameTags(stack, returnedAmmo)), "full inventory sends ammo to world");
+            if (step == 9 && expectedAmmo > 0) verify(p.getInventory().items.stream().noneMatch(stack -> ItemStack.isSameItemSameComponents(stack, returnedAmmo)), "full inventory sends ammo to world");
         }
         if (LOADED_AMMO && step == 9) {
             int rounds = ammunitionCount(p, returnedAmmo);
@@ -235,11 +236,11 @@ public final class AnalyzerReleaseServerProbe {
     }
     private static int ammunitionCount(ServerPlayer player, ItemStack ammo) {
         if (ammo.isEmpty()) return 0;
-        int count=player.getInventory().items.stream().filter(stack->ItemStack.isSameItemSameTags(stack,ammo)).mapToInt(ItemStack::getCount).sum();
-        for(var entity:player.serverLevel().getAllEntities()) if(entity instanceof net.minecraft.world.entity.item.ItemEntity item && ItemStack.isSameItemSameTags(item.getItem(),ammo)) count+=item.getItem().getCount();
+        int count=player.getInventory().items.stream().filter(stack->ItemStack.isSameItemSameComponents(stack,ammo)).mapToInt(ItemStack::getCount).sum();
+        for(var entity:player.serverLevel().getAllEntities()) if(entity instanceof net.minecraft.world.entity.item.ItemEntity item && ItemStack.isSameItemSameComponents(item.getItem(),ammo)) count+=item.getItem().getCount();
         return count;
     }
-    private static IPlayerRecipeData data(ServerPlayer p) { return p.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElseThrow(); }
+    private static IPlayerRecipeData data(ServerPlayer p) { return com.gamergaming.taczweaponblueprints.init.ModAttachments.recipeData(p).orElseThrow(); }
     private static void seedPersistence(ServerPlayer p) throws Exception {
         restore(); p.closeContainer(); p.getInventory().clearContent(); var d = data(p);
         d.replaceProgression(Set.of(targets.get(0).toString()), targets.stream().map(Object::toString).toList(), 137);

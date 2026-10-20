@@ -35,14 +35,14 @@ import net.minecraft.world.item.trading.*;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.phys.AABB;
-import net.minecraftforge.common.util.FakePlayerFactory;
-import net.minecraftforge.event.server.ServerStartedEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.util.ObfuscationReflectionHelper;
+import net.neoforged.neoforge.common.util.FakePlayerFactory;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.util.ObfuscationReflectionHelper;
 
 /** Native inventory/AI/persistence checks. Never runs without an explicit marked QA root. */
-@Mod.EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID)
+@EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID)
 public final class VillagerMerchantProbe {
     private static final List<String> RESULTS = new ArrayList<>();
     private static ServerLevel level;
@@ -119,14 +119,14 @@ public final class VillagerMerchantProbe {
     }
     private static void pricing() throws Exception {
         var o=priced(); o.setSpecialPriceDiff(-30);
-        CompoundTag tag=o.createTag();tag.putInt("demand",20);o=new MerchantOffer(tag);
+        CompoundTag tag=com.gamergaming.taczweaponblueprints.villager.OwnedOfferSerialization.save(o, level.registryAccess());tag.putInt("demand",20);o=com.gamergaming.taczweaponblueprints.villager.OwnedOfferSerialization.read(tag, level.registryAccess());
         require(o.getCostA().getCount()==18,"Demand bonus plus reputation respects minimum 18");
-        tag=o.createTag();tag.putInt("demand",0);o=new MerchantOffer(tag);
+        tag=com.gamergaming.taczweaponblueprints.villager.OwnedOfferSerialization.save(o, level.registryAccess());tag.putInt("demand",0);o=com.gamergaming.taczweaponblueprints.villager.OwnedOfferSerialization.read(tag, level.registryAccess());
         require(o.getCostA().getCount()==18,"Demand decrease recalculates floor instead of reusing correction");
         for(int demand:new int[]{0,1,20,Integer.MAX_VALUE,Integer.MIN_VALUE}) {
-            tag=o.createTag();tag.putInt("demand",demand);var current=new MerchantOffer(tag);
-            var buffer=new FriendlyByteBuf(Unpooled.buffer());
-            try { offers(current).writeToStream(buffer);var client=MerchantOffers.createFromStream(buffer).get(0);
+            tag=com.gamergaming.taczweaponblueprints.villager.OwnedOfferSerialization.save(o, level.registryAccess());tag.putInt("demand",demand);var current=com.gamergaming.taczweaponblueprints.villager.OwnedOfferSerialization.read(tag, level.registryAccess());
+            var buffer=new net.minecraft.network.RegistryFriendlyByteBuf(Unpooled.buffer(), level.registryAccess());
+            try { MerchantOffers.STREAM_CODEC.encode(buffer, offers(current));var client=MerchantOffers.STREAM_CODEC.decode(buffer).get(0);
                 require(ItemStack.matches(current.getCostA(),client.getCostA()),"Vanilla packet displays charged price at demand "+demand);
                 require(((OwnedVillagerOffer)client).taczweaponblueprints$terms()==null,"Native packet leaves ownership off merchandise/client state");
             } finally {buffer.release();}
@@ -134,7 +134,7 @@ public final class VillagerMerchantProbe {
         var v=villager(ModVillagers.GUNSMITH.get());o=priced();v.setOffers(offers(o));
         v.getGossips().add(player.getUUID(),GossipType.MAJOR_POSITIVE,100);
         player.addEffect(new MobEffectInstance(MobEffects.HERO_OF_THE_VILLAGE,600,3));
-        var update=ObfuscationReflectionHelper.findMethod(Villager.class,"m_35540_",Player.class);
+        var update=ObfuscationReflectionHelper.findMethod(Villager.class,"updateSpecialPrices",Player.class);
         update.invoke(v,player);require(o.getCostA().getCount()==18,"Native Hero and reputation cannot cross floor");
         v.setTradingPlayer(player);v.setTradingPlayer(null);player.removeAllEffects();
         var other=FakePlayerFactory.get(level,new GameProfile(UUID.fromString("76475c01-081d-42a4-aebb-42ba75ad4635"),"VillagerProbe2"));
@@ -160,7 +160,7 @@ public final class VillagerMerchantProbe {
             require(o.getUses()==1 && v.getVillagerXp()==5 && menu.getSlot(0).getItem().isEmpty() && menu.getSlot(1).getItem().isEmpty() && outputs+drops==1,"Native successful "+click+": one payment, output, use and XP award");
             player.closeContainer();v.discard();
             v=villager(ModVillagers.GUNSMITH.get());o=priced();menu=open(v,o);pay(menu,o);
-            var before=o.createTag();var terms=((OwnedVillagerOffer)o).taczweaponblueprints$terms();
+            var before=com.gamergaming.taczweaponblueprints.villager.OwnedOfferSerialization.save(o, level.registryAccess());var terms=((OwnedVillagerOffer)o).taczweaponblueprints$terms();
             ((OwnedVillagerOffer)o).taczweaponblueprints$terms(new VillagerOfferTerms(terms.slot(),terms.minimumPrimary(),false,terms.revision()+1));
             entities=level.getEntitiesOfClass(ItemEntity.class,new AABB(-8,70,-8,8,90,8)).size();
             menu.clicked(2,0,click,player);
@@ -177,7 +177,7 @@ public final class VillagerMerchantProbe {
         require(!((VillagerMerchantMenuBridge)menu).taczweaponblueprints$validateQuote(player) && player.containerMenu==player.inventoryMenu,"Price change closes stale quote before next input");
         v.setTradingPlayer(player);menu=new MerchantMenu(++sequence,player.getInventory(),v);player.containerMenu=menu;
         require(((VillagerMerchantMenuBridge)menu).taczweaponblueprints$validateQuote(player),"Reopened menu quotes current terms");player.closeContainer();v.discard();
-        v=villager(VillagerProfession.FARMER);o=new MerchantOffer(new ItemStack(Items.EMERALD,24),new ItemStack(Items.PAPER),4,1,.05F);o.setSpecialPriceDiff(-100);
+        v=villager(VillagerProfession.FARMER);o=new MerchantOffer(new net.minecraft.world.item.trading.ItemCost(Items.EMERALD,24),new ItemStack(Items.PAPER),4,1,.05F);o.setSpecialPriceDiff(-100);
         menu=open(v,o);pay(menu,o);menu.clicked(2,0,ClickType.PICKUP,player);
         require(o.getCostA().getCount()==1 && o.getUses()==1,"Unowned vanilla profession pricing/trading untouched");player.closeContainer();v.discard();
     }
@@ -195,7 +195,7 @@ public final class VillagerMerchantProbe {
         var zombie=new Zombie(EntityType.ZOMBIE,level);zombie.killedEntity(level,v);
         var infected=level.getEntitiesOfClass(ZombieVillager.class,v.getBoundingBox().inflate(2)).stream().filter(e->!ids.contains(e.getUUID())).findFirst().orElseThrow();
         var beforeIds=new HashSet<UUID>();level.getEntitiesOfClass(Villager.class,infected.getBoundingBox().inflate(2)).forEach(e->beforeIds.add(e.getUUID()));
-        ObfuscationReflectionHelper.findMethod(ZombieVillager.class,"m_34398_",ServerLevel.class).invoke(infected,level);
+        ObfuscationReflectionHelper.findMethod(ZombieVillager.class,"finishConversion",ServerLevel.class).invoke(infected,level);
         var cured=level.getEntitiesOfClass(Villager.class,infected.getBoundingBox().inflate(2)).stream().filter(e->!beforeIds.contains(e.getUUID())).findFirst().orElseThrow();
         require(cured.getVillagerData().getProfession()==ModVillagers.GUNSMITH.get() && cured.getVillagerXp()==12
                 && cured.getOffers().get(0).getUses()==1 && ((OwnedVillagerOffer)cured.getOffers().get(0)).taczweaponblueprints$terms().equals(((OwnedVillagerOffer)o).taczweaponblueprints$terms()),"Native zombification and curing preserve profession, XP, choices and spent stock");cured.discard();
@@ -216,7 +216,7 @@ public final class VillagerMerchantProbe {
         player.closeContainer();v.discard();
         // Direct calls to the native quick-move entry point receive the same stale-quote guard.
         v=villager(ModVillagers.GUNSMITH.get());o=priced();menu=open(v,o);pay(menu,o);
-        o.getBaseCostA().setCount(32);
+        net.neoforged.fml.util.ObfuscationReflectionHelper.setPrivateValue(MerchantOffer.class, o, new net.minecraft.world.item.trading.ItemCost(Items.EMERALD, 32), "baseCostA");
         require(menu.quickMoveStack(player,2).isEmpty() && o.getUses()==0 && player.getInventory().countItem(Items.EMERALD)==24,
                 "Direct quick-move rejects changed base price and returns inputs");
         v.discard();
@@ -224,13 +224,13 @@ public final class VillagerMerchantProbe {
     private static void actualContents() {
         if(MagazineCatalog.INSTANCE.publication().catalog().status()==TaCZMagazinesAdapter.Status.WAITING_FOR_RECIPES) {
             RESULTS.add("Installed magazine adapter waits for native recipe synchronization before stock can resolve");
-            net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(new net.minecraftforge.event.OnDatapackSyncEvent(level.getServer().getPlayerList(),null));
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.event.OnDatapackSyncEvent(level.getServer().getPlayerList(),null));
             require(MagazineCatalog.INSTANCE.publication().catalog().status()==TaCZMagazinesAdapter.Status.READY,
                     "Native upstream datapack-sync handler generates and publishes magazine recipes");
         }
         var data=Objects.requireNonNull(BlueprintDataManager.SERVER.getBlueprintData("tacz:glock_17"));
         var gun=data.getRecipe().getOutput().copy();
-        var fragment=BlueprintFragmentItem.createAnalysis(new ResourceLocation("tacz:glock_17"),AnalysisRewardClass.PROTECTED_PREREQUISITES);
+        var fragment=BlueprintFragmentItem.createAnalysis(ResourceLocation.parse("tacz:glock_17"),AnalysisRewardClass.PROTECTED_PREREQUISITES);
         var v=villager(ModVillagers.BALLISTICS_RESEARCHER.get());
         var o=VillagerPrototypeStock.offer("fragment",new ItemStack(ModItems.SCRAP.get(),8),ItemStack.EMPTY,fragment,3,5);
         var menu=open(v,o);pay(menu,o);menu.clicked(2,0,ClickType.PICKUP,player);
@@ -241,7 +241,7 @@ public final class VillagerMerchantProbe {
         require(ItemStack.matches(menu.getCarried(),gun),"Native two-input sale returns exact TaCZ gun");player.closeContainer();
         var capture=MagazineCatalog.INSTANCE.publication().catalog();
         if(capture.status()==TaCZMagazinesAdapter.Status.READY) {
-            var family=capture.families().values().stream().filter(d->d.extensionLevel()==0 && d.compatibleGuns().contains(new ResourceLocation("tacz:glock_17"))).findFirst().orElseThrow();
+            var family=capture.families().values().stream().filter(d->d.extensionLevel()==0 && d.compatibleGuns().contains(ResourceLocation.parse("tacz:glock_17"))).findFirst().orElseThrow();
             var support=VillagerPrototypeStock.offer("magazine",new ItemStack(ModItems.SCRAP.get(),6),new ItemStack(Items.IRON_INGOT,2),family.output(),4,5);
             v.setOffers(offers(o,priced(),support));
             require(v.getVillagerData().getLevel()==2 && v.getOffers().size()==3 && ItemStack.matches(v.getOffers().get(2).getResult(),family.output()),"Controlled same-level magazine support is added after two core offers");

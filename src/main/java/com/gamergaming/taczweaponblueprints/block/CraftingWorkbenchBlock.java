@@ -13,7 +13,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -35,11 +34,14 @@ import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.network.NetworkHooks;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 /** A two-block TaCZ crafting workstation with an authenticated progression tier. */
 public final class CraftingWorkbenchBlock extends HorizontalDirectionalBlock {
+    public static final com.mojang.serialization.MapCodec<CraftingWorkbenchBlock> CODEC = com.mojang.serialization.codecs.RecordCodecBuilder.mapCodec(instance -> instance.group(
+            com.mojang.serialization.Codec.STRING.xmap(ResearchWorkbenchTier::parse, ResearchWorkbenchTier::serializedName).fieldOf("tier").forGetter(CraftingWorkbenchBlock::tier), com.mojang.serialization.Codec.doubleRange(0.0001, 32).fieldOf("height").forGetter(value -> value.height), propertiesCodec()).apply(instance, CraftingWorkbenchBlock::new));
+    @Override public com.mojang.serialization.MapCodec<CraftingWorkbenchBlock> codec() { return CODEC; }
+
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
     public static final BooleanProperty EXTENSION = BooleanProperty.create("extension");
 
@@ -50,6 +52,7 @@ public final class CraftingWorkbenchBlock extends HorizontalDirectionalBlock {
 
     private final ResearchWorkbenchTier tier;
     private final VoxelShape shape;
+    private final double height;
 
     public CraftingWorkbenchBlock(
             ResearchWorkbenchTier tier,
@@ -60,6 +63,7 @@ public final class CraftingWorkbenchBlock extends HorizontalDirectionalBlock {
             throw new IllegalArgumentException("invalid crafting Workbench definition");
         }
         this.tier = tier;
+        this.height = height;
         this.shape = Block.box(0.0D, 0.0D, 0.0D, 16.0D, height, 16.0D);
         registerDefaultState(stateDefinition.any()
                 .setValue(FACING, Direction.NORTH)
@@ -170,7 +174,7 @@ public final class CraftingWorkbenchBlock extends HorizontalDirectionalBlock {
     }
 
     @Override
-    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide && state.getValue(EXTENSION)) {
             BlockPos rootPos = counterpartPos(pos, state);
             BlockState rootState = level.getBlockState(rootPos);
@@ -178,7 +182,7 @@ public final class CraftingWorkbenchBlock extends HorizontalDirectionalBlock {
                 level.destroyBlock(rootPos, !player.isCreative(), player);
             }
         }
-        super.playerWillDestroy(level, pos, state, player);
+        return super.playerWillDestroy(level, pos, state, player);
     }
 
     @Override
@@ -222,12 +226,11 @@ public final class CraftingWorkbenchBlock extends HorizontalDirectionalBlock {
     }
 
     @Override
-    public InteractionResult use(
+    public InteractionResult useWithoutItem(
             BlockState state,
             Level level,
             BlockPos pos,
             Player player,
-            InteractionHand hand,
             BlockHitResult hit) {
         if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
             BlockPos rootPos = rootPosition(pos, state);
@@ -239,13 +242,11 @@ public final class CraftingWorkbenchBlock extends HorizontalDirectionalBlock {
     }
 
     private void openCrafting(ServerPlayer player, Level level, BlockPos rootPos) {
-        ResourceLocation workstationId = ForgeRegistries.BLOCKS.getKey(this);
+        ResourceLocation workstationId = BuiltInRegistries.BLOCK.getKey(this);
         if (workstationId == null) {
             return;
         }
-        NetworkHooks.openScreen(
-                player,
-                new net.minecraft.world.SimpleMenuProvider(
+        player.openMenu(new net.minecraft.world.SimpleMenuProvider(
                         (containerId, inventory, ignoredPlayer) -> {
                             GunSmithTableMenu menu = new GunSmithTableMenu(
                                     containerId, inventory, workstationId);

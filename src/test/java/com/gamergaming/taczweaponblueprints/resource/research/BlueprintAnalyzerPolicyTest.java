@@ -65,7 +65,7 @@ class BlueprintAnalyzerPolicyTest {
 
     @Test void exactAndStableWinnerDoNotAccumulateLowerRulesOrShadowCoreCosts() {
         var tag = rule("{\"weapon_tier\":\"tier_3\",\"attempt\":{\"cost\":{\"points\":99}}}");
-        var tagJson = BlueprintResearchRule.CODEC.encodeStart(JsonOps.INSTANCE, tag).getOrThrow(false, ignored -> {}).getAsJsonObject();
+        var tagJson = BlueprintResearchRule.CODEC.encodeStart(JsonOps.INSTANCE, tag).getOrThrow().getAsJsonObject();
         tagJson.add("target", JsonParser.parseString("{\"tags\":[\"test:weapons\"]}")); tagJson.addProperty("priority", 1000);
         var coreJson = JsonParser.parseString("{\"format\":5,\"profile\":\"test:analyzer\",\"target\":{\"tags\":[\"test:weapons\"]},\"reverse_engineering\":{\"cost\":{\"points\":7}}}");
         var snapshot = snapshot(profileJson(), Map.of(id("test:tag"), decode(BlueprintResearchRule.CODEC, tagJson),
@@ -139,7 +139,7 @@ class BlueprintAnalyzerPolicyTest {
         assertTrue(BlueprintResearchProfile.CODEC.parse(JsonOps.INSTANCE, json).error().isPresent());
         json.remove("analyzer");
         assertEquals(AnalyzerPolicyQuote.Status.LEGACY, quote(snapshot(json, Map.of()), 1).status());
-        var rule = BlueprintResearchRule.CODEC.encodeStart(JsonOps.INSTANCE, rule("{\"mode\":\"disabled\"}")).getOrThrow(false, ignored -> {}).getAsJsonObject();
+        var rule = BlueprintResearchRule.CODEC.encodeStart(JsonOps.INSTANCE, rule("{\"mode\":\"disabled\"}")).getOrThrow().getAsJsonObject();
         rule.addProperty("format", 4);
         assertTrue(BlueprintResearchRule.CODEC.parse(JsonOps.INSTANCE, rule).error().isPresent());
     }
@@ -205,7 +205,7 @@ class BlueprintAnalyzerPolicyTest {
 
     @Test void canonicalCodecRoundTripAndCatalogExportRetainAllTwelveOriginPairings() {
         var profile = decode(BlueprintResearchProfile.CODEC, profileJson());
-        var encoded = BlueprintResearchProfile.CODEC.encodeStart(JsonOps.INSTANCE, profile).getOrThrow(false, ignored -> {});
+        var encoded = BlueprintResearchProfile.CODEC.encodeStart(JsonOps.INSTANCE, profile).getOrThrow();
         assertEquals(profile, decode(BlueprintResearchProfile.CODEC, encoded));
         var snapshot = snapshot(profileJson(), Map.of());
         var exported = JsonParser.parseString(BlueprintResearchCatalogExporter.export(snapshot, CATALOG, PROFILE)).getAsJsonObject();
@@ -300,7 +300,7 @@ class BlueprintAnalyzerPolicyTest {
                 BlueprintAnalyzerPolicy.Origin.UNKNOWN, FoundWeaponRecoveryMode.PROTECTED_BLUEPRINT_ONLY);
     }
     static <T> T decode(Codec<T> codec, JsonElement json) {
-        return codec.parse(JsonOps.INSTANCE, json).getOrThrow(false, message -> { throw new AssertionError(message); });
+        return codec.parse(JsonOps.INSTANCE, json).getOrThrow(AssertionError::new);
     }
-    static ResourceLocation id(String value) { return new ResourceLocation(value); }
+    static ResourceLocation id(String value) { return ResourceLocation.parse(value); }
 }

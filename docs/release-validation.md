@@ -3,7 +3,20 @@
 This reference explains the technical evidence required for a release of
 [TaCZ] Weapon Research & Blueprints. Use the shorter
 [release checklist](release-checklist.md) for the reusable prepare, validate,
-and publish workflow. Release commands require JDK 17.
+and publish workflow.
+
+## NeoForge 1.21.1
+
+The NeoForge branch requires JDK 21. Its regression, artifact, and installed-game
+commands are documented in [NeoForge development](neoforge-development.md#packaged-runtime-matrix).
+Run the complete packaged runtime matrix before `certifyReleaseCandidate`.
+Then run `verifyPublicationReadiness` after preparing the release version and
+public copy. Evidence and JARs are under `build/neoforge/`; each game result is
+bound to the exact artifact and verification fixture.
+
+The sections below describe the preserved Forge 1.20.1 release process on
+`v1.3.8`, which uses JDK 17 and Forge reobfuscation. Those commands and report
+formats are not the NeoForge certification contract.
 
 ## Automated validation
 

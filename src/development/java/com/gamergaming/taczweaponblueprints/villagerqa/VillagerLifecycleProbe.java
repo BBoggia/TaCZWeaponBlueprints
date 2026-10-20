@@ -17,12 +17,13 @@ import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.inventory.MerchantMenu;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.trading.*;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /** Drives actual connected players through native packet actions in disposable environments. */
-@Mod.EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID)
+@EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID)
 public final class VillagerLifecycleProbe {
     private static final List<String> checks=new ArrayList<>();
     private static int phase,tick,since,action;
@@ -36,8 +37,8 @@ public final class VillagerLifecycleProbe {
     private static Path root;
     private static boolean integrated;
     private static String client(){return integrated?"client-integrated":"client-a";}
-    @SubscribeEvent public static void tick(TickEvent.ServerTickEvent event){
-        if(Boolean.getBoolean("tacz.villagerQA.presentation")||Boolean.getBoolean("tacz.villagerQA.balance")||!Boolean.getBoolean("tacz.villagerQA.lifecycle")||event.phase!=TickEvent.Phase.END||done||VillagerPrototypeStock.root()==null)return;
+    @SubscribeEvent public static void tick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event){
+        if(Boolean.getBoolean("tacz.villagerQA.presentation")||Boolean.getBoolean("tacz.villagerQA.balance")||!Boolean.getBoolean("tacz.villagerQA.lifecycle")||done||VillagerPrototypeStock.root()==null)return;
         var server=event.getServer();integrated=!server.isDedicatedServer();root=Path.of(System.getProperty("tacz.villagerQA.control"));tick++;
         if(tick%5!=0||reloading)return;
         try{
@@ -114,7 +115,7 @@ public final class VillagerLifecycleProbe {
         },server);
     }
     private static StockState state(){return ((StockVillagerBridge)v).taczweaponblueprints$stock();}
-    private static void open(ServerPlayer player)throws Exception{v.setTradingPlayer(null);net.minecraftforge.fml.util.ObfuscationReflectionHelper.findMethod(Villager.class,"m_35540_",net.minecraft.world.entity.player.Player.class).invoke(v,player);v.setTradingPlayer(player);v.openTradingScreen(player,v.getDisplayName(),v.getVillagerData().getLevel());open=(MerchantMenu)player.containerMenu;}
+    private static void open(ServerPlayer player)throws Exception{v.setTradingPlayer(null);net.neoforged.fml.util.ObfuscationReflectionHelper.findMethod(Villager.class,"updateSpecialPrices",net.minecraft.world.entity.player.Player.class).invoke(v,player);v.setTradingPlayer(player);v.openTradingScreen(player,v.getDisplayName(),v.getVillagerData().getLevel());open=(MerchantMenu)player.containerMenu;}
     private static void send(String client,String kind,int container,int index)throws Exception{var j=new JsonObject();j.addProperty("id",++action);j.addProperty("kind",kind);j.addProperty("container",container);j.addProperty("index",index);Files.writeString(root.resolve(client+"-action.json"),j.toString());}
     private static Optional<JsonObject> stateFile(String client){try{return Optional.of(JsonParser.parseString(Files.readString(root.resolve(client+"-state.json"))).getAsJsonObject());}catch(Exception e){return Optional.empty();}}
     private static boolean status(String client){return stateFile(client).filter(j->j.has("status")&&j.get("status").getAsBoolean()).isPresent();}

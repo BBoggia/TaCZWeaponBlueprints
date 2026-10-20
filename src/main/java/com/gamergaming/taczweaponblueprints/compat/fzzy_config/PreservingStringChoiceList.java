@@ -19,8 +19,8 @@ import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedString;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.peanuuutz.tomlkt.TomlElement;
 
 /**

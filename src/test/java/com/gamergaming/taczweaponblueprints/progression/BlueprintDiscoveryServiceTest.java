@@ -24,7 +24,7 @@ class BlueprintDiscoveryServiceTest {
 
     @Test
     void discoversAValidInventoryBlueprintExactlyOnce() {
-        ResourceLocation blueprintId = new ResourceLocation("test", "ak47");
+        ResourceLocation blueprintId = ResourceLocation.fromNamespaceAndPath("test", "ak47");
         BlueprintDataManager.SERVER.setBlueprintDataMap(Map.of(blueprintId, blueprint(blueprintId)));
         PlayerRecipeData data = new PlayerRecipeData();
         data.setResearchPoints(25);
@@ -51,8 +51,8 @@ class BlueprintDiscoveryServiceTest {
 
     @Test
     void trackingToggleSuppressesInventoryDiscoveryWithoutDeletingState() {
-        ResourceLocation existingId = new ResourceLocation("test", "existing");
-        ResourceLocation newId = new ResourceLocation("test", "new_blueprint");
+        ResourceLocation existingId = ResourceLocation.fromNamespaceAndPath("test", "existing");
+        ResourceLocation newId = ResourceLocation.fromNamespaceAndPath("test", "new_blueprint");
         BlueprintDataManager.SERVER.setBlueprintDataMap(Map.of(newId, blueprint(newId)));
         PlayerRecipeData data = new PlayerRecipeData();
         data.discoverBlueprint(existingId.toString());
@@ -105,7 +105,7 @@ class BlueprintDiscoveryServiceTest {
 
     @Test
     void capacityFailureDoesNotMutateProgression() {
-        ResourceLocation overflowId = new ResourceLocation("test", "overflow");
+        ResourceLocation overflowId = ResourceLocation.fromNamespaceAndPath("test", "overflow");
         BlueprintDataManager.SERVER.setBlueprintDataMap(Map.of(overflowId, blueprint(overflowId)));
         PlayerRecipeData data = new PlayerRecipeData();
         for (int index = 0; index < PlayerProgressionLimits.MAX_IDS_PER_COLLECTION; index++) {
@@ -125,7 +125,7 @@ class BlueprintDiscoveryServiceTest {
 
     @Test
     void missingCapabilityDataFailsClosed() {
-        ResourceLocation blueprintId = new ResourceLocation("test", "ak47");
+        ResourceLocation blueprintId = ResourceLocation.fromNamespaceAndPath("test", "ak47");
         BlueprintDataManager.SERVER.setBlueprintDataMap(Map.of(blueprintId, blueprint(blueprintId)));
 
         assertEquals(
@@ -142,9 +142,9 @@ class BlueprintDiscoveryServiceTest {
                 blueprintId.toString(),
                 "item.test.name",
                 "item.test.tooltip",
-                new ResourceLocation("test", "recipe/" + blueprintId.getPath()),
+                ResourceLocation.fromNamespaceAndPath("test", "recipe/" + blueprintId.getPath()),
                 null,
                 "rifle",
-                new ResourceLocation("test", "display/rifle"));
+                ResourceLocation.fromNamespaceAndPath("test", "display/rifle"));
     }
 }

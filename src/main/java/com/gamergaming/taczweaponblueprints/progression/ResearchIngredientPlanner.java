@@ -16,7 +16,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 /** Finds an exact, overlap-safe ingredient allocation across supplied inventory slots. */
 public final class ResearchIngredientPlanner {
@@ -151,7 +151,7 @@ public final class ResearchIngredientPlanner {
         if (stack == null || stack.isEmpty() || ingredient == null) {
             return false;
         }
-        var itemId = ForgeRegistries.ITEMS.getKey(stack.getItem());
+        var itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (itemId != null && ingredient.items().contains(itemId)) {
             return true;
         }
@@ -164,7 +164,7 @@ public final class ResearchIngredientPlanner {
         if (stack == null || stack.isEmpty() || ingredient == null) {
             return false;
         }
-        var itemId = ForgeRegistries.ITEMS.getKey(stack.getItem());
+        var itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (itemId != null && ingredient.items().contains(itemId)) {
             return true;
         }

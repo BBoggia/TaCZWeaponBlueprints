@@ -67,12 +67,11 @@ import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedBoolean;
 import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedCondition;
 import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedEnum;
 import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedString;
-import me.fzzyhmstrs.fzzy_config.validation.number.ValidatedDouble;
 import me.fzzyhmstrs.fzzy_config.validation.number.ValidatedInt;
 import me.fzzyhmstrs.fzzy_config.validation.number.ValidatedNumber;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraftforge.fml.loading.FMLPaths;
+import net.neoforged.fml.loading.FMLPaths;
 
 @Version(version = 5)
 @Translation(prefix = ModConfigs.BASE_KEY + "blueprint")
@@ -538,7 +537,7 @@ public class BlueprintConfig extends Config {
     private transient volatile ResearchCurrencyPolicy currencyPolicy;
     private transient volatile com.gamergaming.taczweaponblueprints.progression.ResearchDataSettings dataSettings;
     public com.gamergaming.taczweaponblueprints.progression.ResearchDataSettings dataSettings() { return dataSettings; }
-    
+
     public BlueprintConfig() {
         super(TaCZWeaponBlueprints.loc("blueprint"));
         publishProgressionSnapshot();
@@ -826,7 +825,7 @@ public class BlueprintConfig extends Config {
         var previous = currencyPolicy;
         var kind = researchCurrencyKind.get();
         var item = kind == ResearchCurrencyPolicy.Kind.PHYSICAL_ITEM
-                ? java.util.Optional.of(new ResourceLocation(researchCurrencyItem.get()))
+                ? java.util.Optional.of(ResourceLocation.parse(researchCurrencyItem.get()))
                 : java.util.Optional.<ResourceLocation>empty();
         int cap = kind == ResearchCurrencyPolicy.Kind.BANKED_RP ? researchPointCap.get() : 0;
         if (previous == null || previous.kind() != kind || !previous.item().equals(item) || previous.pointCap() != cap) {
@@ -1107,5 +1106,5 @@ public class BlueprintConfig extends Config {
         }
         return label.toString();
     }
-    
+
 }

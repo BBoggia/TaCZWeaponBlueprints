@@ -26,11 +26,11 @@ public final class TaCZWeaponBlueprintsEmiPlugin implements EmiPlugin {
         registry.setDefaultComparison(
                 ModItems.BLUEPRINT_ITEM.get(),
                 Comparison.compareData(stack ->
-                        EmiBlueprintStackIdentity.blueprintId(stack.getNbt())));
+                        EmiBlueprintStackIdentity.blueprintId(stack.getItemStack().getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag())));
         registry.setDefaultComparison(
                 ModItems.EMPTY_BLUEPRINT_ITEM.get(),
                 Comparison.compareData(stack ->
-                        EmiBlueprintStackIdentity.blankTarget(stack.getNbt())));
+                        EmiBlueprintStackIdentity.blankTarget(stack.getItemStack().getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag())));
 
         addInfo(registry, Topic.RESEARCH_BENCH,
                 List.of(
@@ -64,8 +64,8 @@ public final class TaCZWeaponBlueprintsEmiPlugin implements EmiPlugin {
         }
         for (ResourceLocation blueprintId : blueprintIds) {
             ItemStack blankBlueprint = new ItemStack(ModItems.EMPTY_BLUEPRINT_ITEM.get());
-            EmiBlueprintStackIdentity.targetBlankBlueprint(
-                    blankBlueprint.getOrCreateTag(), blueprintId);
+            net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, blankBlueprint,
+                    tag -> EmiBlueprintStackIdentity.targetBlankBlueprint(tag, blueprintId));
             ItemStack physicalBlueprint = BlueprintItem.createBlueprint(blueprintId.toString());
             registry.addRecipe(new EmiInfoRecipe(
                     List.of(

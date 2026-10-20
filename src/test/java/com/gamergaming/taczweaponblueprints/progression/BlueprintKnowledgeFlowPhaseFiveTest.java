@@ -37,13 +37,14 @@ class BlueprintKnowledgeFlowPhaseFiveTest {
         assertEquals(0, BlueprintRecyclerMenu.INPUT_SLOT);
         assertEquals(1, BlueprintRecyclerMenu.OUTPUT_SLOT);
         assertEquals(2, BlueprintRecyclerMenu.FIRST_PLAYER_SLOT);
-        assertEquals("70", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("neoforge-1", NetworkHandler.PROTOCOL_VERSION);
     }
 
     @Test
     void packagedArtifactGateRequiresTheCompleteAnalyzerAuthority()
             throws IOException {
-        String build = Files.readString(PROJECT.resolve("build.gradle"));
+        String build = Files.readString(PROJECT.resolve("build.gradle"))
+                + Files.readString(PROJECT.resolve("gradle/release.gradle"));
         for (String required : List.of(
                 "capabilities/BlueprintLearningMutation.class",
                 "progression/BlueprintLearningService.class",

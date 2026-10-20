@@ -9,7 +9,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Player;
@@ -32,12 +31,15 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.network.NetworkHooks;
 
 /**
  * Two-block Blueprint Analyzer. Both halves share one transient two-slot menu.
  */
 public final class BlueprintRecyclerBlock extends HorizontalDirectionalBlock {
+    public static final com.mojang.serialization.MapCodec<BlueprintRecyclerBlock> CODEC = com.mojang.serialization.codecs.RecordCodecBuilder.mapCodec(instance -> instance.group(
+            AnalyzerTier.CODEC.fieldOf("tier").forGetter(BlueprintRecyclerBlock::tier), propertiesCodec()).apply(instance, BlueprintRecyclerBlock::new));
+    @Override public com.mojang.serialization.MapCodec<BlueprintRecyclerBlock> codec() { return CODEC; }
+
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
     public static final BooleanProperty EXTENSION = BooleanProperty.create("extension");
     private static final int TRANSACTION_FLAGS = Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS;
@@ -115,12 +117,11 @@ public final class BlueprintRecyclerBlock extends HorizontalDirectionalBlock {
     }
 
     @Override
-    public InteractionResult use(
+    public InteractionResult useWithoutItem(
             BlockState state,
             Level level,
             BlockPos pos,
             Player player,
-            InteractionHand hand,
             BlockHitResult hit) {
         if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
             BlockPos rootPos = rootPosition(pos, state);
@@ -136,9 +137,7 @@ public final class BlueprintRecyclerBlock extends HorizontalDirectionalBlock {
                         "message.taczweaponblueprints.blueprint_analyzer.incomplete"), true);
                 return InteractionResult.CONSUME;
             }
-            NetworkHooks.openScreen(
-                    serverPlayer,
-                    new SimpleMenuProvider(
+            serverPlayer.openMenu(new SimpleMenuProvider(
                             (containerId, inventory, ignored) -> BlueprintRecyclerMenu.server(
                                     containerId, inventory, level, rootPos),
                             menuTitle()),
@@ -277,7 +276,7 @@ public final class BlueprintRecyclerBlock extends HorizontalDirectionalBlock {
     }
 
     @Override
-    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide && state.getValue(EXTENSION)) {
             BlockPos rootPos = counterpartPos(pos, state);
             BlockState rootState = level.getBlockState(rootPos);
@@ -285,7 +284,7 @@ public final class BlueprintRecyclerBlock extends HorizontalDirectionalBlock {
                 level.destroyBlock(rootPos, !player.isCreative() && rootState.canHarvestBlock(level, rootPos, player), player);
             }
         }
-        super.playerWillDestroy(level, pos, state, player);
+        return super.playerWillDestroy(level, pos, state, player);
     }
 
     @Override

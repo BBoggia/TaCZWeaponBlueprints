@@ -87,7 +87,7 @@ public final class ResearchTreePerformanceTool {
     static ResearchTreePublication publication(ResearchTreeBaselineInput.ProjectionData data) {
         var projection = data.replay();
         return new ResearchTreePublication(projection.graph(), ResearchTreePresentation.EMPTY,
-                new ResearchTechTreePresentation(Optional.of(new net.minecraft.resources.ResourceLocation("replay:tree")),
+                new ResearchTechTreePresentation(Optional.of(net.minecraft.resources.ResourceLocation.parse("replay:tree")),
                         "Replay", Optional.empty(), Optional.empty(), List.of(), data.bands(), data.maxNodesPerLayer(), List.of(data.presentation())));
     }
     static JsonObject measure(Supplier<Object> work,int repetitions) {

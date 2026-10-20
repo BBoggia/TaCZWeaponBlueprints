@@ -9,7 +9,7 @@ import com.gamergaming.taczweaponblueprints.villager.trade.*;
 import static com.gamergaming.taczweaponblueprints.villager.trade.TradeDefinition.*;
 
 class StockPlannerTest {
-    static ResourceLocation id(String s){return new ResourceLocation("test",s);}
+    static ResourceLocation id(String s){return ResourceLocation.fromNamespaceAndPath("test", s);}
     static TradeResolver.Row row(String slot,int level,Kind kind,Selection selection,Role role,String... targets){
         var choices=Arrays.stream(targets).map(t->new Choice(id(t),1)).toList();
         return new TradeResolver.Row(id(slot),id(slot),Profession.GUNSMITH,level,role,new Output(kind,1,selection==Selection.STUDY_T1?1:selection==Selection.STUDY_T2?2:0,selection,kind==Kind.CURRENCY?List.of():choices),.05F,

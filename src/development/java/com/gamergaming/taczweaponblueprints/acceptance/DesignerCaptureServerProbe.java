@@ -4,19 +4,20 @@ import com.gamergaming.taczweaponblueprints.research.designer.*;
 import com.gamergaming.taczweaponblueprints.research.designer.server.ResearchDesignerCaptureService;
 import com.gamergaming.taczweaponblueprints.resource.research.ProgressionPolicyAccessService;
 import com.google.gson.*;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 import java.nio.file.*;
 import java.util.UUID;
 
 /** Development-only, opt-in read-only production capture exercise. */
-@Mod.EventBusSubscriber(modid="taczweaponblueprints")
+@EventBusSubscriber(modid="taczweaponblueprints")
 public final class DesignerCaptureServerProbe {
     private static boolean finished; private static int ticks;
-    @SubscribeEvent public static void tick(TickEvent.ServerTickEvent event) throws Exception {
+    @SubscribeEvent public static void tick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) throws Exception {
         String output=System.getProperty("tacz.designerCaptureQA.output","");
-        if(output.isEmpty()||finished||event.phase!=TickEvent.Phase.END)return;
+        if(output.isEmpty()||finished)return;
         if(++ticks<60)return; finished=true; var report=new JsonObject();
         try {
             var before=ProgressionPolicyAccessService.acquire(ProgressionPolicyAccessService.Mode.CURRENT_ONLY).orElseThrow();
@@ -63,7 +64,7 @@ public final class DesignerCaptureServerProbe {
         Files.writeString(Path.of(output),report.toString());event.getServer().halt(false);
     }
     private static <T> void decode(com.mojang.serialization.Codec<T> codec,JsonElement json){
-        codec.parse(com.mojang.serialization.JsonOps.INSTANCE,json).getOrThrow(false,ignored -> {});
+        codec.parse(com.mojang.serialization.JsonOps.INSTANCE,json).getOrThrow();
     }
 
 }

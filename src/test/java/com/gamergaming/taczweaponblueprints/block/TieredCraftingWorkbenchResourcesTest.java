@@ -100,7 +100,7 @@ class TieredCraftingWorkbenchResourcesTest {
                 JsonObject model = json(
                         "src/main/resources/assets/taczweaponblueprints/models/"
                                 + domain + '/' + id + ".json");
-                assertEquals("forge:obj", model.get("loader").getAsString());
+                assertEquals("neoforge:obj", model.get("loader").getAsString());
                 assertEquals("taczweaponblueprints:block/" + id,
                         model.getAsJsonObject("textures").get("texture0").getAsString());
                 assertEquals("taczweaponblueprints:block/" + id,
@@ -131,14 +131,14 @@ class TieredCraftingWorkbenchResourcesTest {
                     + id + ".json");
             JsonObject index = json("src/main/resources/data/taczweaponblueprints/index/blocks/"
                     + id + ".json");
-            JsonObject recipe = json("src/main/resources/data/taczweaponblueprints/recipes/"
+            JsonObject recipe = json("src/main/resources/data/taczweaponblueprints/recipe/"
                     + id + ".json");
 
             assertEquals("taczweaponblueprints:workbench_all",
                     data.get("filter").getAsString());
             assertEquals("taczweaponblueprints:" + id, index.get("id").getAsString());
             assertEquals("taczweaponblueprints:" + id,
-                    recipe.getAsJsonObject("result").get("item").getAsString());
+                    recipe.getAsJsonObject("result").get("id").getAsString());
             assertFalse(recipe.getAsJsonObject("key").toString().contains("workbench_lvl"));
         }
         for (String researchBench : List.of(
@@ -167,7 +167,7 @@ class TieredCraftingWorkbenchResourcesTest {
 
         for (String id : WORKBENCH_IDS) {
             JsonObject directRecipe = json(
-                    "src/main/resources/data/taczweaponblueprints/recipes/"
+                    "src/main/resources/data/taczweaponblueprints/recipe/"
                             + id + ".json");
             assertFalse(directRecipe.getAsJsonObject("key").toString()
                     .contains("taczweaponblueprints:workbench_lvl"));
@@ -176,7 +176,7 @@ class TieredCraftingWorkbenchResourcesTest {
                 "workbench_lvl2_upgrade_kit",
                 "workbench_lvl3_upgrade_kit")) {
             assertFalse(Files.exists(PROJECT.resolve(
-                    "src/main/resources/data/taczweaponblueprints/recipes/" + id + ".json")));
+                    "src/main/resources/data/taczweaponblueprints/recipe/" + id + ".json")));
             assertFalse(Files.exists(PROJECT.resolve(
                     "src/main/resources/assets/taczweaponblueprints/models/item/" + id + ".json")));
         }

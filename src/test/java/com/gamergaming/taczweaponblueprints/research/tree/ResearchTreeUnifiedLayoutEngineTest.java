@@ -206,7 +206,7 @@ class ResearchTreeUnifiedLayoutEngineTest {
                 id(path),
                 "fixture." + path,
                 "rifle",
-                new ResourceLocation("minecraft", "paper"),
+                ResourceLocation.fromNamespaceAndPath("minecraft", "paper"),
                 JournalVisibility.FULL,
                 false,
                 false,
@@ -221,6 +221,6 @@ class ResearchTreeUnifiedLayoutEngineTest {
     }
 
     private static ResourceLocation id(String path) {
-        return new ResourceLocation("phase_zero", path);
+        return ResourceLocation.fromNamespaceAndPath("phase_zero", path);
     }
 }

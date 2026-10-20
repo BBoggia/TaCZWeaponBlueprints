@@ -72,7 +72,7 @@ class ResearchDesignerCompilerTest {
         var player = new PlayerRecipeData();
         for (var name : List.of("root", "left", "right", "support")) player.addBlueprint("designer_fixture:" + name);
         var resolution = DetachedResearchEvaluation.resolve(old.snapshot(), old.catalog(), config, old.profile(), player, ignored -> false, ignored -> false, null);
-        var target = new net.minecraft.resources.ResourceLocation("designer_fixture:end");
+        var target = net.minecraft.resources.ResourceLocation.parse("designer_fixture:end");
         assertTrue(resolution.resolver().apply(target).prerequisitesSatisfied());
         assertEquals(2, resolution.resolver().apply(target).requirements().allOf().size());
         var path = com.gamergaming.taczweaponblueprints.progression.ResearchPathUnlockPlanner.plan(target, player, resolution.resolver(), ignored -> false, false);
@@ -109,8 +109,8 @@ class ResearchDesignerCompilerTest {
         assertTrue(offline.catalog().values().stream().allMatch(data -> data.getRecipe() == null));
     }
     @Test void simulatedCurrencyAndMaterialCannotSpendTheSameSlotTwice() {
-        var scrap = new net.minecraft.resources.ResourceLocation("test:scrap");
-        var tag = new net.minecraft.resources.ResourceLocation("test:metals");
+        var scrap = net.minecraft.resources.ResourceLocation.parse("test:scrap");
+        var tag = net.minecraft.resources.ResourceLocation.parse("test:metals");
         var requirements = List.of(
                 new com.gamergaming.taczweaponblueprints.progression.ResearchIngredientPlanner.Requirement(List.of(scrap), Optional.empty(), 2),
                 new com.gamergaming.taczweaponblueprints.progression.ResearchIngredientPlanner.Requirement(List.of(), Optional.of(tag), 2));

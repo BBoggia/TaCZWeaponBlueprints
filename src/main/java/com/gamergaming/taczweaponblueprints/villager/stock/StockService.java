@@ -9,7 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.npc.*;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.trading.*;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 import static com.gamergaming.taczweaponblueprints.villager.trade.TradeDefinition.*;
 
 /** Native factories own core selection; this layer only supplies and validates our marked offers. */
@@ -55,7 +55,7 @@ public final class StockService {
         if(offers.size()>TradeLimits.OWNED_OFFERS||state.invalid){suspendAll(offers);return;}
         if(state.plan==null)return;
         boolean changed=state.checkedPublication!=catalog;
-        if(changed)refreshCurrencyOutputs(state,offers,catalog);
+        if(changed)refreshCurrencyOutputs(state,offers,catalog,villager.registryAccess());
         if(state.attemptedPublication!=catalog){
             state.attemptedPublication=catalog;state.attemptedFactories=0;state.attemptedSupport.clear();
         }
@@ -84,7 +84,7 @@ public final class StockService {
                 var offer=offers.get(i);var binding=((OwnedVillagerOffer)offer).taczweaponblueprints$binding();if(binding==null)continue;
                 var row=catalog.row(binding.entry());
                 if(row!=null&&binding.entry().equals(state.plan.entries().get(binding.entry().slot())))
-                    offers.set(i,reprice(offer,row,restock));
+                    offers.set(i,reprice(offer,row,restock,villager.registryAccess()));
             }
             state.checkedPublication=catalog;owned=owned(offers);
         }
@@ -129,7 +129,7 @@ public final class StockService {
         }
     }
     /** Currency is a configured denomination, not a randomized merchandise choice. */
-    private static void refreshCurrencyOutputs(StockState state,MerchantOffers offers,StockCatalog catalog){
+    private static void refreshCurrencyOutputs(StockState state,MerchantOffers offers,StockCatalog catalog,net.minecraft.core.HolderLookup.Provider registries){
         var entries=new TreeMap<ResourceLocation,StockPlan.Entry>(state.plan.entries());boolean changed=false;
         for(var old:state.plan.entries().values()){
             if(old.kind()!=Kind.CURRENCY)continue;
@@ -142,13 +142,13 @@ public final class StockService {
             for(int n=0;n<offers.size();n++){
                 var offer=offers.get(n);var binding=((OwnedVillagerOffer)offer).taczweaponblueprints$binding();
                 if(binding==null||!binding.entry().equals(old))continue;
-                var previousItem=ForgeRegistries.ITEMS.getValue(old.target());
+                var previousItem=BuiltInRegistries.ITEM.get(old.target());
                 if(previousItem==null||!ItemStack.matches(offer.getResult(),new ItemStack(previousItem,old.count())))continue;
-                var tag=offer.createTag();tag.put("sell",catalog.output(next).save(new net.minecraft.nbt.CompoundTag()));
+                var tag=OwnedOfferSerialization.save(offer,registries);tag.put("sell",catalog.output(next).saveOptional(registries));
                 tag.put(StockOfferBinding.TAG,new StockOfferBinding(next,binding.primary(),binding.protectedSecondary()).save());
                 var terms=((OwnedVillagerOffer)offer).taczweaponblueprints$terms();
                 tag.put(VillagerOfferTerms.TAG,new VillagerOfferTerms(terms.slot(),terms.minimumPrimary(),terms.available(),Math.incrementExact(terms.revision())).save());
-                offers.set(n,new MerchantOffer(tag));
+                offers.set(n,OwnedOfferSerialization.read(tag,registries));
             }
         }
         if(changed)state.plan=new StockPlan(state.profession,entries,state.plan.excluded(),state.plan.reachable());
@@ -156,13 +156,13 @@ public final class StockService {
     private static MerchantOffer create(StockPlan.Entry entry,StockCatalog catalog){
         var row=catalog.row(entry);if(row==null)return null;var output=catalog.output(entry);if(output.isEmpty())return null;
         var price=row.price().orElseThrow();var counts=price.amounts().charged();
-        var a=new ItemStack(ForgeRegistries.ITEMS.getValue(price.primaryItem()),counts.primary());
-        var b=counts.secondary()==0?ItemStack.EMPTY:new ItemStack(ForgeRegistries.ITEMS.getValue(price.secondaryItem().orElseThrow()),counts.secondary());
-        var offer=new MerchantOffer(a,b,output,row.uses(),row.xp(),row.demandMultiplier());var owned=(OwnedVillagerOffer)offer;
+        var a=new ItemStack(BuiltInRegistries.ITEM.get(price.primaryItem()),counts.primary());
+        var b=counts.secondary()==0?ItemStack.EMPTY:new ItemStack(BuiltInRegistries.ITEM.get(price.secondaryItem().orElseThrow()),counts.secondary());
+        var offer=new MerchantOffer(OwnedOfferSerialization.cost(a),b.isEmpty()?Optional.empty():Optional.of(OwnedOfferSerialization.cost(b)),output,row.uses(),row.xp(),row.demandMultiplier());var owned=(OwnedVillagerOffer)offer;
         owned.taczweaponblueprints$terms(new VillagerOfferTerms(entry.slot(),counts.minimumPrimary(),true,0));
         owned.taczweaponblueprints$binding(new StockOfferBinding(entry,price.amounts().originalPrimary(),price.amounts().protectedSecondary()));return offer;
     }
-    private static MerchantOffer reprice(MerchantOffer old,TradeResolver.Row row,boolean restock){
+    private static MerchantOffer reprice(MerchantOffer old,TradeResolver.Row row,boolean restock,net.minecraft.core.HolderLookup.Provider registries){
         var binding=((OwnedVillagerOffer)old).taczweaponblueprints$binding();var fresh=create(binding.entry(),StockCatalog.current());if(fresh==null)return old;
         int capacity=restock?row.uses():Math.min(old.getMaxUses(),row.uses());var oldTerms=((OwnedVillagerOffer)old).taczweaponblueprints$terms();var freshTerms=((OwnedVillagerOffer)fresh).taczweaponblueprints$terms();
         if(ItemStack.matches(old.getBaseCostA(),fresh.getBaseCostA())&&ItemStack.matches(old.getCostB(),fresh.getCostB())
@@ -170,10 +170,10 @@ public final class StockService {
                 &&oldTerms.minimumPrimary()==freshTerms.minimumPrimary()
                 &&binding.primary()==((OwnedVillagerOffer)fresh).taczweaponblueprints$binding().primary()
                 &&binding.protectedSecondary()==((OwnedVillagerOffer)fresh).taczweaponblueprints$binding().protectedSecondary())return old;
-        var tag=old.createTag();tag.put("buy",fresh.getBaseCostA().save(new net.minecraft.nbt.CompoundTag()));tag.put("buyB",fresh.getCostB().save(new net.minecraft.nbt.CompoundTag()));
+        var tag=OwnedOfferSerialization.save(old,registries);var freshTag=OwnedOfferSerialization.save(fresh,registries);tag.put("buy",freshTag.get("buy"));if(freshTag.contains("buyB"))tag.put("buyB",freshTag.get("buyB"));else tag.remove("buyB");
         tag.putInt("maxUses",capacity);tag.putInt("xp",row.xp());tag.putFloat("priceMultiplier",row.demandMultiplier());
         tag.put(VillagerOfferTerms.TAG,new VillagerOfferTerms(oldTerms.slot(),freshTerms.minimumPrimary(),oldTerms.available(),Math.incrementExact(oldTerms.revision())).save());
-        tag.put(StockOfferBinding.TAG,((OwnedVillagerOffer)fresh).taczweaponblueprints$binding().save());return new MerchantOffer(tag);
+        tag.put(StockOfferBinding.TAG,((OwnedVillagerOffer)fresh).taczweaponblueprints$binding().save());return OwnedOfferSerialization.read(tag,registries);
     }
     private static Map<ResourceLocation,MerchantOffer> owned(MerchantOffers offers){
         var result=new HashMap<ResourceLocation,MerchantOffer>();var duplicate=new HashSet<ResourceLocation>();

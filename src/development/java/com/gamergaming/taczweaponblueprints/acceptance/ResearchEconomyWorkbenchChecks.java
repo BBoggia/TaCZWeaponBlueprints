@@ -17,8 +17,8 @@ import net.minecraft.world.phys.*;
 
 /** Actual dedicated menus and inventory transactions; separate from wire-click acceptance. */
 final class ResearchEconomyWorkbenchChecks {
-    private static final ResourceLocation TARGET = new ResourceLocation("tacz:ak47");
-    private static IPlayerRecipeData data(ServerPlayer p) { return p.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElseThrow(); }
+    private static final ResourceLocation TARGET = ResourceLocation.parse("tacz:ak47");
+    private static IPlayerRecipeData data(ServerPlayer p) { return com.gamergaming.taczweaponblueprints.init.ModAttachments.recipeData(p).orElseThrow(); }
     private static ResearchBenchMenu am, bm;
     private static long readyAt;
     private static boolean initialized;
@@ -87,7 +87,7 @@ final class ResearchEconomyWorkbenchChecks {
     }
     private static ResearchBenchMenu open(ServerPlayer p, BlockPos pos) {
         var state=p.serverLevel().getBlockState(pos);
-        state.getBlock().use(state,p.serverLevel(),pos,p,InteractionHand.MAIN_HAND,new BlockHitResult(Vec3.atCenterOf(pos),Direction.NORTH,pos,false));
+        state.useWithoutItem(p.serverLevel(),p,new BlockHitResult(Vec3.atCenterOf(pos),Direction.NORTH,pos,false));
         return (ResearchBenchMenu)p.containerMenu;
     }
 }

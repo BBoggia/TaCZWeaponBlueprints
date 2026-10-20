@@ -6,6 +6,48 @@ documentation.
 
 ## Unreleased
 
+## 1.3.8-neoforge-beta.1 - 2026-10-20
+
+### Added
+
+- Added a Minecraft 1.21.1 NeoForge beta with blueprint learning, tiered
+  Workbench crafting, Tech Tree research, the Blueprint Analyzer, Blueprint
+  Journal, villager professions, and Research Designer.
+- Added NeoForge integrations for JEI 19.x and EMI 1.1.x.
+
+### Compatibility
+
+- Requires Java 21, NeoForge 21.1.233 or newer in the 21.1 series, the unofficial
+  NeoForge port of TaCZ 1.1.8 or newer, and Fzzy Config 0.7.7 or later in the
+  0.7 series with its NeoForge dependencies. Built against TaCZ 1.1.8-hotfix-r7.
+- Install matching NeoForge versions on the server and all clients. The Forge
+  1.20.1 release remains available separately; migration of Forge worlds and
+  player progress to NeoForge is not supported by this beta.
+- TaCZ Magazines integration remains Forge-only. This beta does not include
+  support for a NeoForge version of that addon.
+
+### Fixed
+
+- Sideways trackpad gestures no longer scroll the Blueprint Analyzer's details
+  or Research Designer's library downward. Vertical scrolling still works.
+- Owned villager trades using an implicit item count of one retain their saved
+  items and remain suspended when the supplying mod is missing.
+- Discounted villager trades enforce their minimum payment when accepting and
+  consuming items, including shift-click purchases.
+- Blueprint Journal and Research Designer text remains clear instead of being
+  covered or blurred by a second background draw. Import instructions appear
+  immediately when opening the Designer's import screen.
+- Research Designer exports, compatibility labels, and installation instructions
+  use the running Minecraft version and its datapack format.
+- Research Designer can capture TaCZ recipes that produce more than 99 items
+  without losing the batch quantity or item data.
+- Research Bench nodes remain visible in front of the game background.
+- Ammo Research and Attachment Research show translated mode names in the
+  configuration screen.
+- Bundled example datapacks use the Minecraft 1.21.1 format and common item tags.
+  Analyzer balance reports and weapon-rating authoring commands are available
+  in the NeoForge build.
+
 ## 1.3.8 - 2026-10-19
 
 ### Added

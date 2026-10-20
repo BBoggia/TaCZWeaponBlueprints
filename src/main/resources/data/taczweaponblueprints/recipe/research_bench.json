@@ -1,0 +1,31 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IPI",
+    "PCP",
+    "PPP"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "P": {
+      "item": "minecraft:spruce_planks"
+    },
+    "C": {
+      "item": "minecraft:cartography_table"
+    }
+  },
+  "result": {
+    "id": "taczweaponblueprints:research_bench"
+  },
+  "show_notification": true,
+  "neoforge:conditions": [
+    {
+      "type": "taczweaponblueprints:station_setup",
+      "analyzer": false,
+      "tier": 1
+    }
+  ]
+}

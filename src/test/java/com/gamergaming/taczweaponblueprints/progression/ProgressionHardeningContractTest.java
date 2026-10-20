@@ -51,7 +51,7 @@ class ProgressionHardeningContractTest {
                         + "BlueprintDataManager.java");
 
         assertTrue(events.indexOf("rebuildDerivedPublicationsFromRetainedCatalog()")
-                < events.indexOf("event.getPlayers().forEach(player -> {", events.indexOf("} else {")));
+                < events.indexOf("event.getRelevantPlayers().forEach(player -> {", events.indexOf("} else {")));
         assertTrue(catalog.contains("AutomaticWeaponPlacementCandidateManager.INSTANCE.rebuild("));
         assertTrue(catalog.contains("return rebuildProgressionPolicy();"));
     }
@@ -106,7 +106,7 @@ class ProgressionHardeningContractTest {
         int pointBalance = network.indexOf("public static void syncPlayerPointBalance(");
         String progressionBody = network.substring(progression, pointBalance);
         assertTrue(progressionBody.indexOf("refreshOpenCraftingWorkbench(player)")
-                < progressionBody.indexOf("player.getCapability("));
+                < progressionBody.indexOf("ModAttachments.recipeData(player)"));
 
         int allData = network.indexOf("public static void syncAllPlayerData(");
         int nextMethod = network.indexOf("public static void sendResearchBenchPreview(", allData);

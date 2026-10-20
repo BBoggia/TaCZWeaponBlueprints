@@ -15,7 +15,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 class ResearchGuidanceAllocationPhaseZeroTest {
     @BeforeAll
@@ -67,7 +67,7 @@ class ResearchGuidanceAllocationPhaseZeroTest {
         ResearchIngredientPlanner.Requirement tagRequirement =
                 new ResearchIngredientPlanner.Requirement(
                         List.of(),
-                        Optional.of(new ResourceLocation("forge:ingots/iron")),
+                        Optional.of(ResourceLocation.parse("forge:ingots/iron")),
                         2);
 
         ResearchIngredientPlanner.Allocation allocation =
@@ -91,7 +91,7 @@ class ResearchGuidanceAllocationPhaseZeroTest {
             net.minecraft.world.item.Item... items) {
         return new ResearchIngredientPlanner.Requirement(
                 java.util.Arrays.stream(items)
-                        .map(ForgeRegistries.ITEMS::getKey)
+                        .map(BuiltInRegistries.ITEM::getKey)
                         .toList(),
                 Optional.empty(),
                 count);

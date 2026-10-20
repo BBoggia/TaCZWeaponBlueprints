@@ -1,5 +1,7 @@
 package com.gamergaming.taczweaponblueprints.event;
 
+import net.neoforged.fml.common.EventBusSubscriber;
+
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionSyncScheduler;
@@ -8,17 +10,16 @@ import com.gamergaming.taczweaponblueprints.progression.ResearchPointPresentatio
 import com.gamergaming.taczweaponblueprints.progression.StartingBlueprintGrantService;
 
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 
-@Mod.EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+@EventBusSubscriber(modid = TaCZWeaponBlueprints.MODID, bus = EventBusSubscriber.Bus.GAME)
 public class ModEventHandler {
 
     @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
-            com.gamergaming.taczweaponblueprints.compat.fzzy_config.BlueprintSettingsSync.sendTo(serverPlayer);
+            // Fzzy Config completes its NeoForge configuration task before play begins.
             StartingBlueprintGrantService.applyConfiguredGrants(serverPlayer);
             NetworkHandler.syncAllPlayerData(serverPlayer);
             ResearchPointPresentationService.syncHelp(serverPlayer);

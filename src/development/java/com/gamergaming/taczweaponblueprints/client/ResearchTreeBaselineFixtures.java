@@ -162,7 +162,7 @@ public final class ResearchTreeBaselineFixtures {
         private final List<ResearchTechTreeProjection.BoundaryLink> boundaries = new ArrayList<>();
 
         Builder(String name) { this.name = name; }
-        ResourceLocation id(String key) { return new ResourceLocation("baseline", name + "/" + key); }
+        ResourceLocation id(String key) { return ResourceLocation.fromNamespaceAndPath("baseline", name + "/" + key); }
         Builder parent(String child, String parent) { parents.put(child, parent); return this; }
         Builder node(String key, int rank, String owner) {
             if (ranks.putIfAbsent(key, rank) != null) throw new IllegalArgumentException("duplicate fixture node");
@@ -192,7 +192,7 @@ public final class ResearchTreeBaselineFixtures {
                 var availability = required.isEmpty() ? ResearchTreeGraph.Availability.AVAILABLE
                         : ResearchTreeGraph.Availability.PREREQUISITES_REQUIRED;
                 nodes.add(new ResearchTreeGraph.Node(nodes.size(), nodeId, "fixture." + entry.getKey(),
-                        "gun", new ResourceLocation("minecraft", "paper"), JournalVisibility.FULL,
+                        "gun", ResourceLocation.fromNamespaceAndPath("minecraft", "paper"), JournalVisibility.FULL,
                         false, true, required.isEmpty(), 8, 0, visible, hidden, availability));
                 members.add(new ResearchTechTreePresentation.Member(nodeId, entry.getValue(),
                         nodes.size(), Optional.empty(), PlacementOrigin.EXACT, Optional.empty()));

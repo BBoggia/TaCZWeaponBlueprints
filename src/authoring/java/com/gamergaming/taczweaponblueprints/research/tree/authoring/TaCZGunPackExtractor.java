@@ -125,7 +125,9 @@ public final class TaCZGunPackExtractor {
         int count = path.getNameCount();
         return count >= 3
                 && "gun".equals(path.getName(count - 2).toString())
-                && "recipes".equals(path.getName(count - 3).toString());
+                // Minecraft 1.21 renamed the recipe directory. Keep older packs
+                // readable by this offline inspection tool too.
+                && Set.of("recipe", "recipes").contains(path.getName(count - 3).toString());
     }
 
     private static Path resourcePath(

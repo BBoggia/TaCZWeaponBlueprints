@@ -1,5 +1,5 @@
 {
-  "loader": "forge:obj",
+  "loader": "neoforge:obj",
   "flip_v": true,
   "model": "taczweaponblueprints:models/block/workbench_lvl1.obj",
   "automatic_culling": false,

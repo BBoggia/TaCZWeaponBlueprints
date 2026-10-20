@@ -28,11 +28,11 @@ public final class ResearchDesignerCaptureService {
             var config = ModConfigs.BLUEPRINT;
             var settings = settings(); var progression = config.progressionSnapshot(); var access = config.accessSnapshot();
             var dependencies = new JsonObject(); var mods = new JsonObject();
-            net.minecraftforge.fml.ModList.get().getMods().forEach(mod -> mods.addProperty(mod.getModId(), mod.getVersion().toString()));
+            net.neoforged.fml.ModList.get().getMods().forEach(mod -> mods.addProperty(mod.getModId(), mod.getVersion().toString()));
             dependencies.add("mods", mods);
             var context = DesignerCaptureAssembly.assemble(c, progression, access, config::isItemBlacklisted,
                     settings, new JsonObject(), dependencies, (kind,id) -> server.getResourceManager()
-                            .getResource(new ResourceLocation(id.getNamespace(), "taczweaponblueprints/" + kind + "/" + id.getPath() + ".json"))
+                            .getResource(ResourceLocation.fromNamespaceAndPath(id.getNamespace(), "taczweaponblueprints/" + kind + "/" + id.getPath() + ".json"))
                             .map(r -> safePackName(r.sourcePackId())).orElse("runtime"));
             var facts = registryFacts(server, context, c);
             context.add("registry_facts", facts);
@@ -77,16 +77,20 @@ public final class ResearchDesignerCaptureService {
         for (var entry : new TreeMap<>(c.catalog().blueprints()).entrySet()) {
             var data = entry.getValue(); var recipe = data.getRecipe();
             if (recipe == null || data.getRecipeId() == null) throw new IllegalStateException("Catalog recipe is unavailable");
-            if (server.getRecipeManager().byKey(data.getRecipeId()).filter(r -> r == recipe).isEmpty())
+            if (server.getRecipeManager().byKey(data.getRecipeId()).filter(r -> r.value() == recipe).isEmpty())
                 throw new IllegalStateException("Catalog recipe revision changed");
-            var buffer = new net.minecraft.network.FriendlyByteBuf(io.netty.buffer.Unpooled.buffer());
+            var buffer = new net.minecraft.network.RegistryFriendlyByteBuf(io.netty.buffer.Unpooled.buffer(), server.registryAccess());
             try {
-                ((net.minecraft.world.item.crafting.RecipeSerializer)recipe.getSerializer()).toNetwork(buffer, recipe);
+                ((net.minecraft.world.item.crafting.RecipeSerializer)recipe.getSerializer()).streamCodec().encode(buffer, recipe);
                 if (buffer.readableBytes() > 1024 * 1024) throw new IllegalStateException("Recipe exceeds capture limit");
                 byte[] payload = new byte[buffer.readableBytes()]; buffer.readBytes(payload);
                 var record = new JsonObject(); record.addProperty("serializer", BuiltInRegistries.RECIPE_SERIALIZER.getKey(recipe.getSerializer()).toString());
                 record.addProperty("network_payload", Base64.getEncoder().encodeToString(payload));
-                record.addProperty("output_nbt", recipe.getOutput().save(new net.minecraft.nbt.CompoundTag()).toString());
+                // A recipe batch can exceed the 1.21 ItemStack codec's count limit.
+                // Capture item identity/components and the full batch quantity separately.
+                var output = recipe.getOutput();
+                record.addProperty("output_nbt", output.copyWithCount(1).save(server.registryAccess()).toString());
+                record.addProperty("output_count", output.getCount());
                 recipes.add(data.getRecipeId().toString(),record);
             } finally { buffer.release(); }
         }
@@ -114,13 +118,13 @@ public final class ResearchDesignerCaptureService {
         for (String value : strings) {
             var id = ResourceLocation.tryParse(value.startsWith("#") ? value.substring(1) : value);
             if (id == null || !value.contains(":")) continue;
-            if (BuiltInRegistries.ITEM.containsKey(id)) items.addProperty(id.toString(), BuiltInRegistries.ITEM.get(id).getMaxStackSize());
+            if (BuiltInRegistries.ITEM.containsKey(id)) items.addProperty(id.toString(), BuiltInRegistries.ITEM.get(id).getDefaultInstance().getMaxStackSize());
             var members = new JsonArray();
             BuiltInRegistries.ITEM.getTag(TagKey.create(Registries.ITEM, id)).ifPresent(holders -> holders.stream()
                     .map(h -> BuiltInRegistries.ITEM.getKey(h.value()).toString()).sorted().forEach(members::add));
             tags.add(id.toString(), members);
-            var advancement = server.getAdvancements().getAdvancement(id);
-            if (advancement != null) advancements.add(id.toString(), evidence(new TreeSet<>(advancement.getCriteria().keySet())));
+            var advancement = server.getAdvancements().get(id);
+            if (advancement != null) advancements.add(id.toString(), evidence(new TreeSet<>(advancement.value().criteria().keySet())));
         }
         facts.add("items", items); facts.add("item_tags", tags); facts.add("advancements", advancements);
         return facts;

@@ -171,6 +171,6 @@ class ResearchTechTreeVisualMotifPlannerTest {
     }
 
     private static ResourceLocation id(String raw) {
-        return new ResourceLocation(raw);
+        return ResourceLocation.parse(raw);
     }
 }

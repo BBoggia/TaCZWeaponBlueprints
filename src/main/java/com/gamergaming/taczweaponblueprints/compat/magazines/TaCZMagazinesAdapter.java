@@ -13,13 +13,12 @@ import com.tacz.guns.crafting.GunSmithTableRecipe;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.Recipe;
 
 /** Reads the optional add-on's published data; never generates recipes or grants permission. */
 public final class TaCZMagazinesAdapter {
     public static final String MOD_ID = "taczmagazines";
     public static final String SUPPORTED_VERSION = "0.2.0-Beta";
-    public static final ResourceLocation MAGAZINE_TAB = new ResourceLocation(MOD_ID, "magazines");
+    public static final ResourceLocation MAGAZINE_TAB = ResourceLocation.fromNamespaceAndPath(MOD_ID, "magazines");
     static final int MAX_FAMILIES = 8192;
     static final int MAX_LINKS = 65536;
     private final Source source;
@@ -52,7 +51,7 @@ public final class TaCZMagazinesAdapter {
         return status;
     }
 
-    public Capture capture(Collection<? extends Recipe<?>> recipes) {
+    public Capture capture(Collection<? extends net.minecraft.world.item.crafting.RecipeHolder<?>> recipes) {
         if (status != Status.READY) return Capture.empty(status);
         try {
             return captureReady(recipes);
@@ -63,25 +62,25 @@ public final class TaCZMagazinesAdapter {
         }
     }
 
-    private Capture captureReady(Collection<? extends Recipe<?>> recipes) {
+    private Capture captureReady(Collection<? extends net.minecraft.world.item.crafting.RecipeHolder<?>> recipes) {
         Set<String> families = Set.copyOf(source.families());
         if (families.size() > MAX_FAMILIES) throw new IllegalArgumentException("too many magazine families");
-        var candidates = new ArrayList<GunSmithTableRecipe>();
-        for (Recipe<?> recipe : recipes) {
-            if (recipe instanceof GunSmithTableRecipe table && isGeneratedRecipe(table.getId())) {
-                candidates.add(table);
+        var candidates = new ArrayList<net.minecraft.world.item.crafting.RecipeHolder<GunSmithTableRecipe>>();
+        for (var recipe : recipes) {
+            if (recipe.value() instanceof GunSmithTableRecipe table && isGeneratedRecipe(recipe.id())) {
+                candidates.add(new net.minecraft.world.item.crafting.RecipeHolder<>(recipe.id(), table));
                 if (candidates.size() > MAX_FAMILIES) throw new IllegalArgumentException("too many magazine recipes");
             }
         }
-        candidates.sort(Comparator.comparing(recipe -> recipe.getId().toString()));
+        candidates.sort(Comparator.comparing(recipe -> recipe.id().toString()));
         Map<ResourceLocation, MagazineDescriptor> descriptors = new LinkedHashMap<>();
         Map<String, String> rejected = new LinkedHashMap<>();
         Set<ResourceLocation> ambiguous = new HashSet<>();
         int links = 0;
-        for (GunSmithTableRecipe recipe : candidates) {
+        for (var recipe : candidates) {
             try {
-                ItemStack output = recipe.getOutput().copy();
-                if (!MAGAZINE_TAB.equals(recipe.getTab()) || !source.isMagazine(output)) {
+                ItemStack output = recipe.value().getOutput().copy();
+                if (!MAGAZINE_TAB.equals(recipe.value().getTab()) || !source.isMagazine(output)) {
                     throw new IllegalArgumentException("unexpected magazine output or tab");
                 }
                 String family = source.family(output);
@@ -97,11 +96,11 @@ public final class TaCZMagazinesAdapter {
                     throw new IllegalStateException("too many magazine compatibility links");
                 }
                 links += facts.compatibleGuns().size();
-                var ingredients = recipe.getInputs().stream().map(input ->
+                var ingredients = recipe.value().getInputs().stream().map(input ->
                         new MagazineDescriptor.IngredientCost(
-                                input.getIngredient().toJson().toString(), input.getCount())).toList();
+                                net.minecraft.world.item.crafting.Ingredient.CODEC.encodeStart(com.mojang.serialization.JsonOps.INSTANCE, input.getIngredient()).getOrThrow().toString(), input.getCount())).toList();
                 var descriptor = new MagazineDescriptor(key, family, facts.ammoId(), facts.capacity(),
-                        facts.extensionLevel(), facts.compatibleGuns(), recipe.getId(), output, ingredients);
+                        facts.extensionLevel(), facts.compatibleGuns(), recipe.id(), output, ingredients);
                 MagazineDescriptor previous = descriptors.putIfAbsent(key, descriptor);
                 if (previous != null || ambiguous.contains(key)) {
                     ambiguous.add(key);
@@ -109,7 +108,7 @@ public final class TaCZMagazinesAdapter {
                     rejected.put(key.toString(), "multiple recipes for magazine family");
                 }
             } catch (IllegalArgumentException | NullPointerException invalid) {
-                rejected.put(recipe.getId().toString(), "invalid magazine recipe: " + invalid.getClass().getSimpleName());
+                rejected.put(recipe.id().toString(), "invalid magazine recipe: " + invalid.getClass().getSimpleName());
             }
         }
         Map<ResourceLocation, ResourceLocation> recipeFamilies = new LinkedHashMap<>();
@@ -127,7 +126,7 @@ public final class TaCZMagazinesAdapter {
                 || !family.matches("[a-z0-9_./-]+")) {
             throw new IllegalArgumentException("invalid upstream magazine family ID");
         }
-        return new ResourceLocation(MOD_ID, "family/" + family);
+        return ResourceLocation.fromNamespaceAndPath(MOD_ID, "family/" + family);
     }
 
     public enum Status { ABSENT, WAITING_FOR_RECIPES, UNSUPPORTED_VERSION, UNAVAILABLE, READY }

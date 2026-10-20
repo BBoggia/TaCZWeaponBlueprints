@@ -9,14 +9,14 @@ import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.screens.inventory.MerchantScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.MerchantMenu;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.util.ObfuscationReflectionHelper;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.util.ObfuscationReflectionHelper;
 
-@Mod.EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID,value=Dist.CLIENT)
+@EventBusSubscriber(modid=TaCZWeaponBlueprints.MODID,value=Dist.CLIENT)
 public final class VillagerPrototypeClient {
     private static WeakReference<MerchantMenu> bound=new WeakReference<>(null);
     private static List<Integer> unavailable=List.of();
@@ -30,7 +30,7 @@ public final class VillagerPrototypeClient {
     @SubscribeEvent public static void logout(ClientPlayerNetworkEvent.LoggingOut event){bound.clear();unavailable=List.of();}
     @SubscribeEvent public static void render(ScreenEvent.Render.Post event){
         if(!(event.getScreen() instanceof MerchantScreen screen) || screen.getMenu()!=bound.get())return;
-        int selected=ObfuscationReflectionHelper.getPrivateValue(MerchantScreen.class,screen,"f_99117_");
+        int selected=ObfuscationReflectionHelper.getPrivateValue(MerchantScreen.class,screen,"shopItem");
         if(!unavailable.contains(selected))return;
         var mc=Minecraft.getInstance();int left=(screen.width-276)/2,top=(screen.height-166)/2;
         var label=Component.translatable("merchant.taczweaponblueprints.unavailable");

@@ -7,7 +7,6 @@ import com.tacz.guns.client.resource.index.ClientAmmoIndex;
 import com.tacz.guns.client.resource.index.ClientAttachmentIndex;
 import com.tacz.guns.client.resource.index.ClientGunIndex;
 import org.jetbrains.annotations.NotNull;
-import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
@@ -27,8 +26,8 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -38,7 +37,7 @@ import java.util.Optional;
 @OnlyIn(Dist.CLIENT)
 public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
 
-    private static final ResourceLocation BLUEPRINT_TEXTURE = new ResourceLocation("taczweaponblueprints", "textures/item/blueprint_base.png");
+    private static final ResourceLocation BLUEPRINT_TEXTURE = ResourceLocation.fromNamespaceAndPath("taczweaponblueprints", "textures/item/blueprint_base.png");
     private static final float OVERLAY_SCALE_FACTOR = 0.9F;
     // TaCZ slot textures use an inverted screen-space Y axis, so positive Z
     // rotation is the visually clockwise direction in inventory GUIs.
@@ -115,7 +114,7 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
 
         switch (itemCategory) {
             case "gun" -> {
-                Optional<ClientGunIndex> index = TimelessAPI.getClientGunIndex(new ResourceLocation(data.getBpId()));
+                Optional<ClientGunIndex> index = TimelessAPI.getClientGunIndex(ResourceLocation.parse(data.getBpId()));
                 GunDisplayInstance display = index.map(ClientGunIndex::getDefaultDisplay).orElse(null);
 
                 overlayTexture = data.getDisplaySlotKey();
@@ -124,7 +123,7 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
                 }
             }
             case "ammo" -> {
-                Optional<ClientAmmoIndex> index = TimelessAPI.getClientAmmoIndex(new ResourceLocation(data.getBpId()));
+                Optional<ClientAmmoIndex> index = TimelessAPI.getClientAmmoIndex(ResourceLocation.parse(data.getBpId()));
 
                 overlayTexture = data.getDisplaySlotKey();
                 if (index.isPresent() && index.get().getSlotTextureLocation() != null) {
@@ -132,7 +131,7 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
                 }
             }
             case "attachments" -> {
-                Optional<ClientAttachmentIndex> index = TimelessAPI.getClientAttachmentIndex(new ResourceLocation(data.getBpId()));
+                Optional<ClientAttachmentIndex> index = TimelessAPI.getClientAttachmentIndex(ResourceLocation.parse(data.getBpId()));
 
                 overlayTexture = data.getDisplaySlotKey();
                 if (index.isPresent() && index.get().getSlotTexture() != null) {
@@ -385,7 +384,7 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
         }
 
         Matrix4f matrix = poseStack.last().pose();
-        Matrix3f normalMatrix = poseStack.last().normal();
+        var normalPose = poseStack.last();
 
         float minX = 0.0f;
         float minY = 0.0f;
@@ -400,37 +399,37 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
         float u1 = flipOverlay ? 0.0f : 1.0f;
         float u2 = flipOverlay ? 1.0f : 0.0f;
 
-        vertexConsumer.vertex(matrix, minX, minY, zLevel)
-                .color(255, 255, 255, 255)
-                .uv(u1, 1.0f)
-                .overlayCoords(overlay)
-                .uv2(light)
-                .normal(normalMatrix, normalX, normalY, normalZ)
-                .endVertex();
+        vertexConsumer.addVertex(matrix, minX, minY, zLevel)
+                .setColor(255, 255, 255, 255)
+                .setUv(u1, 1.0f)
+                .setOverlay(overlay)
+                .setLight(light)
+                .setNormal(normalPose, normalX, normalY, normalZ)
+                ;
 
-        vertexConsumer.vertex(matrix, maxX, minY, zLevel)
-                .color(255, 255, 255, 255)
-                .uv(u2, 1.0f)
-                .overlayCoords(overlay)
-                .uv2(light)
-                .normal(normalMatrix, normalX, normalY, normalZ)
-                .endVertex();
+        vertexConsumer.addVertex(matrix, maxX, minY, zLevel)
+                .setColor(255, 255, 255, 255)
+                .setUv(u2, 1.0f)
+                .setOverlay(overlay)
+                .setLight(light)
+                .setNormal(normalPose, normalX, normalY, normalZ)
+                ;
 
-        vertexConsumer.vertex(matrix, maxX, maxY, zLevel)
-                .color(255, 255, 255, 255)
-                .uv(u2, 0.0f)
-                .overlayCoords(overlay)
-                .uv2(light)
-                .normal(normalMatrix, normalX, normalY, normalZ)
-                .endVertex();
+        vertexConsumer.addVertex(matrix, maxX, maxY, zLevel)
+                .setColor(255, 255, 255, 255)
+                .setUv(u2, 0.0f)
+                .setOverlay(overlay)
+                .setLight(light)
+                .setNormal(normalPose, normalX, normalY, normalZ)
+                ;
 
-        vertexConsumer.vertex(matrix, minX, maxY, zLevel)
-                .color(255, 255, 255, 255)
-                .uv(u1, 0.0f)
-                .overlayCoords(overlay)
-                .uv2(light)
-                .normal(normalMatrix, normalX, normalY, normalZ)
-                .endVertex();
+        vertexConsumer.addVertex(matrix, minX, maxY, zLevel)
+                .setColor(255, 255, 255, 255)
+                .setUv(u1, 0.0f)
+                .setOverlay(overlay)
+                .setLight(light)
+                .setNormal(normalPose, normalX, normalY, normalZ)
+                ;
 
         poseStack.popPose();
     }

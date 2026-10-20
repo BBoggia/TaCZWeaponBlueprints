@@ -1,4 +1,4 @@
-name: Build
+name: NeoForge development build
 
 on:
   push:
@@ -9,62 +9,40 @@ permissions:
   contents: read
 
 concurrency:
-  group: build-${{ github.workflow }}-${{ github.ref }}
+  group: neoforge-build-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  verify-addon:
+    name: Regression tests, packaged artifact, and verification fixtures
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17
+      - uses: actions/checkout@v4
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
-
-      - name: Set up Gradle cache
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: Test and verify build
-        run: ./gradlew cleanTest build --warning-mode all
-
-      - name: Verify release tag matches build version
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Check release tag version
         if: startsWith(github.ref, 'refs/tags/v')
-        shell: bash
         run: |
-          mod_version="$(awk -F= '$1 == "mod_version" {print substr($0, index($0, "=") + 1); exit}' gradle.properties)"
-          if [[ -z "$mod_version" || "$mod_version" == *-dev ]]; then
-            echo "Release tags require a non-development mod_version; found '$mod_version'." >&2
-            exit 1
-          fi
-          if [[ "$GITHUB_REF_NAME" != "v$mod_version" ]]; then
-            echo "Tag '$GITHUB_REF_NAME' does not match mod_version '$mod_version'." >&2
-            exit 1
-          fi
-
-      - name: Certify release candidate
-        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
-        run: ./gradlew certifyReleaseCandidate --warning-mode all
-
-      - name: Write release artifact checksum
-        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
-        shell: bash
-        run: |
-          mod_version="$(awk -F= '$1 == "mod_version" {print substr($0, index($0, "=") + 1); exit}' gradle.properties)"
-          sha256sum "build/libs/taczweaponblueprints-$mod_version.jar" \
-            > "build/reports/taczweaponblueprints-$mod_version.jar.sha256"
-
-      - name: Upload release-candidate evidence
-        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@v4
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          properties = dict(line.split('=', 1) for line in Path('gradle.properties').read_text().splitlines()
+                            if '=' in line and not line.lstrip().startswith('#'))
+          version = properties['mod_version']
+          if version.endswith('-dev') or os.environ['GITHUB_REF_NAME'] != 'v' + version:
+              raise SystemExit('Release tags must match the finalized mod_version.')
+          PY
+      - name: Verify the addon and compile the isolated game fixtures
+        run: ./gradlew verifyRegressionEvidence testReleaseGates verifyReleaseArtifact portBootstrapClasses portVerificationClasses packageAnalyzerDatapacks packageResearchEconomyDatapacks --warning-mode all
+      - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: release-candidate-evidence
-          path: |
-            build/libs/taczweaponblueprints-*.jar
-            build/reports/release-candidate.json
-            build/reports/*.sha256
+          name: neoforge-validation-reports
+          path: build/neoforge/reports/
+      # Installed-game checks require a desktop and run separately before release.
+      # This build verifies code and packaging; it does not publish a release.

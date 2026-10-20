@@ -19,7 +19,7 @@ import com.gamergaming.taczweaponblueprints.resource.research.BlueprintFragmentP
 import net.minecraft.resources.ResourceLocation;
 
 class ResearchFeatureConfigSnapshotTest {
-    private static final ResourceLocation TARGET = new ResourceLocation("test:rifle");
+    private static final ResourceLocation TARGET = ResourceLocation.parse("test:rifle");
 
     @Test
     void everyResearchPresetHasAnExplicitResearchAndCraftingTruthTable() {

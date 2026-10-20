@@ -9,7 +9,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 
 /** Reads tier identity from its block so inventory and placed station cannot disagree. */
@@ -28,7 +27,7 @@ public final class BlueprintAnalyzerItem extends BlockItem {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext level, List<Component> tooltip, TooltipFlag flag) {
         if (com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.stationSetup().analyzer()
                 == com.gamergaming.taczweaponblueprints.progression.StationSetup.AnalyzerMode.SINGLE)
             tooltip.add(Component.translatable("item.taczweaponblueprints.station.single").withStyle(ChatFormatting.GRAY));

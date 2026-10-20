@@ -68,7 +68,7 @@ public final class ResearchCurrencyPlanner {
         long left = request.reward();
         int outputUnits = 0;
         if (request.destination() == Destination.MANUAL_OUTPUT) {
-            if (!output.isEmpty() && !ItemStack.isSameItemSameTags(output, unit))
+            if (!output.isEmpty() && !ItemStack.isSameItemSameComponents(output, unit))
                 return failed(OUTPUT_BLOCKED, policy, before, request, available);
             outputUnits = (int) Math.min(left, output.isEmpty() ? max : max - output.getCount());
             if (output.isEmpty()) { output = unit.copy(); output.setCount(outputUnits); }
@@ -80,7 +80,7 @@ public final class ResearchCurrencyPlanner {
         // Existing compatible stacks first; renamed/NBT-bearing currency retains its data and is not overwritten.
         for (int pass = 0; pass < 2; pass++) for (int slot = 0; slot < filled.size() && left > 0; slot++) {
             var stack = filled.get(slot);
-            if (pass == 0 ? stack.isEmpty() || !ItemStack.isSameItemSameTags(stack, unit) : !stack.isEmpty()) continue;
+            if (pass == 0 ? stack.isEmpty() || !ItemStack.isSameItemSameComponents(stack, unit) : !stack.isEmpty()) continue;
             int count = (int) Math.min(left, stack.isEmpty() ? max : max - stack.getCount());
             if (count == 0) continue;
             if (stack.isEmpty()) { stack = unit.copy(); stack.setCount(count); filled.set(slot, stack); }

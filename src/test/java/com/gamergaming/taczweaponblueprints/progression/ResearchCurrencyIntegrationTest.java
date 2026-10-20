@@ -22,7 +22,7 @@ class ResearchCurrencyIntegrationTest {
     static final ResearchPointAwardConfigSnapshot CONFIG = new ResearchPointAwardConfigSnapshot(true, false, 0, PROFILE, CURRENCY);
     static final ResearchPointAwardContext CONTEXT = ResearchPointAwardContext.simple(ResearchPointAwardTrigger.Type.BLUEPRINT_DISCOVERED, PROFILE, TARGET);
     @BeforeAll static void bootstrap() { SharedConstants.tryDetectVersion(); Bootstrap.bootStrap(); }
-    static ResourceLocation id(String id) { return new ResourceLocation(id); }
+    static ResourceLocation id(String id) { return ResourceLocation.parse(id); }
     static ResearchPointAwardResolver.Resolution awards(int... values) {
         var definitions = new LinkedHashMap<ResourceLocation, ResearchPointAwardDefinition>();
         for (int i = 0; i < values.length; i++) {

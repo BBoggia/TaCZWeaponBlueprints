@@ -115,10 +115,10 @@ class StartingBlueprintGrantServiceTest {
     }
 
     private static ResourceLocation recipe(ResourceLocation id) {
-        return new ResourceLocation("test", "recipe/" + id.getPath());
+        return ResourceLocation.fromNamespaceAndPath("test", "recipe/" + id.getPath());
     }
 
     private static ResourceLocation id(String value) {
-        return new ResourceLocation(value);
+        return ResourceLocation.parse(value);
     }
 }

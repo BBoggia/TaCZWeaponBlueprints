@@ -21,7 +21,7 @@ class CraftingPolicyConfigSnapshotTest {
     @Test
     void snapshotNormalizesSelectorsAndDefensivelyCopiesOverrides() {
         Map<ResourceLocation, CraftingAccessOverride> overrides = new LinkedHashMap<>();
-        overrides.put(new ResourceLocation("test:rifle"), CraftingAccessOverride.TIER_3);
+        overrides.put(ResourceLocation.parse("test:rifle"), CraftingAccessOverride.TIER_3);
 
         CraftingPolicyConfigSnapshot snapshot = new CraftingPolicyConfigSnapshot(
                 AmmoCraftingStrategy.LINKED_WEAPON,
@@ -38,7 +38,7 @@ class CraftingPolicyConfigSnapshotTest {
         assertEquals(Set.of("scope"), snapshot.disabledItemTypes());
         assertEquals(
                 CraftingAccessOverride.TIER_3,
-                snapshot.exactOverrides().get(new ResourceLocation("test:rifle")));
+                snapshot.exactOverrides().get(ResourceLocation.parse("test:rifle")));
         assertThrows(
                 UnsupportedOperationException.class,
                 () -> snapshot.disabledKinds().add(BlueprintKind.GUN));

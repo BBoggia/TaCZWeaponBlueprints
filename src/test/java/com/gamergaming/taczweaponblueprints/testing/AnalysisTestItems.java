@@ -9,8 +9,8 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.ForgeRegistry;
+import net.minecraft.core.registries.BuiltInRegistries;
+
 
 /** Registers real item fixtures without starting a client or loading mod configuration. */
 public final class AnalysisTestItems {
@@ -22,20 +22,19 @@ public final class AnalysisTestItems {
         if (fragment != null) return;
         SharedConstants.tryDetectVersion(); Bootstrap.bootStrap();
         var registry = (MappedRegistry<Item>) BuiltInRegistries.ITEM;
-        var forge = (ForgeRegistry<Item>) ForgeRegistries.ITEMS;
-        registry.unfreeze(); forge.unfreeze();
+        registry.unfreeze();
         try {
             fragment = new BlueprintFragmentItem(new Item.Properties());
-            forge.register(new ResourceLocation("analysis_test:fragment"), fragment);
+            Registry.register(registry, ResourceLocation.parse("analysis_test:fragment"), fragment);
             gun = new TestGun();
-            forge.register(new ResourceLocation("analysis_test:gun"), gun);
+            Registry.register(registry, ResourceLocation.parse("analysis_test:gun"), gun);
             blueprint = new BlueprintItem(new Item.Properties());
-            forge.register(new ResourceLocation("analysis_test:blueprint"), blueprint);
+            Registry.register(registry, ResourceLocation.parse("analysis_test:blueprint"), blueprint);
         } catch (RuntimeException exception) {
             try { registry.freeze(); } catch (RuntimeException freeze) { exception.addSuppressed(freeze); }
-            forge.freeze(); throw exception;
+            throw exception;
         }
-        registry.freeze(); forge.freeze();
+        registry.freeze();
     }
     /** Uses TaCZ NBT defaults; no rendering, Lua runtime, or add-on classes are needed. */
     public static final class TestGun extends Item implements com.tacz.guns.api.item.nbt.GunItemDataAccessor {

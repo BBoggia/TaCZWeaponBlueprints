@@ -99,7 +99,7 @@ public final class DesignerCaptureAssembly {
             if (researchPolicy != null) {
                 node.add("progression_evidence", evidence(researchPolicy));
                 JsonObject overrides = policy.has("progression") ? policy.getAsJsonObject("progression") : new JsonObject();
-                overrides.add("research_tier", BlueprintProgressionCodecs.WORKBENCH_TIER.encodeStart(com.mojang.serialization.JsonOps.INSTANCE, researchPolicy.researchWorkbenchTier()).getOrThrow(false, ignored -> {}));
+                overrides.add("research_tier", BlueprintProgressionCodecs.WORKBENCH_TIER.encodeStart(com.mojang.serialization.JsonOps.INSTANCE, researchPolicy.researchWorkbenchTier()).getOrThrow(IllegalArgumentException::new));
                 // Exactness affects fragment loot, not just diagnostics. Preserve inherited thresholds as inherited.
                 if (researchPolicy.exactFragmentThreshold() && researchPolicy.fragments().threshold() > 0)
                     overrides.addProperty("fragment_threshold", researchPolicy.fragments().threshold());
@@ -110,12 +110,12 @@ public final class DesignerCaptureAssembly {
                 node.add("crafting_evidence", evidence(crafting));
                 // Preserve the independently selected crafting gates; the profile supplies its own gates.
                 var craft = new JsonObject(); craft.addProperty("disposition", crafting.disposition().serializedName());
-                crafting.requiredWorkbenchTier().ifPresent(t -> craft.add("workbench_tier", BlueprintProgressionCodecs.WORKBENCH_TIER.encodeStart(com.mojang.serialization.JsonOps.INSTANCE, t).getOrThrow(false, ignored -> {})));
+                crafting.requiredWorkbenchTier().ifPresent(t -> craft.add("workbench_tier", BlueprintProgressionCodecs.WORKBENCH_TIER.encodeStart(com.mojang.serialization.JsonOps.INSTANCE, t).getOrThrow(IllegalArgumentException::new)));
                 crafting.selectedRuleId().map(snapshot.rules()::get).ifPresent(rule -> {
                     var source = encode(BlueprintResearchRule.CODEC, rule);
                     if (source.has("crafting") && source.getAsJsonObject("crafting").has("gates")) craft.add("gates", source.getAsJsonObject("crafting").get("gates"));
                 });
-                if (crafting.gates().conditionCount() > 0) craft.add("gates",BlueprintProgressionCodecs.GATE_REQUIREMENTS.encodeStart(com.mojang.serialization.JsonOps.INSTANCE,crafting.gates()).getOrThrow(false, ignored -> {}));
+                if (crafting.gates().conditionCount() > 0) craft.add("gates",BlueprintProgressionCodecs.GATE_REQUIREMENTS.encodeStart(com.mojang.serialization.JsonOps.INSTANCE,crafting.gates()).getOrThrow(IllegalArgumentException::new));
                 policy.add("crafting", craft);
             }
             // Use exactly the runtime exemption, entry-point and automatic replacement semantics.
@@ -167,7 +167,7 @@ public final class DesignerCaptureAssembly {
                 .sorted(Comparator.<Map.Entry<String,JsonElement>>comparingLong(e -> e.getValue().getAsJsonObject().getAsJsonObject("automatic_evidence").getAsJsonObject("progressionCoordinate").get("siblingOrder").getAsLong()).thenComparing(Map.Entry::getKey)).toList();
         for (int i=0;i<automaticNodes.size();i++) automaticNodes.get(i).getValue().getAsJsonObject().getAsJsonObject("placement").addProperty("order",i);
         Set<String> referencedBlueprints=new TreeSet<>(); collectBlueprints(definitions,referencedBlueprints,false);
-        for(String reference:referencedBlueprints) if(!records.has(reference)) note(notes,"missing_reference",new ResourceLocation(reference));
+        for(String reference:referencedBlueprints) if(!records.has(reference)) note(notes,"missing_reference",ResourceLocation.parse(reference));
         context.add("catalog", records); context.add("resolved_nodes", nodes); context.add("conversion_notes", notes);
         context.addProperty("context_completeness", "complete");
         return context;

@@ -20,20 +20,20 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.*;
 
 class ResearchDataAnalysisServiceTest {
-    static final ResourceLocation TARGET = new ResourceLocation("test:weapon"), OTHER = new ResourceLocation("test:other");
+    static final ResourceLocation TARGET = ResourceLocation.parse("test:weapon"), OTHER = ResourceLocation.parse("test:other");
     @BeforeAll static void bootstrap() { AnalysisTestItems.initialize(); }
     static ResearchDataPolicy policy(AnalysisRewardClass reward) {
         try (var in = ResearchDataAnalysisServiceTest.class.getResourceAsStream("/research-data-policy/report.json")) {
             var json = JsonParser.parseString(new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
             json.addProperty("reward_class", reward.serializedName());
             json.add("cost", JsonParser.parseString("{\"points\":3,\"ingredients\":[{\"items\":[\"minecraft:iron_ingot\"],\"count\":2}]}"));
-            return ResearchDataPolicy.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow(false, ignored -> {});
+            return ResearchDataPolicy.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow();
         } catch (Exception failure) { throw new AssertionError(failure); }
     }
     static ResearchDataPoolResolver.Pool pool(AnalysisRewardClass reward, AnalyzerOutcomeTable table) {
         var candidates = List.of(new ResearchDataPoolResolver.Candidate(TARGET, AnalyzerTier.TIER_1, 1, table, Optional.empty()),
                 new ResearchDataPoolResolver.Candidate(OTHER, AnalyzerTier.TIER_1, 1, table, Optional.empty()));
-        return new ResearchDataPoolResolver.Pool(ResearchDataPoolResolver.Status.READY, new ResourceLocation("test:data"), policy(reward),
+        return new ResearchDataPoolResolver.Pool(ResearchDataPoolResolver.Status.READY, ResourceLocation.parse("test:data"), policy(reward),
                 List.of(new ResearchDataPoolResolver.TierPool(AnalyzerTier.TIER_1, 1, candidates, 2)), Map.of(), table.blueprintProbability(), table.minimumFragments(), table.maximumFragments());
     }
     static ResearchDataPoolResolver.Pool mixed() { return pool(AnalysisRewardClass.PROTECTED_PREREQUISITES, new AnalyzerOutcomeTable(1,1,0,1,64)); }
@@ -72,7 +72,7 @@ class ResearchDataAnalysisServiceTest {
             case "input" -> tx.input.shrink(1);
             case "inventory" -> tx.inventory.get(0).shrink(1);
             case "knowledge" -> data.addBlueprint(TARGET.toString());
-            case "currency" -> tx.currency = ResearchCurrencyPolicy.physical(new ResourceLocation("minecraft:iron_ingot"),2);
+            case "currency" -> tx.currency = ResearchCurrencyPolicy.physical(ResourceLocation.parse("minecraft:iron_ingot"),2);
             default -> tx.current = false;
         }
         assertEquals(Status.STALE_INVENTORY, ResearchDataAnalysisService.commit(p,data,tx,b -> fail("stale request rolled")).status());
@@ -82,7 +82,7 @@ class ResearchDataAnalysisServiceTest {
         for (boolean physical : List.of(false, true)) {
             if (physical && fault.startsWith("spend")) continue;
             var tx = new Tx(); var data = data(); tx.fault = fault; data.fault = fault;
-            if (physical) tx.currency = ResearchCurrencyPolicy.physical(new ResourceLocation("minecraft:iron_ingot"),1);
+            if (physical) tx.currency = ResearchCurrencyPolicy.physical(ResourceLocation.parse("minecraft:iron_ingot"),1);
             var before = data.serializeNBT().copy();
             var result = ResearchDataAnalysisService.commit(prepare(tx,data,mixed()),data,tx,b -> 0);
             assertEquals(Status.TRANSACTION_FAILED,result.status(),fault); assertTrue(result.outcome().isEmpty());
@@ -90,7 +90,7 @@ class ResearchDataAnalysisServiceTest {
         }
     }
     @Test void physicalCostAndMaterialOverlapConsumeFiveUnitsAndKeepDormantBank() {
-        var tx=new Tx(); var data=data(); tx.currency=ResearchCurrencyPolicy.physical(new ResourceLocation("minecraft:iron_ingot"),1);
+        var tx=new Tx(); var data=data(); tx.currency=ResearchCurrencyPolicy.physical(ResourceLocation.parse("minecraft:iron_ingot"),1);
         assertTrue(ResearchDataAnalysisService.commit(prepare(tx,data,mixed()),data,tx,b -> 0).successful());
         assertEquals(3,tx.inventory.get(0).getCount()); assertEquals(137,data.getResearchPoints());
     }
@@ -158,8 +158,8 @@ class ResearchDataAnalysisServiceTest {
         public List<ItemStack> inventoryStacks(){return inventory.stream().map(ItemStack::copy).toList();}
         public ItemStack createOutput(ResourceLocation id,BlueprintProvenance provenance){
             if(fault.equals("bad_second_builder")&&id.equals(OTHER))return ItemStack.EMPTY;
-            var stack = new ItemStack(AnalysisTestItems.blueprint); stack.getOrCreateTag().putString("bpId",id.toString());
-            stack.getOrCreateTag().put(BlueprintProvenance.TAG_KEY,provenance.toTag()); return stack;
+            var stack = new ItemStack(AnalysisTestItems.blueprint); net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, stack, customTag -> customTag.putString("bpId",id.toString()));
+            net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, stack, customTag -> customTag.put(BlueprintProvenance.TAG_KEY,provenance.toTag())); return stack;
         }
         public ItemStack createFragments(ResourceLocation id,AnalysisRewardClass reward,int count){var stack = BlueprintFragmentItem.createAnalysis(AnalysisTestItems.fragment,id,reward); stack.setCount(count); return stack;}
         public boolean consumeMaterials(ResearchIngredientPlanner.Plan p,List<ItemStack> expected){inventory=new ArrayList<>(p.applyToCopies(inventory));return !fault.equals("materials_false");}

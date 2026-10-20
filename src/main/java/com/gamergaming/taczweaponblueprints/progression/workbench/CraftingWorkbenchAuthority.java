@@ -8,11 +8,10 @@ import com.tacz.guns.block.AbstractGunSmithTableBlock;
 import com.tacz.guns.block.entity.GunSmithTableBlockEntity;
 import com.tacz.guns.inventory.GunSmithTableMenu;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 /** Revalidates the physical source of a native TaCZ crafting menu. */
 public final class CraftingWorkbenchAuthority {
@@ -57,7 +56,7 @@ public final class CraftingWorkbenchAuthority {
                     player.level(), context.rootPosition(), context.tier())) {
                 return false;
             }
-            ResourceLocation liveId = ForgeRegistries.BLOCKS.getKey(
+            ResourceLocation liveId = BuiltInRegistries.BLOCK.getKey(
                     player.level().getBlockState(context.rootPosition()).getBlock());
             return menuId.equals(liveId);
         }

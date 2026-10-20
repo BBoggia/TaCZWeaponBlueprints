@@ -1,28 +1,29 @@
 package com.gamergaming.taczweaponblueprints.resource;
 
-import com.google.gson.JsonObject;
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.GsonHelper;
-import net.minecraftforge.common.crafting.conditions.ICondition;
-import net.minecraftforge.common.crafting.conditions.IConditionSerializer;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.common.conditions.ICondition;
+import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 /** Filters bundled recipes on data reload; existing blocks and items remain registered. */
 public record StationRecipeCondition(boolean analyzer, int tier) implements ICondition {
-    public static final ResourceLocation ID = TaCZWeaponBlueprints.loc("station_setup");
+    public static final MapCodec<StationRecipeCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+            Codec.BOOL.fieldOf("analyzer").forGetter(StationRecipeCondition::analyzer),
+            Codec.intRange(1, 3).fieldOf("tier").forGetter(StationRecipeCondition::tier)
+    ).apply(instance, StationRecipeCondition::new));
+    private static final DeferredRegister<MapCodec<? extends ICondition>> CONDITIONS =
+            DeferredRegister.create(NeoForgeRegistries.Keys.CONDITION_CODECS, TaCZWeaponBlueprints.MODID);
+    static { CONDITIONS.register("station_setup", () -> CODEC); }
+
     public StationRecipeCondition {
         if (tier < 1 || tier > 3) throw new IllegalArgumentException("Invalid station recipe tier");
     }
-    @Override public ResourceLocation getID() { return ID; }
+    @Override public MapCodec<StationRecipeCondition> codec() { return CODEC; }
     @Override public boolean test(IContext context) { return ModConfigs.BLUEPRINT.stationSetup().recipeEnabled(analyzer, tier); }
-    public static final class Serializer implements IConditionSerializer<StationRecipeCondition> {
-        @Override public void write(JsonObject json, StationRecipeCondition value) {
-            json.addProperty("analyzer", value.analyzer()); json.addProperty("tier", value.tier());
-        }
-        @Override public StationRecipeCondition read(JsonObject json) {
-            return new StationRecipeCondition(GsonHelper.getAsBoolean(json, "analyzer"), GsonHelper.getAsInt(json, "tier"));
-        }
-        @Override public ResourceLocation getID() { return ID; }
-    }
+    public static void register(IEventBus bus) { CONDITIONS.register(bus); }
 }

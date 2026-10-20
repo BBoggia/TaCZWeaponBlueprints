@@ -1,6 +1,6 @@
 # Blueprint Analyzer datapacks
 
-These optional Minecraft 1.20.1 datapacks demonstrate complete legacy and tiered
+These optional Minecraft 1.21.1 datapacks demonstrate complete legacy and tiered
 analysis policies plus exact-target and blueprint-tag overrides. The mod's
 bundled profile already uses tiered analysis; these packs are customization and legacy references.
 

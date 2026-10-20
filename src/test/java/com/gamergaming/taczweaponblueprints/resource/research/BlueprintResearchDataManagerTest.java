@@ -36,19 +36,19 @@ class BlueprintResearchDataManagerTest {
             var data = ResearchDataPolicyTest.json("report");
             data.add("input", com.google.gson.JsonParser.parseString("{\"item\":\"minecraft:paper\"}"));
             var definitions = new java.util.HashMap<ResourceLocation, Resource>();
-            definitions.put(new ResourceLocation("test:taczweaponblueprints/research_profiles/analyzer.json"), resource(BlueprintAnalyzerPolicyTest.profileJson().toString()));
-            definitions.put(new ResourceLocation("test:taczweaponblueprints/research_data/data.json"), resource(data.toString()));
-            definitions.put(new ResourceLocation("test:taczweaponblueprints/analysis_reconstruction/shared.json"), resource(ResearchDataPolicyTest.json("shared").toString()));
+            definitions.put(ResourceLocation.parse("test:taczweaponblueprints/research_profiles/analyzer.json"), resource(BlueprintAnalyzerPolicyTest.profileJson().toString()));
+            definitions.put(ResourceLocation.parse("test:taczweaponblueprints/research_data/data.json"), resource(data.toString()));
+            definitions.put(ResourceLocation.parse("test:taczweaponblueprints/analysis_reconstruction/shared.json"), resource(ResearchDataPolicyTest.json("shared").toString()));
             var prepared = manager.prepare(resourceManager(definitions), InactiveProfiler.INSTANCE);
-            manager.applySnapshot(prepared, com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager.SERVER.catalogPublication(), BlueprintAnalyzerPolicyTest.PROFILE, ignored -> true);
+            manager.applySnapshot(prepared, com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager.SERVER.catalogPublication(), BlueprintAnalyzerPolicyTest.PROFILE, com.gamergaming.taczweaponblueprints.progression.ResearchDomainSettings.PROFILE_DEFAULTS, ignored -> true);
             var published = manager.publication();
             assertEquals(1, published.snapshot().researchData().policies().size());
             assertEquals(1, published.snapshot().researchData().reconstruction().size());
-            definitions.remove(new ResourceLocation("test:taczweaponblueprints/analysis_reconstruction/shared.json"));
+            definitions.remove(ResourceLocation.parse("test:taczweaponblueprints/analysis_reconstruction/shared.json"));
             assertThrows(RuntimeException.class, () -> manager.prepare(resourceManager(definitions), InactiveProfiler.INSTANCE));
             assertSame(published, manager.publication());
             var disabled = ResearchDataPolicyTest.json("shared"); disabled.addProperty("enabled", false);
-            definitions.put(new ResourceLocation("test:taczweaponblueprints/analysis_reconstruction/shared.json"), resource(disabled.toString()));
+            definitions.put(ResourceLocation.parse("test:taczweaponblueprints/analysis_reconstruction/shared.json"), resource(disabled.toString()));
             assertThrows(RuntimeException.class, () -> manager.prepare(resourceManager(definitions), InactiveProfiler.INSTANCE));
             assertSame(published, manager.publication());
         } finally { manager.clear(); }
@@ -62,11 +62,11 @@ class BlueprintResearchDataManagerTest {
         manager.clear();
         try {
             var json = BlueprintAnalyzerPolicyTest.profileJson();
-            var path = new ResourceLocation("test", "taczweaponblueprints/research_profiles/analyzer.json");
+            var path = ResourceLocation.fromNamespaceAndPath("test", "taczweaponblueprints/research_profiles/analyzer.json");
             var valid = resourceManager(Map.of(path, resource(json.toString())));
             var prepared = manager.prepare(valid, InactiveProfiler.INSTANCE);
             var catalog = com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager.SERVER.catalogPublication();
-            manager.applySnapshot(prepared, catalog, BlueprintAnalyzerPolicyTest.PROFILE, ignored -> true);
+            manager.applySnapshot(prepared, catalog, BlueprintAnalyzerPolicyTest.PROFILE, com.gamergaming.taczweaponblueprints.progression.ResearchDomainSettings.PROFILE_DEFAULTS, ignored -> true);
             var published = manager.publication();
             assertSame(prepared, published.snapshot());
             json.getAsJsonObject("analyzer").getAsJsonObject("tiers").remove("tier_2");
@@ -77,7 +77,7 @@ class BlueprintResearchDataManagerTest {
             json.getAsJsonObject("analyzer").addProperty("minimum_analyzer_tier", "tier_3");
             var changed = resourceManager(Map.of(path, resource(json.toString())));
             var replacement = manager.prepare(changed, InactiveProfiler.INSTANCE);
-            manager.applySnapshot(replacement, catalog, BlueprintAnalyzerPolicyTest.PROFILE, ignored -> true);
+            manager.applySnapshot(replacement, catalog, BlueprintAnalyzerPolicyTest.PROFILE, com.gamergaming.taczweaponblueprints.progression.ResearchDomainSettings.PROFILE_DEFAULTS, ignored -> true);
             assertSame(replacement, manager.snapshot());
             assertEquals(published.revision() + 1, manager.revision());
             assertEquals(com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerTier.TIER_1,
@@ -105,11 +105,11 @@ class BlueprintResearchDataManagerTest {
     @Test
     void preparesTechTreeMapsAndAdditiveEntryBundlesAtomically() {
         ResourceManager resources = resourceManager(Map.of(
-                new ResourceLocation("test", "taczweaponblueprints/research_profiles/profile.json"),
+                ResourceLocation.fromNamespaceAndPath("test", "taczweaponblueprints/research_profiles/profile.json"),
                 resource(validProfileJsonWithTechTree()),
-                new ResourceLocation("test", "taczweaponblueprints/research_tech_trees/progression.json"),
+                ResourceLocation.fromNamespaceAndPath("test", "taczweaponblueprints/research_tech_trees/progression.json"),
                 resource(validTechTreeJson()),
-                new ResourceLocation("test", "taczweaponblueprints/research_tech_tree_entries/base.json"),
+                ResourceLocation.fromNamespaceAndPath("test", "taczweaponblueprints/research_tech_tree_entries/base.json"),
                 resource(validTechTreeEntryJson())));
 
         BlueprintResearchSnapshot prepared = BlueprintResearchDataManager.INSTANCE.prepare(
@@ -119,19 +119,19 @@ class BlueprintResearchDataManagerTest {
         assertEquals(1, prepared.techTrees().size());
         assertEquals(1, prepared.techTreeEntryBundles().size());
         assertEquals(
-                new ResourceLocation("test", "progression"),
-                prepared.profiles().get(new ResourceLocation("test", "profile"))
+                ResourceLocation.fromNamespaceAndPath("test", "progression"),
+                prepared.profiles().get(ResourceLocation.fromNamespaceAndPath("test", "profile"))
                         .techTree().orElseThrow());
         assertEquals(1, prepared.techTreeEntriesFor(
-                new ResourceLocation("test", "progression")).size());
+                ResourceLocation.fromNamespaceAndPath("test", "progression")).size());
     }
 
     @Test
     void preparesStrictResearchTreeGroupsAlongsideExistingDefinitions() {
         ResourceManager resources = resourceManager(Map.of(
-                new ResourceLocation("test", "taczweaponblueprints/research_profiles/profile.json"),
+                ResourceLocation.fromNamespaceAndPath("test", "taczweaponblueprints/research_profiles/profile.json"),
                 resource(validProfileJson()),
-                new ResourceLocation("test", "taczweaponblueprints/research_tree_groups/pistols.json"),
+                ResourceLocation.fromNamespaceAndPath("test", "taczweaponblueprints/research_tree_groups/pistols.json"),
                 resource("""
                         {
                           "format": 1,
@@ -150,19 +150,19 @@ class BlueprintResearchDataManagerTest {
         assertEquals(1, prepared.groups().size());
         assertEquals(
                 new ResearchTreeGroupPlacement(
-                        new ResourceLocation("test", "pistols"),
+                        ResourceLocation.fromNamespaceAndPath("test", "pistols"),
                         0,
                         0),
                 prepared.placementFor(
-                        new ResourceLocation("test", "profile"),
-                        new ResourceLocation("test", "starter"))
+                        ResourceLocation.fromNamespaceAndPath("test", "profile"),
+                        ResourceLocation.fromNamespaceAndPath("test", "starter"))
                         .orElseThrow());
     }
 
     @Test
     void failedPreparationLeavesThePublishedSnapshotUntouched() {
         BlueprintResearchDataManager.Publication before = BlueprintResearchDataManager.INSTANCE.publication();
-        ResourceLocation resourceId = new ResourceLocation(
+        ResourceLocation resourceId = ResourceLocation.fromNamespaceAndPath(
                 "test",
                 "taczweaponblueprints/research_profiles/invalid.json");
         ResourceManager resources = resourceManager(Map.of(
@@ -193,9 +193,9 @@ class BlueprintResearchDataManagerTest {
     void invalidGroupPreparationLeavesThePublishedSnapshotUntouched() {
         BlueprintResearchDataManager.Publication before = BlueprintResearchDataManager.INSTANCE.publication();
         ResourceManager resources = resourceManager(Map.of(
-                new ResourceLocation("test", "taczweaponblueprints/research_profiles/profile.json"),
+                ResourceLocation.fromNamespaceAndPath("test", "taczweaponblueprints/research_profiles/profile.json"),
                 resource(validProfileJson()),
-                new ResourceLocation("test", "taczweaponblueprints/research_tree_groups/invalid.json"),
+                ResourceLocation.fromNamespaceAndPath("test", "taczweaponblueprints/research_tree_groups/invalid.json"),
                 resource("""
                         {
                           "format": 1,
@@ -216,7 +216,7 @@ class BlueprintResearchDataManagerTest {
     @Test
     void oversizedDefinitionIsRejectedBeforeJsonMaterialization() {
         ResourceManager resources = resourceManager(Map.of(
-                new ResourceLocation("test", "taczweaponblueprints/research_profiles/oversized.json"),
+                ResourceLocation.fromNamespaceAndPath("test", "taczweaponblueprints/research_profiles/oversized.json"),
                 resource(validProfileJson() + " ".repeat(
                         BlueprintResearchDataManager.MAX_DEFINITION_JSON_CHARACTERS + 1))));
 
@@ -229,11 +229,11 @@ class BlueprintResearchDataManagerTest {
 
     @Test
     void groupAdditionRemovalAndProfileSwitchPrepareIndependentSnapshots() {
-        ResourceLocation alphaProfile = new ResourceLocation(
+        ResourceLocation alphaProfile = ResourceLocation.fromNamespaceAndPath(
                 "test", "taczweaponblueprints/research_profiles/alpha.json");
-        ResourceLocation betaProfile = new ResourceLocation(
+        ResourceLocation betaProfile = ResourceLocation.fromNamespaceAndPath(
                 "test", "taczweaponblueprints/research_profiles/beta.json");
-        ResourceLocation groupResource = new ResourceLocation(
+        ResourceLocation groupResource = ResourceLocation.fromNamespaceAndPath(
                 "test", "taczweaponblueprints/research_tree_groups/weapons.json");
 
         BlueprintResearchSnapshot alpha = BlueprintResearchDataManager.INSTANCE.prepare(
@@ -254,11 +254,11 @@ class BlueprintResearchDataManagerTest {
                         groupResource, resource(validGroupJson("test:beta")))),
                 InactiveProfiler.INSTANCE);
 
-        assertEquals(1, alpha.groupsForProfile(new ResourceLocation("test", "alpha")).size());
-        assertEquals(0, alpha.groupsForProfile(new ResourceLocation("test", "beta")).size());
+        assertEquals(1, alpha.groupsForProfile(ResourceLocation.fromNamespaceAndPath("test", "alpha")).size());
+        assertEquals(0, alpha.groupsForProfile(ResourceLocation.fromNamespaceAndPath("test", "beta")).size());
         assertEquals(0, removed.groups().size());
-        assertEquals(0, beta.groupsForProfile(new ResourceLocation("test", "alpha")).size());
-        assertEquals(1, beta.groupsForProfile(new ResourceLocation("test", "beta")).size());
+        assertEquals(0, beta.groupsForProfile(ResourceLocation.fromNamespaceAndPath("test", "alpha")).size());
+        assertEquals(1, beta.groupsForProfile(ResourceLocation.fromNamespaceAndPath("test", "beta")).size());
         assertEquals(1, alpha.groups().size());
     }
 
@@ -393,6 +393,9 @@ class BlueprintResearchDataManagerTest {
     }
 
     private static final PackResources TEST_PACK = new PackResources() {
+        @Override public net.minecraft.server.packs.PackLocationInfo location() {
+            return new net.minecraft.server.packs.PackLocationInfo(packId(), net.minecraft.network.chat.Component.literal(packId()), net.minecraft.server.packs.repository.PackSource.DEFAULT, java.util.Optional.empty());
+        }
         @Override
         public IoSupplier<InputStream> getRootResource(String... path) {
             return null;

@@ -212,7 +212,7 @@ public record ResearchTreeGroupDefinition(
 
     private static String errorMessage(DataResult<?> result) {
         return result.error()
-                .map(DataResult.PartialResult::message)
+                .map(DataResult.Error::message)
                 .orElse("unknown codec error");
     }
 

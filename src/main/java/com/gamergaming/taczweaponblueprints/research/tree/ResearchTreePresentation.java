@@ -22,7 +22,7 @@ public final class ResearchTreePresentation {
     public static final String UNDISCLOSED_TRANSLATION_KEY =
             "gui.taczweaponblueprints.research_group.undisclosed";
     public static final ResourceLocation PREFERRED_UNDISCLOSED_GROUP_ID =
-            new ResourceLocation("taczweaponblueprints", "published/undisclosed");
+            ResourceLocation.fromNamespaceAndPath("taczweaponblueprints", "published/undisclosed");
     public static final ResearchTreePresentation EMPTY = new ResearchTreePresentation(List.of());
 
     private static final Comparator<Member> MEMBER_ORDER = Comparator

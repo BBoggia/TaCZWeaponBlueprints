@@ -151,7 +151,7 @@ public final class BlueprintLootDataManager extends SimplePreparableReloadListen
             return result.result().orElseThrow(() -> new IllegalStateException(
                     "Invalid blueprint " + typeName + " " + resourceId + " from pack "
                             + resource.sourcePackId() + ": "
-                            + result.error().map(DataResult.PartialResult::message).orElse("unknown codec error")));
+                            + result.error().map(DataResult.Error::message).orElse("unknown codec error")));
         } catch (IOException | RuntimeException exception) {
             if (exception instanceof IllegalStateException illegalStateException) {
                 throw illegalStateException;

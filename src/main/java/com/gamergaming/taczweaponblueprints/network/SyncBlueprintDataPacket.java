@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
-import java.util.function.Supplier;
 
 import com.gamergaming.taczweaponblueprints.client.ClientBlueprintCatalog;
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
@@ -16,9 +15,20 @@ import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 
-public class SyncBlueprintDataPacket {
+public class SyncBlueprintDataPacket implements CustomPacketPayload {
+    public static final Type<SyncBlueprintDataPacket> TYPE = new Type<>(
+            com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.loc("sync_blueprint_data"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, SyncBlueprintDataPacket> STREAM_CODEC =
+            StreamCodec.ofMember(SyncBlueprintDataPacket::toBytes, SyncBlueprintDataPacket::new);
+
+    @Override
+    public Type<SyncBlueprintDataPacket> type() { return TYPE; }
+
     private static final int MAX_BLUEPRINTS = BlueprintDataManager.MAX_CATALOG_ENTRIES;
     private static final ClientAccumulator CLIENT_ACCUMULATOR = new ClientAccumulator();
 
@@ -134,12 +144,19 @@ public class SyncBlueprintDataPacket {
         }
     }
 
-    public void handle(Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> CLIENT_ACCUMULATOR.accept(this).ifPresent(completed -> {
-            BlueprintDataManager.CLIENT.setBlueprintDataMap(completed);
-            ClientBlueprintCatalog.invalidateCreativeTabs();
-        }));
-        ctx.get().setPacketHandled(true);
+    public void handle(IPayloadContext context) {
+        new ClientHandler().handle(context);
+    }
+
+    /** Loaded only when this clientbound payload is handled, never during server registration. */
+    @net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)
+    private final class ClientHandler {
+        void handle(IPayloadContext ctx) {
+            ctx.enqueueWork(() -> CLIENT_ACCUMULATOR.accept(SyncBlueprintDataPacket.this).ifPresent(completed -> {
+                BlueprintDataManager.CLIENT.setBlueprintDataMap(completed);
+                ClientBlueprintCatalog.invalidateCreativeTabs();
+            }));
+        }
     }
 
     /** Drops any partial or completed snapshot retained from the previous connection. */

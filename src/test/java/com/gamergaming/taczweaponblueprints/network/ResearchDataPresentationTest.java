@@ -49,7 +49,7 @@ class ResearchDataPresentationTest {
         } finally {full.release();}
     }
     @Test void currencyModeAndDataDefaultsTravelTogetherAndClearOnDisconnect() {
-        var p=new SyncResearchCurrencyPacket(com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy.physical(new net.minecraft.resources.ResourceLocation("test:currency"),2),173,
+        var p=new SyncResearchCurrencyPacket(com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy.physical(net.minecraft.resources.ResourceLocation.parse("test:currency"),2),173,
                 new com.gamergaming.taczweaponblueprints.progression.ResearchDataSettings(com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPolicy.Behavior.ANALYSIS,new com.gamergaming.taczweaponblueprints.resource.research.ResearchDataPoolResolver.Defaults(false,true)));
         var b=new FriendlyByteBuf(Unpooled.buffer());
         try {p.toBytes(b);assertEquals(p,new SyncResearchCurrencyPacket(b));ClientResearchCurrency.accept(p);assertEquals("analysis",ClientResearchCurrency.dataMode());

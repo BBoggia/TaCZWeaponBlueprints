@@ -110,7 +110,7 @@ class ResearchRequirementsTest {
                 () -> new ResearchPrerequisiteGroup(ids(
                         ResearchPrerequisiteGroup.MAX_ALTERNATIVES + 1)));
         assertThrows(IllegalArgumentException.class,
-                () -> ResearchPrerequisiteGroup.singleton(new ResourceLocation(
+                () -> ResearchPrerequisiteGroup.singleton(ResourceLocation.fromNamespaceAndPath(
                         "test", "a".repeat(300))));
 
         ResearchPrerequisiteGroup group = new ResearchPrerequisiteGroup(List.of(A, B));
@@ -269,6 +269,6 @@ class ResearchRequirementsTest {
     }
 
     private static ResourceLocation id(String value) {
-        return new ResourceLocation(value);
+        return ResourceLocation.parse(value);
     }
 }

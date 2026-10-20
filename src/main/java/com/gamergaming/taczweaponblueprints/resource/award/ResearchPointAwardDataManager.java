@@ -170,7 +170,7 @@ public final class ResearchPointAwardDataManager
             return result.result().orElseThrow(() -> new AwardDataException(
                     "Invalid Research Point award " + resourceId + " from pack "
                             + resource.sourcePackId() + ": "
-                            + result.error().map(DataResult.PartialResult::message)
+                            + result.error().map(DataResult.Error::message)
                                     .orElse("unknown codec error")));
         } catch (IOException | RuntimeException exception) {
             if (exception instanceof AwardDataException dataException) {

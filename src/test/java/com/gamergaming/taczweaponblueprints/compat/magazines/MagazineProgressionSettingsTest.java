@@ -21,7 +21,7 @@ import net.minecraft.world.item.Items;
 class MagazineProgressionSettingsTest {
     static final ResourceLocation A = id("pack:rifle_a"), B = id("pack:rifle_b"), OTHER = id("pack:same_caliber_isolated");
     @BeforeAll static void bootstrap() { AnalysisTestItems.initialize(); }
-    static ResourceLocation id(String value) { return new ResourceLocation(value); }
+    static ResourceLocation id(String value) { return ResourceLocation.parse(value); }
     static MagazineDescriptor magazine(int extension) {
         String family = extension == 0 ? "9mm_17" : "9mm_33_ext" + extension;
         var recipe = id("taczmagazines:magazine/0010_" + family);

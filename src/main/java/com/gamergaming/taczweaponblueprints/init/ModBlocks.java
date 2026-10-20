@@ -12,42 +12,42 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.RegistryObject;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.DeferredHolder;
 
 public final class ModBlocks {
     public static final DeferredRegister<Block> BLOCKS =
             DeferredRegister.create(Registries.BLOCK, TaCZWeaponBlueprints.MODID);
 
-    public static final RegistryObject<com.gamergaming.taczweaponblueprints.block.VillagerJobSiteBlock> GUNSMITH_STATION =
+    public static final DeferredHolder<net.minecraft.world.level.block.Block, com.gamergaming.taczweaponblueprints.block.VillagerJobSiteBlock> GUNSMITH_STATION =
             BLOCKS.register("gunsmith_station", () -> new com.gamergaming.taczweaponblueprints.block.VillagerJobSiteBlock(
                     BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5F).sound(SoundType.WOOD).noOcclusion()));
-    public static final RegistryObject<com.gamergaming.taczweaponblueprints.block.VillagerJobSiteBlock> BALLISTICS_DESK =
+    public static final DeferredHolder<net.minecraft.world.level.block.Block, com.gamergaming.taczweaponblueprints.block.VillagerJobSiteBlock> BALLISTICS_DESK =
             BLOCKS.register("ballistics_desk", () -> new com.gamergaming.taczweaponblueprints.block.VillagerJobSiteBlock(
                     BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5F).sound(SoundType.WOOD).noOcclusion()));
 
-    public static final RegistryObject<ResearchBenchBlock> RESEARCH_BENCH = BLOCKS.register(
+    public static final DeferredHolder<net.minecraft.world.level.block.Block, ResearchBenchBlock> RESEARCH_BENCH = BLOCKS.register(
             "research_bench",
             () -> researchBench(ResearchWorkbenchTier.TIER_1));
 
-    public static final RegistryObject<ResearchBenchBlock> ADVANCED_RESEARCH_BENCH = BLOCKS.register(
+    public static final DeferredHolder<net.minecraft.world.level.block.Block, ResearchBenchBlock> ADVANCED_RESEARCH_BENCH = BLOCKS.register(
             "advanced_research_bench",
             () -> researchBench(ResearchWorkbenchTier.TIER_2));
 
-    public static final RegistryObject<ResearchBenchBlock> EXPERIMENTAL_RESEARCH_BENCH = BLOCKS.register(
+    public static final DeferredHolder<net.minecraft.world.level.block.Block, ResearchBenchBlock> EXPERIMENTAL_RESEARCH_BENCH = BLOCKS.register(
             "experimental_research_bench",
             () -> researchBench(ResearchWorkbenchTier.TIER_3));
 
-    public static final RegistryObject<CraftingWorkbenchBlock> WORKBENCH_LVL1 = BLOCKS.register(
+    public static final DeferredHolder<net.minecraft.world.level.block.Block, CraftingWorkbenchBlock> WORKBENCH_LVL1 = BLOCKS.register(
             "workbench_lvl1",
             () -> craftingWorkbench(ResearchWorkbenchTier.TIER_1, 31.25D));
 
-    public static final RegistryObject<CraftingWorkbenchBlock> WORKBENCH_LVL2 = BLOCKS.register(
+    public static final DeferredHolder<net.minecraft.world.level.block.Block, CraftingWorkbenchBlock> WORKBENCH_LVL2 = BLOCKS.register(
             "workbench_lvl2",
             () -> craftingWorkbench(ResearchWorkbenchTier.TIER_2, 31.25D));
 
-    public static final RegistryObject<CraftingWorkbenchBlock> WORKBENCH_LVL3 = BLOCKS.register(
+    public static final DeferredHolder<net.minecraft.world.level.block.Block, CraftingWorkbenchBlock> WORKBENCH_LVL3 = BLOCKS.register(
             "workbench_lvl3",
             () -> craftingWorkbench(ResearchWorkbenchTier.TIER_3, 31.25D));
 
@@ -70,14 +70,14 @@ public final class ModBlocks {
                 .sound(SoundType.METAL));
     }
 
-    public static final RegistryObject<Block> BLUEPRINT_RECYCLER = BLOCKS.register(
+    public static final DeferredHolder<net.minecraft.world.level.block.Block, Block> BLUEPRINT_RECYCLER = BLOCKS.register(
             "blueprint_recycler",
             () -> analyzer(AnalyzerTier.TIER_1));
 
-    public static final RegistryObject<BlueprintRecyclerBlock> ADVANCED_BLUEPRINT_ANALYZER = BLOCKS.register(
+    public static final DeferredHolder<net.minecraft.world.level.block.Block, BlueprintRecyclerBlock> ADVANCED_BLUEPRINT_ANALYZER = BLOCKS.register(
             "advanced_blueprint_analyzer", () -> analyzer(AnalyzerTier.TIER_2));
 
-    public static final RegistryObject<BlueprintRecyclerBlock> EXPERIMENTAL_BLUEPRINT_ANALYZER = BLOCKS.register(
+    public static final DeferredHolder<net.minecraft.world.level.block.Block, BlueprintRecyclerBlock> EXPERIMENTAL_BLUEPRINT_ANALYZER = BLOCKS.register(
             "experimental_blueprint_analyzer", () -> analyzer(AnalyzerTier.TIER_3));
 
     private static BlueprintRecyclerBlock analyzer(AnalyzerTier tier) {

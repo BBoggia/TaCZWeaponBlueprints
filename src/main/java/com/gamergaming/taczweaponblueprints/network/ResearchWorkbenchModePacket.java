@@ -1,6 +1,5 @@
 package com.gamergaming.taczweaponblueprints.network;
 
-import java.util.function.Supplier;
 
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
 import com.gamergaming.taczweaponblueprints.progression.workbench.ResearchWorkbenchMenuTransitions;
@@ -8,10 +7,21 @@ import com.tacz.guns.inventory.GunSmithTableMenu;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 
 /** Requests a server-validated mode transition for the currently open Bench. */
-public final class ResearchWorkbenchModePacket {
+public final class ResearchWorkbenchModePacket implements CustomPacketPayload {
+    public static final Type<ResearchWorkbenchModePacket> TYPE = new Type<>(
+            com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints.loc("research_workbench_mode"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, ResearchWorkbenchModePacket> STREAM_CODEC =
+            StreamCodec.ofMember(ResearchWorkbenchModePacket::toBytes, ResearchWorkbenchModePacket::new);
+
+    @Override
+    public Type<ResearchWorkbenchModePacket> type() { return TYPE; }
+
     private final int containerId;
     private final Mode mode;
 
@@ -32,9 +42,9 @@ public final class ResearchWorkbenchModePacket {
         buffer.writeEnum(mode);
     }
 
-    public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
-        ServerPlayer sender = context.getSender();
+    public void handle(IPayloadContext contextSupplier) {
+        IPayloadContext context = contextSupplier;
+        ServerPlayer sender = NetworkHandler.sender(context);
         context.enqueueWork(() -> {
             if (sender == null || sender.containerMenu.containerId != containerId) {
                 return;
@@ -46,7 +56,6 @@ public final class ResearchWorkbenchModePacket {
                 ResearchWorkbenchMenuTransitions.toResearch(sender, menu);
             }
         });
-        context.setPacketHandled(true);
     }
 
     public enum Mode {

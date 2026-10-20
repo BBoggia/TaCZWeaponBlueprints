@@ -1,15 +1,13 @@
 package com.gamergaming.taczweaponblueprints.network;
 
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionSyncScheduler;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionAccess;
 import com.gamergaming.taczweaponblueprints.progression.PlayerSupplementalProgressionView;
@@ -23,13 +21,10 @@ import com.gamergaming.taczweaponblueprints.resource.research.ResolvedBlueprintP
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkDirection;
-import net.minecraftforge.network.NetworkRegistry;
-import net.minecraftforge.network.PacketDistributor;
-import net.minecraftforge.network.simple.SimpleChannel;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 public class NetworkHandler {
-    public static final String PROTOCOL_VERSION = "70";
+    public static final String PROTOCOL_VERSION = "neoforge-1";
     // A random per-server seed prevents a partial chunk set from an earlier
     // connection being mistaken for a new sync after reconnecting.
     private static final AtomicLong SYNC_SEQUENCE =
@@ -38,175 +33,50 @@ public class NetworkHandler {
             new ConcurrentHashMap<>();
     private static final Map<UUID, Long> LAST_SENT_RESEARCH_GENERATIONS =
             new ConcurrentHashMap<>();
-    public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
-        new ResourceLocation(TaCZWeaponBlueprints.MODID, "main"),
-        () -> PROTOCOL_VERSION,
-        PROTOCOL_VERSION::equals,
-        PROTOCOL_VERSION::equals
-    );
+    /** Direction-specific play payloads are mandatory on both ends. */
+    public static void registerPackets(net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent event) {
+        var registrar = event.registrar(PROTOCOL_VERSION);
+        registrar.playToServer(OpenPortableResearchPacket.TYPE, OpenPortableResearchPacket.STREAM_CODEC, OpenPortableResearchPacket::handle);
+        registrar.playToClient(SyncPlayerRecipeDataPacket.TYPE, SyncPlayerRecipeDataPacket.STREAM_CODEC, SyncPlayerRecipeDataPacket::handle);
+        registrar.playToClient(SyncBlueprintDataPacket.TYPE, SyncBlueprintDataPacket.STREAM_CODEC, SyncBlueprintDataPacket::handle);
+        registrar.playToClient(SyncPlayerProgressionPacket.TYPE, SyncPlayerProgressionPacket.STREAM_CODEC, SyncPlayerProgressionPacket::handle);
+        registrar.playToClient(SyncBlueprintJournalPacket.TYPE, SyncBlueprintJournalPacket.STREAM_CODEC, SyncBlueprintJournalPacket::handle);
+        registrar.playToServer(ResearchBenchActionPacket.TYPE, ResearchBenchActionPacket.STREAM_CODEC, ResearchBenchActionPacket::handle);
+        registrar.playToClient(SyncResearchBenchPreviewPacket.TYPE, SyncResearchBenchPreviewPacket.STREAM_CODEC, SyncResearchBenchPreviewPacket::handle);
+        registrar.playToClient(ResearchBenchActionResultPacket.TYPE, ResearchBenchActionResultPacket.STREAM_CODEC, ResearchBenchActionResultPacket::handle);
+        registrar.playToClient(SyncResearchTreePacket.TYPE, SyncResearchTreePacket.STREAM_CODEC, SyncResearchTreePacket::handle);
+        registrar.playToClient(ResearchPointFeedbackPacket.TYPE, ResearchPointFeedbackPacket.STREAM_CODEC, ResearchPointFeedbackPacket::handle);
+        registrar.playToClient(SyncResearchPointHelpPacket.TYPE, SyncResearchPointHelpPacket.STREAM_CODEC, SyncResearchPointHelpPacket::handle);
+        registrar.playToServer(BlueprintRecyclerActionPacket.TYPE, BlueprintRecyclerActionPacket.STREAM_CODEC, BlueprintRecyclerActionPacket::handle);
+        registrar.playToClient(SyncBlueprintRecyclerPreviewPacket.TYPE, SyncBlueprintRecyclerPreviewPacket.STREAM_CODEC, SyncBlueprintRecyclerPreviewPacket::handle);
+        registrar.playToClient(BlueprintRecyclerActionResultPacket.TYPE, BlueprintRecyclerActionResultPacket.STREAM_CODEC, BlueprintRecyclerActionResultPacket::handle);
+        registrar.playToClient(SyncBalancePresetPacket.TYPE, SyncBalancePresetPacket.STREAM_CODEC, SyncBalancePresetPacket::handle);
+        registrar.playToServer(ResearchGuidanceRequestPacket.TYPE, ResearchGuidanceRequestPacket.STREAM_CODEC, ResearchGuidanceRequestPacket::handle);
+        registrar.playToClient(ResearchGuidanceResultPacket.TYPE, ResearchGuidanceResultPacket.STREAM_CODEC, ResearchGuidanceResultPacket::handle);
+        registrar.playToServer(ResearchAffordabilityRequestPacket.TYPE, ResearchAffordabilityRequestPacket.STREAM_CODEC, ResearchAffordabilityRequestPacket::handle);
+        registrar.playToClient(ResearchAffordabilityResultPacket.TYPE, ResearchAffordabilityResultPacket.STREAM_CODEC, ResearchAffordabilityResultPacket::handle);
+        registrar.playToClient(SyncPlayerSupplementalProgressionPacket.TYPE, SyncPlayerSupplementalProgressionPacket.STREAM_CODEC, SyncPlayerSupplementalProgressionPacket::handle);
+        registrar.playToServer(ResearchWorkbenchModePacket.TYPE, ResearchWorkbenchModePacket.STREAM_CODEC, ResearchWorkbenchModePacket::handle);
+        registrar.playToServer(CraftingAccessRequestPacket.TYPE, CraftingAccessRequestPacket.STREAM_CODEC, CraftingAccessRequestPacket::handle);
+        registrar.playToClient(SyncResearchCurrencyPacket.TYPE, SyncResearchCurrencyPacket.STREAM_CODEC, SyncResearchCurrencyPacket::handle);
+        registrar.playToClient(SyncCraftingAccessPacket.TYPE, SyncCraftingAccessPacket.STREAM_CODEC, SyncCraftingAccessPacket::handle);
+        registrar.playToServer(ResearchRouteReviewRequestPacket.TYPE, ResearchRouteReviewRequestPacket.STREAM_CODEC, ResearchRouteReviewRequestPacket::handle);
+        registrar.playToClient(ResearchRouteReviewResultPacket.TYPE, ResearchRouteReviewResultPacket.STREAM_CODEC, ResearchRouteReviewResultPacket::handle);
+        registrar.playToServer(DesignerCaptureRequestPacket.TYPE, DesignerCaptureRequestPacket.STREAM_CODEC, DesignerCaptureRequestPacket::handle);
+        registrar.playToClient(DesignerCaptureReplyPacket.TYPE, DesignerCaptureReplyPacket.STREAM_CODEC, DesignerCaptureReplyPacket::handle);
+        registrar.playToServer(ResearchMaterialPageRequestPacket.TYPE, ResearchMaterialPageRequestPacket.STREAM_CODEC, ResearchMaterialPageRequestPacket::handle);
+        registrar.playToClient(SyncVillagerTradeStatusPacket.TYPE, SyncVillagerTradeStatusPacket.STREAM_CODEC, SyncVillagerTradeStatusPacket::handle);
+    }
 
-    public static void registerPackets() {
-        int id = 0;
-        INSTANCE.registerMessage(id++, OpenPortableResearchPacket.class, OpenPortableResearchPacket::toBytes,
-                OpenPortableResearchPacket::new, OpenPortableResearchPacket::handle,
-                Optional.of(NetworkDirection.PLAY_TO_SERVER));
-
-        INSTANCE.registerMessage(id++, SyncPlayerRecipeDataPacket.class,
-                SyncPlayerRecipeDataPacket::toBytes, SyncPlayerRecipeDataPacket::new,
-                SyncPlayerRecipeDataPacket::handle,
-                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-
-        INSTANCE.registerMessage(id++, SyncBlueprintDataPacket.class,
-                SyncBlueprintDataPacket::toBytes, SyncBlueprintDataPacket::new,
-                SyncBlueprintDataPacket::handle,
-                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-
-        INSTANCE.registerMessage(id++, SyncPlayerProgressionPacket.class,
-                SyncPlayerProgressionPacket::toBytes, SyncPlayerProgressionPacket::new,
-                SyncPlayerProgressionPacket::handle,
-                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-
-        INSTANCE.registerMessage(id++, SyncBlueprintJournalPacket.class,
-                SyncBlueprintJournalPacket::toBytes, SyncBlueprintJournalPacket::new,
-                SyncBlueprintJournalPacket::handle,
-                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-
-        INSTANCE.registerMessage(id++, ResearchBenchActionPacket.class,
-                ResearchBenchActionPacket::toBytes, ResearchBenchActionPacket::new,
-                ResearchBenchActionPacket::handle,
-                Optional.of(NetworkDirection.PLAY_TO_SERVER));
-
-        INSTANCE.registerMessage(id++, SyncResearchBenchPreviewPacket.class,
-                SyncResearchBenchPreviewPacket::toBytes, SyncResearchBenchPreviewPacket::new,
-                SyncResearchBenchPreviewPacket::handle,
-                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-
-        INSTANCE.registerMessage(id++, ResearchBenchActionResultPacket.class,
-                ResearchBenchActionResultPacket::toBytes,
-                ResearchBenchActionResultPacket::new,
-                ResearchBenchActionResultPacket::handle,
-                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-
-        INSTANCE.registerMessage(id++, SyncResearchTreePacket.class,
-                SyncResearchTreePacket::toBytes, SyncResearchTreePacket::new,
-                SyncResearchTreePacket::handle,
-                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-
-        INSTANCE.registerMessage(id++, ResearchPointFeedbackPacket.class,
-                ResearchPointFeedbackPacket::toBytes, ResearchPointFeedbackPacket::new,
-                ResearchPointFeedbackPacket::handle,
-                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-
-        INSTANCE.registerMessage(id++, SyncResearchPointHelpPacket.class,
-                SyncResearchPointHelpPacket::toBytes, SyncResearchPointHelpPacket::new,
-                SyncResearchPointHelpPacket::handle,
-                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-
-        // Phase 1 workstation split: append-only IDs keep the live packet table stable.
-        INSTANCE.registerMessage(id++, BlueprintRecyclerActionPacket.class,
-                BlueprintRecyclerActionPacket::toBytes, BlueprintRecyclerActionPacket::new,
-                BlueprintRecyclerActionPacket::handle,
-                Optional.of(NetworkDirection.PLAY_TO_SERVER));
-
-        INSTANCE.registerMessage(id++, SyncBlueprintRecyclerPreviewPacket.class,
-                SyncBlueprintRecyclerPreviewPacket::toBytes,
-                SyncBlueprintRecyclerPreviewPacket::new,
-                SyncBlueprintRecyclerPreviewPacket::handle,
-                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-
-        INSTANCE.registerMessage(id++, BlueprintRecyclerActionResultPacket.class,
-                BlueprintRecyclerActionResultPacket::toBytes,
-                BlueprintRecyclerActionResultPacket::new,
-                BlueprintRecyclerActionResultPacket::handle,
-                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-
-        // Appended in the preset-sync correction; existing discriminators remain stable.
-        INSTANCE.registerMessage(id++, SyncBalancePresetPacket.class,
-                SyncBalancePresetPacket::toBytes,
-                SyncBalancePresetPacket::new,
-                SyncBalancePresetPacket::handle,
-                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-
-        INSTANCE.registerMessage(id++, ResearchGuidanceRequestPacket.class,
-                ResearchGuidanceRequestPacket::toBytes,
-                ResearchGuidanceRequestPacket::new,
-                ResearchGuidanceRequestPacket::handle,
-                Optional.of(NetworkDirection.PLAY_TO_SERVER));
-
-        INSTANCE.registerMessage(id++, ResearchGuidanceResultPacket.class,
-                ResearchGuidanceResultPacket::toBytes,
-                ResearchGuidanceResultPacket::new,
-                ResearchGuidanceResultPacket::handle,
-                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-
-        INSTANCE.registerMessage(id++, ResearchAffordabilityRequestPacket.class,
-                ResearchAffordabilityRequestPacket::toBytes,
-                ResearchAffordabilityRequestPacket::new,
-                ResearchAffordabilityRequestPacket::handle,
-                Optional.of(NetworkDirection.PLAY_TO_SERVER));
-
-        INSTANCE.registerMessage(id++, ResearchAffordabilityResultPacket.class,
-                ResearchAffordabilityResultPacket::toBytes,
-                ResearchAffordabilityResultPacket::new,
-                ResearchAffordabilityResultPacket::handle,
-                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-
-        // Phase 3 supplemental progression is append-only so existing packet
-        // discriminators retain their established ordering.
-        INSTANCE.registerMessage(id++, SyncPlayerSupplementalProgressionPacket.class,
-                SyncPlayerSupplementalProgressionPacket::toBytes,
-                SyncPlayerSupplementalProgressionPacket::new,
-                SyncPlayerSupplementalProgressionPacket::handle,
-                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-
-        INSTANCE.registerMessage(id++, ResearchWorkbenchModePacket.class,
-                ResearchWorkbenchModePacket::toBytes,
-                ResearchWorkbenchModePacket::new,
-                ResearchWorkbenchModePacket::handle,
-                Optional.of(NetworkDirection.PLAY_TO_SERVER));
-
-        INSTANCE.registerMessage(id++, CraftingAccessRequestPacket.class,
-                CraftingAccessRequestPacket::toBytes,
-                CraftingAccessRequestPacket::new,
-                CraftingAccessRequestPacket::handle,
-                Optional.of(NetworkDirection.PLAY_TO_SERVER));
-
-        INSTANCE.registerMessage(id++, SyncResearchCurrencyPacket.class,
-                SyncResearchCurrencyPacket::toBytes, SyncResearchCurrencyPacket::new, SyncResearchCurrencyPacket::handle,
-                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-
-        INSTANCE.registerMessage(id++, SyncCraftingAccessPacket.class,
-                SyncCraftingAccessPacket::toBytes,
-                SyncCraftingAccessPacket::new,
-                SyncCraftingAccessPacket::handle,
-                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        INSTANCE.registerMessage(id++, ResearchRouteReviewRequestPacket.class,
-                ResearchRouteReviewRequestPacket::toBytes, ResearchRouteReviewRequestPacket::new,
-                ResearchRouteReviewRequestPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
-        INSTANCE.registerMessage(id++, ResearchRouteReviewResultPacket.class,
-                ResearchRouteReviewResultPacket::toBytes, ResearchRouteReviewResultPacket::new,
-                ResearchRouteReviewResultPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        INSTANCE.registerMessage(id++, DesignerCaptureRequestPacket.class,
-                DesignerCaptureRequestPacket::toBytes, DesignerCaptureRequestPacket::new,
-                DesignerCaptureRequestPacket::handle, java.util.Optional.of(NetworkDirection.PLAY_TO_SERVER));
-        INSTANCE.registerMessage(id++, DesignerCaptureReplyPacket.class,
-                DesignerCaptureReplyPacket::toBytes, DesignerCaptureReplyPacket::new,
-                DesignerCaptureReplyPacket::handle, java.util.Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        INSTANCE.registerMessage(id++, ResearchMaterialPageRequestPacket.class,
-                ResearchMaterialPageRequestPacket::toBytes, ResearchMaterialPageRequestPacket::new,
-                ResearchMaterialPageRequestPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
-        INSTANCE.registerMessage(id++, SyncVillagerTradeStatusPacket.class,
-                SyncVillagerTradeStatusPacket::toBytes, SyncVillagerTradeStatusPacket::new,
-                SyncVillagerTradeStatusPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+    static ServerPlayer sender(net.neoforged.neoforge.network.handling.IPayloadContext context) {
+        return context.player() instanceof ServerPlayer player ? player : null;
     }
 
     public static void syncBalancePreset(
             ServerPlayer player,
             com.gamergaming.taczweaponblueprints.progression.BlueprintBalancePreset preset) {
         if (player != null && preset != null) {
-            INSTANCE.send(
-                    PacketDistributor.PLAYER.with(() -> player),
-                    new SyncBalancePresetPacket(preset));
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new SyncBalancePresetPacket(preset));
         }
     }
 
@@ -220,7 +90,7 @@ public class NetworkHandler {
         if (refreshCraftingWorkbench) {
             refreshOpenCraftingWorkbench(player);
         }
-        player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).ifPresent(recipeData -> {
+        ModAttachments.recipeData(player).ifPresent(recipeData -> {
             BlueprintDataManager.SERVER.migrateLegacyUnlocks(recipeData);
             var activeRecipes = RecipeSyncFilter.activeLearnedRecipes(
                     recipeData.getLearnedRecipes(),
@@ -232,14 +102,14 @@ public class NetworkHandler {
                                     .accessSnapshot(),
                             BlueprintDataManager.SERVER.getBlueprintDataMap()));
             SyncPlayerRecipeDataPacket.split(activeRecipes, SYNC_SEQUENCE.incrementAndGet())
-                    .forEach(packet -> INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), packet));
+                    .forEach(packet -> net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, packet));
             sendPlayerProgressionData(player, recipeData, true, false, true);
         });
     }
 
     public static void syncPlayerProgressionData(ServerPlayer player) {
         refreshOpenCraftingWorkbench(player);
-        player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
+        ModAttachments.recipeData(player)
                 .ifPresent(recipeData -> sendPlayerProgressionData(
                         player, recipeData, false, false, true));
     }
@@ -250,10 +120,10 @@ public class NetworkHandler {
      * criteria must use {@link #syncPlayerProgressionData(ServerPlayer)}.
      */
     public static void syncResearchCurrency(ServerPlayer player) {
-        player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).ifPresent(data -> {
+        ModAttachments.recipeData(player).ifPresent(data -> {
             var policy = com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.currencyPolicy();
             int amount = com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPayments.balance(policy, player.getInventory().items, data);
-            INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new SyncResearchCurrencyPacket(policy, amount, com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.dataSettings()));
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new SyncResearchCurrencyPacket(policy, amount, com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.dataSettings()));
         });
     }
 
@@ -263,14 +133,14 @@ public class NetworkHandler {
         if (BlueprintProgressionSyncScheduler.hasPendingFullSync(player)) {
             return;
         }
-        player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
+        ModAttachments.recipeData(player)
                 .ifPresent(recipeData -> sendPlayerProgressionData(
                         player, recipeData, false, true, false));
     }
 
     public static void syncJournalData(ServerPlayer player) {
         refreshOpenCraftingWorkbench(player);
-        player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
+        ModAttachments.recipeData(player)
                 .ifPresent(recipeData -> sendJournalData(player, recipeData, false, false, true));
         refreshOpenWorkstation(player);
     }
@@ -279,7 +149,7 @@ public class NetworkHandler {
         SyncBlueprintDataPacket.split(
                         BlueprintDataManager.SERVER.getBlueprintDataMap(),
                         SYNC_SEQUENCE.incrementAndGet())
-                .forEach(packet -> INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), packet));
+                .forEach(packet -> net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, packet));
     }
 
     public static void syncAllPlayerData(ServerPlayer player) {
@@ -292,9 +162,7 @@ public class NetworkHandler {
             ServerPlayer player,
             int containerId,
             com.gamergaming.taczweaponblueprints.menu.ResearchSelectionPreview preview) {
-        INSTANCE.send(
-                PacketDistributor.PLAYER.with(() -> player),
-                new SyncResearchBenchPreviewPacket(containerId, preview));
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new SyncResearchBenchPreviewPacket(containerId, preview));
     }
 
     /** Clears stale server/client selection state before publishing an admin reset. */
@@ -311,9 +179,7 @@ public class NetworkHandler {
             int containerId,
             int requestId,
             com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu.ActionResult result) {
-        INSTANCE.send(
-                PacketDistributor.PLAYER.with(() -> player),
-                new ResearchBenchActionResultPacket(containerId, requestId, result));
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new ResearchBenchActionResultPacket(containerId, requestId, result));
     }
 
     public static void sendResearchGuidanceResult(
@@ -322,9 +188,7 @@ public class NetworkHandler {
             int requestId,
             long publicationGeneration,
             com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu.GuidanceResult result) {
-        INSTANCE.send(
-                PacketDistributor.PLAYER.with(() -> player),
-                new ResearchGuidanceResultPacket(
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new ResearchGuidanceResultPacket(
                         containerId,
                         requestId,
                         publicationGeneration,
@@ -338,9 +202,7 @@ public class NetworkHandler {
             long publicationGeneration,
             com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu
                     .AffordabilityResult result) {
-        INSTANCE.send(
-                PacketDistributor.PLAYER.with(() -> player),
-                new ResearchAffordabilityResultPacket(
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new ResearchAffordabilityResultPacket(
                         containerId,
                         requestId,
                         publicationGeneration,
@@ -354,17 +216,13 @@ public class NetworkHandler {
     public static void sendResearchPointFeedback(ServerPlayer player, Feedback feedback,
             com.gamergaming.taczweaponblueprints.progression.currency.ResearchCurrencyPolicy currency) {
         if (player != null && feedback != null && feedback.present()) {
-            INSTANCE.send(
-                    PacketDistributor.PLAYER.with(() -> player),
-                    new ResearchPointFeedbackPacket(feedback, currency));
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new ResearchPointFeedbackPacket(feedback, currency));
         }
     }
 
     public static void sendResearchPointHelp(ServerPlayer player, HelpSnapshot snapshot) {
         if (player != null && snapshot != null) {
-            INSTANCE.send(
-                    PacketDistributor.PLAYER.with(() -> player),
-                    new SyncResearchPointHelpPacket(snapshot));
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new SyncResearchPointHelpPacket(snapshot));
         }
     }
 
@@ -372,9 +230,7 @@ public class NetworkHandler {
             ServerPlayer player,
             int containerId,
             com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerPreview preview) {
-        INSTANCE.send(
-                PacketDistributor.PLAYER.with(() -> player),
-                new SyncBlueprintRecyclerPreviewPacket(containerId, preview));
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new SyncBlueprintRecyclerPreviewPacket(containerId, preview));
     }
 
     public static void sendBlueprintRecyclerActionResult(
@@ -382,9 +238,7 @@ public class NetworkHandler {
             int containerId,
             int requestId,
             com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerActionContract.ActionResult result) {
-        INSTANCE.send(
-                PacketDistributor.PLAYER.with(() -> player),
-                new BlueprintRecyclerActionResultPacket(containerId, requestId, result));
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new BlueprintRecyclerActionResultPacket(containerId, requestId, result));
     }
 
     public static void sendCraftingAccess(
@@ -403,8 +257,7 @@ public class NetworkHandler {
                             bridge.taczweaponblueprints$nextCraftingAccessSnapshotId(),
                             com.gamergaming.taczweaponblueprints.progression
                                     .CraftingEligibilityService.snapshot(player, menu))
-                    .forEach(packet -> INSTANCE.send(
-                            PacketDistributor.PLAYER.with(() -> player), packet));
+                    .forEach(packet -> net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, packet));
         }
     }
 
@@ -446,7 +299,7 @@ public class NetworkHandler {
                         recipeData.getDiscoveredBlueprints(),
                         recipeData.getResearchPoints(),
                         SYNC_SEQUENCE.incrementAndGet())
-                .forEach(packet -> INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), packet));
+                .forEach(packet -> net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, packet));
         sendJournalData(
                 player,
                 recipeData,
@@ -488,10 +341,10 @@ public class NetworkHandler {
         boolean sendTree = !reuseKnownTree && (forceTree || !tree.equals(previousTree));
         long generation = SYNC_SEQUENCE.incrementAndGet();
         SyncBlueprintJournalPacket.split(snapshot, generation, !sendTree)
-                .forEach(packet -> INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), packet));
+                .forEach(packet -> net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, packet));
         if (sendTree) {
             SyncResearchTreePacket.split(tree, generation)
-                    .forEach(packet -> INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), packet));
+                    .forEach(packet -> net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, packet));
             LAST_SENT_RESEARCH_TREES.put(player.getUUID(), tree);
         }
         LAST_SENT_RESEARCH_GENERATIONS.put(player.getUUID(), generation);
@@ -519,8 +372,7 @@ public class NetworkHandler {
         SyncPlayerSupplementalProgressionPacket.split(
                         view,
                         SYNC_SEQUENCE.incrementAndGet())
-                .forEach(packet -> INSTANCE.send(
-                        PacketDistributor.PLAYER.with(() -> player), packet));
+                .forEach(packet -> net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, packet));
     }
 
     private static void refreshOpenWorkstation(ServerPlayer player) {

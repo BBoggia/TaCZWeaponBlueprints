@@ -40,12 +40,12 @@ class ResearchDesignerContractTest {
     }
     static JsonObject named(String id) { return cases().filter(c -> c.get("id").getAsString().equals(id)).findFirst().orElseThrow(); }
     static JsonObject project(JsonObject c) { return read(ROOT.resolve(c.get("project").getAsString())); }
-    static ResourceLocation id(String value) { return new ResourceLocation(value); }
+    static ResourceLocation id(String value) { return ResourceLocation.parse(value); }
     static <T> T decode(Codec<T> codec, JsonElement json) {
-        return codec.parse(JsonOps.INSTANCE, json).getOrThrow(false, message -> {});
+        return codec.parse(JsonOps.INSTANCE, json).getOrThrow();
     }
     static <T> void roundTrip(Codec<T> codec, T value) {
-        assertEquals(value, decode(codec, codec.encodeStart(JsonOps.INSTANCE, value).getOrThrow(false, message -> {})));
+        assertEquals(value, decode(codec, codec.encodeStart(JsonOps.INSTANCE, value).getOrThrow()));
     }
 
     @ParameterizedTest @MethodSource("cases")

@@ -1,11 +1,11 @@
 {
-  "loader": "forge:composite",
+  "loader": "neoforge:composite",
   "textures": {
     "particle": "taczweaponblueprints:block/advanced_research_bench"
   },
   "children": {
     "body": {
-      "loader": "forge:obj",
+      "loader": "neoforge:obj",
       "flip_v": true,
       "model": "taczweaponblueprints:models/block/advanced_research_bench_east.obj",
       "automatic_culling": false,
@@ -16,7 +16,7 @@
       }
     },
     "glass": {
-      "loader": "forge:obj",
+      "loader": "neoforge:obj",
       "flip_v": true,
       "model": "taczweaponblueprints:models/block/advanced_research_bench_east_glass.obj",
       "automatic_culling": false,

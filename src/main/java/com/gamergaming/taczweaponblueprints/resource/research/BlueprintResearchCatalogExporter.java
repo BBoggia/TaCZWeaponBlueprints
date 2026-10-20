@@ -272,7 +272,7 @@ public final class BlueprintResearchCatalogExporter {
                 for (var branch : stableSnapshot.authoredBranches(treeId)) {
                     var declaration = tree.branches().stream().filter(value -> value.id().equals(branch.id())).findFirst().orElseThrow();
                     JsonObject record = ResearchTechTreeBranchDefinition.CODEC.encodeStart(com.mojang.serialization.JsonOps.INSTANCE,declaration)
-                            .getOrThrow(false, message -> {}).getAsJsonObject();
+                            .getOrThrow(IllegalArgumentException::new).getAsJsonObject();
                     JsonArray members = new JsonArray(); branch.members().forEach(id -> members.add(id.toString()));
                     record.add("members",members); authoredBranches.add(record);
                 }

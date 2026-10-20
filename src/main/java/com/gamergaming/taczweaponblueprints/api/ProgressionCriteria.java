@@ -6,7 +6,7 @@ import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.api.event.ProgressionCriterionChangeEvent;
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionSyncScheduler;
 import com.gamergaming.taczweaponblueprints.progression.ProgressionIds;
 import com.gamergaming.taczweaponblueprints.progression.gate.ProgressionCriterionProgress;
@@ -16,7 +16,7 @@ import com.gamergaming.taczweaponblueprints.progression.gate.ProgressionCriterio
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.common.MinecraftForge;
+import net.neoforged.neoforge.common.NeoForge;
 
 /**
  * Stable server-only API for durable, player-scoped Progression Gate criteria.
@@ -43,8 +43,7 @@ public final class ProgressionCriteria {
         } catch (IllegalArgumentException exception) {
             return Inspection.failure(Status.INVALID_CRITERION);
         }
-        IPlayerRecipeData data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
-                .resolve().orElse(null);
+        IPlayerRecipeData data = ModAttachments.recipeData(player).orElse(null);
         if (data == null) {
             return Inspection.failure(Status.PLAYER_DATA_UNAVAILABLE);
         }
@@ -127,8 +126,7 @@ public final class ProgressionCriteria {
         if (operation == null || !operation.acceptsOperand(operand)) {
             return ChangeResult.failure(Status.INVALID_AMOUNT);
         }
-        IPlayerRecipeData data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
-                .resolve().orElse(null);
+        IPlayerRecipeData data = ModAttachments.recipeData(player).orElse(null);
         if (data == null) {
             return ChangeResult.failure(Status.PLAYER_DATA_UNAVAILABLE);
         }
@@ -153,7 +151,7 @@ public final class ProgressionCriteria {
                 prepared.resultingValue());
         boolean cancelled;
         try {
-            cancelled = MinecraftForge.EVENT_BUS.post(pre);
+            cancelled = NeoForge.EVENT_BUS.post(pre).isCanceled();
         } catch (RuntimeException exception) {
             TaCZWeaponBlueprints.LOGGER.error(
                     "Progression Gate criterion Pre event failed for {} and {}; no change was committed",
@@ -190,7 +188,7 @@ public final class ProgressionCriteria {
         if (committed.status() == Status.APPLIED) {
             BlueprintProgressionSyncScheduler.markDirty(player);
             try {
-                MinecraftForge.EVENT_BUS.post(new ProgressionCriterionChangeEvent.Post(
+                NeoForge.EVENT_BUS.post(new ProgressionCriterionChangeEvent.Post(
                         player,
                         criterionId,
                         operation,

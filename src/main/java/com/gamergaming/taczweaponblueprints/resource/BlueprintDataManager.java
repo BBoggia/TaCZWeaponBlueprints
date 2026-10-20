@@ -9,7 +9,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.item.BlueprintData;
@@ -37,8 +36,8 @@ import com.tacz.guns.resource.index.CommonGunIndex;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLEnvironment;
 
 public class BlueprintDataManager {
 
@@ -217,28 +216,28 @@ public class BlueprintDataManager {
     }
 
     private CatalogRebuild rebuildCatalog(CommonAssetsManager assetsManager) {
-        List<GunSmithTableRecipe> recipes = new ArrayList<>(
+        List<net.minecraft.world.item.crafting.RecipeHolder<GunSmithTableRecipe>> recipes = new ArrayList<>(
                 assetsManager.recipeManager.getAllRecipesFor(ModRecipe.GUN_SMITH_TABLE_CRAFTING.get()));
-        recipes.sort(Comparator.comparing(recipe -> recipe.getId().toString()));
+        recipes.sort(Comparator.comparing(recipe -> recipe.id().toString()));
 
         Map<ResourceLocation, BlueprintData> rebuiltCatalog = new LinkedHashMap<>();
         Map<ResourceLocation, ResourceLocation> recipeToBlueprint = new LinkedHashMap<>();
         CatalogDiagnostics diagnostics = new CatalogDiagnostics(recipes.size());
 
-        for (GunSmithTableRecipe recipe : recipes) {
+        for (var recipe : recipes) {
             try {
                 BlueprintResolution resolution = resolveBlueprint(recipe, assetsManager);
                 if (!resolution.isSuccess()) {
-                    diagnostics.recordSkip(recipe.getId(), resolution.skipReason(), resolution.detail());
+                    diagnostics.recordSkip(recipe.id(), resolution.skipReason(), resolution.detail());
                     continue;
                 }
 
                 BlueprintCandidate candidate = resolution.candidate();
-                recipeToBlueprint.put(recipe.getId(), candidate.itemId());
+                recipeToBlueprint.put(recipe.id(), candidate.itemId());
                 BlueprintData existing = rebuiltCatalog.putIfAbsent(candidate.itemId(), candidate.data());
                 if (existing != null) {
                     diagnostics.recordSkip(
-                            recipe.getId(),
+                            recipe.id(),
                             SkipReason.DUPLICATE_OUTPUT,
                             "output " + candidate.itemId() + " is already provided by " + existing.getRecipeId());
                     continue;
@@ -247,7 +246,7 @@ public class BlueprintDataManager {
                 diagnostics.recordRegistered(candidate.kind());
             } catch (RuntimeException exception) {
                 diagnostics.recordSkip(
-                        recipe.getId(),
+                        recipe.id(),
                         SkipReason.RESOLUTION_ERROR,
                         exception.getClass().getSimpleName() + formatExceptionMessage(exception));
             }
@@ -267,8 +266,8 @@ public class BlueprintDataManager {
         return new CatalogRebuild(rebuilt, diagnostics);
     }
 
-    private BlueprintResolution resolveBlueprint(GunSmithTableRecipe recipe, CommonAssetsManager assetsManager) {
-        ItemStack output = recipe.getOutput();
+    private BlueprintResolution resolveBlueprint(net.minecraft.world.item.crafting.RecipeHolder<GunSmithTableRecipe> recipe, CommonAssetsManager assetsManager) {
+        ItemStack output = recipe.value().getOutput();
         if (output == null || output.isEmpty()) {
             return BlueprintResolution.skipped(SkipReason.EMPTY_OUTPUT, "recipe result is empty or unresolved");
         }
@@ -342,7 +341,7 @@ public class BlueprintDataManager {
     }
 
     private BlueprintResolution createCandidate(
-            GunSmithTableRecipe recipe,
+            net.minecraft.world.item.crafting.RecipeHolder<GunSmithTableRecipe> recipe,
             ResourceLocation itemId,
             String nameKey,
             String itemType,
@@ -363,8 +362,8 @@ public class BlueprintDataManager {
                 itemId.toString(),
                 nameKey,
                 BLUEPRINT_TOOLTIP_KEY,
-                recipe.getId(),
-                recipe,
+                recipe.id(),
+                recipe.value(),
                 normalizedItemType,
                 displaySlotKey,
                 kind);

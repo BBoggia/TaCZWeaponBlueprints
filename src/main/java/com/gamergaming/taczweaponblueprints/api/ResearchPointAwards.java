@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Set;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.network.NetworkHandler;
 import com.gamergaming.taczweaponblueprints.progression.ResearchPointAwardConfigSnapshot;
@@ -100,7 +100,7 @@ public final class ResearchPointAwards {
         if (config == null || !config.awardsEnabled()) {
             return Result.failure(Status.DISABLED);
         }
-        var data = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA).resolve().orElse(null);
+        var data = ModAttachments.recipeData(player).orElse(null);
         if (data == null) {
             return Result.failure(Status.PLAYER_DATA_UNAVAILABLE);
         }

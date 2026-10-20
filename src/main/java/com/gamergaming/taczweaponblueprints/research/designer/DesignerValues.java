@@ -9,7 +9,7 @@ import java.util.*;
 public final class DesignerValues {
     private DesignerValues() {}
     public static <T> JsonObject encode(Codec<T> codec, T value) {
-        return codec.encodeStart(JsonOps.INSTANCE, value).getOrThrow(false, ignored -> {}).getAsJsonObject();
+        return codec.encodeStart(JsonOps.INSTANCE, value).getOrThrow(IllegalArgumentException::new).getAsJsonObject();
     }
     public static JsonElement evidence(Object value) {
         if (value == null) return JsonNull.INSTANCE;

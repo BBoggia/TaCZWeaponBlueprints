@@ -17,7 +17,7 @@ class TaCZGunPackExtractorTest {
 
     @Test
     void extractsOnlyRecipeBackedGunsAndAcceptsTaCZComments() throws IOException {
-        write("data/test/recipes/gun/sample.json", """
+        write("data/test/recipe/gun/sample.json", """
                 {
                   // TaCZ gun packs permit comments.
                   "result": {"type": "gun", "id": "test:sample"}
@@ -84,7 +84,7 @@ class TaCZGunPackExtractorTest {
 
     @Test
     void rejectsResourceIdsThatCouldEscapeThePack() throws IOException {
-        write("data/test/recipes/gun/bad.json", """
+        write("data/test/recipe/gun/bad.json", """
                 {"result":{"type":"gun","id":"test:../../bad"}}
                 """);
 
@@ -94,7 +94,7 @@ class TaCZGunPackExtractorTest {
 
     @Test
     void expandsKnownTubeReloadScriptsAndFlagsScriptedBehavior() throws IOException {
-        write("data/test/recipes/gun/tube.json", """
+        write("data/test/recipe/gun/tube.json", """
                 {"result":{"type":"gun","id":"test:tube"}}
                 """);
         write("data/test/index/guns/tube.json", """
@@ -133,7 +133,7 @@ class TaCZGunPackExtractorTest {
 
     @Test
     void expandsM1014PairLoadingTheSameWayAsRuntimeEvidence() throws IOException {
-        write("data/test/recipes/gun/pair_tube.json", """
+        write("data/test/recipe/gun/pair_tube.json", """
                 {"result":{"type":"gun","id":"test:pair_tube"}}
                 """);
         write("data/test/index/guns/pair_tube.json", """
@@ -171,7 +171,7 @@ class TaCZGunPackExtractorTest {
     @Test
     void extractsBurstHeatAndExplosionCapabilitiesUsingTaCZFieldNames()
             throws IOException {
-        write("data/test/recipes/gun/capability.json", """
+        write("data/test/recipe/gun/capability.json", """
                 {"result":{"type":"gun","id":"test:capability"}}
                 """);
         write("data/test/index/guns/capability.json", """

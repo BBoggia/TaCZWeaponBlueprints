@@ -60,7 +60,7 @@ class AnalyzerLegacyCompatibilityTest {
     @Test
     void targetOnlyFragmentKeepsItsLegacyIdentity() throws Exception {
         var tag = nbt("item-tags.snbt").getCompound("fragment");
-        assertEquals(new ResourceLocation("tacz:ak47"), BlueprintFragmentItem.getTarget(tag).orElseThrow());
+        assertEquals(ResourceLocation.parse("tacz:ak47"), BlueprintFragmentItem.getTarget(tag).orElseThrow());
         assertEquals(1, tag.size());
     }
 
@@ -95,9 +95,7 @@ class AnalyzerLegacyCompatibilityTest {
     @Test
     void shippedVersionFourProfileKeepsKnownCopiesAndDiscountFragments() throws Exception {
         var profile = BlueprintResearchProfile.CODEC.parse(JsonOps.INSTANCE,
-                JsonParser.parseString(read("research-profile-v4.json"))).getOrThrow(false, message -> {
-                    throw new AssertionError(message);
-                });
+                JsonParser.parseString(read("research-profile-v4.json"))).getOrThrow(AssertionError::new);
         assertTrue(profile.reverseEngineering().enabled());
         assertTrue(profile.reverseEngineering().allowKnown());
         assertTrue(profile.reverseEngineering().allowModified());

@@ -27,14 +27,14 @@ import net.minecraft.network.FriendlyByteBuf;
 class SyncBlueprintJournalPacketTest {
     @Test
     void fragmentProgressRoundTripsWithTheJournalEntry() {
-        var id = new net.minecraft.resources.ResourceLocation("test:rifle");
+        var id = net.minecraft.resources.ResourceLocation.parse("test:rifle");
         BlueprintJournalEntry entry = new BlueprintJournalEntry(
                 0,
                 JournalVisibility.FULL,
                 Optional.of(id),
                 Optional.of("item.test.rifle"),
                 Optional.of("rifle"),
-                Optional.of(new net.minecraft.resources.ResourceLocation("test:slot/rifle")),
+                Optional.of(net.minecraft.resources.ResourceLocation.parse("test:slot/rifle")),
                 false, true, true, true, true,
                 10, 1, 1, 2,
                 Optional.of(new BlueprintJournalEntry.FragmentProgress(
@@ -81,10 +81,10 @@ class SyncBlueprintJournalPacketTest {
                 List.of(new BlueprintJournalSnapshot.RecentUnlockBatch(
                         4L,
                         RecentBlueprintUnlockBatch.Source.TREE_RESEARCH,
-                        new net.minecraft.resources.ResourceLocation("test:target"),
+                        net.minecraft.resources.ResourceLocation.parse("test:target"),
                         List.of(
-                                new net.minecraft.resources.ResourceLocation("test:root"),
-                                new net.minecraft.resources.ResourceLocation("test:target")),
+                                net.minecraft.resources.ResourceLocation.parse("test:root"),
+                                net.minecraft.resources.ResourceLocation.parse("test:target")),
                         2)),
                 25, 1_000_000, 0, 0, 0);
         List<SyncBlueprintJournalPacket> packets = SyncBlueprintJournalPacket.split(snapshot, 55L);

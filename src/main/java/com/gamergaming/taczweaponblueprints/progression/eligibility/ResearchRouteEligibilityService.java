@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.gamergaming.taczweaponblueprints.capabilities.IPlayerRecipeData;
-import com.gamergaming.taczweaponblueprints.init.ModCapabilities;
+import com.gamergaming.taczweaponblueprints.init.ModAttachments;
 import com.gamergaming.taczweaponblueprints.progression.ResearchFeatureConfigSnapshot;
 import com.gamergaming.taczweaponblueprints.progression.ResearchPathUnlockPlanner;
 import com.gamergaming.taczweaponblueprints.progression.eligibility.ResearchEligibilityBlocker.Gate;
@@ -68,8 +68,7 @@ public final class ResearchRouteEligibilityService {
                 || !ResearchWorkbenchAuthority.validForResearch(player, workbench)) {
             return Evaluation.unavailable();
         }
-        IPlayerRecipeData playerData = player.getCapability(ModCapabilities.PLAYER_RECIPE_DATA)
-                .resolve().orElse(null);
+        IPlayerRecipeData playerData = ModAttachments.recipeData(player).orElse(null);
         if (playerData == null) {
             return Evaluation.unavailable();
         }
@@ -295,7 +294,7 @@ public final class ResearchRouteEligibilityService {
         }
 
         public static Evaluation unavailable() {
-            ResourceLocation placeholder = new ResourceLocation(
+            ResourceLocation placeholder = ResourceLocation.parse(
                     "taczweaponblueprints:unavailable");
             return new Evaluation(
                     new ResearchEligibilityBlockers(List.of(

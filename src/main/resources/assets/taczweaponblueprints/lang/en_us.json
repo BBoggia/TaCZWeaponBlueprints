@@ -2110,5 +2110,11 @@
   "config.taczweaponblueprints.blueprint.attachmentResearch.ENABLED": "Enabled",
   "config.taczweaponblueprints.blueprint.attachmentResearch.ENABLED.desc": "Enable this category in the Tech Tree. Individual blueprint exclusions and research requirements still apply.",
   "config.taczweaponblueprints.blueprint.attachmentResearch.DISABLED": "Disabled",
-  "config.taczweaponblueprints.blueprint.attachmentResearch.DISABLED.desc": "Hide this category from the Tech Tree and prevent its research. Already learned blueprints are kept."
+  "config.taczweaponblueprints.blueprint.attachmentResearch.DISABLED.desc": "Hide this category from the Tech Tree and prevent its research. Already learned blueprints are kept.",
+  "config.taczweaponblueprints.blueprint.researchDomainMode.PROFILE": "Use Profile",
+  "config.taczweaponblueprints.blueprint.researchDomainMode.PROFILE.desc": "Follow the active datapack profile's category settings. The built-in profile disables this category by default.",
+  "config.taczweaponblueprints.blueprint.researchDomainMode.ENABLED": "Enabled",
+  "config.taczweaponblueprints.blueprint.researchDomainMode.ENABLED.desc": "Enable this category in the Tech Tree. Individual blueprint exclusions and research requirements still apply.",
+  "config.taczweaponblueprints.blueprint.researchDomainMode.DISABLED": "Disabled",
+  "config.taczweaponblueprints.blueprint.researchDomainMode.DISABLED.desc": "Hide this category from the Tech Tree and prevent its research. Already learned blueprints are kept."
 }
