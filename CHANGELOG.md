@@ -6,6 +6,23 @@ documentation.
 
 ## Unreleased
 
+## 1.3.9 - 2026-11-05
+
+### Changed
+
+- Promoted the Minecraft 1.21.1 NeoForge version to a stable release, including
+  blueprint learning, tiered crafting, Tech Tree research, the Blueprint
+  Analyzer, Blueprint Journal, villager professions, and Research Designer.
+
+### Compatibility
+
+- Updated the tested Fzzy Config dependency to **0.7.7+fix1+1.21+neoforge**.
+  The supported range remains 0.7.7 or later in the 0.7 series for NeoForge.
+- Requires Minecraft 1.21.1, Java 21, NeoForge 21.1.233 or newer in the 21.1
+  series, and the unofficial NeoForge TaCZ port 1.1.8 or newer.
+- Existing NeoForge beta installations can update in place. Forge 1.20.1 world
+  migration and NeoForge TaCZ Magazines integration remain unsupported.
+
 ## 1.3.8-neoforge-beta.1 - 2026-10-20
 
 ### Added

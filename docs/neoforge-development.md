@@ -4,9 +4,8 @@ The `neoforge-1.21.1` branch ports [TaCZ] Weapon Research & Blueprints to
 Minecraft 1.21.1. The completed Forge 1.20.1 source remains on branch and tag
 `v1.3.8`, commit `8748be8cfbadcb54a0fc7e047302a8339f549b3b`.
 
-The current NeoForge candidate is a beta. The
-full production source compiles. Player knowledge uses persistent NeoForge
-attachments, networking uses direction-specific play payloads, and blueprint
+The NeoForge release includes the progression, workstation, villager, and
+Designer features. Player knowledge uses persistent NeoForge attachments, networking uses direction-specific play payloads, and blueprint
 items and crafted-gun provenance use Minecraft data components. The workbench
 integration retains recipe-holder IDs and server-authoritative recipe access.
 Research, Analyzer, villager trading, and Designer workflows have focused
@@ -24,7 +23,7 @@ excluded to make a partial build pass.
 | Minecraft | 1.21.1 |
 | NeoForge | 21.1.233 |
 | Unofficial TaCZ port | 1.1.8-hotfix-r7; Modrinth project `OypNE65K`, version `62q6mB5Q` |
-| Fzzy Config | 0.7.7+1.21+neoforge; Modrinth version `uG7oHgw6` |
+| Fzzy Config | 0.7.7+fix1+1.21+neoforge; Modrinth version `jRuOkBAG` |
 | Kotlin for Forge, NeoForge variant | 5.12.0 |
 | Optional EMI | 1.1.24+1.21.1, NeoForge |
 | Optional JEI | 19.21.0.247, Minecraft 1.21.1 NeoForge |
@@ -61,8 +60,8 @@ Resolve the dependencies, expand NeoForge metadata, and compile the setup probe:
 
 Build output is isolated under `build/neoforge/`. Running `clean` on this branch
 does not delete `build/releases/1.3.8/` or the Forge `build/libs/` artifacts.
-Development versions have a `-dev` suffix; prepared beta versions use
-`-neoforge-beta.<number>`. Archive names include `1.21.1-neoforge`.
+Development versions have a `-dev` suffix; stable releases use a numeric
+version such as `1.3.9`. Archive names include `1.21.1-neoforge`.
 
 ## Dependency startup checks
 

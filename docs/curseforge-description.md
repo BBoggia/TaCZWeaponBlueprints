@@ -5,7 +5,7 @@ turns **Timeless and Classics Zero (TaCZ)** into a configurable progression
 system: find weapon blueprints, collect Scrap, analyze recovered guns, and work
 through a Tech Tree toward the weapons you want.
 
-Choose **Minecraft 1.20.1 with Forge** or the **Minecraft 1.21.1 NeoForge beta**.
+Choose **Minecraft 1.20.1 with Forge** or the **Minecraft 1.21.1 NeoForge release**.
 Install the matching build and dependencies on both the client and server.
 
 Learning a blueprint permanently unlocks its matching recipe for your player.
@@ -97,7 +97,7 @@ On **Forge 1.20.1**, **TaCZ Magazines 0.2.0-Beta** adds empty-magazine crafting
 at the three Workbench levels and TaCZ's ammo Workbench. Servers can require
 learned compatible weapons and minimum Workbench levels. Eject inserted
 magazines before analyzing a gun. This integration is not available in the
-NeoForge beta.
+NeoForge release.
 
 ## Getting Started
 
@@ -110,7 +110,7 @@ NeoForge beta.
 
 ## Requirements
 
-| | Forge version | NeoForge beta |
+| | Forge version | NeoForge release |
 | --- | --- | --- |
 | Minecraft | 1.20.1 | 1.21.1 |
 | Loader | Forge 47.x | NeoForge 21.1.233 or newer in the 21.1 series |
@@ -121,14 +121,15 @@ NeoForge beta.
 | Optional recipe viewers | JEI 15.x or EMI 1.1.x | JEI 19.x or EMI 1.1.x for 1.21.1 NeoForge |
 
 Use the dependencies built for your chosen Minecraft version and loader. The
-NeoForge beta requires the **unofficial NeoForge TaCZ port**; the Forge TaCZ
+NeoForge release requires the **unofficial NeoForge TaCZ port**; the Forge TaCZ
 JAR cannot be used with it. Newer TaCZ versions are accepted by the dependency
 requirement, but future API changes can still require a compatibility update.
 
-Back up worlds before updating. Start the NeoForge beta in a new world;
-migration of Forge 1.20.1 worlds and player progress is not supported by this
-beta. For supported updates within the Forge version, learned recipes,
-discoveries, fragment archives, and saved RP carry over. Changing currency
+Back up worlds before updating. Existing NeoForge beta worlds can update in
+place. For a first NeoForge installation, start a new world; migration of Forge
+1.20.1 worlds and player progress is not supported. For supported updates within
+the Forge version, learned recipes, discoveries, fragment archives, and saved
+RP carry over. Changing currency
 modes does not turn RP into items automatically; see the
 [currency migration guide](https://github.com/BBoggia/TaCZWeaponBlueprints/blob/main/docs/research-currency-migration.md).
 [Report issues](https://github.com/BBoggia/TaCZWeaponBlueprints/issues) with mod and

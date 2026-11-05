@@ -1,7 +1,7 @@
 # [TaCZ] Weapon Research & Blueprints
 
 This branch targets Minecraft 1.21.1 with NeoForge. The current build is a
-NeoForge beta; the released Forge 1.20.1 source is preserved at `v1.3.8`. See
+NeoForge release; the released Forge 1.20.1 source is preserved at `v1.3.8`. See
 [NeoForge development](docs/neoforge-development.md) for the port's dependencies,
 setup commands, and current limitations.
 
@@ -84,7 +84,7 @@ stock, research restrictions, and modpack examples.
 
 ## Requirements
 
-These requirements apply to the NeoForge beta. For the separate Forge 1.20.1
+These requirements apply to the NeoForge release. For the separate Forge 1.20.1
 version, see the [Forge release notes](docs/releases/1.3.8.md).
 
 | Component | Version |
@@ -100,8 +100,9 @@ JEI 19.x and EMI 1.1.x for Minecraft 1.21.1 NeoForge are optional client-side in
 
 Use the unofficial NeoForge TaCZ port; the Forge TaCZ JAR is incompatible with
 this loader. Newer versions are accepted by the dependency requirement; API
-changes can still require a compatibility update. Start this beta in a new
-world; migration of Forge 1.20.1 worlds and player progress is not supported.
+changes can still require a compatibility update. Existing NeoForge beta worlds
+can update in place. For a first NeoForge installation, start a new world;
+migration of Forge 1.20.1 worlds and player progress is not supported.
 
 Install matching [TaCZ] Weapon Research & Blueprints versions on both the client and server.
 TaCZ content packs can be added or removed independently; the available
@@ -149,7 +150,7 @@ On the Forge 1.20.1 version, optional [TaCZ Magazines support](docs/tacz-magazin
 magazine crafting at all three Workbench tiers and TaCZ's ammo Workbench.
 Servers can keep material-only access or link magazines to learned compatible
 weapons, with separate minimum tiers for basic and extended magazines. This
-integration is not supported in the NeoForge beta.
+integration is not supported in the NeoForge release.
 
 Each player also has Personal Settings for research confirmation, currency
 notifications, reduced motion, the optional background grid, and Compact,
@@ -238,7 +239,7 @@ last working data active.
 - [Research economy supply and balance](docs/research-economy-balance.md)
 - [Research currency integration API](docs/research-currency-integrations.md)
 - [Economy release handoff and playtest checklist](docs/research-economy-release-handoff.md)
-- [Current release notes](docs/releases/1.3.8-neoforge-beta.1.md)
+- [Current release notes](docs/releases/1.3.9.md)
 - [CurseForge description](docs/curseforge-description.md)
 - [Operations and migration](docs/operations-and-migration.md)
 - [Research Designer workspace](docs/research-designer-workspace.md)
