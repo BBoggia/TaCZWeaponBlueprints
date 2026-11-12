@@ -32,7 +32,7 @@ public final class ClientVerification {
             RuntimeIdentity.verify();
             if(mc.player==null){
                 if(mc.getOverlay()!=null)return;
-                if(FeatureVerification.enabled()) {
+                if(FeatureVerification.enabled() || SettingsVerification.enabled()) {
                     com.gamergaming.taczweaponblueprints.client.ResearchTreeGuidancePreference.client().dismiss();
                     com.gamergaming.taczweaponblueprints.client.ResearchTreeGuidancePreference.client().dismissOnboarding();
                     mc.getTutorial().setStep(net.minecraft.client.tutorial.TutorialSteps.NONE);
@@ -40,7 +40,7 @@ public final class ClientVerification {
                 if(mc.screen instanceof TitleScreen&&!connecting || mc.screen instanceof DisconnectedScreen && ++wait>80){
                     if(++attempts>3)throw new IllegalStateException("Too many connection attempts");
                     connecting=true;wait=0;
-                    if (Boolean.getBoolean("wrb.verifyIntegrated")) {
+                    if (Boolean.getBoolean("wrb.verifyIntegrated") && !Boolean.getBoolean("wrb.verifyRemotePeer")) {
                         mc.createWorldOpenFlows().openWorld("packaged-integrated-world", () -> mc.setScreen(new TitleScreen()));
                     } else {
                         var address="127.0.0.1:25594";
@@ -51,6 +51,7 @@ public final class ClientVerification {
             }
             if(expected==0)return;
             if(++wait>600)throw new IllegalStateException("Client timed out waiting for stage "+expected);
+            if (SettingsVerification.enabled()) { SettingsClientVerification.tick(); return; }
             if (LifecycleVerification.enabled()) { LifecycleClientVerification.tick(mc); return; }
             if (FeatureVerification.enabled()) { FeatureClientVerification.tick(mc); return; }
             if(!(mc.screen instanceof GunSmithTableScreen screen)||!(mc.player.containerMenu instanceof GunSmithTableMenu menu))return;

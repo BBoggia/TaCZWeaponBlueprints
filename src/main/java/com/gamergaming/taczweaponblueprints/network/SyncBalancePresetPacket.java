@@ -51,8 +51,14 @@ public final class SyncBalancePresetPacket implements CustomPacketPayload {
     private final class ClientHandler {
         void handle(IPayloadContext contextSupplier) {
             IPayloadContext context = contextSupplier;
-            context.enqueueWork(() ->
-                    ModConfigs.BLUEPRINT.acceptSynchronizedBalancePreset(preset));
+            context.enqueueWork(() -> {
+                var minecraft = net.minecraft.client.Minecraft.getInstance();
+                var connection = minecraft.getConnection();
+                // The integrated host already shares the authoritative config. An older queued
+                // preset notification must not overwrite a newer server-side settings batch.
+                if (minecraft.hasSingleplayerServer() || connection == null || connection.getConnection() != context.connection()) return;
+                ModConfigs.BLUEPRINT.acceptSynchronizedBalancePreset(preset);
+            });
         }
     }
 

@@ -35,14 +35,12 @@ progression requirements.
 
 Servers can use a single Research Bench or enable **Portable Research** through
 the Journal / Research key. Costs and progression requirements still apply.
-Toggle branch labels or focus the tree on a blueprint or branch.
 
 ## Analyze Weapons and Research Data
 
 Bring supported equipment to a **Blueprint Analyzer** for blueprints or
 fragments. Basic, Advanced, and Experimental Analyzers compare weapon and station
-tiers; attempts above the station's tier can produce nothing. The screen shows
-outcomes, costs, and saved progress. Servers can use Single Analyzer mode to
+tiers; attempts above the station's tier can produce nothing. Servers can use Single Analyzer mode to
 handle every weapon tier at the basic station.
 
 Research Data supplies another route to blueprints. By default, **Research
@@ -85,19 +83,27 @@ Configure loot, starting blueprints, discovery visibility, research and crafting
 tiers, and progression exemptions. Datapacks can customize branches,
 requirements, Analyzer rewards, Data pools, and villager trades. The automatic
 tree adapts to compatible TaCZ catalogs; pack authors can select exact weapons.
-To enable the included ammo and attachment Tech Trees,
-set **Ammo Research** and **Attachment Research** to **Enabled** under
-**Server Settings → Research Progression**, with **Enable Research** on.
-The default **Use Profile** choice follows your datapack's category rules;
-weapons are the only category enabled by the built-in profile. Saving the
-settings updates connected players without a reload or additional datapack.
+On **NeoForge**, open **World & Server Settings → Quick Setup** for common
+progression choices. **Advanced Settings** keeps detailed controls in searchable
+categories. Both views share pending changes: review the Gameplay Summary, then
+Apply or Discard. Recommended setup and Simpler Stations show what they will
+change first. Personal Settings keeps your own interface preferences separate.
+Existing configuration values are preserved.
+
+To enable the included ammo and attachment Tech Trees on NeoForge, set
+**Ammo research** and **Attachment research** to **On** in Quick Setup,
+keep **Research** on, and choose Apply. On Forge, use **Server Settings →
+Research Progression** and keep **Enable Research** on. Follow modpack follows your
+datapack's category rules; weapons are the only category enabled by the bundled
+profile. No additional datapack is needed to enable the bundled categories.
 See the [operations guide](https://github.com/BBoggia/TaCZWeaponBlueprints/blob/main/docs/operations-and-migration.md).
 
-On **Forge 1.20.1**, **TaCZ Magazines 0.2.0-Beta** adds empty-magazine crafting
+On **Forge 1.20.1**, the optional **TaCZ Magazines** integration adds empty-magazine crafting
 at the three Workbench levels and TaCZ's ammo Workbench. Servers can require
 learned compatible weapons and minimum Workbench levels. Eject inserted
 magazines before analyzing a gun. This integration is not available in the
-NeoForge release.
+NeoForge release. Compatibility between TaCZ Magazines and TaCZ 1.2.0
+still needs separate validation.
 
 ## Getting Started
 
@@ -110,23 +116,27 @@ NeoForge release.
 
 ## Requirements
 
-| | Forge version | NeoForge release |
+| | Forge | NeoForge |
 | --- | --- | --- |
 | Minecraft | 1.20.1 | 1.21.1 |
 | Loader | Forge 47.x | NeoForge 21.1.233 or newer in the 21.1 series |
 | Java | 17 | 21 |
-| TaCZ | 1.1.8 or newer for Forge | Unofficial NeoForge port, 1.1.8 or newer; tested with 1.1.8-hotfix-r7 |
+| TaCZ | Official Forge build, 1.2.0 or newer | Official NeoForge build, 1.2.0 or newer |
 | Fzzy Config | 0.7.6 or later in the 0.7 series, Forge build | 0.7.7 or later in the 0.7 series, NeoForge build |
 | Kotlin dependency | Kotlin for Forge | Kotlin for Forge, NeoForge variant; tested with 5.12.0 |
 | Optional recipe viewers | JEI 15.x or EMI 1.1.x | JEI 19.x or EMI 1.1.x for 1.21.1 NeoForge |
 
 Use the dependencies built for your chosen Minecraft version and loader. The
-NeoForge release requires the **unofficial NeoForge TaCZ port**; the Forge TaCZ
-JAR cannot be used with it. Newer TaCZ versions are accepted by the dependency
+NeoForge build requires the **official NeoForge TaCZ build**. Remove the
+unofficial port before installing it. The Forge TaCZ JAR cannot be used with it.
+Newer TaCZ versions are accepted by the dependency
 requirement, but future API changes can still require a compatibility update.
 
-Back up worlds before updating. Existing NeoForge beta worlds can update in
-place. For a first NeoForge installation, start a new world; migration of Forge
+The new settings screens are NeoForge-only. The Forge build retains its
+existing Fzzy Config interface.
+
+Back up worlds before updating. For a first NeoForge installation, start a new
+world; migration of Forge
 1.20.1 worlds and player progress is not supported. For supported updates within
 the Forge version, learned recipes, discoveries, fragment archives, and saved
 RP carry over. Changing currency

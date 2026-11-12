@@ -6,6 +6,51 @@ documentation.
 
 ## Unreleased
 
+## 1.3.10 - 2026-11-10
+
+### Added
+
+- Added a settings landing page separating personal preferences from world/server
+  settings, with seven Advanced categories, cross-category search, and explicit
+  Apply, Discard, and stale-change review controls.
+- Added Quick Setup for common progression, research, crafting, discovery,
+  cost, and villager choices. Quick Setup and Advanced Settings share pending
+  changes, with a Gameplay Summary separating applied rules from the draft.
+- Added Recommended setup and Simpler Stations recipes with a before-and-after
+  review. Recipes queue changes for Apply and preserve unrelated settings.
+
+### Changed
+
+- Simplified Personal Settings to active controls and appearance preferences.
+  Hidden legacy layout values remain saved; appearance resets show their scope
+  and wait for Apply.
+- Clarified Research Bench tiers, crafting Workbench levels, and the difference
+  between ordinary loot fragments and analysis fragments in settings help.
+
+### Fixed
+
+- Updated workbench integration for TaCZ 1.2.0, preserving blueprint requirements
+  and crafted-weapon origin tracking when recipe outputs are split into stacks.
+- Added the Marksman Rifle category to all three Crafting Workbenches and the
+  Rifle Blueprints creative tab, with matching blueprint artwork sizing and
+  settings choices.
+- Free factory attachment choices in TaCZ 1.2.0 no longer block weapon analysis
+  as removable attachments. Physical attachments still need to be removed.
+- Applying settings in singleplayer keeps newer changes from being overwritten
+  by an older local sync. Players joining over LAN receive the complete update.
+- Open Blueprint Analyzers now refresh their previews when station setup or the
+  single-Analyzer Research Data reward tier changes.
+- Settings search keeps the cursor in place while results update, and native
+  controls include their setting names in screen-reader narration.
+
+### Compatibility
+
+- The NeoForge build targets the official TaCZ 1.2.0 release for Minecraft
+  1.21.1 and requires TaCZ 1.2.0 or newer. Replace the unofficial TaCZ port with
+  the official NeoForge build on both clients and servers.
+- NeoForge builds use network protocol `neoforge-2` for server-validated
+  settings edits. Clients and servers must use matching addon builds.
+
 ## 1.3.9 - 2026-11-05
 
 ### Changed

@@ -129,7 +129,7 @@ public class BlueprintItem extends Item {
 
             String itemName;
             switch (data.getItemType()) {
-                case "rifle", "shotgun", "pistol", "sniper", "smg", "mg", "rpg":
+                case "rifle", "shotgun", "pistol", "sniper", "dmr", "smg", "mg", "rpg":
                     itemName = firstHalfName.getString() + ItemNameFilterHelper.filterGunName(secondHalfName.getString());
                     break;
 
@@ -157,7 +157,7 @@ public class BlueprintItem extends Item {
             String itemName = Component.translatable(data.getNameKey()).getString();
 
             switch (data.getItemType()) {
-                case "rifle", "shotgun", "pistol", "sniper", "smg", "mg", "rpg":
+                case "rifle", "shotgun", "pistol", "sniper", "dmr", "smg", "mg", "rpg":
                     itemName = ItemNameFilterHelper.filterGunName(itemName);
                     break;
 

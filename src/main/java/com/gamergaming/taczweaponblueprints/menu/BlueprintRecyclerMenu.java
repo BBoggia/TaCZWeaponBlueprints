@@ -938,7 +938,8 @@ public final class BlueprintRecyclerMenu extends AbstractContainerMenu
                             .orElseGet(net.minecraft.nbt.CompoundTag::new),
                     List.of(com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.progressionSnapshot(),
                             com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.accessSnapshot(),
-                            ModConfigs.BLUEPRINT.dataSettings()));
+                            ModConfigs.BLUEPRINT.dataSettings(),
+                            ModConfigs.BLUEPRINT.stationSetup()));
         }
 
         boolean matches(WorkstationState other) {

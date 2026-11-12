@@ -24,7 +24,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 public class NetworkHandler {
-    public static final String PROTOCOL_VERSION = "neoforge-1";
+    public static final String PROTOCOL_VERSION = "neoforge-2";
     // A random per-server seed prevents a partial chunk set from an earlier
     // connection being mistaken for a new sync after reconnecting.
     private static final AtomicLong SYNC_SEQUENCE =
@@ -36,6 +36,9 @@ public class NetworkHandler {
     /** Direction-specific play payloads are mandatory on both ends. */
     public static void registerPackets(net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent event) {
         var registrar = event.registrar(PROTOCOL_VERSION);
+        registrar.playToServer(SettingsRequestPacket.TYPE, SettingsRequestPacket.STREAM_CODEC, SettingsRequestPacket::handle);
+        registrar.playToClient(SettingsReplyPacket.TYPE, SettingsReplyPacket.STREAM_CODEC, SettingsReplyPacket::handle);
+        registrar.playToClient(SettingsConfigSyncPacket.TYPE, SettingsConfigSyncPacket.STREAM_CODEC, SettingsConfigSyncPacket::handle);
         registrar.playToServer(OpenPortableResearchPacket.TYPE, OpenPortableResearchPacket.STREAM_CODEC, OpenPortableResearchPacket::handle);
         registrar.playToClient(SyncPlayerRecipeDataPacket.TYPE, SyncPlayerRecipeDataPacket.STREAM_CODEC, SyncPlayerRecipeDataPacket::handle);
         registrar.playToClient(SyncBlueprintDataPacket.TYPE, SyncBlueprintDataPacket.STREAM_CODEC, SyncBlueprintDataPacket::handle);

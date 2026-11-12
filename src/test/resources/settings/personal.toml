@@ -1,0 +1,15 @@
+version = 3
+holdToResearch = false
+holdDurationMillis = 1200
+showResearchPointNotifications = false
+showBranchLabels = false
+reduceMotion = true
+showBackgroundGrid = false
+minimap = "HIDDEN"
+layoutPreset = "CUSTOM"
+canvasPadding = 83
+nodeGap = 77
+tierGap = 91
+portalPadding = 67
+orderingSweeps = 6
+compactionSweeps = 4

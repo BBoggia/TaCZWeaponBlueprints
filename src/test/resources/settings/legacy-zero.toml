@@ -1,0 +1,6 @@
+version = 0
+blueprintSpawnChance = 0.42
+minBlueprints = 2
+maxBlueprints = 5
+customEnforceResearchTiers = false
+customEnforceCraftingTiers = true

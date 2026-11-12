@@ -158,12 +158,12 @@ tasks.register('verifyPackagedRuntimeEvidence') {
             it.moduleVersion.id.group in ['dev.emi', 'mezz.jei']
         }.collectEntries { [(it.file.name): digest(it.file)] }
         if (evidence.dependencies != dependencies) throw new GradleException('Runtime dependencies differ from the current pinned artifacts.')
-        def required = ['core', 'features', 'review-regressions', 'lifecycle', 'restart', 'integrated', 'emi', 'jei']
+        def required = ['core', 'features', 'review-regressions', 'settings', 'settings-integrated', 'lifecycle', 'restart', 'integrated', 'emi', 'jei']
         if (!required.every { key -> evidence.suites[key]?.passed == true }) throw new GradleException('Packaged runtime matrix is incomplete.')
         required.each { key ->
             def suite = evidence.suites[key]
             def expectedSuite = key in ['emi', 'jei'] ? 'features' : key
-            def sides = key in ['lifecycle', 'restart'] ? ['server', 'client', 'peer'] : ['server', 'client']
+            def sides = key in ['lifecycle', 'restart', 'settings', 'settings-integrated'] ? ['server', 'client', 'peer'] : ['server', 'client']
             if (suite.fixtureSha256 != fixtureHash || suite.dependencies != dependencies)
                 throw new GradleException("Mismatched suite environment: ${key}")
             sides.each { side ->

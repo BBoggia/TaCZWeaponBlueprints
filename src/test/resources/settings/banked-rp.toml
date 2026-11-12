@@ -1,0 +1,6 @@
+version = 5
+researchCurrencyKind = "BANKED_RP"
+researchCurrencyItem = "minecraft:copper_ingot"
+researchPointCap = 8675
+enableScrapLoot = false
+researchCostMode = "POINTS_ONLY"

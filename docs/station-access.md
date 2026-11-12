@@ -1,6 +1,9 @@
 # Station setup and research access
 
-Open the server's blueprint settings and expand **Stations & Research Access**.
+On NeoForge 1.3.10, open **World & Server Settings → Quick Setup** for Research
+Bench access, or use Advanced Settings to find Analyzer setup. Choose Apply to
+save the draft. On Forge, open the server's blueprint settings and expand
+**Stations & Research Access**.
 Changing these settings requires operator permission level 2. They apply to
 all players on that server. Client and server mod versions must match.
 

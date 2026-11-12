@@ -1,0 +1,5 @@
+version = 5
+researchCurrencyKind = "PHYSICAL_ITEM"
+researchCurrencyItem = "minecraft:copper_ingot"
+researchCostMode = "ITEMS_ONLY"
+villagerFixedCurrency = "minecraft:diamond"

@@ -50,7 +50,7 @@ import net.neoforged.neoforge.common.conditions.ConditionalOps;
 import net.neoforged.neoforge.common.crafting.CraftingHelper;
 import net.neoforged.neoforge.common.conditions.FalseCondition;
 
-/** Pins the TaCZ NeoForge 1.1.8-hotfix-r7 and NeoForge 21.1 seams selected for tiered workstations. */
+/** Pins the official TaCZ NeoForge 1.2.0 and NeoForge 21.1 integration for tiered workstations. */
 class TaCZWorkbenchAdapterContractTest {
     private static final String FIXTURE_ROOT = "/fixtures/tiered-workbench/";
 
@@ -174,6 +174,7 @@ class TaCZWorkbenchAdapterContractTest {
                     bundledTabs.add(tab.getAsJsonObject().get("id").getAsString()));
         }
         assertTrue(bundledTabs.contains("tacz:ifp_rifle_cartridges"));
+        assertTrue(bundledTabs.contains("tacz:dmr"));
         for (int tier = 1; tier <= 3; tier++) {
             Set<String> configuredTabs = new java.util.HashSet<>();
             classpathJson("/data/taczweaponblueprints/data/blocks/workbench_lvl"

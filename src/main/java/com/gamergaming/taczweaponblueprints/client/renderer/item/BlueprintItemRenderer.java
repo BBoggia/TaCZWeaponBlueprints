@@ -159,7 +159,7 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
             case "shotgun":
                 overlayScale = 0.42f;
                 break;
-            case "mg", "sniper":
+            case "mg", "sniper", "dmr":
                 overlayScale = 0.45f;
                 break;
             case "rpg":

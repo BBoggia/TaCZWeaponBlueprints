@@ -13,6 +13,15 @@ client/server acceptance coverage. The optional recipe-viewer plugins are
 checked with their pinned NeoForge runtimes. No production sources are
 excluded to make a partial build pass.
 
+The Quick Setup and Advanced Settings foundation is documented in the
+[settings editing contract](settings-editing.md), including its field inventory,
+config preservation rules, and dedicated settings verification suite.
+
+The official TaCZ 1.2.0 changes pass the 1.3.10 build, automated tests, and
+packaged-artifact checks. Earlier runtime acceptance results used the unofficial
+1.1.8-hotfix-r7 dependency and do not certify this update. Client/server checks
+remain pending; see [TaCZ compatibility](tacz-compatibility.md).
+
 ## Pinned environment
 
 | Component | Development version |
@@ -22,21 +31,21 @@ excluded to make a partial build pass.
 | ModDevGradle | 2.0.74 |
 | Minecraft | 1.21.1 |
 | NeoForge | 21.1.233 |
-| Unofficial TaCZ port | 1.1.8-hotfix-r7; Modrinth project `OypNE65K`, version `62q6mB5Q` |
+| Official TaCZ NeoForge | 1.2.0; Modrinth project `SzzJttH8`, version `O2Pfsh6w` |
 | Fzzy Config | 0.7.7+fix1+1.21+neoforge; Modrinth version `jRuOkBAG` |
 | Kotlin for Forge, NeoForge variant | 5.12.0 |
 | Optional EMI | 1.1.24+1.21.1, NeoForge |
 | Optional JEI | 19.21.0.247, Minecraft 1.21.1 NeoForge |
 
-Versions and artifact IDs are defined in `gradle.properties`. TaCZ's
-[upstream build](https://github.com/MUKSC/TACZ-1.21.1/tree/c471821c771a62cc8850694bbea579c2ba0b9e3a)
-provides the NeoForge, ModDevGradle, Gradle, and Java baseline. The
+Versions and artifact IDs are defined in `gradle.properties`. The loader and
+build-tool baseline is retained from the original port. The TaCZ dependency now
+uses the [official NeoForge release](https://github.com/MCModderAnchor/TACZ/releases/tag/1.2.0-neoforge-1.21.1). The
 [ModDevGradle documentation](https://github.com/neoforged/ModDevGradle) explains
 the development runs and additional source sets. Kotlin uses its
 [1.20.6–1.21.8 integration](https://github.com/thedarkcolour/KotlinForForge/tree/5.x).
 
-The TaCZ dependency refers to the unofficial NeoForge project, not the Forge
-project with a similar version name. It already packages its support libraries.
+The TaCZ dependency refers to the official project's NeoForge artifact, selected
+by its exact Modrinth version ID. It already packages its support libraries.
 JEI and EMI APIs are available for compilation, but neither viewer is installed
 in normal development runs unless requested. TaCZ Magazines and the old Forge
 structure-mod datagen dependencies are not enabled on this branch.
@@ -150,13 +159,15 @@ the disposable client.
 | `core` | Physical learning, denied and allowed native crafts, ingredients, provenance, bench tiers, disconnect/reconnect |
 | `features` | Research, Analyzer, villagers, Designer, and screens without an optional viewer |
 | `review-regressions` | Merchant pricing and payment, Designer round trips, and screen rendering |
+| `settings` | Config preservation, Quick Setup and native editors, permissions, concurrent operators, reload/file conflicts, reconnect, and workstation refresh |
+| `settings-integrated` | Settings UI, recipes, apply and stale review on an integrated host, plus synchronization to a separate LAN guest |
 | `lifecycle` | Two simultaneous players with different knowledge, unauthorized crafting, native death/respawn, dimension travel, successful and failed reloads, recovery, and saved restart fixtures |
 | `restart` | A new server process loads both players' progression and inventories, a used gunsmith offer, and the workstation; both clients verify their own recipe access |
 | `integrated` | The core learning/crafting flow in a singleplayer integrated server using a copy of the disposable server world |
 | `emi`, `jei` | Feature coverage with each pinned viewer separately, including production information-page registration |
 
 Use `--suite <name>` to investigate one environment. Run `lifecycle` immediately
-before `restart`; run `core` before `integrated` to provide the disposable world.
+before `restart`; run `core` before `integrated` or `settings-integrated` to provide the disposable world.
 The runner creates a fresh world for each independent suite and resets the
 addon's settings in the disposable profiles, so a prior suite's temporary
 workbench or award settings cannot affect the next run. Restart retains its

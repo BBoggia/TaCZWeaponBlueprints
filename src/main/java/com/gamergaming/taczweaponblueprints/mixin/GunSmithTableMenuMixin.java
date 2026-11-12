@@ -31,9 +31,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(GunSmithTableMenu.class)
 public abstract class GunSmithTableMenuMixin implements TaCZWorkbenchMenuBridge {
 
-    @Dynamic("TaCZ 1.1.8 getRecipe tab-membership callback")
+    @Dynamic("Official TaCZ 1.2.0 getRecipe tab-membership callback")
     @SuppressWarnings("target")
-    @Inject(method = "lambda$getRecipe$2(Lcom/tacz/guns/crafting/GunSmithTableRecipe;Lcom/tacz/guns/resource/index/CommonBlockIndex;)Ljava/lang/Boolean;",
+    @Inject(method = "lambda$getRecipe$3(Lcom/tacz/guns/crafting/GunSmithTableRecipe;Lcom/tacz/guns/resource/index/CommonBlockIndex;)Ljava/lang/Boolean;",
             at = @At("RETURN"), cancellable = true, require = 1, allow = 1, remap = false)
     private static void taczweaponblueprints$acceptMagazineTab(GunSmithTableRecipe recipe,
             com.tacz.guns.resource.index.CommonBlockIndex index,
@@ -132,26 +132,26 @@ public abstract class GunSmithTableMenuMixin implements TaCZWorkbenchMenuBridge 
     @Dynamic("TaCZ compiler-generated crafting lambda, pinned by GunSmithTableMenuMixinContractTest")
     @SuppressWarnings("target")
     @Redirect(
-            method = "lambda$doCraft$3(Lnet/minecraft/world/entity/player/Player;"
+            method = "lambda$doCraft$4(Lnet/minecraft/world/entity/player/Player;"
                     + "Lcom/tacz/guns/crafting/GunSmithTableRecipe;"
                     + "Lnet/neoforged/neoforge/items/IItemHandler;)V",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/world/item/ItemStack;copy()Lnet/minecraft/world/item/ItemStack;",
+                    target = "Lnet/minecraft/world/item/ItemStack;split(I)Lnet/minecraft/world/item/ItemStack;",
                     remap = true),
             require = 1,
             allow = 1,
             remap = false)
     private ItemStack markSurvivalCraftedOutput(
             ItemStack output,
+            int stackLimit,
             Player player,
             GunSmithTableRecipe recipe,
             IItemHandler ignoredHandler) {
-        // TaCZ constructs the dropped result inside this captured lambda. Copy
-        // first, exactly as TaCZ does, so the cached recipe output is never
-        // mutated. The enclosing craft supplies its canonical recipe ID; the
-        // lambda supplies the player and recipe output.
-        ItemStack crafted = output.copy();
+        // TaCZ 1.2.0 copies the recipe result before this loop, then splits it
+        // into legal dropped stacks. Preserve the split (including shrinking
+        // the remainder), and stamp every emitted stack, never the recipe.
+        ItemStack crafted = output.split(stackLimit);
         if (player != null && !player.level().isClientSide()
                 && !player.isCreative() && recipe != null) {
             ResourceLocation recipeId = taczweaponblueprints$activeCraftRecipe;

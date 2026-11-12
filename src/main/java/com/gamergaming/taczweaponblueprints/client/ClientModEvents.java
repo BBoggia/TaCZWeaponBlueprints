@@ -35,6 +35,7 @@ public final class ClientModEvents {
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
+            com.gamergaming.taczweaponblueprints.client.settings.SettingsScreens.register();
             ItemBlockRenderTypes.setRenderLayer(ModBlocks.RESEARCH_BENCH.get(), RenderType.cutout());
             ItemBlockRenderTypes.setRenderLayer(
                     ModBlocks.ADVANCED_RESEARCH_BENCH.get(), RenderType.cutout());

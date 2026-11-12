@@ -132,6 +132,11 @@ public class ModCreativeTabs {
                     event.accept(BlueprintItem.createBlueprint(data.getBpId()));
                 }
             }
+            for (BlueprintData data : BlueprintDataManager.CLIENT.getBlueprintsByType("dmr")) {
+                if (!ModConfigs.BLUEPRINT.isItemBlacklisted(data.getBpId())) {
+                    event.accept(BlueprintItem.createBlueprint(data.getBpId()));
+                }
+            }
         } else if (event.getTabKey() == ModCreativeTabs.GUN_PISTOL_BLUEPRINT_TAB.getKey()) {
             TaCZWeaponBlueprints.LOGGER.debug("Populating Pistol Blueprints tab (Key: {})...", event.getTabKey());
             for (BlueprintData data : BlueprintDataManager.CLIENT.getPistolBlueprints()) {

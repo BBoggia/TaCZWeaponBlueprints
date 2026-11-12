@@ -28,6 +28,18 @@ class TieredCraftingWorkbenchResourcesTest {
             "workbench_lvl3");
 
     @Test
+    void allCraftingWorkbenchesExposeTheOfficialMarksmanRecipeCategory() throws IOException {
+        for (String id : WORKBENCH_IDS) {
+            var tabs = json("src/main/resources/data/taczweaponblueprints/data/blocks/"
+                    + id + ".json").getAsJsonArray("tabs");
+            long matches = java.util.stream.StreamSupport.stream(tabs.spliterator(), false)
+                    .map(element -> element.getAsJsonObject().get("id").getAsString())
+                    .filter("tacz:dmr"::equals).count();
+            assertEquals(1L, matches, id + " must accept marksman recipes exactly once");
+        }
+    }
+
+    @Test
     void allThreeBlocksAndItemsUseTheDedicatedCraftingTypes() throws IOException {
         String blocks = source("init/ModBlocks.java");
         String items = source("init/ModItems.java");

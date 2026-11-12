@@ -52,14 +52,15 @@ public final class CoreVerification {
 
     public CoreVerification(IEventBus bus) {
         bus.addListener(CoreVerification::register);
-        NeoForge.EVENT_BUS.addListener((ServerStartedEvent e) -> { server=e.getServer(); RuntimeIdentity.verify(); if(LifecycleVerification.enabled()) LifecycleVerification.started(); if(ReviewVerification.enabled()) ReviewVerification.run(server); else LOG.info("WRB_CORE waiting for QA client"); });
+        NeoForge.EVENT_BUS.addListener((ServerStartedEvent e) -> { server=e.getServer(); RuntimeIdentity.verify(); if(SettingsVerification.enabled()) SettingsVerification.started(); if(LifecycleVerification.enabled()) LifecycleVerification.started(); if(ReviewVerification.enabled()) ReviewVerification.run(server); else LOG.info("WRB_CORE waiting for QA client"); });
         NeoForge.EVENT_BUS.addListener(CoreVerification::login);
         NeoForge.EVENT_BUS.addListener(CoreVerification::tick);
     }
     static void register(RegisterPayloadHandlersEvent event) {
         event.registrar("1").playBidirectional(Probe.TYPE, Probe.CODEC, (packet, context) -> {
             if (context.player() instanceof ServerPlayer sender) {
-                if (LifecycleVerification.enabled()) LifecycleVerification.acknowledge(sender, packet.stage());
+                if (SettingsVerification.enabled()) SettingsVerification.acknowledge(sender, packet.stage());
+                else if (LifecycleVerification.enabled()) LifecycleVerification.acknowledge(sender, packet.stage());
                 else if (sender == player) acknowledge(packet.stage());
             }
             else ClientVerification.expect(packet.stage());
@@ -73,6 +74,7 @@ public final class CoreVerification {
     static void login(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer p) || !p.getGameProfile().getName().equals("WRBCoreQA")) return;
         player=p;delay=100;
+        if (SettingsVerification.enabled()) SettingsVerification.login(p);
         if(stage==6)stage=7;
     }
     static void tick(ServerTickEvent.Post event) {
@@ -80,6 +82,7 @@ public final class CoreVerification {
         if(finished){if(--delay==0)server.halt(false);return;}
         if(++ticks>deadline){fail(new IllegalStateException("Timed out at stage "+stage));return;}
         if(player==null||--delay>0)return;
+        if (SettingsVerification.enabled()) { SettingsVerification.tick(); return; }
         if (LifecycleVerification.enabled()) { LifecycleVerification.tick(); return; }
         if (FeatureVerification.enabled()) { FeatureVerification.tick(); return; }
         try {
@@ -147,6 +150,7 @@ public final class CoreVerification {
         } catch(Throwable error){fail(error);}
     }
     static void acknowledge(int value) {
+        if (SettingsVerification.enabled()) { SettingsVerification.acknowledge(value); return; }
         if (FeatureVerification.enabled()) { FeatureVerification.acknowledge(value); return; }
         try {
             if(value<0)throw new IllegalStateException("Client check failed at stage "+stage);
@@ -207,6 +211,6 @@ public final class CoreVerification {
     static void require(boolean condition,String name){if(!condition)throw new IllegalStateException(name);checks.add(name);LOG.info("WRB_CORE PASS {}",name);}
     static void pass(){LOG.info("WRB_CORE SUCCESS {} checks",checks.size());write(true,null);finished=true;delay=40;PacketDistributor.sendToPlayer(player,new Probe(99));}
     static void fail(Throwable error){LOG.error("WRB_CORE FAILURE stage "+stage,error);write(false,error.toString());finished=true;delay=20;if(player!=null&&player.connection.isAcceptingMessages())PacketDistributor.sendToPlayer(player,new Probe(-1));}
-    static String suite(){return LifecycleVerification.enabled()?LifecycleVerification.suite():Boolean.getBoolean("wrb.verifyIntegrated")?"integrated":ReviewVerification.enabled()?"review-regressions":FeatureVerification.enabled()?"features":"core";}
+    static String suite(){return SettingsVerification.enabled()?(Boolean.getBoolean("wrb.verifyIntegrated")?"settings-integrated":"settings"):LifecycleVerification.enabled()?LifecycleVerification.suite():Boolean.getBoolean("wrb.verifyIntegrated")?"integrated":ReviewVerification.enabled()?"review-regressions":FeatureVerification.enabled()?"features":"core";}
     static void write(boolean passed,String error){try{var obj=new com.google.gson.JsonObject();RuntimeIdentity.addTo(obj);obj.addProperty("passed",passed);obj.addProperty("suite",suite());obj.addProperty("stage",stage);obj.addProperty("error",error);obj.add("checks",new com.google.gson.Gson().toJsonTree(checks));Files.writeString(Path.of(Boolean.getBoolean("wrb.verifyIntegrated")?"integrated-server-verification.json":"core-verification.json"),new com.google.gson.GsonBuilder().setPrettyPrinting().create().toJson(obj));}catch(Exception e){throw new IllegalStateException(e);}}
 }

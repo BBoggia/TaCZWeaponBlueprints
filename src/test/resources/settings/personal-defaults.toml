@@ -1,0 +1,16 @@
+# Don't change this! Version used to track needed updates.
+version = 3
+holdToResearch = true
+holdDurationMillis = 700
+showResearchPointNotifications = true
+showBranchLabels = true
+reduceMotion = false
+showBackgroundGrid = false
+minimap = "AUTOMATIC"
+layoutPreset = "BALANCED"
+canvasPadding = 20
+nodeGap = 24
+tierGap = 44
+portalPadding = 4
+orderingSweeps = 6
+compactionSweeps = 6

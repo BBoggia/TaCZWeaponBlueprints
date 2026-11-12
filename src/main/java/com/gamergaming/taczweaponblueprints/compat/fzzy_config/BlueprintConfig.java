@@ -97,6 +97,7 @@ public class BlueprintConfig extends Config {
             "rifle",
             "pistol",
             "sniper",
+            "dmr",
             "shotgun",
             "smg",
             "rpg",
@@ -1071,6 +1072,7 @@ public class BlueprintConfig extends Config {
             case "rifle" -> "Rifles";
             case "pistol" -> "Pistols";
             case "sniper" -> "Sniper Rifles";
+            case "dmr" -> "Marksman Rifles";
             case "shotgun" -> "Shotguns";
             case "smg" -> "Submachine Guns";
             case "rpg" -> "Rocket Launchers";

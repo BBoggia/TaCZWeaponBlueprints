@@ -1,0 +1,28 @@
+version = 5
+balancePreset = "BALANCED"
+blueprintSpawnChance = 0.731
+minBlueprints = 7
+maxBlueprints = 12
+progressionPreset = "CLASSIC"
+customEnforceResearchTiers = true
+customEnforceCraftingTiers = false
+researchAccess = "PRESET"
+fragmentPreset = "DISABLED"
+tierOneFragmentThreshold = 17
+tierTwoFragmentThreshold = 23
+tierThreeFragmentThreshold = 41
+fragmentRetainedProgressCap = 1200
+activeResearchProfile = "example:custom_profile"
+startingBlueprints = ["missing:weapon"]
+progressionExemptItemTypes = ["missing_addon_type"]
+craftingDisabledItemTypes = ["missing_addon_disabled"]
+craftingUnrestrictedItemTypes = ["missing_addon_unrestricted"]
+exactCraftingOverrides = { "missing:disabled" = "DISABLED", "missing:unrestricted" = "UNRESTRICTED", "missing:tiered" = "TIER_3" }
+externalWorkstationTiers = { "missing:bench" = "TIER_2" }
+exactFragmentThresholds = { "missing:weapon" = 19 }
+magazineProgressionMode = "LINKED_WEAPON"
+magazineKeepBasicCrafting = false
+villagerMagazineSales = false
+villagerExtendedMagazines = true
+villagerPricePercent = 173
+villagerStockPercent = 43

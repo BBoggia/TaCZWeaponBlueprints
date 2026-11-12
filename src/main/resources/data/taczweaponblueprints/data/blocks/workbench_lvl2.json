@@ -105,6 +105,18 @@
       }
     },
     {
+      "id": "tacz:dmr",
+      "name": "tacz.type.dmr.name",
+      "icon": {
+        "id": "tacz:modern_kinetic_gun",
+        "components": {
+          "minecraft:custom_data": {
+            "GunId": "tacz:mk14"
+          }
+        }
+      }
+    },
+    {
       "id": "tacz:rifle",
       "name": "tacz.type.rifle.name",
       "icon": {

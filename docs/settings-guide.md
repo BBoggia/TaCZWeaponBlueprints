@@ -1,36 +1,63 @@
 # Settings guide
 
-**Personal Settings** changes your own controls and Tech Tree display.
-**Server Settings** changes progression for the server; multiplayer changes
-require operator permission. A disabled control explains which mode or switch
-must be selected before you can edit it.
+This guide covers the NeoForge 1.3.10 settings screens. Forge 1.20.1 retains
+its existing Fzzy Config interface and section names.
 
-In multiplayer, Server Settings displays the server’s values. Fzzy Config also
-saves these shared settings locally; Personal Settings is a separate file.
+Open the mod's settings from the Mods screen. **Personal Settings** changes
+your own controls and Tech Tree display. While connected to a world,
+**World & Server Settings** opens **Quick Setup**. Shared settings affect everyone
+in that world; editing them requires operator permission level 2.
 
-## Find the right setting
+At the main menu, **Local Defaults** edits local configuration through the native
+Fzzy editor. It does not change a connected remote server.
 
-| Section | What it controls |
+## Start with Quick Setup
+
+Quick Setup covers blueprint progression, research, ammo and attachment
+research, Research Bench access, crafting tiers, discovery pacing, research
+costs, and the two villager professions. Use **Advanced Settings** whenever you
+need a more specific rule. Both views share the same pending changes.
+
+To enable the bundled ammo and attachment Tech Trees, set **Ammo research** and
+**Attachment research** to **Enabled**, keep **Research** enabled, and choose
+**Apply**. No additional datapack or reload is needed. **Use Profile** follows
+your active datapack; the bundled profile enables weapon research only.
+
+**Gameplay Summary** separates the applied snapshot from your pending preview.
+Select a setting in the summary to open its Advanced category. Switching screens
+does not save changes: **Apply** asks the server to save the draft, and **Discard**
+returns it to the last snapshot. If another operator or a reload changes the
+server while you edit, review the fresh values before applying your proposal.
+
+**Recommended setup** and **Simpler Stations** show exactly which values they
+would change before adding them to your draft. Simpler Stations selects a single
+Research Bench and a single Analyzer; it does not change crafting Workbench tiers.
+Neither recipe automatically applies itself or resets unrelated custom settings.
+
+## Find a detailed setting
+
+Advanced Settings has seven categories and search across them:
+
+| Category | What it controls |
 | --- | --- |
-| General Progression | Enable blueprints, discovery, the Journal, and research. |
-| Discovery and Loot | Choose a preset or customize blueprint loot chances and quantities. |
-| Research Purchases | Choose currency/material costs and whether research learns a recipe or creates a blueprint. |
-| Currency and Rewards | Choose physical Scrap or banked RP, loot supply, and gameplay rewards. |
-| Research Data | Choose Data results and whether learned or undiscovered weapons can be targets. |
-| Research Progression | Choose Research Bench tier rules and the result of ordinary fragment sets. |
-| Crafting Access | Choose Workbench level rules for ammo and attachments. |
-| Blueprint Analyzer | Choose duplicate-blueprint recycling and the actions offered for found weapons. |
-| Starting Access | Grant starting blueprints or allow selected recipes without learning them. |
-| Datapacks and Exclusions | Select a profile and exclude specific blueprint IDs. |
-| Advanced Tier Settings | Tune automatic tier boundaries, custom tier switches, and other workstations. |
-| Advanced Crafting Rules | Allow or block crafting for categories, subgroups, or individual items. |
-| TaCZ Magazines | Choose optional magazine access and minimum crafting Workbench tiers. |
-| Ordinary Loot Fragments | Customize ordinary fragment set sizes and research discounts. |
+| Blueprint loot and discovery | Loot chance, quantities, discovery pacing and visibility. |
+| Research, stations and crafting | Research access, category research, purchases, tiers and crafting rules. |
+| Currency, rewards and Research Data | Physical Scrap or banked RP, rewards and Data behavior. |
+| Blueprint Analyzer and fragments | Analyzer setup, recovery, recycling and ordinary loot fragments. |
+| Villager trading | Professions, stock, prices, currency and trade categories. |
+| Starting unlocks and exceptions | Starting knowledge and recipes that do not require blueprints. |
+| Datapacks and compatibility | Profiles, exclusions and external workstation mappings. |
 
-The advanced sections start collapsed. Personal Settings keeps legacy layout
-controls in their own collapsed section because they do not affect the current
-Tech Tree. Restore Tree Appearance resets camera motion, the grid, the minimap,
-and saved legacy layout values; it does not reset confirmation controls.
+Inactive controls explain which mode or switch enables them. Unsupported
+TaCZ Magazines controls remain saved but are unavailable on NeoForge.
+
+## Personal preferences
+
+Personal Settings exposes research confirmation, confirmation hold time,
+currency notifications, reduced motion, grid visibility, minimap mode and
+context labels. It has its own Apply and Discard controls. Appearance resets
+show their scope before updating your draft; hidden legacy layout values remain
+saved. Personal choices never change server progression.
 
 ## Enter values in familiar units
 
@@ -68,7 +95,7 @@ and [policy fields](analyzer-policy-authoring.md). A guaranteed legacy mode
 remains available as a profile override.
 
 Ordinary loot fragments and analysis fragments are different item types.
-The Ordinary Fragment Result preset and Ordinary Loot Fragments section affect
+The Ordinary Fragment Result preset and detailed fragment controls affect
 ordinary loot fragments. Fragments earned from weapon or Research Data analysis
 use the shared reconstruction rules in datapacks. See
 [Research Data policies](research-data-policies.md) and
@@ -76,25 +103,10 @@ use the shared reconstruction rules in datapacks. See
 
 ## Optional magazine crafting
 
-With **TaCZ Magazines 0.2.0-Beta** installed, the default **Materials Only**
-setting allows empty magazines at all three Workbench tiers and TaCZ's ammo
-Workbench, using the add-on's recipe costs.
-
-Choose **Linked to Weapons** to require a learned or progression-exempt
-compatible gun. Learning any gun in a shared magazine family qualifies; matching
-caliber alone does not. **Keep Basic Magazines Available** starts enabled so
-players can supply found or traded guns. Turn it off to require a compatible
-learned gun for basic magazines too.
-
-**Basic Magazine Workbench Tier** and **Extended Magazine Workbench Tier** set
-separate minimums in either mode. Both default to Tier 1. The original ammo
-Workbench counts as Tier 1 unless explicitly mapped in Advanced Tier Settings.
-These controls apply while blueprint progression is enabled; they do not change
-the add-on's loading or attachment requirements. Eject an inserted magazine
-before using its gun at the Blueprint Analyzer.
-
-See the [magazine integration guide](tacz-magazines-integration.md) for exact
-setting keys and pack-author behavior.
+TaCZ Magazines integration is available only on the Forge branch. It is not
+enabled by the NeoForge settings screens. The [magazine integration guide](tacz-magazines-integration.md)
+describes the existing Forge controls; compatibility with TaCZ 1.2.0 requires
+separate validation.
 
 ## Currency and Research Data
 

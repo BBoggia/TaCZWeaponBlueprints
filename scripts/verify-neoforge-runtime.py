@@ -29,7 +29,7 @@ MC = PROPERTIES['minecraft_version']
 JAVA = str(Path(os.environ['JAVA_HOME']) / 'bin/java') if 'JAVA_HOME' in os.environ else shutil.which('java')
 OS = {'Darwin': 'osx', 'Linux': 'linux', 'Windows': 'windows'}[platform.system()]
 INSTALLER_SHA256 = '311475c8315ed0be6b5f1dbbf5a377b6c0976457c0bd5aa6d19b0fe25fd77148'
-SUITES = ('core', 'features', 'review-regressions', 'lifecycle', 'restart', 'integrated', 'emi', 'jei')
+SUITES = ('core', 'features', 'review-regressions', 'settings', 'settings-integrated', 'lifecycle', 'restart', 'integrated', 'emi', 'jei')
 
 
 def sha(path, algorithm='sha256'):
@@ -260,7 +260,7 @@ def run(suite):
                 raise RuntimeError(f'Viewer dependency checksum mismatch: {name}')
             shutil.copy2(source, client / 'mods' / name)
     peer = None
-    if suite in ('lifecycle', 'restart'):
+    if suite in ('lifecycle', 'restart', 'settings', 'settings-integrated'):
         peer = BASE / 'production-peer'
         peer.mkdir(exist_ok=True)
         for directory in ('versions', 'libraries'):
@@ -282,13 +282,13 @@ def run(suite):
                 or previous.get('savedStateSha256') != sha(snapshot)):
             raise RuntimeError('Run the lifecycle suite successfully with this artifact and fixture before restart.')
     world_name = f'packaged-{"lifecycle" if suite == "restart" else suite}-world'
-    if suite not in ('restart', 'integrated'):
+    if suite not in ('restart', 'integrated', 'settings-integrated'):
         # Every scenario starts independently. Only restart consumes a prior
         # scenario's saved world; integrated opens a copy of the completed core world.
         world = server / world_name
         if world.exists():
             shutil.rmtree(world)
-    if suite == 'integrated':
+    if suite in ('integrated', 'settings-integrated'):
         source = server / 'packaged-core-world'
         target = client / 'saves/packaged-integrated-world'
         if not matrix['suites'].get('core', {}).get('passed') or not (source / 'level.dat').is_file():
@@ -318,15 +318,17 @@ motd=WRB packaged verification
         actual_suite = 'features'
     if suite == 'review-regressions':
         flags += ['-Dwrb.verifyReviewFixes=true', '-Dwrb.reviewServerDirectory=' + str(server)]
-    if suite in ('lifecycle', 'restart', 'integrated'):
+    if suite in ('lifecycle', 'restart', 'integrated', 'settings'):
         flags.append('-Dwrb.verify' + suite.title() + '=true')
+    if suite == 'settings-integrated':
+        flags += ['-Dwrb.verifySettings=true', '-Dwrb.verifyIntegrated=true']
     server_log = REPORTS / f'{suite}-server.log'
     client_log = REPORTS / f'{suite}-client.log'
     client_cmd = client_command(client, flags)
     server_cmd = [JAVA, '-Xmx2G'] + flags + ['@user_jvm_args.txt', f'@libraries/net/neoforged/neoforge/{NEO}/unix_args.txt', '--nogui']
     processes = []
     try:
-        if suite != 'integrated':
+        if suite not in ('integrated', 'settings-integrated'):
             print(f'Starting packaged {suite} server', flush=True)
             processes.append(launch(server_cmd, server, server_log))
             if suite == 'review-regressions':
@@ -338,12 +340,13 @@ motd=WRB packaged verification
         main_client = processes[-1]
         if peer:
             print(f'Starting packaged {suite} second player', flush=True)
-            processes.append(launch(client_command(peer, flags, 'WRBPeerQA'), peer, REPORTS / f'{suite}-peer.log'))
+            peer_flags = flags + (['-Dwrb.verifyRemotePeer=true'] if suite == 'settings-integrated' else [])
+            processes.append(launch(client_command(peer, peer_flags, 'WRBPeerQA'), peer, REPORTS / f'{suite}-peer.log'))
         finish(main_client, 480)
         for process in processes:
             finish(process, 45)
         result = dict(passed=True,
-                      server=read_result(client / 'integrated-server-verification.json' if suite == 'integrated'
+                      server=read_result(client / 'integrated-server-verification.json' if suite in ('integrated', 'settings-integrated')
                                          else server / 'core-verification.json', inputs['sha256'], actual_suite),
                       client=read_result(client / 'core-verification.json', inputs['sha256'], actual_suite),
                       dependencies=inputs['dependencies'], viewer=viewer, fixtureSha256=inputs['fixtureSha256'])

@@ -1,0 +1,5 @@
+version = 3
+progressionPreset = "TIERED_RESEARCH"
+fragmentPreset = "TARGETED_RESEARCH_BOOST"
+progressionExemptKinds = ["gun"]
+exactCraftingOverrides = { "example:gun" = "TIER_2" }

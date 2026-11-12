@@ -1,5 +1,8 @@
 # [TaCZ] Weapon Research & Blueprints
 
+See the [1.3.10 release notes](docs/releases/1.3.10.md) for TaCZ 1.2.0 compatibility
+and loader-specific changes.
+
 This branch targets Minecraft 1.21.1 with NeoForge. The current build is a
 NeoForge release; the released Forge 1.20.1 source is preserved at `v1.3.8`. See
 [NeoForge development](docs/neoforge-development.md) for the port's dependencies,
@@ -84,7 +87,7 @@ stock, research restrictions, and modpack examples.
 
 ## Requirements
 
-These requirements apply to the NeoForge release. For the separate Forge 1.20.1
+These requirements apply to the next NeoForge build. For the separate Forge 1.20.1
 version, see the [Forge release notes](docs/releases/1.3.8.md).
 
 | Component | Version |
@@ -92,16 +95,18 @@ version, see the [Forge release notes](docs/releases/1.3.8.md).
 | Minecraft | 1.21.1 |
 | NeoForge | 21.1.233 or newer in the 21.1 series (`[21.1.233,21.2)`) |
 | Java | 21 |
-| Timeless and Classics Zero | Unofficial NeoForge port, 1.1.8 or newer (`[1.1.8,)`); compiled against 1.1.8-hotfix-r7 |
+| Timeless and Classics Zero | Official NeoForge build, 1.2.0 or newer (`[1.2.0,)`); development dependency pinned to 1.2.0 |
 | Fzzy Config | 0.7.7 or later in the 0.7 series for NeoForge (`[0.7.7,0.8)`) |
 | Kotlin for Forge | NeoForge variant; tested with 5.12.0 |
 
 JEI 19.x and EMI 1.1.x for Minecraft 1.21.1 NeoForge are optional client-side integrations.
 
-Use the unofficial NeoForge TaCZ port; the Forge TaCZ JAR is incompatible with
-this loader. Newer versions are accepted by the dependency requirement; API
-changes can still require a compatibility update. Existing NeoForge beta worlds
-can update in place. For a first NeoForge installation, start a new world;
+Use the official NeoForge TaCZ build and remove the unofficial port; both use
+the same mod ID. The Forge TaCZ JAR is incompatible with this loader. Newer
+versions are accepted by the dependency requirement; API
+changes can still require a compatibility update. TaCZ 1.2.0 compilation and automated checks pass;
+client/server runtime validation remains pending; see the [integration notes](docs/tacz-compatibility.md).
+For a first NeoForge installation, start a new world;
 migration of Forge 1.20.1 worlds and player progress is not supported.
 
 Install matching [TaCZ] Weapon Research & Blueprints versions on both the client and server.
@@ -114,51 +119,26 @@ Start with [Stations & Research Access](docs/station-access.md) to choose single
 or tiered Analyzers, single or tiered Research Benches, or portable research
 through the Journal / Research key. Crafting Workbench tiers remain separate.
 
-The synchronized Server Settings screen organizes its other controls into General
-Progression, Discovery and Loot, Research and RP, Blueprint Analyzer, Starting
-Access, and a collapsed Advanced section. Related controls become visibly
-inactive when their parent feature or preset is disabled, with a tooltip that
-explains what must be enabled.
+Open the mod's settings and choose **World & Server Settings → Quick Setup**
+for common progression choices. **Advanced Settings** retains detailed controls
+in seven searchable categories. Both views share a draft: review the Gameplay
+Summary, then Apply or Discard. Editing world/server settings requires operator
+permission level 2. At the main menu, Local Defaults edits local configuration.
 
-Server controls include:
+To research ammo and attachments with the bundled Tech Trees, set **Ammo research**
+and **Attachment research** to **Enabled** in Quick Setup, keep **Research** on,
+and choose Apply. The default Use Profile choice follows the datapack's category
+rules. No additional datapack is needed to enable the bundled categories.
 
-- blueprint progression and discovery tracking;
-- default loot chance and roll limits;
-- discovery pacing presets;
-- gun, ammo, and attachment blacklists;
-- the Blueprint Journal, Research Bench, and Blueprint Analyzer;
-- active currency item or banked RP, research cost channels, and the banked cap;
-- Research Data processing, learned/undiscovered targets, and independent Scrap
-  and Research Data loot;
-- research and crafting tier enforcement, external workstation mappings, and
-  Creative-mode tier bypass;
-- Ammo Research and Attachment Research, each with Use Profile, Enabled, and
-  Disabled choices under Server Settings → Research Progression;
-- found-weapon recovery and duplicate recycling;
-- undiscovered blueprint visibility;
-- Creative-mode cost bypass;
-- starting blueprints and progression exemptions; and
-- the active research profile.
+Recommended setup and Simpler Stations offer a before-and-after review before
+queuing changes. They preserve unrelated custom values. Personal Settings has a
+separate draft for confirmation, notifications, motion, grid, minimap and context
+labels. Existing configuration files and hidden legacy values remain saved.
+See the [settings guide](docs/settings-guide.md) for navigation and editing help.
 
-To research ammo and attachments with the bundled Tech Trees, set **Ammo Research**
-and **Attachment Research** to **Enabled** and leave **Enable Research** on.
-Save the settings to refresh connected players; no extra datapack or reload is
-needed. The default **Use Profile** choice follows the active datapack's category
-rules. These settings preserve costs, prerequisites, and learned blueprints.
-
-On the Forge 1.20.1 version, optional [TaCZ Magazines support](docs/tacz-magazines-integration.md) adds empty
-magazine crafting at all three Workbench tiers and TaCZ's ammo Workbench.
-Servers can keep material-only access or link magazines to learned compatible
-weapons, with separate minimum tiers for basic and extended magazines. This
-integration is not supported in the NeoForge release.
-
-Each player also has Personal Settings for research confirmation, currency
-notifications, reduced motion, the optional background grid, and Compact,
-Balanced, Spacious, or Custom Tech Tree layouts. The fullscreen minimap can
-appear automatically for large trees, remain always visible, or stay hidden.
-Advanced canvas, weapon, level, and connection spacing plus crossing-reduction
-and compaction controls remain available under the collapsed Custom section.
-These settings affect presentation only and do not change server progression.
+These screens are available in NeoForge 1.3.10. The Forge version retains its
+existing Fzzy Config interface. [TaCZ Magazines integration](docs/tacz-magazines-integration.md)
+remains Forge-only; its TaCZ 1.2.0 compatibility requires separate validation.
 
 ## Servers and Modpacks
 
