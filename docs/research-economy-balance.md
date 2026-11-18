@@ -26,6 +26,11 @@ Currency already present in the generated loot counts toward that limit; the
 modifier never removes existing loot. This is a per-roll limit, not a per-player
 cooldown. Other mods or later modifiers can add their own loot independently.
 
+`scrapLootPercent` scales every amount in that table without editing a
+datapack. It accepts 10–400 and defaults to 100. A leftover fraction becomes
+one more item with that probability, so a mob drop of 1 at 75 percent still
+appears three times in four. The per-roll limit applies after scaling.
+
 Pack authors can replace
 `data/taczweaponblueprints/loot_modifiers/scrap_supply.json`. Its `tables` map
 uses canonical loot-table IDs and rows containing `chance`, `minimum`, `maximum`,

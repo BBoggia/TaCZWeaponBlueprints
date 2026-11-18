@@ -49,7 +49,7 @@ class ResearchWorkstationsPhaseEightTest {
         assertEquals(RECYCLER, ModItems.BLUEPRINT_RECYCLER_ITEM.getId());
         assertEquals(RECYCLER, ModMenus.BLUEPRINT_RECYCLER.getId());
         assertTrue(ResearchBenchPresentationPolicy.permanentFullscreen());
-        assertEquals("neoforge-2", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("neoforge-4", NetworkHandler.PROTOCOL_VERSION);
     }
 
     @Test
@@ -110,7 +110,7 @@ class ResearchWorkstationsPhaseEightTest {
                 "src/main/java/com/gamergaming/taczweaponblueprints/client/ClientModEvents.java"));
 
         assertTrue(clientEvents.contains(
-                "event.register(ModMenus.RESEARCH_BENCH.get(), ResearchBenchScreen::new)"));
+                "event.register(ModMenus.RESEARCH_BENCH.get(), TechTreeScreens::create)"));
         assertTrue(clientEvents.contains(
                 "event.register(ModMenus.BLUEPRINT_RECYCLER.get(), BlueprintRecyclerScreen::new)"));
     }

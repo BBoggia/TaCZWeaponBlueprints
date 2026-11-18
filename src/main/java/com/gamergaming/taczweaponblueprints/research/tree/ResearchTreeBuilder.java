@@ -103,6 +103,21 @@ public final class ResearchTreeBuilder {
             Predicate<ResourceLocation> progressionExemptPredicate,
             AutomaticWeaponPlacementCandidateSnapshot automaticCandidates,
             AutomaticWeaponPrerequisitePlan automaticPrerequisites) {
+        return buildPublication(catalog, researchSnapshot, config, playerData, blockedPredicate,
+                progressionExemptPredicate, automaticCandidates, automaticPrerequisites, null);
+    }
+
+    /** {@code tiers} prices research by the caller's own resolved tiers; null uses the running server's. */
+    public static ResearchTreePublication buildPublication(
+            Map<ResourceLocation, BlueprintData> catalog,
+            BlueprintResearchSnapshot researchSnapshot,
+            BlueprintProgressionConfigSnapshot config,
+            IPlayerRecipeData playerData,
+            Predicate<String> blockedPredicate,
+            Predicate<ResourceLocation> progressionExemptPredicate,
+            AutomaticWeaponPlacementCandidateSnapshot automaticCandidates,
+            AutomaticWeaponPrerequisitePlan automaticPrerequisites,
+            com.gamergaming.taczweaponblueprints.resource.research.BlueprintProgressionPolicySnapshot tiers) {
         if (catalog == null || researchSnapshot == null || config == null || playerData == null) {
             return ResearchTreePublication.EMPTY;
         }
@@ -152,7 +167,7 @@ public final class ResearchTreeBuilder {
                     entry.getKey(),
                     playerData,
                     blocked,
-                    exempt));
+                    exempt), tiers);
             policy = AutomaticWeaponPrerequisiteOverlay.apply(
                     policy,
                     automaticPrerequisites,

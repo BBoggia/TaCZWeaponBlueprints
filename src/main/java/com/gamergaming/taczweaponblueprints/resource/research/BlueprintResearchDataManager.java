@@ -502,9 +502,17 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
                 context.automatic().prerequisitePlan().orElse(null),
                 progressionPolicies,
                 craftingPolicies);
+        ResearchTreePublication tree = buildTree(context, playerData);
+        if (policyAccess != null && policyAccess.config().enforceResearchTiers() && !progressionPolicies.isEmpty()) {
+            // Tell the client which Research Bench each blueprint needs so the Tech Tree can group by it.
+            tree = tree.withBenchTiers(id -> {
+                ResolvedBlueprintProgressionPolicy policy = progressionPolicies.get(id);
+                return policy == null ? 0 : policy.researchWorkbenchTier().level();
+            });
+        }
         return new PlayerResearchPublication(
                 journal,
-                buildTree(context, playerData),
+                tree,
                 context.catalog().revision(),
                 context.research().revision());
     }

@@ -17,12 +17,8 @@ final class ResearchPreviewCommitGuard {
                 || current.pathPlanningState() != ResearchSelectionPreview.PathPlanningState.NONE) {
             return false;
         }
-        if (!directPathResearch) {
-            // CREATE_BLUEPRINT has no route fingerprint. Reject a fingerprint
-            // from a DIRECT_LEARN preview so a live result-mode change cannot
-            // silently commit a different transaction shape.
-            return requested == null || requested.isEmpty();
-        }
+        // Both modes carry an opaque quote identity. Its server-side digest includes the result
+        // mode, so a live switch between printing and learning also requires a fresh confirmation.
         if (current == null || requested == null || requested.isEmpty()) {
             return false;
         }

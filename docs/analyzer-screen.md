@@ -1,8 +1,8 @@
 # Blueprint Analyzer screen and synchronization
 
 The Blueprint Analyzer uses a horizontal work area: Input on the left, possible
-results in the center, and the real Output slot on the right. A dark metal panel
-separates this area from the cost/action strip and the player inventory. The
+results in the center, and the real Output slot on the right. Thin rules
+separate this area from the cost/action strip and the player inventory. The
 station tier appears once in the header. Possible results use blueprint,
 fragment, and active-currency artwork; they never populate the real Output slot.
 
@@ -36,7 +36,7 @@ for every accepted attempt, including an explicitly configured no-result. Curren
 recovery has its own input count, cost, material list, and currency award; its cost does
 not inherit the tiered analysis cost. The action tooltip explains the applicable
 consumption. When both weapon analysis and direct currency recovery are available,
-the header selector changes the operation shown in the overview. The gold action
+the header selector changes the operation shown in the overview. The amber action
 button submits only that operation. Switching the selector spends nothing and
 updates the displayed reward and cost together. Unknown-weapon recovery still
 requires a second confirmation click. Legacy Research Data uses the same selector

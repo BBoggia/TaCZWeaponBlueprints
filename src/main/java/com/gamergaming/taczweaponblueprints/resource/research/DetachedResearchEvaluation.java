@@ -16,6 +16,15 @@ public final class DetachedResearchEvaluation {
             Map<ResourceLocation, BlueprintData> catalog, BlueprintProgressionConfigSnapshot config,
             ResourceLocation profile, IPlayerRecipeData knowledge, Predicate<String> blocked,
             Predicate<ResourceLocation> exempt, AutomaticWeaponPrerequisitePlan automatic) {
+        return resolve(snapshot, catalog, config, profile, knowledge, blocked, exempt, automatic, null);
+    }
+
+    /** {@code tiers} prices research by the caller's own resolved tiers; null uses the running server's. */
+    public static Resolution resolve(BlueprintResearchSnapshot snapshot,
+            Map<ResourceLocation, BlueprintData> catalog, BlueprintProgressionConfigSnapshot config,
+            ResourceLocation profile, IPlayerRecipeData knowledge, Predicate<String> blocked,
+            Predicate<ResourceLocation> exempt, AutomaticWeaponPrerequisitePlan automatic,
+            BlueprintProgressionPolicySnapshot tiers) {
         Objects.requireNonNull(snapshot); Objects.requireNonNull(config);
         var effectiveSnapshot = snapshot.withDomainSettings(config.domainSettings());
         var entries = BlueprintResearchPolicyResolver.entryPointReplacements(effectiveSnapshot, catalog, profile, blocked, exempt);
@@ -23,7 +32,7 @@ public final class DetachedResearchEvaluation {
         Function<ResourceLocation, BlueprintResearchPolicy> structuralResolver = id -> structural.computeIfAbsent(id, key -> {
             var policy = BlueprintResearchPolicyResolver.resolve(effectiveSnapshot, catalog, profile, key, knowledge, blocked, exempt);
             var data = catalog.get(key);
-            return AutomaticWeaponPrerequisiteOverlay.apply(config.apply(policy), automatic, knowledge, blocked,
+            return AutomaticWeaponPrerequisiteOverlay.apply(config.apply(policy, tiers), automatic, knowledge, blocked,
                     config.maximumUndiscoveredVisibility().allowsServerSelection(), catalog::containsKey,
                     exempt, entries, effectiveSnapshot.usesAutomaticWeaponPlacement(profile)
                             && data != null && data.getKind() == BlueprintKind.GUN);

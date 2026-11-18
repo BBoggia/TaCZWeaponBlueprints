@@ -31,10 +31,6 @@
         "weight": 1
       },
       {
-        "id": "tacz:hk_mk23",
-        "weight": 1
-      },
-      {
         "id": "tacz:uzi",
         "weight": 1
       },
@@ -43,26 +39,30 @@
         "weight": 1
       },
       {
-        "id": "tacz:ump45",
+        "id": "tacz:aug",
         "weight": 1
       },
       {
-        "id": "tacz:db_short",
+        "id": "tacz:g36k",
         "weight": 1
       },
       {
-        "id": "tacz:db_long",
+        "id": "tacz:sks_tactical",
         "weight": 1
       },
       {
-        "id": "tacz:m870",
+        "id": "tacz:m1014",
+        "weight": 1
+      },
+      {
+        "id": "tacz:spas_12",
         "weight": 1
       }
     ]
   },
   "price": {
     "item": "currency",
-    "count": 8
+    "count": 4
   },
   "uses": 3,
   "xp": 5,

@@ -115,7 +115,8 @@ class ResolvedBlueprintCraftingPolicyTest {
                 Optional.of(7_500),
                 false,
                 Set.of()));
-        assertThrows(IllegalArgumentException.class, () -> policy(
+        // A review-flagged score may still set the tier; the flag stays on the policy for diagnostics.
+        policy(
                 BlueprintCraftingDisposition.TIERED,
                 Optional.of(ResearchWorkbenchTier.TIER_2),
                 BlueprintCraftingPolicySource.AUTOMATIC_PERCENTILE,
@@ -124,7 +125,7 @@ class ResolvedBlueprintCraftingPolicyTest {
                 Optional.of(64),
                 Optional.of(7_500),
                 true,
-                Set.of()));
+                Set.of());
 
         policy(
                 BlueprintCraftingDisposition.TIERED,

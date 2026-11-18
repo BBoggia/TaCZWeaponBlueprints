@@ -24,7 +24,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 public class NetworkHandler {
-    public static final String PROTOCOL_VERSION = "neoforge-2";
+    public static final String PROTOCOL_VERSION = "neoforge-4";
     // A random per-server seed prevents a partial chunk set from an earlier
     // connection being mistaken for a new sync after reconnecting.
     private static final AtomicLong SYNC_SEQUENCE =

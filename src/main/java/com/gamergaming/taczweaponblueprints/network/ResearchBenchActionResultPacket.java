@@ -3,7 +3,7 @@ package com.gamergaming.taczweaponblueprints.network;
 import java.util.Optional;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
-import com.gamergaming.taczweaponblueprints.client.ResearchBenchScreen;
+import com.gamergaming.taczweaponblueprints.client.ResearchBenchActionResultListener;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchResearchAction;
 
@@ -70,7 +70,7 @@ public final class ResearchBenchActionResultPacket implements CustomPacketPayloa
             IPayloadContext context = contextSupplier;
             context.enqueueWork(() -> {
                 Minecraft minecraft = Minecraft.getInstance();
-                if (minecraft.screen instanceof ResearchBenchScreen screen
+                if (minecraft.screen instanceof ResearchBenchActionResultListener screen
                         && minecraft.player != null
                         && minecraft.player.containerMenu.containerId == containerId) {
                     screen.acceptActionResult(requestId, result);

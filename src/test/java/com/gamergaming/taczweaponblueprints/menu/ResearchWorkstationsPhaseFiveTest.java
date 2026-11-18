@@ -73,6 +73,6 @@ class ResearchWorkstationsPhaseFiveTest {
 
     @Test
     void destructiveWireCleanupUsesANewExactProtocol() {
-        assertEquals("neoforge-2", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("neoforge-4", NetworkHandler.PROTOCOL_VERSION);
     }
 }

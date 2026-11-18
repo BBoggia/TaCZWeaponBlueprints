@@ -7,6 +7,8 @@ public final class SettingsCatalog {
     public enum Category { DISCOVERY, RESEARCH, ECONOMY, ANALYZER, VILLAGERS, STARTING_ACCESS, INTEGRATIONS, PERSONAL, LEGACY }
     /** The crafting switch is one control with a coordinated write, not three independent quick widgets. */
     public enum QuickControl {
+        /** Several coordinated writes. Its first field only anchors availability and navigation. */
+        PACE("balancePreset", "scrapLootPercent", "researchCostPercent", "tierTwoResearchCostPercent", "tierThreeResearchCostPercent"),
         BLUEPRINTS("enableBlueprints"), RESEARCH("enableResearch"), AMMO_RESEARCH("ammoResearch"),
         ATTACHMENT_RESEARCH("attachmentResearch"), RESEARCH_ACCESS("researchAccess"),
         CRAFTING_TIERS("progressionPreset", "customEnforceResearchTiers", "customEnforceCraftingTiers"),
@@ -31,9 +33,9 @@ public final class SettingsCatalog {
     }
     private static Map<String, Entry> build() {
         Map<String, Entry> entries = new LinkedHashMap<>();
-        add(entries, Category.RESEARCH, "researchAccess enableBlueprints enableDiscoveryTracking enableJournal enableResearch researchCostMode treeResearchResultMode creativeBypassesResearchCost ammoResearch attachmentResearch progressionPreset ammoCraftingStrategy attachmentCraftingStrategy");
+        add(entries, Category.RESEARCH, "researchAccess enableBlueprints enableDiscoveryTracking enableJournal enableResearch researchCostMode researchCostPercent tierTwoResearchCostPercent tierThreeResearchCostPercent treeResearchResultMode creativeBypassesResearchCost ammoResearch attachmentResearch progressionPreset ammoCraftingStrategy attachmentCraftingStrategy");
         add(entries, Category.DISCOVERY, "balancePreset maximumUndiscoveredVisibility blueprintSpawnChance minBlueprints maxBlueprints");
-        add(entries, Category.ECONOMY, "researchCurrencyKind researchCurrencyItem enableScrapLoot scrapLootBudget researchPointCap enableResearchPointAwards enableCombatResearchPointAwards researchDataBehavior researchDataAllowLearned researchDataAllowUndiscovered enableResearchDataLoot");
+        add(entries, Category.ECONOMY, "researchCurrencyKind researchCurrencyItem enableScrapLoot scrapLootBudget scrapLootPercent researchPointCap enableResearchPointAwards enableCombatResearchPointAwards researchDataBehavior researchDataAllowLearned researchDataAllowUndiscovered enableResearchDataLoot");
         add(entries, Category.ANALYZER, "fragmentPreset duplicateBlueprintPolicy allowUnlearnedRecycling foundWeaponRecoveryMode exactFragmentThresholds customFragmentMode tierOneFragmentThreshold tierTwoFragmentThreshold tierThreeFragmentThreshold fragmentRetainedProgressCap fragmentDiscountType fragmentDiscountValue learnedTargetFragmentResearchPoints fragmentLootReplacementPercent");
         add(entries, Category.STARTING_ACCESS, "startingBlueprints progressionExemptBlueprints progressionExemptKinds progressionExemptItemTypes");
         add(entries, Category.INTEGRATIONS, "activeResearchProfile gunBlacklist ammoBlacklist attachmentBlacklist unknownWorkstationFallbackTier unknownExternalWorkstationsUnrestricted externalWorkstationTiers magazineProgressionMode magazineKeepBasicCrafting magazineBasicWorkbenchTier magazineExtendedWorkbenchTier");

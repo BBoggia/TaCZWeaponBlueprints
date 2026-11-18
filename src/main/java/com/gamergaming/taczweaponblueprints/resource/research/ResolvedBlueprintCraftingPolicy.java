@@ -97,8 +97,7 @@ public record ResolvedBlueprintCraftingPolicy(
         if (source == BlueprintCraftingPolicySource.AUTOMATIC_PERCENTILE
                 && (disposition != BlueprintCraftingDisposition.TIERED
                         || automaticScore.isEmpty()
-                        || automaticPercentileBasisPoints.isEmpty()
-                        || reviewRequired)) {
+                        || automaticPercentileBasisPoints.isEmpty())) {
             throw new IllegalArgumentException(
                     "automatic percentile assignment requires tiered score evidence");
         }

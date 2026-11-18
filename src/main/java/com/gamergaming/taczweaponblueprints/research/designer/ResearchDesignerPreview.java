@@ -43,13 +43,14 @@ public final class ResearchDesignerPreview {
         if (!scenario.progression().activeProfileId().equals(candidate.profile()))
             throw new IllegalArgumentException("Preview configuration must select the candidate profile");
         var effectiveSnapshot = candidate.snapshot().withDomainSettings(scenario.progression().domainSettings());
+        // Resolve the project's own tiers first: research prices follow them, not the running server's.
+        var progression = BlueprintProgressionPolicyResolver.resolve(effectiveSnapshot, catalog, 1, 1, Map.of(), scenario.features());
         var resolution = DetachedResearchEvaluation.resolve(effectiveSnapshot, catalog, scenario.progression(),
-                candidate.profile(), scenario.knowledge(), scenario.blocked(), scenario.exempt(), null);
+                candidate.profile(), scenario.knowledge(), scenario.blocked(), scenario.exempt(), null, progression);
         var policies = new TreeMap<ResourceLocation, BlueprintResearchPolicy>();
         catalog.keySet().forEach(id -> policies.put(id, resolution.resolver().apply(id)));
         var tree = ResearchTreeBuilder.buildPublication(catalog, effectiveSnapshot, scenario.progression(),
-                scenario.knowledge(), scenario.blocked(), scenario.exempt(), null, null);
-        var progression = BlueprintProgressionPolicyResolver.resolve(effectiveSnapshot, catalog, 1, 1, Map.of(), scenario.features());
+                scenario.knowledge(), scenario.blocked(), scenario.exempt(), null, null, progression);
         var route = scenario.routeTarget().map(target -> ResearchPathUnlockPlanner.plan(target, scenario.knowledge(),
                 resolution.resolver(), scenario.exempt(), scenario.creative()));
         return new Evaluation(tree, policies, progression, route);

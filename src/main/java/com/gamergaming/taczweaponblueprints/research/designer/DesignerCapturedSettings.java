@@ -56,6 +56,11 @@ public final class DesignerCapturedSettings {
             var domains = new JsonObject(); domains.addProperty("ammo", "PROFILE");
             domains.addProperty("attachments", "PROFILE"); object.add("domainSettings", domains);
         }
+        if (cls == BlueprintProgressionConfigSnapshot.class && !object.has("tierPricing")) {
+            // A capture from before tier prices existed came from a server that charged datapack prices.
+            var pricing = new JsonObject(); pricing.addProperty("allPercent", 100); pricing.addProperty("tierTwoPercent", 100);
+            pricing.addProperty("tierThreePercent", 100); object.add("tierPricing", pricing);
+        }
         if (cls == ResearchFeatureConfigSnapshot.class && !object.has("stations")) {
             var stations = new JsonObject(); stations.addProperty("analyzer", "TIERED");
             stations.addProperty("research", "PRESET"); stations.addProperty("dataRewardTier", "TIER_1");

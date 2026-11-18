@@ -79,7 +79,12 @@ class QuickSetupSettingsTest {
     @ParameterizedTest @ValueSource(strings = {"defaults", "custom-current", "banked-rp", "custom-currency"})
     void viewingEveryChoicePreservesComplexConfigsAndDisplaysAValidStoredSelection(String fixture) throws Exception {
         var config = SettingsBaselineTest.load(fixture); var before = FzzySettingsAdapter.capture(config); var draft = draft(config);
-        for (var control : QuickControl.values()) assertTrue(QuickSetupSettings.choices(control).contains(QuickSetupSettings.selected(control, summary(draft))), control.name());
+        for (var control : QuickControl.values()) {
+            String selected = QuickSetupSettings.selected(control, summary(draft));
+            // Pace describes the stored values, so it can read Custom without offering Custom as a choice.
+            assertTrue(QuickSetupSettings.choices(control).contains(selected) || control == QuickControl.PACE
+                    && selected.equals(SettingsValues.token(SettingsPace.Pace.CUSTOM)), control.name());
+        }
         assertFalse(draft.dirty()); assertEquals(before, draft.preview()); assertEquals(before, FzzySettingsAdapter.capture(config));
     }
     @Test void everyQuickLabelAndChoiceHasAnEnglishTranslation() throws Exception {

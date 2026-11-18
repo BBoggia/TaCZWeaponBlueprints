@@ -5,13 +5,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import com.gamergaming.taczweaponblueprints.client.ui.UiButton;
+import com.gamergaming.taczweaponblueprints.client.ui.UiDraw;
+import com.gamergaming.taczweaponblueprints.client.ui.UiListRow;
+import com.gamergaming.taczweaponblueprints.client.ui.UiTheme;
 import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
 import com.gamergaming.taczweaponblueprints.journal.BlueprintJournalEntry;
 import com.gamergaming.taczweaponblueprints.journal.BlueprintJournalSnapshot;
 import com.gamergaming.taczweaponblueprints.resource.research.JournalVisibility;
 import com.gamergaming.taczweaponblueprints.util.ItemNameFilterHelper;
 
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
@@ -108,29 +111,31 @@ public final class BlueprintJournalScreen extends Screen {
         int left = panelX + PANEL_PADDING;
         int half = (listWidth - 4) / 2;
         searchBox = addRenderableWidget(new EditBox(
-                font, left, panelY + 39, listWidth, CONTROL_HEIGHT,
+                font, left + 5, panelY + 45, listWidth - 10, 10,
                 Component.translatable("gui.taczweaponblueprints.journal.search.narration")));
+        searchBox.setBordered(false);
+        searchBox.setTextColor(UiTheme.TEXT);
         searchBox.setMaxLength(BlueprintJournalQuery.MAX_SEARCH_LENGTH);
         searchBox.setHint(Component.translatable("gui.taczweaponblueprints.journal.search"));
         searchBox.setValue(initialSearch);
         searchBox.setResponder(ignored -> resetAndRefresh());
 
-        statusButton = addRenderableWidget(Button.builder(statusLabel(), ignored -> {
+        statusButton = addRenderableWidget(UiButton.secondary(left, panelY + 63, half, CONTROL_HEIGHT, statusLabel(), ignored -> {
             status = status.next();
             statusButton.setMessage(statusLabel());
             resetAndRefresh();
-        }).bounds(left, panelY + 63, half, CONTROL_HEIGHT).build());
-        categoryButton = addRenderableWidget(Button.builder(categoryLabel(), ignored -> {
+        }));
+        categoryButton = addRenderableWidget(UiButton.secondary(left + half + 4, panelY + 63, half, CONTROL_HEIGHT, categoryLabel(), ignored -> {
             cycleCategory();
             categoryButton.setMessage(categoryLabel());
             resetAndRefresh();
-        }).bounds(left + half + 4, panelY + 63, half, CONTROL_HEIGHT).build());
-        sortButton = addRenderableWidget(Button.builder(sortLabel(), ignored -> {
+        }));
+        sortButton = addRenderableWidget(UiButton.secondary(left, panelY + 85, half, CONTROL_HEIGHT, sortLabel(), ignored -> {
             sort = sort.next();
             sortButton.setMessage(sortLabel());
             resetAndRefresh();
-        }).bounds(left, panelY + 85, half, CONTROL_HEIGHT).build());
-        viewButton = addRenderableWidget(Button.builder(viewLabel(), ignored -> {
+        }));
+        viewButton = addRenderableWidget(UiButton.secondary(left + half + 4, panelY + 85, half, CONTROL_HEIGHT, viewLabel(), ignored -> {
             view = view.next(snapshot);
             page = 0;
             selectedEntry = null;
@@ -138,28 +143,17 @@ public final class BlueprintJournalScreen extends Screen {
             selectedRecent = null;
             updateControlState();
             refreshRows();
-        }).bounds(left + half + 4, panelY + 85, half, CONTROL_HEIGHT).build());
+        }));
 
         int pagerWidth = Math.min(90, (listWidth - 70) / 2);
-        previousButton = addRenderableWidget(Button.builder(
-                Component.translatable("gui.taczweaponblueprints.journal.previous"), ignored -> changePage(-1))
-                .bounds(left, panelBottom - 28, pagerWidth, CONTROL_HEIGHT).build());
-        nextButton = addRenderableWidget(Button.builder(
-                Component.translatable("gui.taczweaponblueprints.journal.next"), ignored -> changePage(1))
-                .bounds(left + listWidth - pagerWidth, panelBottom - 28, pagerWidth, CONTROL_HEIGHT).build());
-        backButton = addRenderableWidget(Button.builder(
-                Component.translatable("gui.taczweaponblueprints.journal.back"), ignored -> closeCompactDetails())
-                .bounds(left, panelBottom - 28, Math.min(100, listWidth), CONTROL_HEIGHT).build());
-        guideButton = addRenderableWidget(Button.builder(Component.literal("?"), ignored -> toggleOnboarding())
-                .bounds(panelX + panelWidth - PANEL_PADDING - 20, panelY + 5, 20, 20)
-                .build());
+        previousButton = addRenderableWidget(UiButton.secondary(left, panelBottom - 28, pagerWidth, CONTROL_HEIGHT, Component.translatable("gui.taczweaponblueprints.journal.previous"), ignored -> changePage(-1)));
+        nextButton = addRenderableWidget(UiButton.secondary(left + listWidth - pagerWidth, panelBottom - 28, pagerWidth, CONTROL_HEIGHT, Component.translatable("gui.taczweaponblueprints.journal.next"), ignored -> changePage(1)));
+        backButton = addRenderableWidget(UiButton.secondary(left, panelBottom - 28, Math.min(100, listWidth), CONTROL_HEIGHT, Component.translatable("gui.taczweaponblueprints.journal.back"), ignored -> closeCompactDetails()));
+        guideButton = addRenderableWidget(UiButton.secondary(panelX + panelWidth - PANEL_PADDING - 20, panelY + 5, 20, 20, Component.literal("?"), ignored -> toggleOnboarding()));
         guideButton.setTooltip(Tooltip.create(Component.translatable(
                 "gui.taczweaponblueprints.journal.onboarding.help")));
-        onboardingDismissButton = addRenderableWidget(Button.builder(
-                Component.translatable("gui.taczweaponblueprints.journal.onboarding.got_it"),
-                ignored -> dismissOnboarding())
-                .bounds(panelX + panelWidth / 2 - 50, panelBottom - 31, 100, CONTROL_HEIGHT)
-                .build());
+        onboardingDismissButton = addRenderableWidget(UiButton.primary(panelX + panelWidth / 2 - 50, panelBottom - 31, 100, CONTROL_HEIGHT, Component.translatable("gui.taczweaponblueprints.journal.onboarding.got_it"),
+                ignored -> dismissOnboarding()));
         updateControlState();
     }
 
@@ -247,13 +241,14 @@ public final class BlueprintJournalScreen extends Screen {
     private void addEntryRow(BlueprintJournalEntry entry) {
         int y = listTop + rows.size() * ROW_HEIGHT;
         Component name = entryName(entry);
-        Component message = Component.literal(entry.blueprintId().isPresent() ? "     " : "")
-                .append(Component.literal("["))
+        Component message = Component.literal("[")
                 .append(statusName(entry))
                 .append(Component.literal("] "))
                 .append(name)
                 .append(journalFragmentRowSuffix(entry));
-        Button button = Button.builder(message, ignored -> {
+        Button button = new UiListRow(panelX + PANEL_PADDING + 2, y, listWidth - 4, ROW_HEIGHT - 2, message,
+                name.copy().append(journalFragmentRowSuffix(entry)), entryKnown(entry) ? UiTheme.TEXT : UiTheme.TEXT_MUTED,
+                statusName(entry), statusColor(entry), entry.blueprintId().isPresent() ? 18 : 0, () -> selectedEntry == entry, ignored -> {
             selectedEntry = entry;
             selectedHistory = null;
             selectedRecent = null;
@@ -262,7 +257,7 @@ public final class BlueprintJournalScreen extends Screen {
                 setInitialFocus(backButton);
             }
             triggerImmediateNarration(true);
-        }).bounds(panelX + PANEL_PADDING, y, listWidth, ROW_HEIGHT - 2).build();
+        });
         addRenderableWidget(button);
         rowWidgets.add(button);
         rows.add(new Row(button, entry));
@@ -275,7 +270,9 @@ public final class BlueprintJournalScreen extends Screen {
                 : "gui.taczweaponblueprints.journal.status.discovered");
         Component message = Component.literal("[").append(status).append("] ")
                 .append(Component.literal(entry.blueprintId().toString()));
-        Button button = Button.builder(message, ignored -> {
+        Button button = new UiListRow(panelX + PANEL_PADDING + 2, y, listWidth - 4, ROW_HEIGHT - 2, message,
+                Component.literal(entry.blueprintId().toString()), UiTheme.TEXT_MUTED,
+                status, entry.learned() ? UiTheme.GREEN : UiTheme.TEXT_MUTED, 0, () -> selectedHistory == entry, ignored -> {
             selectedHistory = entry;
             selectedEntry = null;
             selectedRecent = null;
@@ -284,7 +281,7 @@ public final class BlueprintJournalScreen extends Screen {
                 setInitialFocus(backButton);
             }
             triggerImmediateNarration(true);
-        }).bounds(panelX + PANEL_PADDING, y, listWidth, ROW_HEIGHT - 2).build();
+        });
         addRenderableWidget(button);
         rowWidgets.add(button);
         rows.add(new Row(button, null));
@@ -296,7 +293,8 @@ public final class BlueprintJournalScreen extends Screen {
                 "gui.taczweaponblueprints.journal.recent.row",
                 recentName(entry.targetBlueprintId()),
                 entry.totalMemberCount());
-        Button button = Button.builder(message, ignored -> {
+        Button button = new UiListRow(panelX + PANEL_PADDING + 2, y, listWidth - 4, ROW_HEIGHT - 2, message,
+                message, UiTheme.TEXT, Component.empty(), UiTheme.TEXT_MUTED, 0, () -> selectedRecent == entry, ignored -> {
             selectedRecent = entry;
             selectedEntry = null;
             selectedHistory = null;
@@ -305,10 +303,22 @@ public final class BlueprintJournalScreen extends Screen {
                 setInitialFocus(backButton);
             }
             triggerImmediateNarration(true);
-        }).bounds(panelX + PANEL_PADDING, y, listWidth, ROW_HEIGHT - 2).build();
+        });
         addRenderableWidget(button);
         rowWidgets.add(button);
         rows.add(new Row(button, null));
+    }
+
+    private static boolean entryKnown(BlueprintJournalEntry entry) {
+        return entry.learned() || entry.researchable() || entry.discovered();
+    }
+
+    /** Green for learned, amber for something the player can research now, quiet for everything else. */
+    private static int statusColor(BlueprintJournalEntry entry) {
+        if (entry.learned()) {
+            return UiTheme.GREEN;
+        }
+        return entry.researchable() ? UiTheme.AMBER_HIGHLIGHT : UiTheme.TEXT_MUTED;
     }
 
     private void updatePagerState() {
@@ -352,8 +362,7 @@ public final class BlueprintJournalScreen extends Screen {
     @Override
     public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.renderBackground(graphics, mouseX, mouseY, partialTick);
-        graphics.fill(panelX, panelY, panelX + panelWidth, panelBottom, 0xE510151C);
-        graphics.renderOutline(panelX, panelY, panelWidth, panelBottom - panelY, 0xFF6B7C8F);
+        UiDraw.raisedPanel(graphics, panelX, panelY, panelWidth, panelBottom - panelY);
         renderHeader(graphics);
         if (onboardingView) {
             renderOnboarding(graphics);
@@ -376,7 +385,7 @@ public final class BlueprintJournalScreen extends Screen {
 
     private void renderHeader(GuiGraphics graphics) {
         int left = panelX + PANEL_PADDING;
-        graphics.drawString(font, title, left, panelY + 10, 0xFFFFFFFF);
+        graphics.drawString(font, title, left, panelY + 10, UiTheme.TEXT, false);
         if (onboardingView) {
             return;
         }
@@ -389,19 +398,25 @@ public final class BlueprintJournalScreen extends Screen {
                     "gui.taczweaponblueprints.journal.points.compact",
                     snapshot.researchPoints(), snapshot.pointCap());
         }
-        graphics.drawString(font, points, pointsRight - font.width(points), panelY + 10, 0xFFE4C56A);
+        graphics.drawString(font, points, pointsRight - font.width(points), panelY + 10, UiTheme.MANILA, false);
         var currencyIcon=ClientResearchCurrency.icon();
         if(!currencyIcon.isEmpty() && pointsRight-font.width(points)-18>left+font.width(title)) graphics.renderItem(currencyIcon,pointsRight-font.width(points)-18,panelY+6);
 
         int total = snapshot.completionTotal();
         int learned = snapshot.learnedCount();
-        int barY = panelY + 25;
-        graphics.fill(left, barY, left + listWidth, barY + 8, 0xFF222A33);
-        int filled = total == 0 ? 0 : (int) ((long) listWidth * learned / total);
-        graphics.fill(left, barY, left + filled, barY + 8, 0xFF4EAF70);
         Component completion = Component.translatable(
                 "gui.taczweaponblueprints.journal.completion", learned, total);
-        graphics.drawCenteredString(font, completion, left + listWidth / 2, barY, 0xFFFFFFFF);
+        graphics.drawString(font, completion, left, panelY + 23, UiTheme.TEXT_MUTED, false);
+        int barY = panelY + 34;
+        graphics.fill(left, barY, left + listWidth, barY + 2, UiTheme.STEEL_DARKEST);
+        int filled = total == 0 ? 0 : (int) ((long) listWidth * learned / total);
+        graphics.fill(left, barY, left + filled, barY + 2, UiTheme.GREEN);
+        if (searchBox != null && searchBox.visible) {
+            UiDraw.field(graphics, left, panelY + 39, listWidth, CONTROL_HEIGHT);
+            if (searchBox.isFocused()) {
+                graphics.renderOutline(left, panelY + 39, listWidth, CONTROL_HEIGHT, UiTheme.TEXT_MUTED);
+            }
+        }
     }
 
     private void renderOnboarding(GuiGraphics graphics) {
@@ -409,7 +424,7 @@ public final class BlueprintJournalScreen extends Screen {
         int y = panelY + 39;
         int contentWidth = panelWidth - PANEL_PADDING * 2;
         int contentBottom = panelBottom - 38;
-        graphics.fill(x, y, x + contentWidth, contentBottom, 0xC0202730);
+        UiDraw.field(graphics, x, y, contentWidth, contentBottom - y);
         graphics.enableScissor(x + 1, y + 1, x + contentWidth - 1, contentBottom - 1);
 
         int textX = x + 10;
@@ -417,11 +432,11 @@ public final class BlueprintJournalScreen extends Screen {
         int line = y + 9 - onboardingScroll;
         Component heading = Component.translatable(
                 "gui.taczweaponblueprints.journal.onboarding.title");
-        graphics.drawString(font, heading, textX, line, 0xFFE4C56A);
+        graphics.drawString(font, heading, textX, line, UiTheme.TEXT, false);
         line += font.lineHeight + 5;
         Component intro = Component.translatable(
                 "gui.taczweaponblueprints.journal.onboarding.intro");
-        graphics.drawWordWrap(font, intro, textX, line, textWidth, 0xFFCCCCCC);
+        graphics.drawWordWrap(font, intro, textX, line, textWidth, UiTheme.TEXT_MUTED);
         line += Math.max(1, font.split(intro, textWidth).size()) * font.lineHeight + 5;
 
         BlueprintOnboardingPlan plan = BlueprintOnboardingPlan.from(
@@ -440,13 +455,13 @@ public final class BlueprintJournalScreen extends Screen {
             line += 3;
             graphics.drawString(font, ClientResearchCurrency.text(
                     "gui.taczweaponblueprints.journal.onboarding.earning_title"),
-                    textX, line, 0xFFE4C56A);
+                    textX, line, UiTheme.TEXT, false);
             line += font.lineHeight + 3;
             for (var help : plan.earningHelp()) {
                 Component earning = ClientResearchCurrency.text(
                         "gui.taczweaponblueprints.journal.onboarding.earning",
                         ClientResearchCurrency.text(help.nameKey()), help.points());
-                graphics.drawWordWrap(font, earning, textX + 6, line, textWidth - 6, 0xFFCCCCCC);
+                graphics.drawWordWrap(font, earning, textX + 6, line, textWidth - 6, UiTheme.TEXT_MUTED);
                 line += Math.max(1, font.split(earning, textWidth - 6).size()) * font.lineHeight + 3;
             }
         }
@@ -457,8 +472,8 @@ public final class BlueprintJournalScreen extends Screen {
             int track = contentBottom - y - 8;
             int thumb = Math.max(12, track * track / (track + onboardingScrollMax));
             int thumbY = y + 4 + (track - thumb) * onboardingScroll / onboardingScrollMax;
-            graphics.fill(x + contentWidth - 4, y + 4, x + contentWidth - 2, contentBottom - 4, 0xFF394A56);
-            graphics.fill(x + contentWidth - 4, thumbY, x + contentWidth - 2, thumbY + thumb, 0xFFB4C5CC);
+            graphics.fill(x + contentWidth - 4, y + 4, x + contentWidth - 2, contentBottom - 4, UiTheme.STEEL_LOW);
+            graphics.fill(x + contentWidth - 4, thumbY, x + contentWidth - 2, thumbY + thumb, UiTheme.TEXT_MUTED);
         }
     }
 
@@ -473,18 +488,15 @@ public final class BlueprintJournalScreen extends Screen {
 
     private static int onboardingColor(BlueprintOnboardingPlan.State state) {
         return switch (state) {
-            case COMPLETE -> 0xFF65D58A;
-            case CURRENT -> 0xFFE4C56A;
-            case LATER -> 0xFFAAAAAA;
-            case OPTIONAL -> 0xFF63C5DA;
+            case COMPLETE -> UiTheme.GREEN;
+            case CURRENT -> UiTheme.AMBER_HIGHLIGHT;
+            case LATER -> UiTheme.TEXT_MUTED;
+            case OPTIONAL -> UiTheme.MANILA;
         };
     }
 
     private void renderListBackground(GuiGraphics graphics) {
-        graphics.fill(
-                panelX + PANEL_PADDING, listTop - 2,
-                panelX + PANEL_PADDING + listWidth, listBottom,
-                0x80202730);
+        UiDraw.field(graphics, panelX + PANEL_PADDING, listTop - 2, listWidth, listBottom - listTop + 2);
         int matches = activeTotalMatches();
         if (matches == 0) {
             String emptyKey;
@@ -498,11 +510,8 @@ public final class BlueprintJournalScreen extends Screen {
                 emptyKey = "gui.taczweaponblueprints.journal.empty";
             }
             Component empty = ClientResearchCurrency.text(emptyKey);
-            graphics.drawCenteredString(
-                    font, empty,
-                    panelX + PANEL_PADDING + listWidth / 2,
-                    listTop + 12,
-                    0xFFAAAAAA);
+            graphics.drawWordWrap(font, empty, panelX + PANEL_PADDING + 8, listTop + 10, listWidth - 16,
+                    UiTheme.TEXT_MUTED);
         }
     }
 
@@ -520,11 +529,8 @@ public final class BlueprintJournalScreen extends Screen {
         int pageCount = activePageCount();
         Component label = Component.translatable(
                 "gui.taczweaponblueprints.journal.page", page + 1, pageCount);
-        graphics.drawCenteredString(
-                font, label,
-                panelX + PANEL_PADDING + listWidth / 2,
-                panelBottom - 22,
-                0xFFCCCCCC);
+        graphics.drawString(font, label, panelX + PANEL_PADDING + (listWidth - font.width(label)) / 2,
+                panelBottom - 22, UiTheme.TEXT_MUTED, false);
     }
 
     private void renderDetails(GuiGraphics graphics) {
@@ -534,11 +540,15 @@ public final class BlueprintJournalScreen extends Screen {
         }
         int x = compact ? panelX + PANEL_PADDING : panelX + PANEL_PADDING * 2 + listWidth;
         int detailWidth = compact ? listWidth : panelX + panelWidth - PANEL_PADDING - x;
-        graphics.fill(x, panelY + 39, x + detailWidth, panelBottom - PANEL_PADDING, 0x80202730);
+        if (!compact) {
+            graphics.fill(x - PANEL_PADDING / 2, panelY + 39, x - PANEL_PADDING / 2 + 1, panelBottom - PANEL_PADDING,
+                    UiTheme.RULE);
+        }
         graphics.drawString(
                 font,
                 Component.translatable("gui.taczweaponblueprints.journal.details"),
-                x + 8, panelY + 48, 0xFFFFFFFF);
+                x + 8, panelY + 45, UiTheme.TEXT, false);
+        UiDraw.rule(graphics, x + 8, panelY + 58, detailWidth - 16);
         int contentBottom = compact ? panelBottom - 34 : panelBottom - PANEL_PADDING - 1;
         graphics.enableScissor(x + 1, panelY + 62, x + detailWidth - 1, contentBottom);
         if (selectedEntry != null) {
@@ -551,7 +561,7 @@ public final class BlueprintJournalScreen extends Screen {
             graphics.drawWordWrap(
                     font,
                     Component.translatable("gui.taczweaponblueprints.journal.details.hint"),
-                    x + 8, panelY + 66, detailWidth - 16, 0xFFAAAAAA);
+                    x + 8, panelY + 66, detailWidth - 16, UiTheme.TEXT_MUTED);
         }
         graphics.disableScissor();
     }
@@ -570,7 +580,7 @@ public final class BlueprintJournalScreen extends Screen {
         }
         Component name = entryName(entry);
         int nameWidth = detailWidth - (textX - x);
-        graphics.drawWordWrap(font, name, textX, y + 2, nameWidth, 0xFFFFFFFF);
+        graphics.drawWordWrap(font, name, textX, y + 2, nameWidth, UiTheme.TEXT);
         int nameHeight = Math.max(18, font.split(name, nameWidth).size() * font.lineHeight);
         int line = y + nameHeight + 5;
         line = detailLine(graphics, x, line, detailWidth,
@@ -618,7 +628,7 @@ public final class BlueprintJournalScreen extends Screen {
             line += 4;
             graphics.drawString(font,
                     Component.translatable("gui.taczweaponblueprints.journal.research"),
-                    x, line, 0xFFE4C56A);
+                    x, line, UiTheme.MANILA, false);
             line += font.lineHeight + 2;
             line = detailLine(graphics, x, line, detailWidth,
                     Component.translatable("gui.taczweaponblueprints.journal.detail.point_cost"),
@@ -650,7 +660,7 @@ public final class BlueprintJournalScreen extends Screen {
             int detailWidth,
             BlueprintJournalSnapshot.HistoryEntry entry) {
         Component unavailable = Component.translatable("gui.taczweaponblueprints.journal.history.unavailable");
-        graphics.drawWordWrap(font, unavailable, x, y, detailWidth, 0xFFFFAA55);
+        graphics.drawWordWrap(font, unavailable, x, y, detailWidth, UiTheme.AMBER_HIGHLIGHT);
         int line = y + Math.max(1, font.split(unavailable, detailWidth).size()) * font.lineHeight + 4;
         line = detailLine(graphics, x, line, detailWidth,
                 Component.translatable("gui.taczweaponblueprints.journal.detail.id"),
@@ -671,7 +681,7 @@ public final class BlueprintJournalScreen extends Screen {
         Component target = Component.translatable(
                 "gui.taczweaponblueprints.journal.recent.target",
                 recentName(entry.targetBlueprintId()));
-        graphics.drawWordWrap(font, target, x, y, detailWidth, 0xFFE4C56A);
+        graphics.drawWordWrap(font, target, x, y, detailWidth, UiTheme.TEXT);
         int line = y + Math.max(1, font.split(target, detailWidth).size()) * font.lineHeight + 4;
         line = detailLine(graphics, x, line, detailWidth,
                 Component.translatable("gui.taczweaponblueprints.journal.recent.source"),
@@ -682,14 +692,14 @@ public final class BlueprintJournalScreen extends Screen {
         line += 4;
         graphics.drawString(font,
                 Component.translatable("gui.taczweaponblueprints.journal.recent.members"),
-                x, line, 0xFFCCCCCC);
+                x, line, UiTheme.MANILA, false);
         line += font.lineHeight + 2;
         List<ResourceLocation> displayedMembers = entry.memberBlueprintIds().stream()
                 .limit(MAX_RECENT_DETAIL_MEMBERS)
                 .toList();
         for (ResourceLocation member : displayedMembers) {
             Component memberName = Component.literal("• ").append(Component.literal(recentName(member)));
-            graphics.drawWordWrap(font, memberName, x, line, detailWidth, 0xFFFFFFFF);
+            graphics.drawWordWrap(font, memberName, x, line, detailWidth, UiTheme.TEXT);
             line += Math.max(1, font.split(memberName, detailWidth).size()) * font.lineHeight + 1;
         }
         int undisplayed = entry.totalMemberCount() - displayedMembers.size();
@@ -697,7 +707,7 @@ public final class BlueprintJournalScreen extends Screen {
             Component more = Component.translatable(
                     "gui.taczweaponblueprints.journal.recent.more",
                     undisplayed);
-            graphics.drawWordWrap(font, more, x, line, detailWidth, 0xFFAAAAAA);
+            graphics.drawWordWrap(font, more, x, line, detailWidth, UiTheme.TEXT_MUTED);
         }
     }
 
@@ -708,10 +718,10 @@ public final class BlueprintJournalScreen extends Screen {
             int width,
             Component label,
             Component value) {
-        Component line = label.copy().withStyle(ChatFormatting.GRAY)
-                .append(Component.literal(": ").withStyle(ChatFormatting.DARK_GRAY))
-                .append(value.copy().withStyle(ChatFormatting.WHITE));
-        graphics.drawWordWrap(font, line, x, y, width, 0xFFFFFFFF);
+        Component line = label.copy().withStyle(style -> style.withColor(UiTheme.TEXT_MUTED & 0xFFFFFF))
+                .append(Component.literal(": "))
+                .append(value.copy().withStyle(style -> style.withColor(UiTheme.TEXT & 0xFFFFFF)));
+        graphics.drawWordWrap(font, line, x, y, width, UiTheme.TEXT);
         int lines = Math.max(1, font.split(line, width).size());
         return y + lines * font.lineHeight + 2;
     }
@@ -721,7 +731,9 @@ public final class BlueprintJournalScreen extends Screen {
             return Component.translatable(
                     "gui.taczweaponblueprints.journal.undiscovered", entry.ordinal() + 1);
         }
-        return Component.literal(resolvedName(entry));
+        // Pack-authored colour codes would fight the status colours, so the Journal shows plain names.
+        String plain = net.minecraft.ChatFormatting.stripFormatting(resolvedName(entry));
+        return Component.literal(plain == null ? "" : plain);
     }
 
     private Component journalFragmentRowSuffix(BlueprintJournalEntry entry) {

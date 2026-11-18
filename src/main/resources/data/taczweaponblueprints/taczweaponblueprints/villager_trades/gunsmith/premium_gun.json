@@ -11,15 +11,19 @@
     "selection": "stocked",
     "candidates": [
       {
-        "id": "tacz:hk416d",
-        "weight": 1
-      },
-      {
-        "id": "tacz:aug",
-        "weight": 1
-      },
-      {
         "id": "tacz:scar_l",
+        "weight": 1
+      },
+      {
+        "id": "tacz:rpk",
+        "weight": 1
+      },
+      {
+        "id": "tacz:spr15hb",
+        "weight": 1
+      },
+      {
+        "id": "tacz:fn_evolys",
         "weight": 1
       }
     ]

@@ -27,6 +27,45 @@ Creative cost bypass continues to waive every active channel. A policy with no
 cost in its active channels is free; the Research Bench reports that state
 instead of presenting a misleading zero-currency requirement.
 
+## Price multipliers
+
+`researchCostPercent` scales the currency price of every blueprint. It accepts
+25–1000, and 100 charges the datapack price. It always applies, with or without
+Research Bench tiers, and the tier multipliers below multiply on top of it: an
+8-currency Tier 3 blueprint at 150 overall and 300 for Tier 3 costs 36.
+
+`tierTwoResearchCostPercent` and `tierThreeResearchCostPercent` scale the
+currency price of blueprints that need a Tier 2 or Tier 3 Research Bench. Each
+accepts 50–1000, and 100 charges the datapack price. Tier 1
+blueprints always pay the datapack price.
+
+The multipliers apply only while Research Bench tiers are enforced. With the
+Classic preset or a single Research Bench, every blueprint pays the datapack
+price, because players never see a tier.
+
+A new server starts with Tier 2 at 200 and Tier 3 at 300. A server whose
+configuration file predates version 6 keeps both at 100, so its prices do not
+change on update. Set both to 100 to charge datapack prices everywhere.
+
+| Setting value | Effect on an 8-currency blueprint |
+| --- | --- |
+| `100` | 8 |
+| `200` | 16 |
+| `400` | 32 |
+| `50` | 4 |
+
+The multiplier applies to currency only; material ingredients are unchanged.
+Scaled prices round up, a free blueprint stays free, and the result is capped at
+the currency limit. The tier is the blueprint's resolved Research Bench tier,
+so the multiplier works for any gun pack without editing its cost rules. A
+blueprint with no resolved tier pays the datapack price.
+
+Like the cost mode, the multiplier never rewrites datapack costs. The scaled
+price is shared by single-blueprint research, shortest-path purchases,
+affordability checks, the Research Bench preview, and the Blueprint Journal.
+Changing either value invalidates an open preview, so the player sees the new
+price before paying.
+
 ## Physical weapon origin
 
 New survival-crafted TaCZ gun-smithing outputs receive a versioned

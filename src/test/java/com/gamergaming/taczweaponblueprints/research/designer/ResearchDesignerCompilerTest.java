@@ -201,4 +201,17 @@ class ResearchDesignerCompilerTest {
         assertTrue(result.candidate().isEmpty());
         assertTrue(result.diagnostics().stream().anyMatch(d -> d.code().equals("missing_blueprint")));
     }
+
+    @Test
+    void capturesSavedBeforeTierPricesStillOpenAndChargeDatapackPrices() {
+        var current = new com.gamergaming.taczweaponblueprints.compat.fzzy_config.BlueprintConfig().progressionSnapshot();
+        var saved = DesignerValues.evidence(current).getAsJsonObject();
+        assertEquals(current, DesignerCapturedSettings.read(
+                com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionConfigSnapshot.class, saved));
+        saved.remove("tierPricing");
+        var reopened = (com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionConfigSnapshot)
+                DesignerCapturedSettings.read(
+                        com.gamergaming.taczweaponblueprints.progression.BlueprintProgressionConfigSnapshot.class, saved);
+        assertEquals(com.gamergaming.taczweaponblueprints.progression.ResearchTierPricing.NONE, reopened.tierPricing());
+    }
 }

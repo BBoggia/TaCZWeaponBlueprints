@@ -18,21 +18,35 @@ research, Research Bench access, crafting tiers, discovery pacing, research
 costs, and the two villager professions. Use **Advanced Settings** whenever you
 need a more specific rule. Both views share the same pending changes.
 
+**Pace** is the first choice. It sets how fast players progress by changing
+five settings together, and you can still adjust each one in Advanced Settings.
+
+| Pace | Blueprint loot | Currency loot | Research price | Tier 2 | Tier 3 |
+| --- | --- | --- | --- | --- | --- |
+| Relaxed | Generous | 150% | 75% | 150% | 200% |
+| Normal | Normal | 100% | 100% | 200% | 300% |
+| Hard | Scarce | 75% | 150% | 250% | 400% |
+
+With the bundled weapons, the whole tree costs about 650 Scrap on Relaxed,
+1,170 on Normal and 2,250 on Hard. Pace reads **Custom** when the five settings
+match none of the three, which includes a server that kept its earlier prices
+through an update. Choosing a pace then replaces those five values.
+
 To enable the bundled ammo and attachment Tech Trees, set **Ammo research** and
 **Attachment research** to **Enabled**, keep **Research** enabled, and choose
 **Apply**. No additional datapack or reload is needed. **Use Profile** follows
 your active datapack; the bundled profile enables weapon research only.
 
-**Gameplay Summary** separates the applied snapshot from your pending preview.
-Select a setting in the summary to open its Advanced category. Switching screens
-does not save changes: **Apply** asks the server to save the draft, and **Discard**
-returns it to the last snapshot. If another operator or a reload changes the
+**Gameplay Summary** switches between the saved settings and your unsaved
+changes. Select a setting in the summary to open its Advanced category.
+Switching screens does not save changes: **Apply** asks the server to save
+them, and **Discard** returns to the saved settings. If another operator or a reload changes the
 server while you edit, review the fresh values before applying your proposal.
 
-**Recommended setup** and **Simpler Stations** show exactly which values they
-would change before adding them to your draft. Simpler Stations selects a single
+**Presets** offers **Recommended setup** and **Simpler Stations**. Each shows
+exactly which values it would change before you add them to your changes. Simpler Stations selects a single
 Research Bench and a single Analyzer; it does not change crafting Workbench tiers.
-Neither recipe automatically applies itself or resets unrelated custom settings.
+Neither preset applies itself or resets unrelated custom settings.
 
 ## Find a detailed setting
 
@@ -53,9 +67,13 @@ TaCZ Magazines controls remain saved but are unavailable on NeoForge.
 
 ## Personal preferences
 
-Personal Settings exposes research confirmation, confirmation hold time,
-currency notifications, reduced motion, grid visibility, minimap mode and
-context labels. It has its own Apply and Discard controls. Appearance resets
+Personal Settings starts with **Tech Tree View** (New or Classic) and **Tech
+Tree Lanes** (Branches or Weapon types). The view and Lanes buttons on the
+Research Bench change the same two settings. **Require Hold to Confirm** works
+in both views: in the new view, hold **Research** until the bar under it fills.
+Reward messages apply everywhere. Reduced motion, branch labels, the background
+grid and the minimap affect Classic view only, and say so in their
+descriptions. It has its own Apply and Discard controls. Appearance resets
 show their scope before updating your draft; hidden legacy layout values remain
 saved. Personal choices never change server progression.
 

@@ -442,7 +442,7 @@ unchecked until that behavior has been confirmed in a real client/server run.
 - [ ] Under the packaged profile, unmatched ammo and attachments retain their authored 4 RP Preview fallback rules but remain non-researchable and unpublished; enabling their domains makes the fallbacks selectable without fabricating prerequisites.
 - [ ] Large generated add-on weapon families wrap across Tech Tree rows instead of one ultra-wide strip, and repeated reloads produce the same placement.
 - [ ] Changing dormant legacy group metadata during `/reload` does not change the visible Tech Tree or reintroduce a hidden view selector.
-- [ ] Dedicated server rejects a client with any protocol other than `neoforge-2`.
+- [ ] Dedicated server rejects a client with any protocol other than `neoforge-4`.
 - [ ] With the Blueprint Journal disabled, identities still disclosed by the Tech Tree receive their Blueprint Fragment and public Progression Gate state. Silhouette, hidden, omitted, and unrelated identities receive no supplemental state.
 - [ ] Select a node with a Bench-tier requirement, a Progression Gate, and archived Blueprint Fragments. Its details and narration list the current/required tier first, the active blocker, then fragment progress; only the selected node receives the small progress/blocker marks.
 - [ ] Open the Blueprint Journal and confirm full-detail entries show their Workbench level, no-level access, or unavailable state. Disclosed fragment targets show progress in details and a compact row suffix only after at least one fragment is archived. Preview, name-only, and silhouette entries reveal no crafting policy, and name-only and silhouette entries reveal neither the target ID nor fragment metadata.
@@ -643,3 +643,26 @@ The development Workbench probe accepts `verify-input-regressions` in its dispos
 Development probe snapshots include `node_presentations`: each visible node's
 actual art/name rectangles, name lines, channels, and decoration flags. Compare
 these with screenshots when checking selection stability and zoom thresholds.
+
+
+## Sheet view regression checks
+
+- [ ] At the smallest GUI size, inspect long names, multiple requirement groups,
+  and a route with more than six material types. Scroll to the end, use both
+  material-page controls, and verify Research remains visible.
+- [ ] Hold Research while its price changes but stays affordable. Confirm the
+  old hold does not purchase, key repeat does not restart it, and a fresh press
+  confirms the new quote. Repeat for printing and direct learning, mouse and
+  keyboard input, focus loss, target changes, and resize.
+- [ ] Verify a harmless balance refresh or material-page change does not
+  restart an unchanged hold. Release after completion and check only one
+  purchase was sent.
+- [ ] Print a blueprint, retry a rejected selection, and switch targets while
+  research is pending. Confirm no stale checking state or overwritten selection.
+- [ ] Check missing materials, discounts, gates, and capacity against tile
+  color, hover, guidance, and the purchase button. Check physical Scrap and RP.
+- [ ] Use a custom Tier 1 node behind a Tier 3 prerequisite. Learn the prerequisite
+  separately and confirm the Tier 1 node stays in its own row and is usable
+  at the proper bench. Inspect backward links for overlaps.
+- [ ] For a visible-or-undiscovered prerequisite, verify the alternative remains
+  described and satisfaction is shown only when disclosed by the server.

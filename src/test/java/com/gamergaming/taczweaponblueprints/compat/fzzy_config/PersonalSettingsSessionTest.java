@@ -74,7 +74,7 @@ class PersonalSettingsSessionTest {
         }
     }
     @Test void projectionIncludesOnlyActiveControlsWithoutDeprecatingStoredFields() throws Exception {
-        assertEquals(Set.of("holdToResearch", "holdDurationMillis", "showResearchPointNotifications", "showBranchLabels", "reduceMotion", "showBackgroundGrid", "minimap"), Set.copyOf(PersonalSettingsSession.VISIBLE));
+        assertEquals(Set.of("techTreeView", "techTreeLanes", "holdToResearch", "holdDurationMillis", "showResearchPointNotifications", "showBranchLabels", "reduceMotion", "showBackgroundGrid", "minimap"), Set.copyOf(PersonalSettingsSession.VISIBLE));
         var table = net.peanuuutz.tomlkt.Toml.Default.parseToTomlTable(PersonalSettingsSession.serialize(live));
         for (String key : List.of("layoutPreset", "canvasPadding", "nodeGap", "tierGap", "portalPadding", "orderingSweeps", "compactionSweeps")) {
             assertTrue(table.containsKey(key));

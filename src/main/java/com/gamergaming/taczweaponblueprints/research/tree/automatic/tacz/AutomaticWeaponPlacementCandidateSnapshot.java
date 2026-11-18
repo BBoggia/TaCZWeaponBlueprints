@@ -106,6 +106,23 @@ public record AutomaticWeaponPlacementCandidateSnapshot(
         return treeId.equals(tree) && catalogRevision == catalog && researchRevision == research;
     }
 
+    /**
+     * Research Bench and Workbench tiers for every placed weapon, by its depth in this tree.
+     * Review-flagged weapons are included: the tree already places them, and leaving one on a
+     * fallback tier could put it above the weapons that depend on it.
+     */
+    public Map<String, com.gamergaming.taczweaponblueprints.resource.research.TieAwareWorkbenchTierAllocator.Assignment>
+            tiersByDepth(com.gamergaming.taczweaponblueprints.resource.research.AutomaticWorkbenchTierPercentiles percentiles) {
+        Map<String, Integer> ranks = new java.util.LinkedHashMap<>();
+        Map<String, Integer> scores = new java.util.LinkedHashMap<>();
+        eligibleProposals.forEach((id, proposal) -> {
+            ranks.put(id, proposal.progressionCoordinate().rank());
+            scores.put(id, proposal.mechanicalScore());
+        });
+        return com.gamergaming.taczweaponblueprints.resource.research.TieAwareWorkbenchTierAllocator
+                .allocateByDepth(ranks, scores, percentiles);
+    }
+
     public Optional<AutomaticWeaponPlacementProposal> eligibleProposal(ResourceLocation blueprintId) {
         return blueprintId == null
                 ? Optional.empty()

@@ -106,7 +106,7 @@ class BlueprintKnowledgeFlowPhaseZeroTest {
         assertEquals(2, BlueprintRecyclerMenu.FIRST_PLAYER_SLOT);
         assertTrue(Arrays.stream(BlueprintResearchService.Status.values())
                 .anyMatch(status -> status == BlueprintResearchService.Status.OUTPUT_FULL));
-        assertEquals("neoforge-2", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("neoforge-4", NetworkHandler.PROTOCOL_VERSION);
     }
 
     private static BlueprintResearchPolicy policy(

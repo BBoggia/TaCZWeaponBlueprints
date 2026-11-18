@@ -220,24 +220,13 @@ public final class BlueprintGunCraftingPolicyResolver {
                     Set.of());
         }
         AutomaticWeaponPlacementProposal value = proposal.orElseThrow();
-        if (value.reviewRequired()) {
-            return fromAccess(
-                    strategy.fallback().orElseThrow(),
-                    gates,
-                    BlueprintCraftingPolicySource.AUTOMATIC_REVIEW_FALLBACK,
-                    "automatic_review_fallback",
-                    Set.of(BlueprintCraftingPolicyWarning.AUTOMATIC_REVIEW_FALLBACK),
-                    Optional.of(value.mechanicalScore()),
-                    Optional.empty(),
-                    true);
-        }
         TieAwareWorkbenchTierAllocator.Assignment assignment =
                 allocations.get(blueprintId.toString());
         if (assignment == null) {
             throw new IllegalStateException(
                     "trusted automatic gun has no percentile crafting tier: " + blueprintId);
         }
-        return automaticPercentile(assignment, gates, "automatic_percentile");
+        return automaticPercentile(assignment, gates, "automatic_percentile", value.reviewRequired());
     }
 
     private static BaseAssignment authored(
@@ -340,18 +329,6 @@ public final class BlueprintGunCraftingPolicyResolver {
         AutomaticWeaponPlacementProposal value = proposal.orElseThrow();
         ProgressionGateRequirements gates = BlueprintCraftingPolicyResolutionSupport
                 .craftingGates(profile.progression().gates());
-        if (value.reviewRequired()) {
-            return fromAccess(
-                    BlueprintCraftingAccessPolicy.tiered(
-                            profile.progression().fallbackTiers().craftingTier()),
-                    gates,
-                    BlueprintCraftingPolicySource.AUTOMATIC_REVIEW_FALLBACK,
-                    "legacy_automatic_review_fallback",
-                    Set.of(BlueprintCraftingPolicyWarning.AUTOMATIC_REVIEW_FALLBACK),
-                    Optional.of(value.mechanicalScore()),
-                    Optional.empty(),
-                    true);
-        }
         TieAwareWorkbenchTierAllocator.Assignment assignment =
                 allocations.get(blueprintId.toString());
         if (assignment == null) {
@@ -359,7 +336,7 @@ public final class BlueprintGunCraftingPolicyResolver {
                     "trusted legacy automatic gun has no percentile crafting tier: "
                             + blueprintId);
         }
-        return automaticPercentile(assignment, gates, "legacy_automatic_percentile");
+        return automaticPercentile(assignment, gates, "legacy_automatic_percentile", value.reviewRequired());
     }
 
     private static BaseAssignment legacyAuthored(
@@ -417,6 +394,15 @@ public final class BlueprintGunCraftingPolicyResolver {
             TieAwareWorkbenchTierAllocator.Assignment assignment,
             ProgressionGateRequirements gates,
             String reason) {
+        return automaticPercentile(assignment, gates, reason, false);
+    }
+
+    /** {@code reviewRequired} stays visible in diagnostics even when the score still sets the tier. */
+    private static BaseAssignment automaticPercentile(
+            TieAwareWorkbenchTierAllocator.Assignment assignment,
+            ProgressionGateRequirements gates,
+            String reason,
+            boolean reviewRequired) {
         return fromAccess(
                 BlueprintCraftingAccessPolicy.tiered(assignment.tier()),
                 gates,
@@ -425,7 +411,7 @@ public final class BlueprintGunCraftingPolicyResolver {
                 Set.of(),
                 Optional.of(assignment.score()),
                 Optional.of(assignment.percentileBasisPoints()),
-                false);
+                reviewRequired);
     }
 
     private static BaseAssignment migratedCompatibility() {
@@ -565,15 +551,7 @@ public final class BlueprintGunCraftingPolicyResolver {
         Map<ResourceLocation, Map<String, TieAwareWorkbenchTierAllocator.Assignment>> result =
                 new LinkedHashMap<>();
         snapshots.forEach((treeId, candidates) -> {
-            Map<String, Integer> trustedScores = new LinkedHashMap<>();
-            candidates.eligibleProposals().forEach((id, proposal) -> {
-                if (!proposal.reviewRequired()) {
-                    trustedScores.put(id, proposal.mechanicalScore());
-                }
-            });
-            result.put(
-                    treeId,
-                    TieAwareWorkbenchTierAllocator.allocate(trustedScores, percentiles));
+            result.put(treeId, candidates.tiersByDepth(percentiles));
         });
         return Collections.unmodifiableMap(result);
     }

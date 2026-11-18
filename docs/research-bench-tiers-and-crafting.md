@@ -130,12 +130,31 @@ applicable profile or category default. A more specific crafting-only rule
 therefore cannot hide a broader research rule, and a research-only rule cannot
 hide a broader crafting rule.
 
-For an automatic weapon tree, trusted mechanical scores are divided by the
-configured percentile boundaries. The defaults assign the lower 35 percent to
-Tier 1, the next 40 percent to Tier 2, and the remaining 25 percent to Tier 3.
-Equal scores remain in the same tier even when they cross a percentile
-boundary. Weapons that require review use the profile fallback instead of
-pretending an uncertain score is authoritative.
+For an automatic weapon tree, a weapon's tier follows its depth in the tree,
+and its power score can raise it. Weapons are ordered by rank, the row the
+generator placed them on, and the configured percentile boundaries divide that
+order. The defaults assign the first 35 percent to Tier 1, the next 40 percent
+to Tier 2, and the remaining 25 percent to Tier 3. Every weapon on the same
+rank starts from the same tier even when the rank crosses a boundary.
+
+The same boundaries are then applied to the weapons ordered by score. A weapon
+whose score tier is higher than its depth tier takes the score tier, so a
+strong weapon placed early does not open on a starter bench. A weak weapon
+placed late keeps its depth tier. To pin one weapon, give it an exact rule with
+`progression.research_tier` and a `crafting` block. The bundled tree does this
+for the M249, which scores low but is set to Tier 2.
+
+A raised weapon can sit in front of a weaker one that keeps a lower tier.
+The Tech Tree places each weapon in its own Research Bench tier and keeps
+prerequisite links, including links back to an earlier tier. The selected
+purchase quote checks the tiers of every blueprint still being learned.
+Already learned prerequisites do not raise the remaining purchase's bench
+requirement or move its node. The bundled TaCZ tree has no tier inversion.
+
+Review-flagged weapons follow the same rule, since the tree already places
+them. The review flag stays in `/gg research inspect` and the catalog export.
+The Workbench level uses the same assignment, so a weapon's research tier and
+crafting level match unless a rule overrides one of them.
 
 Recipe-backed ammo uses TaCZ's canonical gun data rather than names or file
 paths. Shared ammo takes the lowest crafting level among its compatible tiered

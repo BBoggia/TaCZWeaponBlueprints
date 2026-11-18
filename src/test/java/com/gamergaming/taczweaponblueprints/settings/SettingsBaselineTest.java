@@ -34,7 +34,7 @@ class SettingsBaselineTest {
         String text = fixture(name);
         var config = ConfigApi.deserializeConfig(new BlueprintConfig(), text).get();
         int version = Integer.parseInt(((net.peanuuutz.tomlkt.TomlLiteral) Toml.Default.parseToTomlTable(text).get("version")).getContent());
-        if (version < 5) config.update(version); else config.initializeLoadedSnapshots();
+        if (version < 6) config.update(version); else config.initializeLoadedSnapshots();
         return config;
     }
     @ParameterizedTest @ValueSource(strings = {"defaults", "custom-current", "banked-rp", "custom-currency", "legacy-zero", "legacy-two", "legacy-three"})
@@ -58,6 +58,27 @@ class SettingsBaselineTest {
         assertEquals(prepared.researchFeatureSnapshot(), restored.researchFeatureSnapshot());
         assertEquals(prepared.progressionSnapshot(), restored.progressionSnapshot());
         assertEquals(prepared.balanceSettings(), restored.balanceSettings());
+    }
+    @Test void newServersRaiseLateResearchPricesAndExistingServersKeepTheirs() throws Exception {
+        var fresh = load("defaults");
+        assertEquals(new com.gamergaming.taczweaponblueprints.progression.ResearchTierPricing(200, 300),
+                fresh.progressionSnapshot().tierPricing());
+        for (String existing : List.of("custom-current", "banked-rp", "legacy-three")) {
+            assertEquals(com.gamergaming.taczweaponblueprints.progression.ResearchTierPricing.NONE,
+                    load(existing).progressionSnapshot().tierPricing(), existing + " predates tier prices");
+        }
+    }
+    @Test void tierPricesOnlyApplyWhileResearchBenchTiersAreEnforced() {
+        var config = new BlueprintConfig();
+        config.progressionPreset.validateAndSet(
+                com.gamergaming.taczweaponblueprints.progression.ResearchProgressionPreset.CLASSIC);
+        config.researchAccess.validateAndSet(
+                com.gamergaming.taczweaponblueprints.progression.StationSetup.ResearchAccess.PRESET);
+        config.initializeLoadedSnapshots();
+        assertFalse(config.researchFeatureSnapshot().enforceResearchTiers());
+        assertEquals(com.gamergaming.taczweaponblueprints.progression.ResearchTierPricing.NONE,
+                config.progressionSnapshot().tierPricing(), "no visible tiers, so no tier prices");
+        assertEquals(200, config.tierTwoResearchCostPercent.getUnconditional(), "the stored setting is kept");
     }
     @Test void allConstructorDefaultsMatchTheFixed139Snapshots() throws Exception {
         assertEquals(Toml.Default.parseToTomlTable(fixture("defaults")), Toml.Default.parseToTomlTable(ConfigApi.serializeConfig(new BlueprintConfig()).get()));

@@ -29,6 +29,7 @@ public final class ResearchTreeGraph {
     public static final int MAX_EDGES = BlueprintResearchSnapshot.MAX_TOTAL_PREREQUISITES;
     public static final int MAX_REQUIREMENT_GROUPS =
             BlueprintResearchSnapshot.MAX_TOTAL_PREREQUISITES;
+    public static final int MAX_BENCH_TIER = 3;
     public static final ResearchTreeGraph EMPTY = new ResearchTreeGraph(
             List.of(), List.of(), List.of());
     public static final String REDACTED_NAME_KEY =
@@ -122,6 +123,20 @@ public final class ResearchTreeGraph {
             List<Node> nodes,
             List<RequirementGroup> requirementGroups) {
         return new ResearchTreeGraph(nodes, edgesFor(requirementGroups), requirementGroups);
+    }
+
+    /**
+     * Attaches the Research Bench tier each identified blueprint needs. Nodes whose identity is
+     * hidden keep 0, and so does any blueprint the lookup returns 0 for.
+     */
+    public ResearchTreeGraph withBenchTiers(java.util.function.ToIntFunction<ResourceLocation> tierOf) {
+        List<Node> updated = new ArrayList<>(nodes.size());
+        for (Node node : nodes) {
+            int tier = node.visibility().revealsIdentity() ? tierOf.applyAsInt(node.blueprintId()) : 0;
+            updated.add(tier == node.benchTier() ? node
+                    : node.withBenchTier(Math.max(0, Math.min(MAX_BENCH_TIER, tier))));
+        }
+        return new ResearchTreeGraph(updated, edges, requirementGroups);
     }
 
     public Optional<Node> node(ResourceLocation blueprintId) {
@@ -249,7 +264,8 @@ public final class ResearchTreeGraph {
                     node.ingredientTypeCount(),
                     prerequisiteCounts.get(node.blueprintId()),
                     hiddenPrerequisiteCounts.get(node.blueprintId()),
-                    node.availability()));
+                    node.availability(),
+                    node.benchTier()));
         }
         return new ResearchTreeGraph(retainedNodes, retainedEdges, retainedGroups);
     }
@@ -488,7 +504,37 @@ public final class ResearchTreeGraph {
             int ingredientTypeCount,
             int prerequisiteCount,
             int hiddenPrerequisiteCount,
-            Availability availability) {
+            Availability availability,
+            int benchTier) {
+        /** Nodes built before the required Research Bench tier is attached disclose none. */
+        public Node(
+                int ordinal,
+                int sourceOrdinal,
+                ResourceLocation blueprintId,
+                String nameKey,
+                String itemType,
+                ResourceLocation displaySlotId,
+                JournalVisibility visibility,
+                boolean learned,
+                boolean discovered,
+                boolean policyEligible,
+                int pointCost,
+                int ingredientTypeCount,
+                int prerequisiteCount,
+                int hiddenPrerequisiteCount,
+                Availability availability) {
+            this(ordinal, sourceOrdinal, blueprintId, nameKey, itemType, displaySlotId, visibility, learned,
+                    discovered, policyEligible, pointCost, ingredientTypeCount, prerequisiteCount,
+                    hiddenPrerequisiteCount, availability, 0);
+        }
+
+        /** The same node with the Research Bench tier it needs, or 0 when that is not disclosed. */
+        public Node withBenchTier(int tier) {
+            return new Node(ordinal, sourceOrdinal, blueprintId, nameKey, itemType, displaySlotId, visibility,
+                    learned, discovered, policyEligible, pointCost, ingredientTypeCount, prerequisiteCount,
+                    hiddenPrerequisiteCount, availability, tier);
+        }
+
         /** Full-publication nodes use their table ordinal as their stable source ordinal. */
         public Node(
                 int ordinal,
@@ -530,6 +576,8 @@ public final class ResearchTreeGraph {
                     || displaySlotId == null
                     || visibility == null
                     || availability == null
+                    || benchTier < 0 || benchTier > MAX_BENCH_TIER
+                    || benchTier != 0 && !visibility.revealsIdentity()
                     || !visibility.appearsInTree()) {
                 throw new IllegalArgumentException("invalid research tree node identity");
             }

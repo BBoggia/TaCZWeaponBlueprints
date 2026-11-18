@@ -58,7 +58,7 @@ class BlueprintGunCraftingPolicyResolverTest {
     private static final ResourceLocation EXCLUDED = id("test:excluded");
 
     @Test
-    void automaticTreeAssignsTrustedPercentilesAndExplicitFallbacksToEveryGun() {
+    void automaticTreeAssignsDepthTiersToPlacedGunsAndExplicitFallbacksToTheRest() {
         Map<ResourceLocation, BlueprintData> catalog = gunCatalog(
                 LOW, MID, HIGH, REVIEW, EXCLUDED);
         BlueprintResearchSnapshot research = automaticResearch(profile(
@@ -91,12 +91,14 @@ class BlueprintGunCraftingPolicyResolverTest {
                 policy(result, HIGH).source());
         assertTrue(policy(result, HIGH).automaticPercentileBasisPoints().isPresent());
 
+        // A review-flagged gun is placed in the tree, so its depth sets its level like any other.
         ResolvedBlueprintCraftingPolicy review = policy(result, REVIEW);
-        assertEquals(ResearchWorkbenchTier.TIER_2, tier(result, REVIEW));
-        assertEquals(BlueprintCraftingPolicySource.AUTOMATIC_REVIEW_FALLBACK,
+        assertTrue(tier(result, REVIEW).level() >= tier(result, MID).level());
+        assertTrue(tier(result, REVIEW).level() <= tier(result, HIGH).level());
+        assertEquals(BlueprintCraftingPolicySource.AUTOMATIC_PERCENTILE,
                 review.source());
         assertTrue(review.reviewRequired());
-        assertTrue(review.warnings().contains(
+        assertFalse(review.warnings().contains(
                 BlueprintCraftingPolicyWarning.AUTOMATIC_REVIEW_FALLBACK));
 
         ResolvedBlueprintCraftingPolicy excluded = policy(result, EXCLUDED);
@@ -107,7 +109,40 @@ class BlueprintGunCraftingPolicyResolverTest {
     }
 
     @Test
-    void automaticReviewFallbackCanBeDisabledWithoutLosingDiagnosticEvidence() {
+    void aScriptControlledGunTakesItsTierFromItsDepthAndStaysFlaggedForReview() {
+        Map<ResourceLocation, BlueprintData> catalog = gunCatalog(LOW, MID, HIGH, REVIEW);
+        BlueprintResearchSnapshot research = automaticResearch(profile(
+                BlueprintResearchProfile.CURRENT_FORMAT,
+                Optional.of(TREE),
+                BlueprintCraftingProfilePolicy.DEFAULT));
+        AutomaticWeaponPlacementProposal scripted = proposal(REVIEW, 5, false, 3);
+        scripted = new AutomaticWeaponPlacementProposal(scripted.blueprintId(), scripted.mechanicalScore(), 50,
+                scripted.position(), scripted.progressionCoordinate(), scripted.levelsPerTier(),
+                scripted.formulaVersion(), scripted.referenceVersion(), scripted.placementVersion(),
+                List.of("low_confidence", "script_controlled"));
+        AutomaticWeaponPlacementCandidateSnapshot candidates = candidates(
+                4L,
+                7L,
+                Map.of(
+                        LOW.toString(), proposal(LOW, 10, false, 0),
+                        MID.toString(), proposal(MID, 50, false, 1),
+                        HIGH.toString(), proposal(HIGH, 90, false, 2),
+                        REVIEW.toString(), scripted),
+                Map.of());
+
+        ResolvedBlueprintCraftingPolicy policy = policy(resolve(
+                research, catalog, 4L, 7L, Map.of(TREE, candidates),
+                AutomaticWeaponEvidenceSnapshot.emptyForCatalog(4L)), REVIEW);
+
+        // The weakest gun of four lands in Tier 1 instead of the blanket Tier 2 fallback.
+        assertEquals(Optional.of(ResearchWorkbenchTier.TIER_1), policy.requiredWorkbenchTier());
+        assertEquals(BlueprintCraftingPolicySource.AUTOMATIC_PERCENTILE, policy.source());
+        assertTrue(policy.reviewRequired(), "the review flag stays visible in diagnostics");
+        assertTrue(policy.warnings().isEmpty());
+    }
+
+    @Test
+    void aPlacedReviewGunIsTieredEvenWhenTheFallbackDisablesCraftingAndKeepsItsEvidence() {
         BlueprintCraftingProfilePolicy crafting = new BlueprintCraftingProfilePolicy(
                 BlueprintAuthoredGunCraftingPolicy.DEFAULT,
                 BlueprintCraftingStrategy.OMITTED_DEFAULT,
@@ -134,8 +169,8 @@ class BlueprintGunCraftingPolicyResolverTest {
                 Map.of(TREE, candidates),
                 AutomaticWeaponEvidenceSnapshot.emptyForCatalog(1L)), REVIEW);
 
-        assertEquals(BlueprintCraftingDisposition.DISABLED, policy.disposition());
-        assertEquals(BlueprintCraftingPolicySource.AUTOMATIC_REVIEW_FALLBACK,
+        assertEquals(BlueprintCraftingDisposition.TIERED, policy.disposition());
+        assertEquals(BlueprintCraftingPolicySource.AUTOMATIC_PERCENTILE,
                 policy.source());
         assertTrue(policy.reviewRequired());
         assertEquals(Optional.of(70), policy.automaticScore());
@@ -802,7 +837,7 @@ class BlueprintGunCraftingPolicyResolverTest {
                 ResearchTechTreeContract.AUTOMATIC_FORMULA_VERSION,
                 ResearchTechTreeContract.AUTOMATIC_REFERENCE_VERSION,
                 ResearchTechTreeContract.AUTOMATIC_PLACEMENT_VERSION,
-                review ? List.of("test_review") : List.of());
+                review ? List.of("incomplete_mechanical_evidence") : List.of());
     }
 
     private static AutomaticWeaponEvidenceSnapshot evidence(

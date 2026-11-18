@@ -204,10 +204,10 @@ Research profile format 3 adds policy that is independent of Tech Tree layout:
 
 For authored entries, `authored_tier_bands` maps the six visual tiers to
 workstation requirements. Automatic entries instead use tie-aware percentiles
-of the final capability score, so equal scores never split across workstation
-tiers and visual compaction cannot change an assignment. A proposal that still
-requires review uses `fallback_tiers` and remains visibly marked as a review
-fallback. In an `authored_only` weapon tree, unmatched weapons remain omitted;
+of their rank in the generated tree, so every weapon on one rank starts from
+the same tier. A weapon whose score earns a higher tier is raised to it; see
+[Research Bench tiers](research-bench-tiers-and-crafting.md). A proposal that
+requires review is tiered the same way and stays marked for review. In an `authored_only` weapon tree, unmatched weapons remain omitted;
 the progression resolver does not reintroduce them.
 
 A format-3 research rule may override one selected target:

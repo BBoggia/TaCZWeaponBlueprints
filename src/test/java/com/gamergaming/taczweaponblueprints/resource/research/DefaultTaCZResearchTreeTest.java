@@ -358,7 +358,7 @@ class DefaultTaCZResearchTreeTest {
     }
 
     @Test
-    void automaticWorkbenchTiersUseTieAwareCapabilityPercentiles() throws Exception {
+    void automaticWorkbenchTiersFollowTreeDepthWithAScoreFloor() throws Exception {
         BlueprintResearchSnapshot snapshot = packagedSnapshot();
         Map<ResourceLocation, BlueprintData> catalog = catalog(OFFICIAL_GUNS);
         AutomaticBaseline automatic = automaticBaseline(snapshot, catalog);
@@ -379,26 +379,45 @@ class DefaultTaCZResearchTreeTest {
         assertTrue(diagnostics.researchTierCounts().get(ResearchWorkbenchTier.TIER_2) > 0);
         assertTrue(diagnostics.researchTierCounts().get(ResearchWorkbenchTier.TIER_3) > 0);
 
-        Map<Integer, Set<ResearchWorkbenchTier>> tiersByScore = new LinkedHashMap<>();
+        // Depth sets a rank's tier and a strong score can only raise it, review-flagged or not.
+        var byScore = TieAwareWorkbenchTierAllocator.allocate(
+                automatic.candidates().eligibleProposals().entrySet().stream().collect(
+                        java.util.stream.Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().mechanicalScore())),
+                AutomaticWorkbenchTierPercentiles.DEFAULT);
+        Map<Integer, Integer> lowestByRank = new java.util.TreeMap<>();
+        Map<ResourceLocation, Integer> levels = new LinkedHashMap<>();
         automatic.candidates().eligibleProposals().forEach((id, proposal) -> {
             ResolvedBlueprintProgressionPolicy policy = progression.policy(
                     PROFILE_ID, ResourceLocation.parse(id)).orElseThrow();
-            if (proposal.reviewRequired()) {
-                assertEquals(
-                        ResolvedBlueprintProgressionPolicy.TierSource.REVIEW_FALLBACK,
-                        policy.tierSource());
-                assertTrue(policy.automaticPercentileBasisPoints().isEmpty());
-            } else {
-                assertEquals(
-                        ResolvedBlueprintProgressionPolicy.TierSource.AUTOMATIC_PERCENTILE,
-                        policy.tierSource());
-                assertTrue(policy.automaticPercentileBasisPoints().isPresent());
-                tiersByScore.computeIfAbsent(proposal.mechanicalScore(), ignored -> new LinkedHashSet<>())
-                        .add(policy.researchWorkbenchTier());
+            // The M249 is pinned to Tier 2 by a bundled rule; every other weapon is tiered automatically.
+            boolean pinned = id.equals("tacz:m249");
+            assertEquals(
+                    pinned ? ResolvedBlueprintProgressionPolicy.TierSource.EXACT_RULE
+                            : ResolvedBlueprintProgressionPolicy.TierSource.AUTOMATIC_PERCENTILE,
+                    policy.tierSource());
+            assertTrue(policy.automaticPercentileBasisPoints().isPresent());
+            assertEquals(proposal.reviewRequired(), policy.reviewRequired());
+            int level = policy.researchWorkbenchTier().level();
+            if (pinned) {
+                assertEquals(2, level);
+            }
+            assertTrue(level >= byScore.get(id).tier().level(), id + " must not open below its score tier");
+            lowestByRank.merge(proposal.progressionCoordinate().rank(), level, Math::min);
+            levels.put(ResourceLocation.parse(id), level);
+        });
+        int previous = 0;
+        for (int level : lowestByRank.values()) {
+            assertTrue(level >= previous, "a deeper rank must never start at a lower workstation tier");
+            previous = level;
+        }
+        // In the bundled tree no weapon sits behind a prerequisite that needs a higher bench than it does.
+        automatic.prerequisites().requirementGroups().forEach((id, requirements) -> {
+            for (var group : requirements.allOf()) {
+                int easiest = group.anyOf().stream().filter(levels::containsKey).mapToInt(levels::get).min()
+                        .orElse(0);
+                assertTrue(easiest <= levels.get(id), id + " needs a lower bench than every way to reach it");
             }
         });
-        assertTrue(tiersByScore.values().stream().allMatch(tiers -> tiers.size() == 1),
-                "equal automatic scores must never split across workstation tiers");
     }
 
     @Test

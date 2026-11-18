@@ -10,6 +10,7 @@ public final class QuickSetupSettings {
 
     public static List<String> choices(QuickControl control) {
         return switch (control) {
+            case PACE -> SettingsPace.choices().stream().map(SettingsValues::token).toList();
             case AMMO_RESEARCH, ATTACHMENT_RESEARCH -> tokens(ResearchDomainMode.values());
             case RESEARCH_ACCESS -> tokens(StationSetup.ResearchAccess.values());
             case DISCOVERY -> tokens(BlueprintBalancePreset.values());
@@ -23,8 +24,16 @@ public final class QuickSetupSettings {
     }
 
     public static String selected(QuickControl control, SettingsPresentation.Summary summary) {
+        if (control == QuickControl.PACE) return SettingsValues.token(pace(summary));
         return control == QuickControl.CRAFTING_TIERS ? SettingsValues.bool(summary.craftingTiers())
                 : summary.controls().get(control.presentationField()).stored();
+    }
+
+    /** The pace the stored values add up to. Custom means they match none of the three. */
+    public static SettingsPace.Pace pace(SettingsPresentation.Summary summary) {
+        Map<String, String> values = new HashMap<>();
+        for (String field : SettingsPace.FIELDS) values.put(field, summary.controls().get(field).stored());
+        return SettingsPace.matching(values);
     }
 
     public static String labelKey(QuickControl control) {
@@ -34,6 +43,7 @@ public final class QuickSetupSettings {
     public static String choiceKey(QuickControl control, String value) {
         String token = SettingsValues.scalar(value);
         return "settings.taczweaponblueprints.choice." + switch (control) {
+            case PACE -> "pace." + token;
             case AMMO_RESEARCH, ATTACHMENT_RESEARCH -> "domain." + token;
             case RESEARCH_ACCESS -> "access." + token;
             case DISCOVERY -> "discovery." + token;
@@ -48,7 +58,8 @@ public final class QuickSetupSettings {
         var presentation = SettingsPresentation.describe(draft.baseline(), draft.preview());
         if (presentation.controls().get(control.presentationField()).availability() != SettingsPresentation.Availability.EDITABLE)
             throw new IllegalStateException("Quick Setup control is not editable");
-        if (control == QuickControl.CRAFTING_TIERS) draft.setCraftingTiers(SettingsValues.booleanValue(canonical));
+        if (control == QuickControl.PACE) SettingsPace.apply(draft, SettingsPace.Pace.valueOf(SettingsValues.scalar(canonical)));
+        else if (control == QuickControl.CRAFTING_TIERS) draft.setCraftingTiers(SettingsValues.booleanValue(canonical));
         else draft.set(control.presentationField(), canonical);
     }
 }

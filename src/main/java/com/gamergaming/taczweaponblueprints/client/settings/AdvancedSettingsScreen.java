@@ -5,7 +5,6 @@ import com.gamergaming.taczweaponblueprints.settings.*;
 import com.gamergaming.taczweaponblueprints.compat.fzzy_config.BlueprintConfig;
 import me.fzzyhmstrs.fzzy_config.screen.PopupWidgetScreen;
 import me.fzzyhmstrs.fzzy_config.validation.ValidatedField;
-import me.fzzyhmstrs.fzzy_config.validation.misc.ChoiceValidator;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.components.*;
@@ -92,7 +91,7 @@ public final class AdvancedSettingsScreen extends PopupWidgetScreen {
                     if(!entry.condition().active(editor)) explanation += "\n"+Component.translatable(entry.condition().reasonKey()).getString();
 
                     labelButton.setTooltip(Tooltip.create(Component.literal(label.getString()+"\n"+explanation)));
-                    var widget=field(entry.field()).widgetEntry(ChoiceValidator.Companion.any());
+                    var widget=SettingsEditors.create(field(entry.field()),()->{if(!rebuilding && writable())session.set(entry.field(),FzzySettingsAdapter.captureField(editor,entry.field()));});
                     widget.setX(width-166);widget.setY(y);widget.setWidth(150);
                     widget.active = writable() && entry.condition().active(editor);
                     var guarded=new SettingsFieldWidget(widget,()->writable() && entry.condition().active(editor), label);

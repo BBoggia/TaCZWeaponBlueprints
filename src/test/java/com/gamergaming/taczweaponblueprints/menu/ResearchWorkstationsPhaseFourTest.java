@@ -46,6 +46,6 @@ class ResearchWorkstationsPhaseFourTest {
 
     @Test
     void presentationOnlyCutoverDoesNotChangeTheWireContract() {
-        assertEquals("neoforge-2", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("neoforge-4", NetworkHandler.PROTOCOL_VERSION);
     }
 }

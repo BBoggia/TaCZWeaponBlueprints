@@ -5,13 +5,12 @@ import com.gamergaming.taczweaponblueprints.compat.fzzy_config.PersonalSettingsS
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.settings.SettingsTransaction.Status;
 import me.fzzyhmstrs.fzzy_config.screen.PopupWidgetScreen;
-import me.fzzyhmstrs.fzzy_config.validation.misc.ChoiceValidator;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.*;
 import net.minecraft.client.gui.screens.*;
 import net.minecraft.network.chat.Component;
 
-/** Only the seven active client preferences. Compatibility fields remain in the original config. */
+/** Only the active client preferences. Compatibility fields remain in the original config. */
 public final class PersonalSettingsScreen extends PopupWidgetScreen {
     private final Screen parent;
     private PersonalSettingsSession session;
@@ -45,7 +44,7 @@ public final class PersonalSettingsScreen extends PopupWidgetScreen {
             name.setTooltip(Tooltip.create(label(id).copy().append("\n").append(label(id + ".desc"))));
             var field = PersonalSettingsSession.field(session.editor(), id);
             field.setTranslatableEntryKey("config.taczweaponblueprints.research_tree_client." + id);
-            var child = field.widgetEntry(ChoiceValidator.Companion.any());
+            var child = SettingsEditors.create(field, () -> {});
             child.setX(width - 160); child.setY(y); child.setWidth(144);
             var guarded = new SettingsFieldWidget(child, () -> editable(id), label(id));
             addRenderableWidget(guarded); editors.put(guarded, id);

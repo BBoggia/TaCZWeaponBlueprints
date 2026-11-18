@@ -110,7 +110,8 @@ public final class ResearchAffordabilityResultPacket implements CustomPacketPayl
                     outcome = ClientResearchAffordabilityState.reject(
                             requestId, publicationGeneration);
                 }
-                if (minecraft.screen instanceof ResearchBenchScreen screen) {
+                if (minecraft.screen instanceof com.gamergaming.taczweaponblueprints.client.ResearchAffordabilityListener screen
+                        && screen.getMenu() == minecraft.player.containerMenu) {
                     switch (outcome) {
                         case ACKNOWLEDGED, ACCEPTED, ADVANCED_AFTER_FAILURE ->
                                 screen.refreshAuthoritativeAffordability();

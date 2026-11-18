@@ -24,7 +24,7 @@ final class FeatureClientVerification {
         mc.getToasts().clear();
         if(wait<20)return;
         if(stage==101) {
-            if(!(mc.screen instanceof ResearchBenchScreen) || !(mc.player.containerMenu instanceof ResearchBenchMenu menu) || !ClientResearchState.hasPublication())return;
+            if(!(mc.screen instanceof com.gamergaming.taczweaponblueprints.client.TechTreeSheetScreen) || !(mc.player.containerMenu instanceof ResearchBenchMenu menu) || !ClientResearchState.hasPublication())return;
             if(emi()&&!EmiFeatureVerification.ready() || jei()&&!JeiFeatureVerification.ready())return;
             if(emi())EmiFeatureVerification.verify();
             if(jei())JeiFeatureVerification.verify();
@@ -90,14 +90,14 @@ final class FeatureClientVerification {
     static void screenshot(Minecraft mc,String name)throws Exception{
         try(var image=Screenshot.takeScreenshot(mc.getMainRenderTarget())){
             if(name.equals("research-tree")) {
-                int gold=0;
-                // Exclude the rail/header/minimap; the central canvas must contain
-                // visible node borders, not just a populated off-screen model.
-                for(int y=image.getHeight()/4;y<image.getHeight()*3/4;y++)for(int x=image.getWidth()/5;x<image.getWidth()*4/5;x++){
+                int ink=0;
+                // Below the bar and left of the inspector, the sheet must show tile names, borders
+                // and links in its pale ink, not just a populated off-screen model.
+                for(int y=image.getHeight()/4;y<image.getHeight()*3/4;y++)for(int x=image.getWidth()/20;x<image.getWidth()*3/5;x++){
                     int color=image.getPixelRGBA(x,y), r=color&255,g=(color>>8)&255,b=(color>>16)&255;
-                    if(r>160 && g>120 && b<160 && r>b+40)gold++;
+                    if(r>110 && g>140 && b>160 && b>=r)ink++;
                 }
-                require(gold>100,"Research Bench draws visible nodes in the central canvas: "+gold+" gold pixels");
+                require(ink>100,"Tech Tree draws visible tiles on the sheet: "+ink+" ink pixels");
             }
             image.writeToFile(Path.of("feature-"+name+".png"));
         }

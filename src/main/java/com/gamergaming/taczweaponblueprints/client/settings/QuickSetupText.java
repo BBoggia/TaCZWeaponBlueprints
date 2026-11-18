@@ -33,6 +33,10 @@ final class QuickSetupText {
     static Component hint(QuickControl control, SettingsPresentation.Summary summary) {
         var state = summary.controls().get(control.presentationField());
         Component details = switch (control) {
+            case PACE -> text("pace_hint", Component.translatable(QuickSetupSettings.choiceKey(QuickControl.DISCOVERY,
+                            summary.controls().get("balancePreset").stored())),
+                    number(summary, "scrapLootPercent"), number(summary, "researchCostPercent"),
+                    number(summary, "tierTwoResearchCostPercent"), number(summary, "tierThreeResearchCostPercent"));
             case AMMO_RESEARCH, ATTACHMENT_RESEARCH -> text("domain_hint", category(state));
             case RESEARCH_ACCESS -> text("access_hint", onOff(summary.researchTiers()));
             case CRAFTING_TIERS -> text(summary.specialCraftingRules() ? "crafting_custom_hint" : "crafting_hint");
@@ -44,10 +48,13 @@ final class QuickSetupText {
         };
         if (control == QuickControl.RESEARCH_ACCESS && !SettingsValues.booleanValue(summary.controls().get("enableResearch").effective().orElseThrow()))
             details = text("access_dormant").append(" ").append(details);
-        if (control == QuickControl.DISCOVERY && !SettingsValues.booleanValue(summary.controls().get("enableBlueprints").stored()))
+        if ((control == QuickControl.DISCOVERY || control == QuickControl.PACE) && !SettingsValues.booleanValue(summary.controls().get("enableBlueprints").stored()))
             details = text("progression_off").append(" ").append(details);
         return state.reasonKey().isEmpty() ? details
                 : Component.translatable(state.reasonKey()).append(" ").append(details);
+    }
+    private static String number(SettingsPresentation.Summary summary, String field) {
+        return SettingsValues.scalar(summary.controls().get(field).stored());
     }
     static Component compact(SettingsPresentation.Summary summary) {
         if (!SettingsValues.booleanValue(summary.controls().get("enableBlueprints").stored())) return text("progression_off");

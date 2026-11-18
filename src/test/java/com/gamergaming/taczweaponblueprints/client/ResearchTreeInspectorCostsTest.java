@@ -109,4 +109,23 @@ class ResearchTreeInspectorCostsTest {
             assertTrue(text.getKey().endsWith(counts[0]+counts[1] == 0 ? ".single" : ".any"));
         }
     }
+    @Test void mixedAlternativeRowsPreserveHiddenChoicesAndDisclosedSatisfaction() {
+        var other = ResourceLocation.parse("test:other");
+        for (boolean disclosed : new boolean[]{false,true}) {
+            var target = new ResearchTreeGraph.Node(0,ID,"target","rifle",ID,disclosed ? JournalVisibility.FULL : JournalVisibility.PREVIEW,
+                    false,disclosed,disclosed,0,0,1,1,disclosed ? ResearchTreeGraph.Availability.AVAILABLE : ResearchTreeGraph.Availability.PREVIEW);
+            var alternative = new ResearchTreeGraph.Node(1,other,"other","rifle",other,JournalVisibility.FULL,
+                    false,true,true,0,0,0,0,ResearchTreeGraph.Availability.AVAILABLE);
+            var group = new ResearchTreeGraph.RequirementGroup(ID,0,List.of(other),1,0,disclosed,disclosed);
+            var graph = ResearchTreeGraph.withRequirementGroups(List.of(target,alternative),List.of(group));
+            var rows = ResearchTreeInspectorRequirements.rows(graph,ID,node -> Component.literal(node.nameKey()),
+                    ignored -> Optional.of(com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain.WEAPONS),
+                    d -> Component.literal(d.name()), ignored -> true,TEXT,5,MUTED,GOOD);
+            assertEquals(disclosed ? GOOD : 5, rows.get(0).color());
+            assertEquals(3, rows.size(), "heading, visible choice, and undisclosed choice must all remain");
+            assertEquals("gui.taczweaponblueprints.research_bench.tree.requirement.undiscovered",
+                    ((TranslatableContents) rows.get(2).text().getContents()).getKey());
+        }
+    }
+
 }

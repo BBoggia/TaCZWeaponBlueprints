@@ -176,6 +176,11 @@ overrides. Version-3 files migrate with every new control at its neutral
 knowledge-only exemptions and are not copied into the new crafting selectors,
 so their established Workbench behavior does not change during migration.
 
+Server configuration version 6 adds the Tier 2 and Tier 3 research price
+settings. New installations start at 200 and 300 percent. Files from version 5
+or earlier migrate with both at 100, so an established server's research prices
+do not change until its operator raises them.
+
 When Blueprint Fragments are enabled, `fragmentLootReplacementPercent` replaces
 that share of successful blueprint opportunities rather than adding more loot.
 The default is 20 percent, and the fragment uses the same rule candidates,

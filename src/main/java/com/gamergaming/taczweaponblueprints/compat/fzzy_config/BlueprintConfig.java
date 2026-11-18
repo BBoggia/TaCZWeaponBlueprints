@@ -67,13 +67,14 @@ import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedBoolean;
 import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedCondition;
 import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedEnum;
 import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedString;
+import com.gamergaming.taczweaponblueprints.progression.ResearchTierPricing;
 import me.fzzyhmstrs.fzzy_config.validation.number.ValidatedInt;
 import me.fzzyhmstrs.fzzy_config.validation.number.ValidatedNumber;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.neoforged.fml.loading.FMLPaths;
 
-@Version(version = 5)
+@Version(version = 6)
 @Translation(prefix = ModConfigs.BASE_KEY + "blueprint")
 public class BlueprintConfig extends Config {
     public static final int MAX_BLUEPRINTS_PER_LOOT_CONTAINER = 64;
@@ -173,6 +174,21 @@ public class BlueprintConfig extends Config {
             new ValidatedEnum<>(ResearchCostMode.POINTS_AND_ITEMS));
 
     @WithPerms(opLevel = 2)
+    public ValidatedCondition<Integer> researchCostPercent = researchEnabled(
+            new ValidatedInt(ResearchTierPricing.UNCHANGED, ResearchTierPricing.MAX_PERCENT,
+                    ResearchTierPricing.MIN_ALL_PERCENT));
+
+    @WithPerms(opLevel = 2)
+    public ValidatedCondition<Integer> tierTwoResearchCostPercent = researchEnabled(
+            new ValidatedInt(ResearchTierPricing.DEFAULT_TIER_TWO_PERCENT, ResearchTierPricing.MAX_PERCENT,
+                    ResearchTierPricing.MIN_PERCENT));
+
+    @WithPerms(opLevel = 2)
+    public ValidatedCondition<Integer> tierThreeResearchCostPercent = researchEnabled(
+            new ValidatedInt(ResearchTierPricing.DEFAULT_TIER_THREE_PERCENT, ResearchTierPricing.MAX_PERCENT,
+                    ResearchTierPricing.MIN_PERCENT));
+
+    @WithPerms(opLevel = 2)
     public ValidatedCondition<TreeResearchResultMode> treeResearchResultMode = researchEnabled(
             new ValidatedEnum<>(TreeResearchResultMode.DIRECT_LEARN));
 
@@ -193,6 +209,13 @@ public class BlueprintConfig extends Config {
     public ValidatedCondition<Boolean> enableScrapLoot = physicalCurrencySetting(new ValidatedBoolean(true));
     @WithPerms(opLevel = 2)
     public ValidatedCondition<Integer> scrapLootBudget = uiCondition(new ValidatedInt(32,64,0),
+            () -> researchCurrencyKind.get() == ResearchCurrencyPolicy.Kind.PHYSICAL_ITEM && enableScrapLoot.get(),
+            TRANSLATION_PREFIX + "condition.currencyLoot");
+    @WithPerms(opLevel = 2)
+    public ValidatedCondition<Integer> scrapLootPercent = uiCondition(
+            new ValidatedInt(com.gamergaming.taczweaponblueprints.loot.ScrapSupplyLootModifier.DEFAULT_PERCENT,
+                    com.gamergaming.taczweaponblueprints.loot.ScrapSupplyLootModifier.MAX_PERCENT,
+                    com.gamergaming.taczweaponblueprints.loot.ScrapSupplyLootModifier.MIN_PERCENT),
             () -> researchCurrencyKind.get() == ResearchCurrencyPolicy.Kind.PHYSICAL_ITEM && enableScrapLoot.get(),
             TRANSLATION_PREFIX + "condition.currencyLoot");
 
@@ -548,6 +571,12 @@ public class BlueprintConfig extends Config {
     public void update(int deserializedVersion) {
         if (deserializedVersion < 5) researchAccess.validateAndSet(
                 com.gamergaming.taczweaponblueprints.progression.StationSetup.ResearchAccess.PRESET);
+        if (deserializedVersion < 6) {
+            // Tier price multipliers did not exist before version 6. Keep an established
+            // server's research prices until its operator chooses to raise them.
+            tierTwoResearchCostPercent.validateAndSet(ResearchTierPricing.UNCHANGED);
+            tierThreeResearchCostPercent.validateAndSet(ResearchTierPricing.UNCHANGED);
+        }
         if (deserializedVersion < 1) {
             // Version-zero files exposed these four discovery settings
             // directly. Preserve their established behavior by migrating the

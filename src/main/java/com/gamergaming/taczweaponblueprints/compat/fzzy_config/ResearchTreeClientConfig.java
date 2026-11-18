@@ -51,6 +51,10 @@ public final class ResearchTreeClientConfig extends Config {
     public ValidatedBoolean showResearchPointNotifications = new ValidatedBoolean(true);
 
     public ConfigGroup treeAppearance = new ConfigGroup("treeAppearance");
+    public ValidatedEnum<com.gamergaming.taczweaponblueprints.client.TechTreeViewMode> techTreeView = new ValidatedEnum<>(
+            com.gamergaming.taczweaponblueprints.client.TechTreeViewMode.NEW, ValidatedEnum.WidgetType.CYCLING);
+    public ValidatedEnum<com.gamergaming.taczweaponblueprints.client.TechTreeLaneMode> techTreeLanes = new ValidatedEnum<>(
+            com.gamergaming.taczweaponblueprints.client.TechTreeLaneMode.BRANCHES, ValidatedEnum.WidgetType.CYCLING);
     public ValidatedBoolean showBranchLabels = new ValidatedBoolean(true);
     public ValidatedBoolean reduceMotion = new ValidatedBoolean(
             ResearchTreeDisplayPolicy.DEFAULT.reduceMotion());
@@ -134,6 +138,30 @@ public final class ResearchTreeClientConfig extends Config {
     /** Returns one immutable snapshot; callers never observe half-applied fields. */
     public ResearchTreeLayoutPolicy layoutPolicy() {
         return layoutPolicy;
+    }
+
+    /** Remembers a choice made from the Tech Tree itself, such as its Classic view button. */
+    public void chooseTechTreeView(com.gamergaming.taczweaponblueprints.client.TechTreeViewMode mode) {
+        if (techTreeView.get() != mode) {
+            techTreeView.validateAndSet(mode);
+            saveQuietly();
+        }
+    }
+
+    public void chooseTechTreeLanes(com.gamergaming.taczweaponblueprints.client.TechTreeLaneMode mode) {
+        if (techTreeLanes.get() != mode) {
+            techTreeLanes.validateAndSet(mode);
+            saveQuietly();
+        }
+    }
+
+    /** The choice still holds for this session when the file can't be written. */
+    private void saveQuietly() {
+        try {
+            save();
+        } catch (RuntimeException error) {
+            TaCZWeaponBlueprints.LOGGER.warn("Could not save the Tech Tree view preference", error);
+        }
     }
 
     public boolean holdToResearchEnabled() {

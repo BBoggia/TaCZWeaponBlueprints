@@ -86,15 +86,7 @@ public final class BlueprintProgressionPolicyResolver {
                     || !candidates.matches(treeId, catalogRevision, researchRevision)) {
                 throw new IllegalArgumentException("automatic tier evidence is stale or inconsistent");
             }
-            Map<String, Integer> trustedScores = new LinkedHashMap<>();
-            candidates.eligibleProposals().forEach((id, proposal) -> {
-                if (!proposal.reviewRequired()) {
-                    trustedScores.put(id, proposal.mechanicalScore());
-                }
-            });
-            allocationsByTree.put(
-                    treeId,
-                    TieAwareWorkbenchTierAllocator.allocate(trustedScores, percentiles));
+            allocationsByTree.put(treeId, candidates.tiersByDepth(percentiles));
         });
 
         Map<ResourceLocation, Map<ResourceLocation, ResolvedBlueprintProgressionPolicy>> policies =
@@ -191,20 +183,16 @@ public final class BlueprintProgressionPolicyResolver {
                 AutomaticWeaponPlacementProposal proposal = placement.automaticProposal().orElseThrow();
                 automaticScore = Optional.of(proposal.mechanicalScore());
                 reviewRequired = proposal.reviewRequired();
-                if (reviewRequired) {
-                    researchTier = profile.progression().fallbackTiers().researchTier();
-                    source = TierSource.REVIEW_FALLBACK;
-                } else {
-                    TieAwareWorkbenchTierAllocator.Assignment assignment = allocations.get(
-                            blueprintId.toString());
-                    if (assignment == null) {
-                        throw new IllegalStateException(
-                                "trusted automatic blueprint has no percentile tier: " + blueprintId);
-                    }
-                    researchTier = assignment.tier();
-                    automaticPercentile = Optional.of(assignment.percentileBasisPoints());
-                    source = TierSource.AUTOMATIC_PERCENTILE;
+                // Every placed weapon is tiered by its depth in the tree; the review flag stays for diagnostics.
+                TieAwareWorkbenchTierAllocator.Assignment assignment = allocations.get(
+                        blueprintId.toString());
+                if (assignment == null) {
+                    throw new IllegalStateException(
+                            "placed automatic blueprint has no depth tier: " + blueprintId);
                 }
+                researchTier = assignment.tier();
+                automaticPercentile = Optional.of(assignment.percentileBasisPoints());
+                source = TierSource.AUTOMATIC_PERCENTILE;
             } else if (placement.base().placement().isPresent()) {
                 researchTier = profile.progression().forAuthoredTier(
                         placement.base().placement().orElseThrow().tier()).researchTier();

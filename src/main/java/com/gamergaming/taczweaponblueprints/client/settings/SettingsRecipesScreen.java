@@ -55,7 +55,8 @@ public final class SettingsRecipesScreen extends Screen {
         String scalar = SettingsValues.scalar(document);
         if (scalar.equals("true") || scalar.equals("false")) return QuickSetupText.onOff(Boolean.parseBoolean(scalar));
         for (var control : SettingsCatalog.QuickControl.values()) {
-            if (control != SettingsCatalog.QuickControl.CRAFTING_TIERS && control.presentationField().equals(field))
+            if (control != SettingsCatalog.QuickControl.CRAFTING_TIERS && control != SettingsCatalog.QuickControl.PACE
+                    && control.presentationField().equals(field))
                 return QuickSetupText.choice(control, document, summary);
         }
         return Component.translatable("config.taczweaponblueprints.blueprint." + field + "." + scalar);

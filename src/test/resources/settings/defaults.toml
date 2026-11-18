@@ -1,5 +1,5 @@
 # Don't change this! Version used to track needed updates.
-version = 5
+version = 6
 analyzerSetup = "TIERED"
 researchAccess = "TIERED"
 singleAnalyzerDataTier = "TIER_1"
@@ -13,12 +13,16 @@ blueprintSpawnChance = 0.2
 minBlueprints = 1
 maxBlueprints = 2
 researchCostMode = "POINTS_AND_ITEMS"
+researchCostPercent = 100
+tierTwoResearchCostPercent = 200
+tierThreeResearchCostPercent = 300
 treeResearchResultMode = "DIRECT_LEARN"
 creativeBypassesResearchCost = false
 researchCurrencyKind = "PHYSICAL_ITEM"
 researchCurrencyItem = "taczweaponblueprints:scrap"
 enableScrapLoot = true
 scrapLootBudget = 32
+scrapLootPercent = 100
 researchPointCap = 10000
 enableResearchPointAwards = true
 enableCombatResearchPointAwards = false

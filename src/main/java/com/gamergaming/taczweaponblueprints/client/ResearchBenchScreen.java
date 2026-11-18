@@ -58,7 +58,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.core.registries.BuiltInRegistries;
 
 /** Permanent Research-only tree backed entirely by the open server menu. */
-public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchBenchMenu> {
+public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchBenchMenu>
+        implements ResearchBenchActionResultListener, ResearchBenchPreviewListener, ResearchAffordabilityListener {
     private static final int KEYBOARD_REVEAL_PADDING = 18;
     private static final ResearchTreeGuidancePreference GUIDANCE_PREFERENCE =
             ResearchTreeGuidancePreference.client();
@@ -421,6 +422,14 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 .tooltip(Tooltip.create(Component.translatable(
                         "gui.taczweaponblueprints.research_bench.close")))
                 .build());
+        Component newView = Component.translatable("gui.taczweaponblueprints.tech_tree.new_view");
+        int newViewWidth = font.width(newView) + 12;
+        addRenderableWidget(com.gamergaming.taczweaponblueprints.client.ui.UiButton.secondary(
+                leftPos + closeBounds.x() + closeBounds.width() - newViewWidth,
+                topPos + closeBounds.y() + closeBounds.height() + 3, newViewWidth, 14, newView, ignored -> {
+                    ModConfigs.RESEARCH_TREE_CLIENT.chooseTechTreeView(TechTreeViewMode.NEW);
+                    minecraft.setScreen(new TechTreeSheetScreen(menu, minecraft.player.getInventory(), title));
+                }));
         ResearchTreeScreenLayout.Rect actionBounds = fullscreen
                 ? new ResearchTreeScreenLayout.Rect(4, 4, 72, 20)
                 : ResearchTreeDetailLayout.primaryAction(activeTreeLayout)
@@ -2654,6 +2663,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         return requestId;
     }
 
+    @Override
     public void acceptActionResult(
             int requestId,
             ResearchBenchMenu.ActionResult result) {

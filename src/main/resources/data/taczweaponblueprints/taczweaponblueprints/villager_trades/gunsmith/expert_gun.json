@@ -11,10 +11,6 @@
     "selection": "expert",
     "candidates": [
       {
-        "id": "tacz:m4a1",
-        "weight": 1
-      },
-      {
         "id": "tacz:ak47",
         "weight": 1
       },
@@ -27,15 +23,19 @@
         "weight": 1
       },
       {
-        "id": "tacz:g36k",
-        "weight": 1
-      },
-      {
         "id": "tacz:qbz_95",
         "weight": 1
       },
       {
-        "id": "tacz:sks_tactical",
+        "id": "tacz:m870",
+        "weight": 1
+      },
+      {
+        "id": "tacz:ump45",
+        "weight": 1
+      },
+      {
+        "id": "tacz:vector45",
         "weight": 1
       }
     ]

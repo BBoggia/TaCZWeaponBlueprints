@@ -46,6 +46,11 @@ public record ResearchTreePublication(
         techTree.validateAgainst(graph);
     }
 
+    /** The same publication with each blueprint's required Research Bench tier attached. */
+    public ResearchTreePublication withBenchTiers(java.util.function.ToIntFunction<ResourceLocation> tierOf) {
+        return new ResearchTreePublication(graph.withBenchTiers(tierOf), presentation, techTree, domainAvailability);
+    }
+
     public ResearchDomainAvailability availability(Domain domain) {
         return domainAvailability.getOrDefault(domain, ResearchDomainAvailability.AVAILABLE);
     }

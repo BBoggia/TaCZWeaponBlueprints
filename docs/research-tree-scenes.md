@@ -550,3 +550,27 @@ anchors; changed label dimensions are measured again. Offscreen or disabled
 labels become hidden, and toggling either direction clears hit targets until
 the next render. Hit testing also rejects geometry from a previous camera or
 canvas rectangle.
+
+
+## Sheet view confirmation and details
+
+The sheet view uses server previews for the selected purchase and bounded
+server affordability batches for other direct-learning targets. Unchecked
+blueprints remain unconfirmed; a published base price cannot establish
+readiness. Printing uses the selected preview because route affordability
+batches apply only to direct learning.
+
+Both research result modes carry an opaque quote identity in the existing
+preview and action fields. Printing and learning have different identity
+formats. The server requires the matching current identity before either
+purchase. NeoForge protocol `neoforge-4` requires matching clients and servers.
+A hold captures its quote and duration at the first press, cancels when its
+purchase changes, and requires release before another hold. Balance-only
+refreshes and material-page changes preserve an otherwise unchanged quote.
+
+The sheet inspector uses the shared scrollable detail body and material-page
+protocol. Scroll and keyboard input inside the body stay inside that body;
+Research remains fixed below it. Requirement groups retain hidden and
+external alternative counts without disclosing those identities. Selection
+results are correlated with their requests so late success or failure cannot
+overwrite newer browsing input.

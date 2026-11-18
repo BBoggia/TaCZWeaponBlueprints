@@ -9,9 +9,9 @@ research costs, source availability, and magazine requirements.
 
 | Level | Curated gun pool | Base price | Lowest primary price | Uses per stock |
 | --- | --- | --- | --- | --- |
-| Apprentice | M1911, CZ75, P320, M9A4, DB Long | 24 currency + 4 Iron | 18 currency + 4 Iron | 2 |
-| Expert | M4A1, AK47, M16A4, M16A1, G36K, QBZ-95, SKS Tactical | 48 currency + 8 Iron | 36 currency + 8 Iron | 1 |
-| Master | HK416D, AUG, SCAR-L | 64 currency + 12 Iron | 48 currency + 12 Iron | 1 |
+| Apprentice | M1911, CZ75, P320, M9A4, Glock 17 | 24 currency + 4 Iron | 18 currency + 4 Iron | 2 |
+| Expert | AK47, M16A4, M16A1, QBZ-95, M870, UMP45, Vector | 48 currency + 8 Iron | 36 currency + 8 Iron | 1 |
+| Master | SCAR-L, RPK, SPR-15 HB, FN EVOLYS | 64 currency + 12 Iron | 48 currency + 12 Iron | 1 |
 
 The market still checks effective research/crafting tiers. Apprentice guns must
 be Tier 1; Expert and Master guns must be Tier 2. Master stock uses an already
@@ -20,12 +20,13 @@ the authored ammo fallback can replace the new gun offer. Installed addon guns
 are not automatically added or priced. The custom-pool example requires an
 explicit candidate list, ammo pool, and reviewed price.
 
-The original recipe spread informed the pool split. For example, M1911 needs
-16 Iron and 5 logs; CZ75 needs 17 Iron; DB Long needs 14 Iron and 10 logs. M4A1
-needs 38 Iron, 6 Lapis and 8 logs, while HK416D needs 64 Iron, 16 Gold and 8
-Quartz. The bundled research costs also differ: M1911 costs 4 Scrap, 2 Paper and
-1 Iron for its own node; DB Long costs 6 Scrap, 3 Paper and 2 Iron; HK416D
-costs 8 Scrap, 4 Paper and 3 Iron. Prerequisite routes add their own costs.
+The pools follow the bundled tiers. Guns that need Tier 3, such as the M4A1 and
+HK416D, are not sold while `villagerMaximumGunTier` is 2. Recipes still differ
+within a pool: M1911 needs 16 Iron and 5 logs and CZ75 needs 17 Iron. Research
+prices differ too. On a new server M1911 costs 4 Scrap, 2 Paper and 1 Iron for
+its own node; AK47 costs 16 Scrap, 4 Paper and 3 Iron; SCAR-L costs 20 Scrap,
+5 Paper and 4 Iron. Prerequisite routes add their own costs, so the AK47 route
+totals 42 Scrap and the SCAR-L route 62.
 Buying is an alternate acquisition path, not a replacement recipe valuation. Factory attachments stay attached to purchased guns. Crafting remains
 useful for making repeat copies without another currency purchase or villager
 stock wait, after learning the recipe and meeting its Workbench requirements.
@@ -39,16 +40,16 @@ are not discounted. Native demand can raise prices.
 
 | Profession / level | Slot | Output | Primary input | Secondary | Uses |
 | --- | --- | --- | --- | --- | --- |
-| Ballistics Researcher / 3 | bulk notes | 4 research data | 14 currency | — | 2 |
-| Ballistics Researcher / 4 | bulk reports | 2 research data | 22 currency | — | 2 |
+| Ballistics Researcher / 3 | bulk notes | 4 research data | 6 currency | — | 2 |
+| Ballistics Researcher / 4 | bulk reports | 2 research data | 9 currency | — | 2 |
 | Ballistics Researcher / 2 | buy lapis | 1 currency | 12 lapis lazuli | — | 4 |
 | Ballistics Researcher / 1 | buy paper | 1 currency | 24 paper | — | 4 |
-| Ballistics Researcher / 5 | dossier | 1 research data | 24 currency | — | 1 |
-| Ballistics Researcher / 2 | fragments 2 | 2 analysis fragments | 8 currency | — | 3 |
-| Ballistics Researcher / 4 | fragments 4 | 2 analysis fragments | 16 currency | — | 2 |
-| Ballistics Researcher / 5 | fragments 5 | 5 analysis fragments | 36 currency | — | 1 |
-| Ballistics Researcher / 1 | note | 1 research data | 4 currency | — | 4 |
-| Ballistics Researcher / 3 | report | 1 research data | 12 currency | — | 3 |
+| Ballistics Researcher / 5 | dossier | 1 research data | 12 currency | — | 1 |
+| Ballistics Researcher / 2 | fragments 2 | 2 analysis fragments | 4 currency | — | 3 |
+| Ballistics Researcher / 4 | fragments 4 | 2 analysis fragments | 6 currency | — | 2 |
+| Ballistics Researcher / 5 | fragments 5 | 5 analysis fragments | 14 currency | — | 1 |
+| Ballistics Researcher / 1 | note | 1 research data | 2 currency | — | 4 |
+| Ballistics Researcher / 3 | report | 1 research data | 5 currency | — | 3 |
 | Gunsmith / 3 | basic attachment | 1 attachment | 12 currency | 2 iron ingot | 3 |
 | Gunsmith / 3 | bulk starter ammo | 32 ammo | 7 currency | — | 8 |
 | Gunsmith / 2 | buy copper | 1 currency | 12 copper ingot | — | 4 |
@@ -62,7 +63,7 @@ are not discounted. Native demand can raise prices.
 
 A required basic empty magazine adds a same-level supply offer at 6 currency
 plus 2 Iron, with 4 uses; its discount floor is 5 currency plus 2 Iron. Integral
-magazine guns such as DB Long do not require a detachable-magazine purchase.
+magazine guns such as M870 do not require a detachable-magazine purchase.
 
 ## Early progression and research value
 
@@ -81,12 +82,19 @@ recipe and reuse the ammo already purchased. Gathering travel, waiting for work
 hours, and building costs were not timed.
 
 Bundled study targets require 5 Tier 1 or 10 Tier 2 analysis fragments. Three
-Apprentice bundles supply 6 Tier 1 fragments for 24 currency (18 at the floor),
+Apprentice bundles supply 6 Tier 1 fragments for 12 currency (9 at the floor),
 enough for one reconstruction with progress left over. Two Master bundles
-supply 10 Tier 2 fragments for 72 currency (54 at the floor), requiring a
+supply 10 Tier 2 fragments for 28 currency (22 at the floor), requiring a
 restock because that offer has one use. Expert bundles can contribute toward
 the same Tier 2 target. Prerequisites still govern learning the reconstructed
 blueprint; the physical route replaces that target's ordinary research purchase.
+
+Fragment prices sit a little above the research price of the same blueprint:
+about 12 currency against 4 to 8 for a Tier 1 node, and about 28 against 12 to
+20 for a Tier 2 node on a new server. Research Data costs less per fragment
+than targeted bundles because its target is random. Every Data price stays
+above what the same item redeems for when legacy redemption is enabled, even
+at the discount floor.
 
 New, partly learned, and fully learned customer scenarios all reached Master
 through native purchases in default and strict economies. Knowledge does not

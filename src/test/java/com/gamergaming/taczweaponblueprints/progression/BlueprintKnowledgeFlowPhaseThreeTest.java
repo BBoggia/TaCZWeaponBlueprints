@@ -51,7 +51,7 @@ class BlueprintKnowledgeFlowPhaseThreeTest {
         assertEquals(
                 ResearchBenchMenu.ActionResultCode.values().length - 1,
                 ResearchBenchMenu.ActionResultCode.REQUEST_THROTTLED.ordinal());
-        assertEquals("neoforge-2", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("neoforge-4", NetworkHandler.PROTOCOL_VERSION);
         assertEquals(5, PlayerProgressionLimits.DATA_VERSION);
     }
 

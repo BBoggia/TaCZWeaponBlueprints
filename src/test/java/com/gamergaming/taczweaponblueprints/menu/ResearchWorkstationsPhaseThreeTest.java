@@ -37,7 +37,7 @@ class ResearchWorkstationsPhaseThreeTest {
                         BlockPos.class,
                         Player.class,
                         BlockHitResult.class).getDeclaringClass());
-        assertEquals("neoforge-2", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("neoforge-4", NetworkHandler.PROTOCOL_VERSION);
     }
 
     @Test

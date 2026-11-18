@@ -41,9 +41,9 @@ public enum SettingsCondition {
             case "singleAnalyzerDataTier" -> SINGLE_ANALYZER;
             case "enableDiscoveryTracking", "enableJournal", "enableResearch", "enableResearchPointAwards", "progressionPreset", "fragmentPreset", "duplicateBlueprintPolicy", "foundWeaponRecoveryMode", "activeResearchProfile" -> BLUEPRINTS;
             case "maximumUndiscoveredVisibility", "blueprintSpawnChance", "minBlueprints", "maxBlueprints" -> DISCOVERY;
-            case "researchCostMode", "treeResearchResultMode", "creativeBypassesResearchCost" -> RESEARCH;
+            case "researchCostMode", "researchCostPercent", "tierTwoResearchCostPercent", "tierThreeResearchCostPercent", "treeResearchResultMode", "creativeBypassesResearchCost" -> RESEARCH;
             case "researchCurrencyItem", "enableScrapLoot" -> PHYSICAL_CURRENCY;
-            case "scrapLootBudget" -> CURRENCY_LOOT;
+            case "scrapLootBudget", "scrapLootPercent" -> CURRENCY_LOOT;
             case "researchPointCap" -> BANKED;
             case "enableCombatResearchPointAwards" -> AWARDS;
             case "researchDataAllowLearned", "researchDataAllowUndiscovered" -> DATA;

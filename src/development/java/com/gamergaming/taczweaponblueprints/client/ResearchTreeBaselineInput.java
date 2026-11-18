@@ -68,7 +68,22 @@ public record ResearchTreeBaselineInput(
                 presentation.remove("branches");
             }
         }
+        dropUndisclosedBenchTiers(json);
         return JSON.toJson(json) + "\n";
+    }
+
+    /** A node without a disclosed Research Bench tier serializes exactly as it did before the field existed. */
+    private static void dropUndisclosedBenchTiers(com.google.gson.JsonElement element) {
+        if (element.isJsonArray()) {
+            element.getAsJsonArray().forEach(ResearchTreeBaselineInput::dropUndisclosedBenchTiers);
+        } else if (element.isJsonObject()) {
+            var object = element.getAsJsonObject();
+            if (object.has("hiddenPrerequisiteCount") && object.has("benchTier")
+                    && object.get("benchTier").getAsInt() == 0) {
+                object.remove("benchTier");
+            }
+            object.entrySet().forEach(entry -> dropUndisclosedBenchTiers(entry.getValue()));
+        }
     }
 
     public String sha256() {

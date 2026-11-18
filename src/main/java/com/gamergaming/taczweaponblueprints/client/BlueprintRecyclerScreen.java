@@ -2,6 +2,7 @@ package com.gamergaming.taczweaponblueprints.client;
 
 import java.util.*;
 import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
+import com.gamergaming.taczweaponblueprints.client.ui.*;
 import com.gamergaming.taczweaponblueprints.init.ModItems;
 import com.gamergaming.taczweaponblueprints.menu.*;
 import com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerActionContract.Action;
@@ -9,7 +10,6 @@ import com.gamergaming.taczweaponblueprints.menu.BlueprintRecyclerMenu.Layout;
 import com.gamergaming.taczweaponblueprints.network.*;
 import com.gamergaming.taczweaponblueprints.progression.*;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
@@ -25,9 +25,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 /** Horizontal workstation overview with an optional, independently scrollable explanation. */
 public final class BlueprintRecyclerScreen extends AbstractContainerScreen<BlueprintRecyclerMenu>
         implements BlueprintRecyclerActionResultListener {
-    private static final int PANEL=0xFF202224, SLOT=0xFF111315, BORDER=0xFF555A5D;
-    private static final int TEXT=0xFFE7E8E4, MUTED=0xFFB0B4B5, ACCENT=0xFFE4C56A, GOOD=0xFF79CC98, BAD=0xFFFF9B87;
-    private static final ResourceLocation METAL=TaCZWeaponBlueprints.loc("textures/gui/analyzer_metal.png");
+    private static final int TEXT=UiTheme.TEXT, MUTED=UiTheme.TEXT_MUTED;
     private static final ResourceLocation BLUEPRINT_ICON=TaCZWeaponBlueprints.loc("textures/item/blueprint_base.png");
     private static final String ANALYZER="gui.taczweaponblueprints.analyzer.";
     private static final int DETAIL_LINES=7, PRIMARY_X=196, PRIMARY_WIDTH=112, DETAILS_X=140;
@@ -46,16 +44,16 @@ public final class BlueprintRecyclerScreen extends AbstractContainerScreen<Bluep
     }
     @Override protected void init() {
         super.init(); observedPreview=menu.preview();
-        primaryButton=addRenderableWidget(new WorkbenchButton(leftPos+PRIMARY_X,topPos+Layout.ACTION_Y,PRIMARY_WIDTH,20,
-                Component.empty(),b->primaryAction.ifPresent(this::request),true));
-        detailsButton=addRenderableWidget(new WorkbenchButton(leftPos+DETAILS_X,topPos+Layout.ACTION_Y,48,20,
-                w("details"),b->{detailsOpen=!detailsOpen;detailScroll=0;updateControls();triggerImmediateNarration(true);},false));
-        modeButton=addRenderableWidget(new WorkbenchButton(leftPos+198,topPos+6,62,16,Component.empty(),b->{
+        primaryButton=addRenderableWidget(UiButton.primary(leftPos+PRIMARY_X,topPos+Layout.ACTION_Y,PRIMARY_WIDTH,20,
+                Component.empty(),b->primaryAction.ifPresent(this::request)));
+        detailsButton=addRenderableWidget(UiButton.secondary(leftPos+DETAILS_X,topPos+Layout.ACTION_Y,48,20,
+                w("details"),b->{detailsOpen=!detailsOpen;detailScroll=0;updateControls();triggerImmediateNarration(true);}));
+        modeButton=addRenderableWidget(UiButton.secondary(leftPos+198,topPos+5,62,16,Component.empty(),b->{
             var model=BlueprintRecyclerScreenModel.from(menu.preview(),requests.pending());
             preferredAction=primaryAction.equals(model.primaryAction())?model.secondaryAction():model.primaryAction();
             clearConfirmation();feedback.clear();detailScroll=0;updateControls();triggerImmediateNarration(true);
-        },false));
-        closeButton=addRenderableWidget(new WorkbenchButton(leftPos+296,topPos+6,16,16,Component.literal("×"),b->onClose(),false));
+        }));
+        closeButton=addRenderableWidget(UiButton.secondary(leftPos+298,topPos+5,16,16,Component.literal("×"),b->onClose()));
         closeButton.setTooltip(Tooltip.create(Component.translatable("gui.done")));
         primaryButton.setTabOrderGroup(0); modeButton.setTabOrderGroup(1); detailsButton.setTabOrderGroup(2); closeButton.setTabOrderGroup(3);
         updateControls();setFocused(null);
@@ -192,35 +190,28 @@ public final class BlueprintRecyclerScreen extends AbstractContainerScreen<Bluep
         }
     }
     @Override protected void renderBg(GuiGraphics g,float delta,int mouseX,int mouseY) {
-        g.fill(leftPos,topPos,leftPos+imageWidth,topPos+imageHeight,PANEL);
-        g.blit(METAL,leftPos+2,topPos+2,0,0,imageWidth-4,imageHeight-4,1254,1254);
-        g.renderOutline(leftPos,topPos,imageWidth,imageHeight,0xFF151719);
-        g.renderOutline(leftPos+1,topPos+1,imageWidth-2,imageHeight-2,0xFF82878A);
-        g.renderOutline(leftPos+2,topPos+2,imageWidth-4,imageHeight-4,0xFF373B3D);
-        g.fill(leftPos+2,topPos+1,leftPos+imageWidth-2,topPos+2,0xFFB1B4B4);
-        g.fill(leftPos+1,topPos+2,leftPos+2,topPos+imageHeight-2,0xFF9A9E9E);
-        g.fill(leftPos+3,topPos+23,leftPos+imageWidth-3,topPos+24,BORDER);
-        g.fill(leftPos+8,topPos+106,leftPos+imageWidth-8,topPos+107,BORDER);
-        g.fill(leftPos+8,topPos+132,leftPos+imageWidth-8,topPos+133,BORDER);
-        slot(g,Layout.INPUT_X,Layout.INPUT_Y,28,0xFF638CAA);
-        slot(g,Layout.OUTPUT_X,Layout.OUTPUT_Y,28,BORDER);
-        for(int row=0;row<3;row++)for(int col=0;col<9;col++)slot(g,Layout.PLAYER_X+col*Layout.PLAYER_SPACING,Layout.PLAYER_Y+row*Layout.PLAYER_SPACING,22,BORDER);
-        for(int col=0;col<9;col++)slot(g,Layout.PLAYER_X+col*Layout.PLAYER_SPACING,Layout.HOTBAR_Y,22,BORDER);
+        UiDraw.raisedPanel(g,leftPos,topPos,imageWidth,imageHeight);
+        UiDraw.rule(g,leftPos+4,topPos+24,imageWidth-8);
+        UiDraw.rule(g,leftPos+8,topPos+106,imageWidth-16);
+        UiDraw.rule(g,leftPos+8,topPos+132,imageWidth-16);
+        slot(g,Layout.INPUT_X,Layout.INPUT_Y,28);
+        slot(g,Layout.OUTPUT_X,Layout.OUTPUT_Y,28);
+        for(int row=0;row<3;row++)for(int col=0;col<9;col++)slot(g,Layout.PLAYER_X+col*Layout.PLAYER_SPACING,Layout.PLAYER_Y+row*Layout.PLAYER_SPACING,20);
+        for(int col=0;col<9;col++)slot(g,Layout.PLAYER_X+col*Layout.PLAYER_SPACING,Layout.HOTBAR_Y,20);
     }
-    private void slot(GuiGraphics g,int x,int y,int size,int color) {
+    /** A recessed well centred on a 16px item slot. */
+    private void slot(GuiGraphics g,int x,int y,int size) {
         int pad=(size-16)/2;
-        g.fill(leftPos+x-pad,topPos+y-pad,leftPos+x+16+pad,topPos+y+16+pad,SLOT);
-        g.renderOutline(leftPos+x-pad,topPos+y-pad,size,size,color);
-        g.renderOutline(leftPos+x-pad+1,topPos+y-pad+1,size-2,size-2,0xFF282C2E);
-        g.fill(leftPos+x-pad+1,topPos+y-pad+1,leftPos+x+15+pad,topPos+y-pad+2,0xFF929797);
-        g.fill(leftPos+x-pad+1,topPos+y-pad+1,leftPos+x-pad+2,topPos+y+15+pad,0xFF777D7F);
-        g.fill(leftPos+x-pad+2,topPos+y-pad+2,leftPos+x+14+pad,topPos+y-pad+3,0xFF08090A);
+        UiDraw.field(g,leftPos+x-pad,topPos+y-pad,size,size);
     }
     @Override protected void renderLabels(GuiGraphics g,int mouseX,int mouseY) {
         var p=menu.preview();var model=BlueprintRecyclerScreenModel.from(p,requests.pending());
         line(g,Component.translatable("block.taczweaponblueprints.blueprint_recycler"),12,9,modeButton.visible?180:246,TEXT);
         int tier=p.presentation().stationTier()>0?p.presentation().stationTier():menu.analyzerTier().map(t->t.level()).orElse(0);
-        if(tier>0 && com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.stationSetup().analyzer() != com.gamergaming.taczweaponblueprints.progression.StationSetup.AnalyzerMode.SINGLE)line(g,w("tier",tier),270,9,22,0xFF83B0D0);
+        if(tier>0 && com.gamergaming.taczweaponblueprints.init.ModConfigs.BLUEPRINT.stationSetup().analyzer() != com.gamergaming.taczweaponblueprints.progression.StationSetup.AnalyzerMode.SINGLE){
+            Component label=w("tier",tier);
+            UiDraw.tag(g,font,label,294-font.width(label)-6,8);
+        }
         line(g,playerInventoryTitle,12,136,160,MUTED);
         if(detailsOpen)renderDetails(g,p);else renderOverview(g,p,model);
         renderCost(g,p);
@@ -233,7 +224,7 @@ public final class BlueprintRecyclerScreen extends AbstractContainerScreen<Bluep
         if(p.inputKind()==BlueprintRecyclerPreview.InputKind.EMPTY&&visibleFeedback(p).isPresent()) {
             line(g,tr("result.title"),86,30,164,TEXT);
             feedback.visibleTarget().ifPresent(target->line(g,targetName(target),86,42,164,MUTED));
-            wrapped(g,notice(p,model),86,57,164,4,GOOD);
+            wrapped(g,notice(p,model),86,57,164,4,noticeColor());
             return;
         }
         var overview=AnalyzerWorkbenchContent.overview(p,primaryAction);
@@ -244,23 +235,29 @@ public final class BlueprintRecyclerScreen extends AbstractContainerScreen<Bluep
         line(g,overview.subtitle(),86,42,164,MUTED);
         overview.progress().ifPresent(progress->{
             int barX=86,barY=53,barWidth=164;
-            g.fill(barX,barY,barX+barWidth,barY+3,SLOT);
+            g.fill(barX,barY,barX+barWidth,barY+3,UiTheme.STEEL_DARKEST);
             int saved=(int)Math.min(barWidth,(long)barWidth*progress.saved()/progress.threshold());
             int after=(int)Math.min(barWidth,(long)barWidth*(progress.saved()+progress.incoming())/progress.threshold());
-            g.fill(barX,barY,barX+saved,barY+3,0xFF638CAA);
-            g.fill(barX+saved,barY,barX+after,barY+3,ACCENT);
+            g.fill(barX,barY,barX+saved,barY+3,UiTheme.TEXT_MUTED);
+            g.fill(barX+saved,barY,barX+after,barY+3,UiTheme.AMBER);
         });
         int y=overview.progress().isPresent()?59:55;
         for(var row:overview.rows()) {
             renderIcon(g,row.icon(),86,y-1);
             int valueWidth=font.width(row.value());int labelWidth=148-(valueWidth==0?0:valueWidth+6);
             line(g,row.label(),102,y,labelWidth,TEXT);
-            if(valueWidth>0)line(g,row.value(),250-valueWidth,y,valueWidth,ACCENT);
+            if(valueWidth>0)line(g,row.value(),250-valueWidth,y,valueWidth,UiTheme.MANILA);
             y+=13;
         }
-        Component notice=notice(p,model);
-        if (notice.getString().isEmpty()) notice = ammunitionReturn(p).orElse(Component.empty());
-        if(!notice.getString().isEmpty())line(g,notice,12,97,296,feedback.visibleCode().filter(c->c==BlueprintRecyclerActionContract.ResultCode.SUCCESS).isPresent()?GOOD:ACCENT);
+        Component notice=notice(p,model);int color=noticeColor();
+        if (notice.getString().isEmpty()) { notice = ammunitionReturn(p).orElse(Component.empty()); color = MUTED; }
+        if(!notice.getString().isEmpty())line(g,notice,12,95,296,color);
+    }
+    /** Green for a finished action, red for a failed one, amber for a warning the player should read first. */
+    private int noticeColor() {
+        var code=feedback.visibleCode();
+        if(code.isPresent())return code.orElseThrow()==BlueprintRecyclerActionContract.ResultCode.SUCCESS?UiTheme.GREEN:UiTheme.RED;
+        return requests.pending()?MUTED:UiTheme.AMBER_HIGHLIGHT;
     }
     private void renderIcon(GuiGraphics g,AnalyzerWorkbenchContent.Icon kind,int x,int y) {
         if(kind==AnalyzerWorkbenchContent.Icon.BLUEPRINT) {
@@ -280,7 +277,12 @@ public final class BlueprintRecyclerScreen extends AbstractContainerScreen<Bluep
         if (p.inputKind()!=BlueprintRecyclerPreview.InputKind.PHYSICAL_ITEM) return Optional.empty();
         return com.gamergaming.taczweaponblueprints.progression.AnalyzerAmmoRecovery.plan(menu.inputStack())
                 .filter(plan->plan.count()>0).map(plan->Component.translatable(
-                        "gui.taczweaponblueprints.blueprint_recycler.ammo_return",plan.count(),plan.ammunition().getHoverName()));
+                        "gui.taczweaponblueprints.blueprint_recycler.ammo_return",plan.count(),plainName(plan.ammunition().getHoverName())));
+    }
+    /** Pack-authored colour codes would override the notice colour, so the name is shown plain. */
+    private static String plainName(Component name) {
+        String plain=net.minecraft.ChatFormatting.stripFormatting(name.getString());
+        return plain==null?"":plain;
     }
     private Component inputName(BlueprintRecyclerPreview p) {
         if(p.inputKind()==BlueprintRecyclerPreview.InputKind.EMPTY)return Component.empty();
@@ -307,7 +309,7 @@ public final class BlueprintRecyclerScreen extends AbstractContainerScreen<Bluep
         var cost=AnalyzerWorkbenchContent.cost(p,primaryAction);
         // The complete cost tooltip owns this strip, including shortened material summaries.
         hoverTexts.add(new HoverText(12,109,120,21,actionExplanation(p)));
-        line(g,w(cost.currency()==0?"free":"cost",cost.currency()),12,111,120,cost.currency()>p.pointBalance()?BAD:MUTED);
+        line(g,w(cost.currency()==0?"free":"cost",cost.currency()),12,111,120,cost.currency()>p.pointBalance()?UiTheme.RED:MUTED);
         Component consumption=consumption(p,cost);
         if(!cost.materials().isEmpty())consumption=w("consumes_materials",cost.input());
         line(g,consumption,12,121,120,MUTED);
@@ -467,12 +469,12 @@ public final class BlueprintRecyclerScreen extends AbstractContainerScreen<Bluep
         // Finish the item-count text batch before covering the raised container items.
         g.flush();
         g.pose().pushPose();g.pose().translate(0,0,300);
-        g.fill(8,25,imageWidth-8,106,PANEL);
+        UiDraw.field(g,8,26,imageWidth-16,79);
         var lines=detailLines();detailScroll=Math.max(0,Math.min(detailScroll,Math.max(0,lines.size()-DETAIL_LINES)));
         for(int i=0;i<DETAIL_LINES&&i+detailScroll<lines.size();i++)g.drawString(font,lines.get(i+detailScroll),14,30+i*10,TEXT,false);
         if(lines.size()>DETAIL_LINES) {
             int thumb=Math.max(6,70*DETAIL_LINES/lines.size());int offset=(70-thumb)*detailScroll/(lines.size()-DETAIL_LINES);
-            g.fill(imageWidth-14,30,imageWidth-12,100,SLOT);g.fill(imageWidth-14,30+offset,imageWidth-12,30+offset+thumb,ACCENT);
+            g.fill(imageWidth-14,30,imageWidth-12,100,UiTheme.STEEL_LOW);g.fill(imageWidth-14,30+offset,imageWidth-12,30+offset+thumb,MUTED);
         }
         g.flush();
         g.pose().popPose();
@@ -527,19 +529,5 @@ public final class BlueprintRecyclerScreen extends AbstractContainerScreen<Bluep
     }
     @Override protected void updateNarrationState(NarrationElementOutput output) {
         super.updateNarrationState(output);output.add(NarratedElementType.HINT,detailsNarration());
-    }
-    private static final class WorkbenchButton extends Button {
-        private final boolean primary;
-        WorkbenchButton(int x,int y,int width,int height,Component label,OnPress press,boolean primary) {
-            super(x,y,width,height,label,press,DEFAULT_NARRATION);this.primary=primary;
-        }
-        @Override protected void renderWidget(GuiGraphics g,int mouseX,int mouseY,float delta) {
-            int base=!active?0xFF303335:primary?(isHoveredOrFocused()?0xFF92742F:0xFF78602E):(isHoveredOrFocused()?0xFF454A4D:0xFF323638);
-            int edge=active&&primary?0xFFBBA164:active&&isHoveredOrFocused()?0xFFB0B6BA:BORDER;
-            g.fill(getX(),getY(),getX()+width,getY()+height,base);g.renderOutline(getX(),getY(),width,height,edge);
-            g.fill(getX()+1,getY()+height-2,getX()+width-1,getY()+height-1,0xFF141617);
-            var font=Minecraft.getInstance().font;
-            renderScrollingString(g,font,4,active?TEXT:0xFF858B8E);
-        }
     }
 }

@@ -31,7 +31,7 @@ class ResearchWorkstationsPhaseZeroTest {
         assertEquals(RESEARCH_BENCH, ModBlocks.RESEARCH_BENCH.getId());
         assertEquals(RESEARCH_BENCH, ModItems.RESEARCH_BENCH_ITEM.getId());
         assertEquals(RESEARCH_BENCH, ModMenus.RESEARCH_BENCH.getId());
-        assertEquals("neoforge-2", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("neoforge-4", NetworkHandler.PROTOCOL_VERSION);
     }
 
     @Test

@@ -34,9 +34,12 @@ class ResearchPreviewCommitGuardTest {
     }
 
     @Test
-    void legacySingleBlueprintResearchDoesNotRequireAPathFingerprint() {
-        assertTrue(ResearchPreviewCommitGuard.accepts(
-                false, preview(null), Optional.empty()));
+    void printingAlsoRequiresItsFreshQuoteIdentity() {
+        assertFalse(ResearchPreviewCommitGuard.accepts(false, preview(null), Optional.empty()));
+        assertTrue(ResearchPreviewCommitGuard.accepts(false, preview(CURRENT), Optional.of(CURRENT)));
+        assertFalse(ResearchPreviewCommitGuard.accepts(false, preview(CURRENT), Optional.empty()));
+        assertFalse(ResearchPreviewCommitGuard.accepts(false, preview(CURRENT),
+                Optional.of(new ResearchRouteFingerprint(10L, 21L))));
         assertFalse(ResearchPreviewCommitGuard.accepts(
                 false, preview(null), Optional.of(CURRENT)));
     }

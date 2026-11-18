@@ -73,16 +73,16 @@ public final class DesignerCaptureComparison {
         int number = 0;
         for (var player : scenarios) {
             var original = DetachedResearchEvaluation.resolve(context.source(), context.catalog(), sourceConfig, context.profile(), player,
-                    context::blocked, context::exempt, prerequisitePlan);
+                    context::blocked, context::exempt, prerequisitePlan, originalProgression);
             var custom = DetachedResearchEvaluation.resolve(candidate.snapshot(), context.catalog(), customConfig, candidate.profile(), player,
-                    context::blocked, context::exempt, null);
+                    context::blocked, context::exempt, null, customProgression);
             for (var id : context.catalog().keySet()) compare(changes, "research", id.toString(), Integer.toString(number),
                     Optional.of(original.resolver().apply(id)), Optional.of(custom.resolver().apply(id)),
                     Set.of("profileId", "ruleId", "specificity", "automaticPrerequisitesAllowed"));
             var originalTree = com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeBuilder.buildPublication(
-                    context.catalog(), context.source(), sourceConfig, player, context::blocked, context::exempt, automatic, prerequisitePlan);
+                    context.catalog(), context.source(), sourceConfig, player, context::blocked, context::exempt, automatic, prerequisitePlan, originalProgression);
             var customTree = com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeBuilder.buildPublication(
-                    context.catalog(), candidate.snapshot(), customConfig, player, context::blocked, context::exempt, null, null);
+                    context.catalog(), candidate.snapshot(), customConfig, player, context::blocked, context::exempt, null, null, customProgression);
             if (!originalTree.graph().equals(customTree.graph()) && changes.size() <= 1000)
                 changes.add(new Difference("public_graph", "tree", Integer.toString(number), "nodes_edges_requirements"));
             if (!ranks(originalTree.techTree()).equals(ranks(customTree.techTree())) && changes.size() <= 1000)

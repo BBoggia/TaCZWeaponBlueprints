@@ -27,6 +27,8 @@ public final class ScrapSupplyLootModifier extends LootModifier {
     }
     public static final Supplier<MapCodec<ScrapSupplyLootModifier>> CODEC=Suppliers.memoize(() -> RecordCodecBuilder.mapCodec(i ->
             codecStart(i).and(Codec.unboundedMap(ResourceLocation.CODEC,Row.CODEC).fieldOf("tables").forGetter(v->v.tables)).apply(i,ScrapSupplyLootModifier::new)));
+    /** The Scrap Loot Amount setting: a percentage of each table's authored quantity. */
+    public static final int DEFAULT_PERCENT=100, MIN_PERCENT=10, MAX_PERCENT=400;
     private final Map<ResourceLocation,Row> tables;
     public ScrapSupplyLootModifier(LootItemCondition[] conditions,Map<ResourceLocation,Row> tables) {
         super(conditions); if(tables.size()>1024)throw new IllegalArgumentException("too many supply tables");this.tables=Map.copyOf(tables);
@@ -39,9 +41,19 @@ public final class ScrapSupplyLootModifier extends LootModifier {
         if(unit.isEmpty())return loot;
         int room=remaining(loot,unit,config.scrapLootBudget.get());
         if(room==0||context.getRandom().nextFloat()>=row.chance())return loot;
-        int amount=Math.min(room,row.minimum()+context.getRandom().nextInt(row.maximum()-row.minimum()+1));
+        int amount=Math.min(room,scaled(row.minimum()+context.getRandom().nextInt(row.maximum()-row.minimum()+1),
+                config.scrapLootPercent.getUnconditional(),context.getRandom().nextFloat()));
         while(amount>0){var stack=unit.copy();int count=Math.min(amount,stack.getMaxStackSize());stack.setCount(count);loot.add(stack);amount-=count;}
         return loot;
+    }
+    /**
+     * An authored quantity at the configured percentage. A fraction left over becomes one more
+     * item with that probability, so small drops such as 1 or 2 from a mob still scale on average.
+     */
+    public static int scaled(int amount,int percent,float roll) {
+        long hundredths=(long)amount*percent;
+        int whole=(int)(hundredths/100);
+        return whole+(roll*100<hundredths%100?1:0);
     }
     public static int remaining(List<ItemStack> loot,ItemStack unit,int budget) {
         long existing=loot.stream().filter(s->s.is(unit.getItem())).mapToLong(ItemStack::getCount).sum();

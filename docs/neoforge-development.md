@@ -340,6 +340,11 @@ also cover blueprint component identity and the Analyzer overlay exclusion.
 Screenshots are saved as `feature-*.png` in the client directory for inspection.
 These development runs do not certify an unmodified production JAR.
 
+The Research Bench opens the lane-and-tier Tech Tree unless the player chose
+**Classic view**. Development probes that drive the classic screen, such as the
+tree baseline, prototype, and workbench QA captures, need
+`-Dtacz.techTree.classic=true` on the client so the classic screen opens.
+
 ## Pack-author tools
 
 Example datapacks under `examples/` declare format 48 and use common `c:` item

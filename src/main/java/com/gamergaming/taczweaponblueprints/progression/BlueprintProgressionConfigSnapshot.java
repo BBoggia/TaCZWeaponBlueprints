@@ -1,5 +1,6 @@
 package com.gamergaming.taczweaponblueprints.progression;
 
+import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCost;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.compat.fzzy_config.BlueprintConfig;
 import com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchPolicy;
@@ -27,8 +28,23 @@ public record BlueprintProgressionConfigSnapshot(
         ResearchCostMode researchCostMode,
         FoundWeaponRecoveryMode foundWeaponRecoveryMode,
         ResearchCurrencyPolicy currencyPolicy,
-        ResearchDomainSettings domainSettings) {
+        ResearchDomainSettings domainSettings,
+        ResearchTierPricing tierPricing) {
     public static final int DEFAULT_POINT_CAP = 10_000;
+
+    /** Snapshots built without tier pricing charge the datapack price at every tier. */
+    public BlueprintProgressionConfigSnapshot(boolean blueprintsEnabled, boolean discoveryTrackingEnabled,
+            boolean journalEnabled, JournalVisibility maximumUndiscoveredVisibility, boolean researchEnabled,
+            DuplicateBlueprintPolicy duplicatePolicy, boolean allowUnlearnedRecycling, int pointCap,
+            boolean creativeBypassesResearchCost, ResourceLocation activeProfileId,
+            TreeResearchResultMode treeResearchResultMode, ResearchCostMode researchCostMode,
+            FoundWeaponRecoveryMode foundWeaponRecoveryMode, ResearchCurrencyPolicy currencyPolicy,
+            ResearchDomainSettings domainSettings) {
+        this(blueprintsEnabled, discoveryTrackingEnabled, journalEnabled, maximumUndiscoveredVisibility,
+                researchEnabled, duplicatePolicy, allowUnlearnedRecycling, pointCap, creativeBypassesResearchCost,
+                activeProfileId, treeResearchResultMode, researchCostMode, foundWeaponRecoveryMode,
+                currencyPolicy, domainSettings, ResearchTierPricing.NONE);
+    }
 
     /** Existing integrations retain the profile's domain choices. */
     public BlueprintProgressionConfigSnapshot(boolean blueprintsEnabled, boolean discoveryTrackingEnabled,
@@ -56,7 +72,7 @@ public record BlueprintProgressionConfigSnapshot(
     }
 
     public BlueprintProgressionConfigSnapshot {
-        if (domainSettings == null || currencyPolicy == null || maximumUndiscoveredVisibility == null || duplicatePolicy == null
+        if (tierPricing == null || domainSettings == null || currencyPolicy == null || maximumUndiscoveredVisibility == null || duplicatePolicy == null
                 || activeProfileId == null || treeResearchResultMode == null
                 || researchCostMode == null || foundWeaponRecoveryMode == null) {
             throw new IllegalArgumentException("progression configuration contains null required state");
@@ -151,10 +167,35 @@ public record BlueprintProgressionConfigSnapshot(
                 config.treeResearchResultMode.get(),
                 config.researchCostMode.get(),
                 config.foundWeaponRecoveryMode.get(), config.currencyPolicy(),
-                new ResearchDomainSettings(config.ammoResearch.get(), config.attachmentResearch.get()));
+                new ResearchDomainSettings(config.ammoResearch.get(), config.attachmentResearch.get()),
+                tierPricing(config));
     }
 
+    /**
+     * The overall price always applies. Tier prices only apply while Research Bench tiers are
+     * enforced: without enforcement a player never sees a blueprint's tier, so a price that
+     * followed it would look arbitrary.
+     */
+    private static ResearchTierPricing tierPricing(BlueprintConfig config) {
+        boolean tiersEnforced = config.stationSetup().enforceResearchTiers(
+                config.progressionPreset.get().enforcesResearch(config.customEnforceResearchTiers.get()));
+        return new ResearchTierPricing(config.researchCostPercent.get(),
+                tiersEnforced ? config.tierTwoResearchCostPercent.get() : ResearchTierPricing.UNCHANGED,
+                tiersEnforced ? config.tierThreeResearchCostPercent.get() : ResearchTierPricing.UNCHANGED);
+    }
+
+    /** Applies this configuration using the tiers the running server has published. */
     public BlueprintResearchPolicy apply(BlueprintResearchPolicy policy) {
+        return apply(policy, null);
+    }
+
+    /**
+     * Applies this configuration. {@code tiers} supplies each blueprint's Research Bench tier for
+     * tier pricing; a detached evaluation such as the Research Designer passes the tiers it
+     * resolved for its own project, and {@code null} means the running server's published tiers.
+     */
+    public BlueprintResearchPolicy apply(BlueprintResearchPolicy policy,
+            com.gamergaming.taczweaponblueprints.resource.research.BlueprintProgressionPolicySnapshot tiers) {
         if (policy == null) {
             throw new IllegalArgumentException("research policy cannot be null");
         }
@@ -179,6 +220,29 @@ public record BlueprintProgressionConfigSnapshot(
                         && creativeBypassesResearchCost
                         && policy.creativeBypassesCost(),
                 currencyPolicy.kind() == ResearchCurrencyPolicy.Kind.PHYSICAL_ITEM
-                        ? PlayerProgressionLimits.MAX_RESEARCH_POINTS : pointCap).withResearchCost(researchCostMode.apply(policy.researchCost()));
+                        ? PlayerProgressionLimits.MAX_RESEARCH_POINTS : pointCap)
+                .withResearchCost(researchCostMode.apply(tierPriced(policy, tiers)));
+    }
+
+    /**
+     * The datapack price scaled by the overall price and by the Research Bench tier this
+     * blueprint needs.
+     */
+    private BlueprintResearchCost tierPriced(BlueprintResearchPolicy policy,
+            com.gamergaming.taczweaponblueprints.resource.research.BlueprintProgressionPolicySnapshot tiers) {
+        if (tierPricing.unchanged() || policy.researchCost().points() == 0) {
+            return policy.researchCost();
+        }
+        if (tierPricing.tiersUnchanged()) {
+            return tierPricing.apply(policy.researchCost(), 1);
+        }
+        var source = tiers != null ? tiers
+                : com.gamergaming.taczweaponblueprints.resource.research.BlueprintProgressionPolicyManager
+                        .INSTANCE.publication().snapshot();
+        var byBlueprint = source.policiesByProfile().get(policy.profileId());
+        var resolved = byBlueprint == null ? null : byBlueprint.get(policy.blueprintId());
+        // A blueprint with no resolved tier still pays the overall price.
+        return tierPricing.apply(policy.researchCost(),
+                resolved == null ? 1 : resolved.researchWorkbenchTier().level());
     }
 }

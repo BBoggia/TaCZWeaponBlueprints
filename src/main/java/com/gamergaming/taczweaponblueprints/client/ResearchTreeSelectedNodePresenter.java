@@ -81,7 +81,7 @@ final class ResearchTreeSelectedNodePresenter {
                 input.publishedCostMode());
     }
 
-    private static Message authoritativeMessage(
+    static Message authoritativeMessage(
             ResearchTreeGraph.Node node,
             ResearchSelectionPreview preview) {
         Message pathPlanningFailure = switch (preview.pathPlanningState()) {
