@@ -1,5 +1,8 @@
 # [TaCZ] Weapon Research & Blueprints
 
+See the [1.3.11 release notes](docs/releases/1.3.11.md) for the redesigned Tech Tree,
+TaCZ 1.2.0-hotfix compatibility, and loader-specific changes.
+
 [TaCZ] Weapon Research & Blueprints turns the Timeless and Classics Zero (TaCZ) arsenal into a
 persistent progression system built around exploration, blueprints, and
 research.
@@ -20,9 +23,9 @@ an optional server setting.
 - Permanent per-player recipe knowledge enforced by the server.
 - A Blueprint Journal for discoveries, learned recipes, recent unlocks,
   completion, active rules, and a reusable Getting Started guide.
-- An edge-to-edge Research Bench Tech Tree with search, pan, zoom, keyboard
-  navigation, an interactive minimap for large trees, and selected-weapon
-  details.
+- A Research Bench Tech Tree with branch or weapon-type lanes, search, keyboard
+  navigation, and a scrollable cost and prerequisite inspector. Switch to
+  **Classic** in the bench for the original canvas and interactive minimap.
 - Three Research Bench tiers for the Tech Tree and three dedicated crafting
   Workbench levels using TaCZ's native crafting screen.
 - Guided research tools for pinning a target, highlighting its complete route,
@@ -79,19 +82,25 @@ stock, research restrictions, and modpack examples.
 
 ## Requirements
 
+These requirements apply to the Forge 1.3.11 release.
+
 | Component | Version |
 | --- | --- |
 | Minecraft | 1.20.1 |
 | Forge | 47.x; built with 47.3.0 and runtime tested with 47.4.10 |
-| Timeless and Classics Zero | 1.1.8 or newer (`[1.1.8,)`); compiled against 1.1.8-hotfix |
+| Timeless and Classics Zero | 1.2.0 or newer (`[1.2.0,)`); development dependency pinned to the official Forge 1.2.0-hotfix artifact |
 | Fzzy Config | 0.7.6 for Forge (`[0.7.6,0.8)`) |
 | Kotlin for Forge | Required by Fzzy Config; tested with 4.12.0 |
 
 JEI 15.x and EMI 1.1.x are optional client-side integrations.
 
-TaCZ 1.1.8-hotfix and 1.1.8-hotfix2 have passed runtime checks. Newer versions
-are accepted by the dependency requirement; API changes can still require a
-compatibility update.
+The 1.3.11 release was tested with the TaCZ 1.2.0-hotfix on a Forge 47.4.10
+client and dedicated server. Checks covered Research Bench selection, learning a
+blueprint, recipe visibility before and after learning, and datapack reload.
+See [TaCZ compatibility](docs/tacz-compatibility.md).
+Newer versions are accepted by the dependency requirement; API changes can
+still require a compatibility update. Use the Forge artifact for Minecraft
+1.20.1, not the separate NeoForge artifact for 1.21.1.
 
 Install matching [TaCZ] Weapon Research & Blueprints versions on both the client and server.
 TaCZ content packs can be added or removed independently; the available
@@ -140,9 +149,10 @@ magazine crafting at all three Workbench tiers and TaCZ's ammo Workbench.
 Servers can keep material-only access or link magazines to learned compatible
 weapons, with separate minimum tiers for basic and extended magazines.
 
-Each player also has Personal Settings for research confirmation, currency
-notifications, reduced motion, the optional background grid, and Compact,
-Balanced, Spacious, or Custom Tech Tree layouts. The fullscreen minimap can
+The Research Bench remembers each player’s view and lane grouping. Players can
+also change these in Fzzy Config under **Tree Appearance**. Personal settings
+include research confirmation and currency notifications. Classic view has
+options for reduced motion, a background grid, and layout spacing. The fullscreen minimap can
 appear automatically for large trees, remain always visible, or stay hidden.
 Advanced canvas, weapon, level, and connection spacing plus crossing-reduction
 and compaction controls remain available under the collapsed Custom section.

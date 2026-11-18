@@ -133,19 +133,21 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
     protected void apply(BlueprintResearchSnapshot prepared, ResourceManager resourceManager, ProfilerFiller profiler) {
         BlueprintDataManager.CatalogPublication catalog =
                 BlueprintDataManager.SERVER.catalogPublication();
-        applySnapshot(prepared, catalog, progressionConfig().activeProfileId(),
+        var config = progressionConfig();
+        applySnapshot(prepared, catalog, config.activeProfileId(), config.domainSettings(),
                 id -> !ForgeRegistries.ITEMS.tags().getTag(TagKey.create(Registries.ITEM, id)).isEmpty());
     }
 
     /** Publishes validated data using explicitly captured reload dependencies. */
     void applySnapshot(BlueprintResearchSnapshot prepared, BlueprintDataManager.CatalogPublication catalog,
-            ResourceLocation activeProfile, Predicate<ResourceLocation> resolvedIngredientTag) {
+            ResourceLocation activeProfile, com.gamergaming.taczweaponblueprints.progression.ResearchDomainSettings domains,
+            Predicate<ResourceLocation> resolvedIngredientTag) {
         ResearchTechTreeCatalogValidator.validate(prepared, catalog.blueprints());
         Set<ResourceLocation> unresolvedIngredientTags = BlueprintResearchIngredientValidator.unresolvedTags(
                 prepared, resolvedIngredientTag);
         Publication previous = publication;
         publication = new Publication(
-                prepared.withDomainSettings(progressionConfig().domainSettings()),
+                prepared.withDomainSettings(domains),
                 PublicationRevision.next(previous.revision()));
         AutomaticWeaponPlacementCandidateManager.INSTANCE.invalidateForRevisions(
                 catalog.revision(), publication.revision());
@@ -500,9 +502,17 @@ public final class BlueprintResearchDataManager extends SimplePreparableReloadLi
                 context.automatic().prerequisitePlan().orElse(null),
                 progressionPolicies,
                 craftingPolicies);
+        ResearchTreePublication tree = buildTree(context, playerData);
+        if (policyAccess != null && policyAccess.config().enforceResearchTiers() && !progressionPolicies.isEmpty()) {
+            // Tell the client which Research Bench each blueprint needs so the Tech Tree can group by it.
+            tree = tree.withBenchTiers(id -> {
+                ResolvedBlueprintProgressionPolicy policy = progressionPolicies.get(id);
+                return policy == null ? 0 : policy.researchWorkbenchTier().level();
+            });
+        }
         return new PlayerResearchPublication(
                 journal,
-                buildTree(context, playerData),
+                tree,
                 context.catalog().revision(),
                 context.research().revision());
     }

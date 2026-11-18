@@ -59,6 +59,8 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
     private ResourceLocation selectedBlueprint;
     private ResearchSelectionPreview preview = ResearchSelectionPreview.EMPTY;
     private int materialOffset;
+    private int nextClientActionRequestId = 1;
+
     private ResearchInventorySnapshot previewInventory = ResearchInventorySnapshot.EMPTY;
     private final ResearchBenchRequestLimiter requestLimiter =
             new ResearchBenchRequestLimiter();
@@ -69,6 +71,14 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
 
     private final boolean portable;
     private final com.gamergaming.taczweaponblueprints.progression.StationSetup.ResearchAccess openingAccessMode;
+
+    /** Both Tech Tree views share this sequence while the same bench is open. */
+    public int nextClientActionRequestId() {
+        int id = nextClientActionRequestId;
+        nextClientActionRequestId = id == Integer.MAX_VALUE ? 1 : id + 1;
+        return id;
+    }
+
     public boolean portable() { return portable; }
     public ResearchWorkbenchTier physicalTier() { return workbenchTier; }
     public static ResearchBenchMenu portable(int id, Inventory inventory) {

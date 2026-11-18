@@ -6,6 +6,48 @@ documentation.
 
 ## Unreleased
 
+## 1.3.11 - 2026-11-18
+
+### Added
+
+- The Research Bench opens a new Tech Tree sheet. Follow a branch or group weapons by type. With bench tiers enabled, each weapon sits in the row for the bench it needs. Dashed links show alternative prerequisites, and markers show where paths meet across lanes.
+- Select a weapon to inspect its route, or press **N** for the next ready blueprint or a suggestion. Use **Ctrl+F** to search, the arrow keys to move, **F** for an overview, and **?** for the key to colors and links. The key opens on your first visit.
+- Switch to **Classic view** from the bench to use the original canvas and minimap. The bench remembers your view and lane grouping between sessions.
+
+### Fixed
+
+- Selecting a blueprint or confirming research can proceed while the bench checks which blueprints you can afford.
+- Amber tiles, hover text, and guidance use the server’s readiness checks, including materials, discounts, bench requirements, Progression Gates, and capacity. The balance shows the server’s active currency. A full inventory and a progression limit now give distinct messages.
+- Hold **Research** or Enter to confirm the displayed purchase when **Require Hold to Confirm** is on. Changing the target or price cancels the hold. Learning and printing both use the current quote, and an unchanged purchase survives a balance refresh or material page change.
+- The details panel wraps long names, scrolls independently of the tree, and lets you page through required materials. When a prerequisite has an undiscovered alternative, the panel acknowledges the choice without revealing its identity.
+- Printing a blueprint clears the completed selection. A rejected selection offers a retry, and a late server reply preserves a newer selection.
+- A blueprint keeps its assigned bench tier even if one of its prerequisites needs a higher tier. After you learn that prerequisite, the bench shows what the remaining purchase requires.
+
+### Compatibility
+
+- Supports the official TaCZ 1.2.0-hotfix for Minecraft 1.20.1 Forge. The minimum remains TaCZ 1.2.0.
+- Update the addon on the server and every client together. This build uses Forge network protocol 71.
+
+## 1.3.10 - 2026-11-10
+
+### Compatibility
+
+- The Forge build targets TaCZ 1.2.0 for Minecraft 1.20.1 and requires
+  TaCZ 1.2.0 or newer. Clients and servers need the updated addon together.
+
+### Fixed
+
+- Updated workbench integration for TaCZ 1.2.0 while retaining blueprint
+  requirements and crafted-weapon origin tracking for every output stack.
+- Added Marksman Rifle recipes to all three Crafting Workbenches and their
+  blueprints to the Rifle Blueprints creative tab, with matching artwork sizing
+  and subgroup settings choices.
+- Free factory attachment choices in TaCZ 1.2.0 no longer block weapon analysis
+  as removable attachments. Physical attachments still need to be removed.
+
+- Ammo Research and Attachment Research now show readable choices and explanations
+  in Fzzy Config. Existing values are preserved.
+
 ## 1.3.8 - 2026-10-19
 
 ### Added

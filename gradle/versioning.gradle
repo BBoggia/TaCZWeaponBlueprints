@@ -55,7 +55,7 @@ def verifyVersionState = tasks.register('verifyVersionState') {
                     commandLine 'git', 'rev-parse', 'HEAD'
                 }.standardOutput.asText.get().trim()
                 def taggedCommit = providers.exec {
-                    commandLine 'git', 'rev-list', '-n', '1', releaseTag
+                    commandLine 'git', 'rev-list', '-n', '1', "refs/tags/${releaseTag}"
                 }.standardOutput.asText.get().trim()
                 def worktree = providers.exec {
                     commandLine 'git', 'status', '--porcelain',

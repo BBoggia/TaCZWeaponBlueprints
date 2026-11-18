@@ -8,7 +8,7 @@ import java.util.function.Supplier;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.client.ClientResearchAffordabilityState;
 import com.gamergaming.taczweaponblueprints.client.ClientResearchState;
-import com.gamergaming.taczweaponblueprints.client.ResearchBenchScreen;
+import com.gamergaming.taczweaponblueprints.client.ResearchAffordabilityListener;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
 import com.gamergaming.taczweaponblueprints.progression.ResearchAffordabilitySnapshot;
 import com.gamergaming.taczweaponblueprints.progression.ResearchGuidanceSnapshot;
@@ -93,7 +93,8 @@ public final class ResearchAffordabilityResultPacket {
                 outcome = ClientResearchAffordabilityState.reject(
                         requestId, publicationGeneration);
             }
-            if (minecraft.screen instanceof ResearchBenchScreen screen) {
+            if (minecraft.screen instanceof ResearchAffordabilityListener screen
+                    && screen.getMenu() == minecraft.player.containerMenu) {
                 switch (outcome) {
                     case ACKNOWLEDGED, ACCEPTED, ADVANCED_AFTER_FAILURE ->
                             screen.refreshAuthoritativeAffordability();

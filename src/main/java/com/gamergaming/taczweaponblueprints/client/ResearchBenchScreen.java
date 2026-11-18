@@ -59,7 +59,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.registries.ForgeRegistries;
 
 /** Permanent Research-only tree backed entirely by the open server menu. */
-public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchBenchMenu> {
+public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchBenchMenu>
+        implements ResearchBenchActionResultListener, ResearchBenchPreviewListener, ResearchAffordabilityListener {
     private static final int KEYBOARD_REVEAL_PADDING = 18;
     private static final ResearchTreeGuidancePreference GUIDANCE_PREFERENCE =
             ResearchTreeGuidancePreference.client();
@@ -196,7 +197,6 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     private double lastMouseY = -1.0D;
     private long lastCameraFrameMillis;
     private List<InventoryEntry> guidanceInventoryIdentity;
-    private int nextActionRequestId = 1;
     private EditBox pendingSearchFocus;
     private EditBox searchBox;
     private Button searchToggleButton;
@@ -422,6 +422,14 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                 .tooltip(Tooltip.create(Component.translatable(
                         "gui.taczweaponblueprints.research_bench.close")))
                 .build());
+        Component newView = Component.translatable("gui.taczweaponblueprints.tech_tree.new_view");
+        int newViewWidth = font.width(newView) + 12;
+        addRenderableWidget(com.gamergaming.taczweaponblueprints.client.ui.UiButton.secondary(
+                leftPos + closeBounds.x() + closeBounds.width() - newViewWidth,
+                topPos + closeBounds.y() + closeBounds.height() + 3, newViewWidth, 14, newView, ignored -> {
+                    ModConfigs.RESEARCH_TREE_CLIENT.chooseTechTreeView(TechTreeViewMode.NEW);
+                    minecraft.setScreen(new TechTreeSheetScreen(menu, minecraft.player.getInventory(), title));
+                }));
         ResearchTreeScreenLayout.Rect actionBounds = fullscreen
                 ? new ResearchTreeScreenLayout.Rect(4, 4, 72, 20)
                 : ResearchTreeDetailLayout.primaryAction(activeTreeLayout)
@@ -832,7 +840,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
     /** Clear the server selection too, so selecting the same target can request a fresh preview. */
     private void clearAuthoritativeSelection() {
         if (menu.selectedBlueprint().isPresent()) {
-            sendTracked(nextActionRequestId(), ResearchBenchResearchAction.SELECT, Optional.empty());
+            sendTracked(menu.nextClientActionRequestId(), ResearchBenchResearchAction.SELECT, Optional.empty());
         }
         menu.acceptPreview(ResearchSelectionPreview.EMPTY);
         previewBinding.clear();
@@ -2616,7 +2624,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
             return;
         }
         ResourceLocation blueprintId = selected.orElseThrow();
-        int requestId = nextActionRequestId();
+        int requestId = menu.nextClientActionRequestId();
         researchFeedback.pending(blueprintId, requestId, Util.getMillis());
         sendTracked(requestId, ResearchBenchResearchAction.RESEARCH, selected);
         uiUpdates.invalidateWidgets();
@@ -2626,7 +2634,7 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
         if (researchTreePublicationRejected || selectionFeedback.pending()) {
             return;
         }
-        int requestId = nextActionRequestId();
+        int requestId = menu.nextClientActionRequestId();
         selectionFeedback.pending(blueprintId, requestId, Util.getMillis());
         sendTracked(
                 requestId,
@@ -2649,12 +2657,8 @@ public final class ResearchBenchScreen extends AbstractContainerScreen<ResearchB
                                 : Optional.empty()));
     }
 
-    private int nextActionRequestId() {
-        int requestId = nextActionRequestId;
-        nextActionRequestId = requestId == Integer.MAX_VALUE ? 1 : requestId + 1;
-        return requestId;
-    }
 
+    @Override
     public void acceptActionResult(
             int requestId,
             ResearchBenchMenu.ActionResult result) {

@@ -30,19 +30,29 @@ final class ResearchTreeInspectorRequirements {
     static List<ResearchTreeInspectorRow> rows(ResearchTreeGraph graph, ResearchTechTreeProjectionCatalog catalog,
             ResourceLocation target, Function<ResearchTreeGraph.Node, Component> name,
             Function<Domain, Component> domainName, int text, int accent, int muted, int learned) {
+        return rows(graph, target, name, catalog::domainOf, domainName,
+                id -> mayFollow(graph, catalog, target, id), text, accent, muted, learned);
+    }
+    static List<ResearchTreeInspectorRow> rows(ResearchTreeGraph graph, ResourceLocation target,
+            Function<ResearchTreeGraph.Node, Component> name,
+            Function<ResourceLocation, Optional<Domain>> domainOf, Function<Domain, Component> domainName,
+            java.util.function.Predicate<ResourceLocation> mayFollow, int text, int accent, int muted, int learned) {
         var result = new ArrayList<ResearchTreeInspectorRow>();
         var groups = graph.requirementGroups().stream().filter(g -> g.dependentId().equals(target)).toList();
         if (groups.size() > 1) result.add(ResearchTreeInspectorRow.text(GROUP, Component.translatable(PREFIX + "scene.all_groups"), text));
         for (var group : groups) {
-            result.add(ResearchTreeInspectorRow.text(GROUP, groupHeading(group), accent));
+            boolean satisfied = group.satisfactionDisclosed() && group.satisfied();
+            Component heading = satisfied ? Component.translatable(PREFIX + "inspector.requirement.met", groupHeading(group))
+                    : groupHeading(group);
+            result.add(ResearchTreeInspectorRow.text(GROUP, heading, satisfied ? learned : accent));
             for (var id : group.visibleAlternativeIds()) graph.node(id).ifPresent(node -> {
-                boolean external = !catalog.domainOf(id).equals(catalog.domainOf(target));
+                boolean external = !domainOf.apply(id).equals(domainOf.apply(target));
                 Component label = name.apply(node);
                 if (external && node.visibility().revealsIdentity()) label = Component.translatable(PREFIX + "inspector.external", label,
-                        catalog.domainOf(id).map(domainName).orElse(Component.empty()));
+                        domainOf.apply(id).map(domainName).orElse(Component.empty()));
                 if (node.learned()) label = Component.translatable(PREFIX + "inspector.learned", label);
                 result.add(new ResearchTreeInspectorRow(external ? EXTERNAL_LINK : PREREQUISITE, label,
-                        node.learned() ? learned : text, mayFollow(graph, catalog, target, id) ? Optional.of(id) : Optional.empty()));
+                        node.learned() ? learned : text, mayFollow.test(id) ? Optional.of(id) : Optional.empty()));
             });
             if (group.hiddenAlternativeCount() > 0) result.add(ResearchTreeInspectorRow.text(EXPLANATION,
                     Component.translatable(PREFIX + "requirement.undiscovered", group.hiddenAlternativeCount()), muted));

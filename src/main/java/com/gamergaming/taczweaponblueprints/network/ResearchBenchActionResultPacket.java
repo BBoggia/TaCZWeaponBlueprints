@@ -4,7 +4,7 @@ import java.util.Optional;
 import java.util.function.Supplier;
 
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
-import com.gamergaming.taczweaponblueprints.client.ResearchBenchScreen;
+import com.gamergaming.taczweaponblueprints.client.ResearchBenchActionResultListener;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchResearchAction;
 
@@ -53,9 +53,10 @@ public final class ResearchBenchActionResultPacket {
         NetworkEvent.Context context = contextSupplier.get();
         context.enqueueWork(() -> {
             Minecraft minecraft = Minecraft.getInstance();
-            if (minecraft.screen instanceof ResearchBenchScreen screen
+            if (minecraft.screen instanceof ResearchBenchActionResultListener screen
                     && minecraft.player != null
-                    && minecraft.player.containerMenu.containerId == containerId) {
+                    && screen.getMenu() == minecraft.player.containerMenu
+                    && screen.getMenu().containerId == containerId) {
                 screen.acceptActionResult(requestId, result);
             }
         });

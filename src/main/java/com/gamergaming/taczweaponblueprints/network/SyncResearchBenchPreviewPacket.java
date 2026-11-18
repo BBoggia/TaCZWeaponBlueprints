@@ -138,7 +138,7 @@ public final class SyncResearchBenchPreviewPacket {
             if (minecraft.player != null
                     && minecraft.player.containerMenu.containerId == containerId
                     && minecraft.player.containerMenu instanceof ResearchBenchMenu menu) {
-                if (minecraft.screen instanceof com.gamergaming.taczweaponblueprints.client.ResearchBenchScreen screen
+                if (minecraft.screen instanceof com.gamergaming.taczweaponblueprints.client.ResearchBenchPreviewListener screen
                         && screen.getMenu() == menu) {
                     screen.acceptPreview(preview);
                 } else {

@@ -6,6 +6,8 @@ import com.gamergaming.taczweaponblueprints.TaCZWeaponBlueprints;
 import com.gamergaming.taczweaponblueprints.client.ResearchTreeDisplayPolicy;
 import com.gamergaming.taczweaponblueprints.client.ResearchTreeLayoutPreset;
 import com.gamergaming.taczweaponblueprints.client.ResearchTreeMinimapMode;
+import com.gamergaming.taczweaponblueprints.client.TechTreeViewMode;
+import com.gamergaming.taczweaponblueprints.client.TechTreeLaneMode;
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayout;
 import com.gamergaming.taczweaponblueprints.research.tree.ResearchTreeLayoutPolicy;
@@ -51,6 +53,10 @@ public final class ResearchTreeClientConfig extends Config {
     public ValidatedBoolean showResearchPointNotifications = new ValidatedBoolean(true);
 
     public ConfigGroup treeAppearance = new ConfigGroup("treeAppearance");
+    public ValidatedEnum<TechTreeViewMode> techTreeView = new ValidatedEnum<>(
+            TechTreeViewMode.NEW, ValidatedEnum.WidgetType.CYCLING);
+    public ValidatedEnum<TechTreeLaneMode> techTreeLanes = new ValidatedEnum<>(
+            TechTreeLaneMode.BRANCHES, ValidatedEnum.WidgetType.CYCLING);
     public ValidatedBoolean showBranchLabels = new ValidatedBoolean(true);
     public ValidatedBoolean reduceMotion = new ValidatedBoolean(
             ResearchTreeDisplayPolicy.DEFAULT.reduceMotion());
@@ -136,6 +142,30 @@ public final class ResearchTreeClientConfig extends Config {
         return layoutPolicy;
     }
 
+    /** Remembers a choice made from the Tech Tree itself, such as its Classic view button. */
+    public void chooseTechTreeView(TechTreeViewMode mode) {
+        if (techTreeView.get() != mode) {
+            techTreeView.validateAndSet(mode);
+            saveQuietly();
+        }
+    }
+
+    public void chooseTechTreeLanes(TechTreeLaneMode mode) {
+        if (techTreeLanes.get() != mode) {
+            techTreeLanes.validateAndSet(mode);
+            saveQuietly();
+        }
+    }
+
+    /** The choice still holds for this session when the file can't be written. */
+    private void saveQuietly() {
+        try {
+            save();
+        } catch (RuntimeException error) {
+            TaCZWeaponBlueprints.LOGGER.warn("Could not save the Tech Tree view preference", error);
+        }
+    }
+
     public boolean holdToResearchEnabled() {
         return holdToResearch.get();
     }
@@ -186,6 +216,8 @@ public final class ResearchTreeClientConfig extends Config {
     }
 
     void restoreTreeAppearanceDefaults() {
+        techTreeView.setAndUpdate(TechTreeViewMode.NEW);
+        techTreeLanes.setAndUpdate(TechTreeLaneMode.BRANCHES);
         canvasPadding.setAndUpdate(DEFAULTS.canvasPadding());
         nodeGap.setAndUpdate(DEFAULTS.nodeGap());
         tierGap.setAndUpdate(DEFAULTS.tierGap());

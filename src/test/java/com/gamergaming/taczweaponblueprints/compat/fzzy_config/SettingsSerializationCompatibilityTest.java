@@ -47,6 +47,24 @@ class SettingsSerializationCompatibilityTest {
     }
 
     @Test
+    void treeViewAndLanesPersistAndCanBeResetAlongsideClassicAppearance() {
+        var config = ConfigApi.deserializeConfig(new ResearchTreeClientConfig(), """
+                version = 3
+                techTreeView = "CLASSIC"
+                techTreeLanes = "TYPES"
+                holdToResearch = false
+                """).get();
+        var saved = ConfigApi.serializeConfig(config).get();
+        assertTrue(saved.contains("techTreeView = \"CLASSIC\""));
+        assertTrue(saved.contains("techTreeLanes = \"TYPES\""));
+        config.restoreTreeAppearanceDefaults();
+        var restored = ConfigApi.serializeConfig(config).get();
+        assertTrue(restored.contains("techTreeView = \"NEW\""));
+        assertTrue(restored.contains("techTreeLanes = \"BRANCHES\""));
+        assertFalse(config.holdToResearch.get());
+    }
+
+    @Test
     void sceneMigrationPreservesDormantLegacyValuesThroughSerialization() {
         ResearchTreeClientConfig original = ConfigApi.deserializeConfig(new ResearchTreeClientConfig(), """
                 version = 3

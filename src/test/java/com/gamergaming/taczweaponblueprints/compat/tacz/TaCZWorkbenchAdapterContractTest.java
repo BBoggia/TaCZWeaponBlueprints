@@ -177,6 +177,7 @@ class TaCZWorkbenchAdapterContractTest {
                     bundledTabs.add(tab.getAsJsonObject().get("id").getAsString()));
         }
         assertTrue(bundledTabs.contains("tacz:ifp_rifle_cartridges"));
+        assertTrue(bundledTabs.contains("tacz:dmr"));
         for (int tier = 1; tier <= 3; tier++) {
             Set<String> configuredTabs = new java.util.HashSet<>();
             classpathJson("/data/taczweaponblueprints/data/blocks/workbench_lvl"

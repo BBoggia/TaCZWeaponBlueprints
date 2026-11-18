@@ -40,7 +40,7 @@ class BlueprintResearchDataManagerTest {
             definitions.put(new ResourceLocation("test:taczweaponblueprints/research_data/data.json"), resource(data.toString()));
             definitions.put(new ResourceLocation("test:taczweaponblueprints/analysis_reconstruction/shared.json"), resource(ResearchDataPolicyTest.json("shared").toString()));
             var prepared = manager.prepare(resourceManager(definitions), InactiveProfiler.INSTANCE);
-            manager.applySnapshot(prepared, com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager.SERVER.catalogPublication(), BlueprintAnalyzerPolicyTest.PROFILE, ignored -> true);
+            manager.applySnapshot(prepared, com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager.SERVER.catalogPublication(), BlueprintAnalyzerPolicyTest.PROFILE, com.gamergaming.taczweaponblueprints.progression.ResearchDomainSettings.PROFILE_DEFAULTS, ignored -> true);
             var published = manager.publication();
             assertEquals(1, published.snapshot().researchData().policies().size());
             assertEquals(1, published.snapshot().researchData().reconstruction().size());
@@ -66,7 +66,7 @@ class BlueprintResearchDataManagerTest {
             var valid = resourceManager(Map.of(path, resource(json.toString())));
             var prepared = manager.prepare(valid, InactiveProfiler.INSTANCE);
             var catalog = com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager.SERVER.catalogPublication();
-            manager.applySnapshot(prepared, catalog, BlueprintAnalyzerPolicyTest.PROFILE, ignored -> true);
+            manager.applySnapshot(prepared, catalog, BlueprintAnalyzerPolicyTest.PROFILE, com.gamergaming.taczweaponblueprints.progression.ResearchDomainSettings.PROFILE_DEFAULTS, ignored -> true);
             var published = manager.publication();
             assertSame(prepared, published.snapshot());
             json.getAsJsonObject("analyzer").getAsJsonObject("tiers").remove("tier_2");
@@ -77,7 +77,7 @@ class BlueprintResearchDataManagerTest {
             json.getAsJsonObject("analyzer").addProperty("minimum_analyzer_tier", "tier_3");
             var changed = resourceManager(Map.of(path, resource(json.toString())));
             var replacement = manager.prepare(changed, InactiveProfiler.INSTANCE);
-            manager.applySnapshot(replacement, catalog, BlueprintAnalyzerPolicyTest.PROFILE, ignored -> true);
+            manager.applySnapshot(replacement, catalog, BlueprintAnalyzerPolicyTest.PROFILE, com.gamergaming.taczweaponblueprints.progression.ResearchDomainSettings.PROFILE_DEFAULTS, ignored -> true);
             assertSame(replacement, manager.snapshot());
             assertEquals(published.revision() + 1, manager.revision());
             assertEquals(com.gamergaming.taczweaponblueprints.progression.analyzer.AnalyzerTier.TIER_1,

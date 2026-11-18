@@ -53,6 +53,7 @@ public final class ResearchRouteEvaluationService {
             Optional<ResearchRouteFingerprint> routeFingerprint = Optional.empty();
             ResearchAccessSummary accessSummary = ResearchAccessSummary.NONE;
 
+            ResearchAccessFingerprint printingAccess = ResearchAccessFingerprint.EMPTY;
             if (!request.directPathResearch() && request.accessEvaluator().isPresent()) {
                 ResearchRouteEligibilityService.Evaluation access = request.accessEvaluator()
                         .orElseThrow().apply(List.of(request.targetId()));
@@ -62,7 +63,14 @@ public final class ResearchRouteEvaluationService {
                 } else {
                     accessSummary = access.summary();
                     policyEligible = policyEligible && access.eligible();
+                    printingAccess = access.fingerprint();
                 }
+            }
+
+            if (!request.directPathResearch() && policyEligible) {
+                routeFingerprint = Optional.of(ResearchRouteFingerprint.createPrintingQuote(
+                        request.targetId(), request.selectedPolicy().researchCost(), bypass,
+                        request.fingerprintContext(), printingAccess));
             }
 
             if (request.directPathResearch()) {
@@ -573,7 +581,7 @@ public final class ResearchRouteEvaluationService {
                     || unlockCount < 1 || planningStatus == null
                     || allocation.ingredientCount() != requirements.size()
                     || !directPathResearch && path.isPresent()
-                    || path.isPresent() != routeFingerprint.isPresent()
+                    || directPathResearch && path.isPresent() != routeFingerprint.isPresent()
                             && !accessSummary.blocked()
                     || accessSummary.blocked() && policyEligible
                     || ready && (!policyEligible || !ingredientsSatisfied

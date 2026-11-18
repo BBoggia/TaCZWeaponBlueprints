@@ -38,7 +38,7 @@ class ResearchWorkstationsPhaseThreeTest {
                         Player.class,
                         InteractionHand.class,
                         BlockHitResult.class).getDeclaringClass());
-        assertEquals("70", NetworkHandler.PROTOCOL_VERSION);
+        assertEquals("71", NetworkHandler.PROTOCOL_VERSION);
     }
 
     @Test

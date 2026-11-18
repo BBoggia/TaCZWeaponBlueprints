@@ -418,7 +418,7 @@ public final class SyncResearchTreePacket {
             throw new IllegalArgumentException("Invalid synchronized Research tree visibility");
         }
         int flags = buf.readUnsignedByte();
-        if ((flags & ~7) != 0) {
+        if ((flags & ~31) != 0) {
             throw new IllegalArgumentException("Invalid synchronized Research tree flags");
         }
         int availabilityOrdinal = buf.readUnsignedByte();
@@ -440,7 +440,8 @@ public final class SyncResearchTreePacket {
                 buf.readVarInt(),
                 buf.readVarInt(),
                 buf.readVarInt(),
-                availabilities[availabilityOrdinal]);
+                availabilities[availabilityOrdinal])
+                .withBenchTier((flags >> 3) & 3);
     }
 
     private static void writeNode(FriendlyByteBuf buf, ResearchTreeGraph.Node node) {
@@ -452,7 +453,8 @@ public final class SyncResearchTreePacket {
         buf.writeByte(node.visibility().ordinal());
         int flags = (node.learned() ? 1 : 0)
                 | (node.discovered() ? 2 : 0)
-                | (node.policyEligible() ? 4 : 0);
+                | (node.policyEligible() ? 4 : 0)
+                | (node.benchTier() << 3);
         buf.writeByte(flags);
         buf.writeByte(node.availability().ordinal());
         buf.writeVarInt(node.pointCost());

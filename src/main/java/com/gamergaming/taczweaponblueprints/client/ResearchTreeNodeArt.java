@@ -36,14 +36,18 @@ final class ResearchTreeNodeArt {
     void clearPresentation() { nodes.clear(); bindings.clear(); fallbackItems.clear(); }
 
     void prepare(ResearchTechTreeProjection projection) {
+        prepare(projection.domain(), projection.graph());
+    }
+
+    void prepare(com.gamergaming.taczweaponblueprints.research.tree.ResearchTechTreeContract.Domain domain, ResearchTreeGraph graph) {
         if (generation != reloadGeneration()) { textures.clear(); generation = reloadGeneration(); }
         clearPresentation();
         var usedTextures = new java.util.HashSet<ResourceLocation>();
-        for (var node : projection.graph().nodes()) {
+        for (var node : graph.nodes()) {
             if (!node.visibility().revealsIcon()) continue;
             ResourceLocation texture = null;
             try {
-                texture = switch (projection.domain()) {
+                texture = switch (domain) {
                     case WEAPONS -> TimelessAPI.getGunDisplay(node.displaySlotId(), node.blueprintId())
                             .map(d -> d.getSlotTexture()).orElse(null);
                     case AMMO -> TimelessAPI.getClientAmmoIndex(node.blueprintId()).map(d -> d.getSlotTextureLocation()).orElse(null);

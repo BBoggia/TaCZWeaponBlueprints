@@ -118,6 +118,38 @@ public record ResearchRouteFingerprint(long high, long low) {
                 : new ResearchRouteFingerprint(high, low);
     }
 
+    /** Printing has its own quote identity; it cannot be confused with a learned-route purchase. */
+    public static ResearchRouteFingerprint createPrintingQuote(
+            ResourceLocation target, com.gamergaming.taczweaponblueprints.resource.research.BlueprintResearchCost cost,
+            boolean bypass, Context context, ResearchAccessFingerprint access) {
+        if (target == null || cost == null || context == null || access == null) {
+            throw new IllegalArgumentException("printing quote inputs cannot be null");
+        }
+        MessageDigest digest = sha256();
+        update(digest, "taczweaponblueprints:printing_quote:v1");
+        update(digest, target.toString());
+        update(digest, context.catalogRevision());
+        update(digest, context.researchRevision());
+        update(digest, context.automaticPublicationRevision());
+        updateProgressionConfig(digest, context.progressionConfig());
+        update(digest, access.high());
+        update(digest, access.low());
+        update(digest, bypass ? 1L : 0L);
+        update(digest, cost.points());
+        update(digest, cost.ingredients().size());
+        for (var ingredient : cost.ingredients()) {
+            update(digest, ingredient.items().size());
+            ingredient.items().stream().sorted(Comparator.comparing(ResourceLocation::toString))
+                    .forEach(id -> update(digest, id.toString()));
+            update(digest, ingredient.tag().map(ResourceLocation::toString).orElse(""));
+            update(digest, ingredient.count());
+        }
+        byte[] hash = digest.digest();
+        long high = readLong(hash, 0), low = readLong(hash, Long.BYTES);
+        return high == 0L && low == 0L ? new ResearchRouteFingerprint(0L, 1L)
+                : new ResearchRouteFingerprint(high, low);
+    }
+
     public boolean present() {
         return high != 0L || low != 0L;
     }

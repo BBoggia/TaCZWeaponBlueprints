@@ -12,7 +12,7 @@ public final class ResearchPlanningAdmission {
 
     private static long admittedTick = Long.MIN_VALUE;
     private static int admittedPlans;
-    private static int admittedReservedBackgroundPlans;
+    private static boolean interactiveSlotUsed;
     private static final java.util.LinkedHashSet<java.util.UUID> QUEUED_REQUESTERS =
             new java.util.LinkedHashSet<>();
 
@@ -32,22 +32,26 @@ public final class ResearchPlanningAdmission {
     }
 
     /**
-     * Admits a direct player action. Reserved background ticks must not make an
-     * otherwise valid selection or research click fail spuriously.
+     * Allows one player selection or purchase per tick alongside the single
+     * background planning slot, regardless of which request arrives first.
      */
     public static synchronized boolean admitInteractive(long currentServerTick) {
         if (currentServerTick < 0L) {
             return false;
         }
         advanceTick(currentServerTick);
-        return claimSlot();
+        if (interactiveSlotUsed) {
+            return false;
+        }
+        interactiveSlotUsed = true;
+        return true;
     }
 
     private static void advanceTick(long currentServerTick) {
         if (admittedTick == Long.MIN_VALUE || currentServerTick != admittedTick) {
             admittedTick = currentServerTick;
             admittedPlans = 0;
-            admittedReservedBackgroundPlans = 0;
+            interactiveSlotUsed = false;
         }
     }
 
@@ -78,14 +82,7 @@ public final class ResearchPlanningAdmission {
             return false;
         }
         advanceTick(currentServerTick);
-        boolean reservedTick = Math.floorMod(
-                currentServerTick, BACKGROUND_RESERVATION_INTERVAL_TICKS) == 0L;
-        if (reservedTick) {
-            if (admittedReservedBackgroundPlans >= MAX_PLANS_PER_SERVER_TICK) {
-                return false;
-            }
-            admittedReservedBackgroundPlans++;
-        } else if (!claimSlot()) {
+        if (!claimSlot()) {
             return false;
         }
         QUEUED_REQUESTERS.remove(requester);
@@ -102,7 +99,7 @@ public final class ResearchPlanningAdmission {
     public static synchronized void clear() {
         admittedTick = Long.MIN_VALUE;
         admittedPlans = 0;
-        admittedReservedBackgroundPlans = 0;
+        interactiveSlotUsed = false;
         QUEUED_REQUESTERS.clear();
     }
 }

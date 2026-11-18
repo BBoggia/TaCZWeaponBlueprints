@@ -1,6 +1,7 @@
 package com.gamergaming.taczweaponblueprints.progression;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -1895,6 +1896,31 @@ class ResearchPathUnlockPlannerTest {
         assertTrue(evaluation.routeFingerprint().isEmpty());
         assertFalse(evaluation.policyEligible());
         assertFalse(evaluation.ready());
+    }
+
+    @Test
+    void printingQuotesBindPricesAndModeButNotHarmlessBalanceChanges() {
+        var original = printingEvaluation(20, 3);
+        var balanceChanged = printingEvaluation(30, 3);
+        var priceChanged = printingEvaluation(20, 5);
+        assertTrue(original.ready()); assertTrue(original.path().isEmpty());
+        assertTrue(original.routeFingerprint().isPresent());
+        assertEquals(original.routeFingerprint(), balanceChanged.routeFingerprint());
+        assertNotEquals(original.routeFingerprint(), priceChanged.routeFingerprint());
+        var data = data(20);
+        var policies = policies(data, spec(TARGET, 3, ResearchRequirements.EMPTY));
+        var direct = ResearchRouteEvaluationService.evaluate(evaluationRequest(data, policies, TARGET, List.of())).orElseThrow();
+        assertNotEquals(original.routeFingerprint(), direct.routeFingerprint(), "printing and learning are different purchases");
+    }
+
+    private ResearchRouteEvaluationService.Evaluation printingEvaluation(int balance, int price) {
+        var data = data(balance);
+        var policies = policies(data, spec(TARGET, price, ResearchRequirements.EMPTY));
+        var base = evaluationRequest(data, policies, TARGET, List.of());
+        return ResearchRouteEvaluationService.evaluate(new ResearchRouteEvaluationService.Request(
+                base.targetId(), base.playerData(), base.selectedPolicy(), base.policyResolver(), base.progressionExempt(),
+                base.pathAuthority(), base.fingerprintContext(), base.targetResolver(), base.inventoryStacks(),
+                base.creativePlayer(), false, base.blueprintsEnabled())).orElseThrow();
     }
 
     private static ResearchRouteEvaluationService.Request evaluationRequest(

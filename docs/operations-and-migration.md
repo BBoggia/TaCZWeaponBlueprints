@@ -215,7 +215,7 @@ only the Analyzer extension when your pack already customizes the active
 profile. Disabling tiered analysis preserves marked fragments and saved counts;
 it does not convert them into ordinary discounts or RP.
 
-The custom network protocol is `70`, so clients and servers must update
+The custom network protocol is `71`, so clients and servers must update
 together. Protocol 50 transfers each
 disclosure-safe research graph, matching group presentation, and optional
 identity-safe Tech Tree metadata as one bounded atomic publication. It also
@@ -259,9 +259,9 @@ The fullscreen Affordable Now filter reuses that server authority through
 ordered batches of at most eight visible targets. The server evaluates no more
 than one queued target per tick across open Research Benches, and each player
 has a separate bounded batch-admission window. Regularly reserved background
-ticks prevent interactive requests from starving those queued sweeps, while
-selection, research, tracked guidance, and live preview refreshes share the
-same server-wide planning fuse. Repeated batch failures become bounded
+ticks let queued sweeps make progress alongside tracked guidance and preview
+refreshes. A separate server-wide slot admits one player selection or research
+purchase per tick, including while the server checks affordability. Repeated batch failures become bounded
 unavailable results instead of leaving the client in Checking indefinitely.
 If a response is lost entirely, tracked guidance retries once after ten
 seconds and then reports the route as unavailable. An Affordable Now batch
@@ -752,7 +752,7 @@ bundled `connected` mode with `place_connected` review handling, the three
 version identities, dynamic layering with a configured 9–20-node range and its
 baseline resolved width, optional
 tree-owned optional/dynamic/configured presentation bands, the 4,096-candidate
-limit, protocol 70, export format 22, and automatic prerequisite strategy
+limit, protocol 71, export format 22, and automatic prerequisite strategy
 `grouped_routes_v1` unless the
 corresponding contract and compatibility documentation are deliberately
 revised.
@@ -760,7 +760,7 @@ revised.
 The Phase 10 research-guidance handoff writes
 `build/reports/research-guidance-candidate-handoff.json`. It binds the complete
 Phase 9 automated report and manual-QA matrix to the exact candidate JAR,
-preserves the protocol 70/player-data 5/client-settings 3 compatibility tuple,
+preserves the protocol 71/player-data 5/client-settings 3 compatibility tuple,
 and carries 21 clean invariants, 16 packaged classes, and 48 localized surfaces
 into release certification. Its `requires_manual_qa` state is intentional:
 complete the linked runtime matrix before publication rather than treating an
@@ -823,7 +823,7 @@ The grouped-prerequisite Phase 12 visual-refinement gate writes
 `branch-aware-visual-refinement-v1` and verifies client-only family-preserving
 responsive wrapping, bounded grouped-junction clearance, branch-seam pressure,
 and deterministic 287/4,096-node geometry. It does not migrate saves or change
-the published graph: prerequisite groups, semantic ranks, costs, protocol 70,
+the published graph: prerequisite groups, semantic ranks, costs, protocol 71,
 export format 22, and the packaged `grouped_routes_v1` strategy remain
 authoritative. Before public release, retain the gate report and complete its
 linked before/after screenshot checks at normal and maximum zoom-out.

@@ -173,7 +173,12 @@ class SyncResearchTreePacketTest {
 
     @Test
     void techTreeMetadataRoundTripsAtomicallyWithItsMatchingGraph() {
-        ResearchTreeGraph graph = branchingGraph();
+        ResearchTreeGraph graph = branchingGraph().withBenchTiers(id -> switch (id.getPath()) {
+            case "a" -> 3;
+            case "b" -> 2;
+            case "c" -> 1;
+            default -> 0;
+        });
         ResearchTreePublication base = publication(graph);
         ResearchTreePublication expected = new ResearchTreePublication(
                 graph,
@@ -346,7 +351,8 @@ class SyncResearchTreePacketTest {
                         redactedNode(0, silhouetteId, ResearchTreeGraph.REDACTED_NAME_KEY,
                                 JournalVisibility.SILHOUETTE, 0),
                         redactedNode(1, nameId, "name.safe", JournalVisibility.NAME, 1)),
-                List.of(new ResearchTreeGraph.Edge(silhouetteId, nameId)));
+                List.of(new ResearchTreeGraph.Edge(silhouetteId, nameId)))
+                .withBenchTiers(id -> { throw new AssertionError("A redacted node must never be looked up"); });
 
         FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
         try {

@@ -36,7 +36,7 @@ def removeStaleModArchives = tasks.register('removeStaleModArchives') {
 // Deliberate changes must update runtime constants, release gates, and
 // migration documentation together.
 def certifiedAutomaticPlacementVersion = 'tacz-gun-placement-v13'
-def certifiedResearchTreeProtocol = '70'
+def certifiedResearchTreeProtocol = '71'
 def certifiedResearchTreeSceneLayout = 'branches-v2'
 def certifiedResearchTreeProtocolNumber = certifiedResearchTreeProtocol as int
 def certifiedResearchCatalogExportFormat = 22
@@ -222,16 +222,19 @@ if (providers.gradleProperty('analyzerStationsQA').isPresent() || providers.grad
             property 'tacz.analyzerBaseline.output', file(providers.gradleProperty('analyzerBaseline').get()).absolutePath
         }
         if (providers.gradleProperty('researchTreeBaseline').isPresent()) {
+            property 'tacz.techTree.classic', 'true'
             property 'tacz.treeBaseline.output', file(
                     providers.gradleProperty('researchTreeBaseline').get()).absolutePath
             property 'tacz.treeBaseline.motion', providers.gradleProperty(
                     'researchTreeBaselineMotion').orElse('false').get()
         }
         if (providers.gradleProperty('researchTreeWorkbenchQA').isPresent()) {
+            property 'tacz.techTree.classic', 'true'
             property 'tacz.treeWorkbenchQA.output', file(providers.gradleProperty('researchTreeWorkbenchQA').get()).absolutePath
             property 'tacz.treeWorkbenchQA.world', providers.gradleProperty('researchTreeWorkbenchQAWorld').orElse('M5 UI QA').get()
         }
         if (providers.gradleProperty('researchTreePrototype').isPresent()) {
+            property 'tacz.techTree.classic', 'true'
             property 'tacz.treePrototype.enabled', 'true'
             property 'tacz.treePrototype.output', file(providers.gradleProperty('researchTreePrototype').get()).absolutePath
             property 'tacz.treePrototype.captureBench', 'true'
@@ -430,7 +433,7 @@ dependencies {
     testRuntimeOnly 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2'
     testRuntimeOnly 'org.jetbrains.kotlin:kotlin-reflect:2.0.20'
 
-    implementation fg.deobf("maven.modrinth:timeless-and-classics-zero:${tacz_version}") {
+    implementation fg.deobf("maven.modrinth:timeless-and-classics-zero:${tacz_version_id}") {
         exclude group: 'org.apache.commons', module: 'commons-math3'
     }
 
@@ -4614,15 +4617,15 @@ tasks.register('verifyReleaseArtifact') {
                 throw new GradleException('Packaged Mixin refmap is missing')
             }
             def refmapText = zip.getInputStream(refmapEntry).getText('UTF-8')
-            if (!refmapText.contains(
-                    'Lnet/minecraft/world/item/ItemStack;copy()Lnet/minecraft/world/item/ItemStack;')
-                    || !refmapText.contains(
-                    'Lnet/minecraft/world/item/ItemStack;m_41777_()Lnet/minecraft/world/item/ItemStack;')) {
-                throw new GradleException(
-                        'Packaged crafted-gun mixin refmap does not remap ItemStack.copy')
-            }
-
             def inheritedMappings = jsonParser.parseText(refmapText).mappings
+            def craftedOutputMapping = inheritedMappings[
+                    'com/gamergaming/taczweaponblueprints/mixin/GunSmithTableMenuMixin']?.get(
+                    'Lnet/minecraft/world/item/ItemStack;split(I)Lnet/minecraft/world/item/ItemStack;')
+            if (craftedOutputMapping !=
+                    'Lnet/minecraft/world/item/ItemStack;m_41620_(I)Lnet/minecraft/world/item/ItemStack;') {
+                throw new GradleException(
+                        'Packaged crafted-gun mixin refmap does not remap ItemStack.split')
+            }
             ['GunSmithTableMenuMixin': ['stillValid', 'm_6875_'],
              'GunSmithTableScreenMixin': ['init', 'm_7856_']].each { mixin, method ->
                 def mapped = inheritedMappings["com/gamergaming/taczweaponblueprints/mixin/${mixin}"]?.get(method[0])

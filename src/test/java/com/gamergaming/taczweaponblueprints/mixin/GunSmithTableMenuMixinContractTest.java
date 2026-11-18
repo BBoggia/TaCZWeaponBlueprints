@@ -53,7 +53,7 @@ class GunSmithTableMenuMixinContractTest {
 
     @Test
     void nativeMagazineTabMembershipRunsInsideRecipeLookupAfterTheCraftAuthority() throws Exception {
-        String name = "lambda$getRecipe$2";
+        String name = "lambda$getRecipe$3";
         String descriptor = "(Lcom/tacz/guns/crafting/GunSmithTableRecipe;Lcom/tacz/guns/resource/index/CommonBlockIndex;)Ljava/lang/Boolean;";
         var handler = GunSmithTableMenuMixin.class.getDeclaredMethod("taczweaponblueprints$acceptMagazineTab",
                 GunSmithTableRecipe.class, com.tacz.guns.resource.index.CommonBlockIndex.class, CallbackInfoReturnable.class);
@@ -117,20 +117,21 @@ class GunSmithTableMenuMixinContractTest {
                 "access filtering must follow all classification callbacks and precede native tab buttons");
     }
 
-    private static final String CRAFT_LAMBDA = "lambda$doCraft$3";
+    private static final String CRAFT_LAMBDA = "lambda$doCraft$4";
     private static final String CRAFT_LAMBDA_DESCRIPTOR =
             "(Lnet/minecraft/world/entity/player/Player;"
                     + "Lcom/tacz/guns/crafting/GunSmithTableRecipe;"
                     + "Lnet/minecraftforge/items/IItemHandler;)V";
-    private static final String COPY_DESCRIPTOR =
-            "()Lnet/minecraft/world/item/ItemStack;";
+    private static final String SPLIT_DESCRIPTOR =
+            "(I)Lnet/minecraft/world/item/ItemStack;";
 
     @Test
-    void redirectMatchesThePinnedTaCZCraftingLambdaAndItsSingleCopyCall()
+    void redirectMatchesThePinnedTaCZCraftingLambdaAndItsSingleSplitCall()
             throws ReflectiveOperationException, IOException {
         Method handler = GunSmithTableMenuMixin.class.getDeclaredMethod(
                 "markSurvivalCraftedOutput",
                 ItemStack.class,
+                int.class,
                 Player.class,
                 GunSmithTableRecipe.class,
                 IItemHandler.class);
@@ -143,14 +144,14 @@ class GunSmithTableMenuMixinContractTest {
         assertEquals(1, redirect.allow());
         assertFalse(redirect.remap(), "the third-party synthetic method name must stay literal");
         assertEquals(
-                "Lnet/minecraft/world/item/ItemStack;copy()"
+                "Lnet/minecraft/world/item/ItemStack;split(I)"
                         + "Lnet/minecraft/world/item/ItemStack;",
                 redirect.at().target());
         assertTrue(redirect.at().remap());
 
         AtomicBoolean lambdaFound = new AtomicBoolean();
-        AtomicInteger lambdaCopies = new AtomicInteger();
-        AtomicInteger outerMethodCopies = new AtomicInteger();
+        AtomicInteger lambdaSplits = new AtomicInteger();
+        AtomicInteger outerMethodSplits = new AtomicInteger();
         try (InputStream bytecode = GunSmithTableMenu.class.getResourceAsStream(
                 "/com/tacz/guns/inventory/GunSmithTableMenu.class")) {
             assertNotNull(bytecode);
@@ -175,13 +176,13 @@ class GunSmithTableMenuMixinContractTest {
                                 String invokedDescriptor,
                                 boolean isInterface) {
                             if ("net/minecraft/world/item/ItemStack".equals(owner)
-                                    && "copy".equals(invokedName)
-                                    && COPY_DESCRIPTOR.equals(invokedDescriptor)) {
+                                    && "split".equals(invokedName)
+                                    && SPLIT_DESCRIPTOR.equals(invokedDescriptor)) {
                                 if (craftLambda) {
-                                    lambdaCopies.incrementAndGet();
+                                    lambdaSplits.incrementAndGet();
                                 }
                                 if (outerCraft) {
-                                    outerMethodCopies.incrementAndGet();
+                                    outerMethodSplits.incrementAndGet();
                                 }
                             }
                         }
@@ -190,8 +191,17 @@ class GunSmithTableMenuMixinContractTest {
             }, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
         }
         assertTrue(lambdaFound.get(), "TaCZ crafting lambda descriptor changed");
-        assertEquals(1, lambdaCopies.get(), "TaCZ crafting lambda copy call changed");
-        assertEquals(0, outerMethodCopies.get(), "copy unexpectedly moved back into doCraft");
+        assertEquals(1, lambdaSplits.get(), "TaCZ crafting lambda split call changed");
+        assertEquals(0, outerMethodSplits.get(), "split unexpectedly moved back into doCraft");
+    }
+
+    @Test
+    void upstreamCopiesTheRecipeResultBeforeSplittingCraftedStacks() throws IOException {
+        assertTrue(relatedMethodCalls(GunSmithTableMenu.class, "doCraft").stream()
+                .anyMatch(call -> call.endsWith("GunSmithTableRecipe.getResultItem")));
+        assertTrue(relatedMethodCalls(GunSmithTableRecipe.class, "getResultItem").stream()
+                .anyMatch(call -> call.endsWith("ItemStack.copy")),
+                "splitting must never consume the cached recipe output");
     }
 
     @Test
@@ -287,15 +297,15 @@ class GunSmithTableMenuMixinContractTest {
     }
 
     @Test
-    void craftedOutputIsCopiedBeforeOriginStamping() throws IOException {
+    void craftedOutputIsSplitBeforeOriginStamping() throws IOException {
         List<String> calls = relatedMethodCalls(
                 GunSmithTableMenuMixin.class,
                 "markSurvivalCraftedOutput");
-        int copy = indexEndingWith(calls, "ItemStack.copy");
+        int split = indexEndingWith(calls, "ItemStack.split");
         int stamp = indexEndingWith(calls, "PhysicalWeaponProvenance.stampCrafted");
 
-        assertTrue(copy >= 0, "crafted output copy call is missing");
-        assertTrue(stamp > copy, "crafted origin must be stamped onto the copied output");
+        assertTrue(split >= 0, "crafted output split call is missing");
+        assertTrue(stamp > split, "crafted origin must be stamped onto each split output");
     }
 
     private static List<String> relatedMethodCalls(Class<?> type, String methodName)

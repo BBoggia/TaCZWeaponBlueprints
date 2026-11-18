@@ -18,6 +18,7 @@ public final class ResearchTreeGuidancePreference {
     private static final String RAIL_PINNED_KEY = "research_tree_rail_pinned";
     private static final String ONBOARDING_DISMISSED_KEY = "onboarding_dismissed";
     private static final String ONBOARDING_HINT_SHOWN_KEY = "onboarding_hint_shown";
+    private static final String TECH_TREE_LEGEND_SHOWN_KEY = "tech_tree_legend_shown";
 
     private final Path file;
     private boolean loaded;
@@ -25,6 +26,7 @@ public final class ResearchTreeGuidancePreference {
     private boolean railPinned;
     private boolean onboardingDismissed;
     private boolean onboardingHintShown;
+    private boolean techTreeLegendShown;
 
     public ResearchTreeGuidancePreference(Path configDirectory) {
         if (configDirectory == null) {
@@ -60,6 +62,17 @@ public final class ResearchTreeGuidancePreference {
         load();
         railPinned = pinned;
         save();
+    }
+
+    /** Returns true the first time the new Tech Tree opens, so its key is shown once without being asked for. */
+    public synchronized boolean claimTechTreeLegend() {
+        load();
+        if (techTreeLegendShown) {
+            return false;
+        }
+        techTreeLegendShown = true;
+        save();
+        return true;
     }
 
     public synchronized boolean shouldShowOnboarding() {
@@ -106,11 +119,14 @@ public final class ResearchTreeGuidancePreference {
                     properties.getProperty(ONBOARDING_DISMISSED_KEY, "false"));
             onboardingHintShown = Boolean.parseBoolean(
                     properties.getProperty(ONBOARDING_HINT_SHOWN_KEY, "false"));
+            techTreeLegendShown = Boolean.parseBoolean(
+                    properties.getProperty(TECH_TREE_LEGEND_SHOWN_KEY, "false"));
         } catch (IOException | IllegalArgumentException | SecurityException ignored) {
             dismissed = false;
             railPinned = false;
             onboardingDismissed = false;
             onboardingHintShown = false;
+            techTreeLegendShown = false;
         }
     }
 
@@ -130,6 +146,7 @@ public final class ResearchTreeGuidancePreference {
                     ONBOARDING_DISMISSED_KEY, Boolean.toString(onboardingDismissed));
             properties.setProperty(
                     ONBOARDING_HINT_SHOWN_KEY, Boolean.toString(onboardingHintShown));
+            properties.setProperty(TECH_TREE_LEGEND_SHOWN_KEY, Boolean.toString(techTreeLegendShown));
             Path temporaryDirectory = parent == null ? file.toAbsolutePath().getParent() : parent;
             temporary = Files.createTempFile(
                     temporaryDirectory,

@@ -258,7 +258,7 @@ public final class AutomaticWeaponPlacementPlanner {
             case "shotgun" -> new ScoreBand(24, 54);
             case "rifle" -> new ScoreBand(30, 62);
             case "mg", "lmg", "machine_gun" -> new ScoreBand(38, 67);
-            case "sniper" -> new ScoreBand(44, 72);
+            case "sniper", "dmr" -> new ScoreBand(44, 72);
             case "rpg", "launcher" -> new ScoreBand(42, 70);
             default -> new ScoreBand(15, 50);
         };

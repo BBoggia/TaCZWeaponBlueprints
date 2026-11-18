@@ -13,6 +13,7 @@ import com.tacz.guns.api.item.IAttachment;
 import com.tacz.guns.api.item.IGun;
 import com.tacz.guns.api.item.attachment.AttachmentType;
 import com.tacz.guns.resource.pojo.data.gun.Bolt;
+import com.tacz.guns.util.VirtualOemAttachment;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
@@ -120,7 +121,8 @@ public final class PhysicalItemBlueprintResolver {
                 continue;
             }
             ResourceLocation attachmentId = gun.getAttachmentId(stack, type);
-            if (attachmentId != null && !DefaultAssets.isEmptyAttachmentId(attachmentId)) {
+            if (attachmentId != null && !DefaultAssets.isEmptyAttachmentId(attachmentId)
+                    && !isVirtualFactoryAttachment(stack, gun, gunId, attachmentId, type)) {
                 attachments = true;
                 break;
             }
@@ -137,6 +139,16 @@ public final class PhysicalItemBlueprintResolver {
                 loaded,
                 attachments,
                 customized);
+    }
+
+    private static boolean isVirtualFactoryAttachment(ItemStack stack, IGun gun,
+            ResourceLocation gunId, ResourceLocation attachmentId, AttachmentType type) {
+        // Free factory choices carry this marker in TaCZ 1.2.0. Require both
+        // the marker and membership in this gun's factory choices so physical
+        // copies of the same attachment still block weapon consumption.
+        var tag = gun.getAttachmentTag(stack, type);
+        return tag != null && tag.getBoolean("VirtualOemAttachment")
+                && VirtualOemAttachment.isAllowedVirtualOem(gunId, attachmentId, type);
     }
 
     static boolean isLoadedGun(

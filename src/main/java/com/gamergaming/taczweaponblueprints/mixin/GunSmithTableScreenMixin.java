@@ -106,7 +106,7 @@ public abstract class GunSmithTableScreenMixin
         return MagazineWorkbenchTabs.namespaceScaffold(this.menu.getBlockId(), recipes);
     }
 
-    @Dynamic("TaCZ 1.1.8 classifyRecipes block-index callback")
+    @Dynamic("TaCZ 1.2.0 classifyRecipes block-index callback")
     @SuppressWarnings("target")
     @Redirect(method = "lambda$classifyRecipes$0(Lnet/minecraft/resources/ResourceLocation;Ljava/util/Map;Ljava/util/Map;Lcom/tacz/guns/resource/index/CommonBlockIndex;)V",
             at = @At(value = "INVOKE", target = "Lcom/tacz/guns/resource/pojo/data/block/BlockData;getTabs()Ljava/util/List;", remap = false),
