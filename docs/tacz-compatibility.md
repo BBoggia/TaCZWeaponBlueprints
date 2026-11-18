@@ -2,23 +2,15 @@
 
 ## Current NeoForge target
 
-[TaCZ] Weapon Research & Blueprints 1.3.10 targets the official
-Timeless and Classics Zero (TaCZ) 1.2.0 release for Minecraft 1.21.1 NeoForge.
-`gradle.properties` pins Modrinth project `SzzJttH8`, version `O2Pfsh6w`, and
-sets the required TaCZ range to `[1.2.0,)`. Minecraft, NeoForge, Java, and Fzzy
-Config requirements are unchanged.
+Version 1.3.11 uses the official TaCZ 1.2.0-hotfix for Minecraft 1.21.1
+NeoForge, Modrinth project `SzzJttH8`, file `tJiZL0He`. The required TaCZ
+range remains `[1.2.0,)`. [Official NeoForge hotfix and release notes](https://modrinth.com/mod/timeless-and-classics-zero/version/tJiZL0He)
 
-The [official release notes](https://github.com/MCModderAnchor/TACZ/releases/tag/1.2.0-neoforge-1.21.1)
-credit the unofficial port and describe the shared implementation. The
-[published NeoForge artifact](https://www.curseforge.com/minecraft/mc-mods/timeless-and-classics-zero/files/9454361)
-is marked beta on CurseForge. The dependency pin selects the NeoForge artifact
-by version ID rather than a version string shared with the Forge artifact.
-
-The 1.3.10 build passes compilation, automated tests, and packaged-artifact
-checks against the pinned official dependency. No Minecraft client or server
-was launched for this update. Earlier runtime acceptance results used the
-unofficial 1.1.8-hotfix-r7 port and do not certify this update. The separately
-prepared Forge 1.3.10 build has the same runtime-validation limitation.
+The hotfix adds rotation to the native gun smith table. Its root-position
+lookup and the classes the addon hooks for opening the menu, filtering recipes,
+crafting, and marking loot are unchanged from 1.2.0. The addon continues to use
+the recipes TaCZ loads on the server, including those from packs TaCZ now tries
+to load without a 1.21.1 declaration.
 
 ## Integration changes
 
@@ -44,14 +36,14 @@ The inspected public API calls for blueprint catalog loading, item identity,
 ammo recovery, weapon evidence, and blueprint artwork retain their signatures.
 The native block-entity menu hook and loot-injector hook also retain their
 targets. TaCZ's new JEI selection flow still reaches the addon's selection and
-crafting guards. Runtime behavior remains to be checked.
+crafting guards.
 
 ## Updating an installation
 
 Replace the unofficial TaCZ jar with the official **NeoForge** jar on the
 client and server; both use the `tacz` mod ID and must not be installed together.
-Use matching addon builds. Published addon 1.3.9 builds still target the
-unofficial port; changing TaCZ alone does not apply these source fixes.
+For hotfix testing, install the 1.3.11 NeoForge addon build on both the
+client and server. Published addon 1.3.9 builds target the unofficial port.
 
 This change does not rewrite addon configuration files or stored player
 knowledge. TaCZ recategorized some existing weapons as `dmr`; pack-authored
@@ -60,22 +52,21 @@ should be reviewed if they are meant to include those weapons. Existing custom
 workbench definitions with explicit tab lists need `tacz:dmr` as well.
 
 TaCZ 1.2.0 ships its default gun pack as a shared base with a 1.21.1 overlay.
-Third-party gun packs must provide the appropriate 1.21.1 resources; TaCZ's
-release notes describe its conversion command. The addon's blueprint catalog
+The hotfix attempts to load third-party packs without a 1.21.1 declaration.
+Packs with incompatible resources can still require TaCZ's conversion command. The addon's blueprint catalog
 continues to use the server's loaded recipes rather than parsing exported pack
 folders. Existing 1.1.8 research reference catalogs remain historical scoring
 baselines, not a declaration that new TaCZ weapons are absent or unsupported.
 
-## Validation still required
+## Release validation
 
-Compilation, automated workbench contract checks, and packaged-artifact checks
-pass. Client and dedicated-server startup with required mixins remain unchecked.
-In disposable worlds, verify learned and locked recipes, all three crafting
-tiers, bulk output stacks and crafted-origin tracking, Marksman recipes,
-factory versus physical attachments in the Blueprint Analyzer, and JEI recipe
-selection. Repeat login and datapack reload checks with TaCZ's chunked gun-pack
-synchronization, including an existing unofficial-port world backed up first.
+The packaged 1.3.11 addon ran on a Minecraft 1.21.1 NeoForge 21.1.233 client
+and dedicated server with the official TaCZ hotfix. Checks covered learning
+physical blueprints, hiding locked recipes, crafting on addon and native
+workbenches, marking crafted weapons, reconnecting, and buying a quoted path in
+the Research Bench. The feature suite also exercised the Blueprint Analyzer,
+both villager professions and the Designer.
 
-The previously recorded release validation must be regenerated for the new
-dependency before certifying this update for publication. Packaging alone is not runtime
-certification.
+The release checks used disposable worlds. An existing unofficial-port world,
+third-party gun packs, and every combination of custom attachments and bulk
+recipe outputs remain outside this runtime check.

@@ -1,10 +1,10 @@
 # [TaCZ] Weapon Research & Blueprints
 
-See the [1.3.10 release notes](docs/releases/1.3.10.md) for TaCZ 1.2.0 compatibility
-and loader-specific changes.
+See the [1.3.11 release notes](docs/releases/1.3.11.md) for the redesigned Tech Tree,
+TaCZ 1.2.0-hotfix compatibility, and loader-specific changes.
 
 This branch targets Minecraft 1.21.1 with NeoForge. The current build is a
-NeoForge release; the released Forge 1.20.1 source is preserved at `v1.3.8`. See
+NeoForge release; the matching Forge 1.20.1 source is on branch `v1.3.11`. See
 [NeoForge development](docs/neoforge-development.md) for the port's dependencies,
 setup commands, and current limitations.
 
@@ -87,15 +87,14 @@ stock, research restrictions, and modpack examples.
 
 ## Requirements
 
-These requirements apply to the next NeoForge build. For the separate Forge 1.20.1
-version, see the [Forge release notes](docs/releases/1.3.8.md).
+These requirements apply to NeoForge 1.3.11. The [release notes](docs/releases/1.3.11.md) also list the requirements for Forge 1.20.1.
 
 | Component | Version |
 | --- | --- |
 | Minecraft | 1.21.1 |
 | NeoForge | 21.1.233 or newer in the 21.1 series (`[21.1.233,21.2)`) |
 | Java | 21 |
-| Timeless and Classics Zero | Official NeoForge build, 1.2.0 or newer (`[1.2.0,)`); development dependency pinned to 1.2.0 |
+| Timeless and Classics Zero | Official NeoForge build, 1.2.0 or newer (`[1.2.0,)`); development dependency pinned to 1.2.0-hotfix |
 | Fzzy Config | 0.7.7 or later in the 0.7 series for NeoForge (`[0.7.7,0.8)`) |
 | Kotlin for Forge | NeoForge variant; tested with 5.12.0 |
 
@@ -104,8 +103,7 @@ JEI 19.x and EMI 1.1.x for Minecraft 1.21.1 NeoForge are optional client-side in
 Use the official NeoForge TaCZ build and remove the unofficial port; both use
 the same mod ID. The Forge TaCZ JAR is incompatible with this loader. Newer
 versions are accepted by the dependency requirement; API
-changes can still require a compatibility update. TaCZ 1.2.0 compilation and automated checks pass;
-client/server runtime validation remains pending; see the [integration notes](docs/tacz-compatibility.md).
+changes can still require a compatibility update. The packaged 1.3.11 client and dedicated server passed blueprint learning, crafting, and research checks with the official TaCZ 1.2.0-hotfix. See the [integration notes](docs/tacz-compatibility.md).
 For a first NeoForge installation, start a new world;
 migration of Forge 1.20.1 worlds and player progress is not supported.
 

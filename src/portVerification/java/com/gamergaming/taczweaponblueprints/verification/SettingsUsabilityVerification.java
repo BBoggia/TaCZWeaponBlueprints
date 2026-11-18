@@ -3,6 +3,7 @@ package com.gamergaming.taczweaponblueprints.verification;
 import static com.gamergaming.taczweaponblueprints.verification.ClientVerification.require;
 import java.util.*;
 import com.gamergaming.taczweaponblueprints.client.settings.*;
+import com.gamergaming.taczweaponblueprints.compat.fzzy_config.PersonalSettingsSession;
 import com.gamergaming.taczweaponblueprints.settings.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.*;
@@ -40,10 +41,18 @@ final class SettingsUsabilityVerification {
             }
             case 2 -> {
                 bounds(); screenshot("settings-personal-auto-scale");
-                var widget = mc.screen.children().stream().filter(AbstractWidget.class::isInstance).map(AbstractWidget.class::cast)
-                        .filter(w -> w.getX() == mc.screen.width - 160 && w.getY() == 54).findFirst().orElseThrow();
-                var narration = new ScreenNarrationCollector(); narration.update(widget::updateNarration);
-                require(narration.collectNarrationText(true).contains(Component.translatable("config.taczweaponblueprints.research_tree_client.holdToResearch").getString()), "native preference narration includes its full setting name");
+                var editors = mc.screen.children().stream().filter(AbstractWidget.class::isInstance)
+                        .map(AbstractWidget.class::cast).filter(w -> w.getX() == mc.screen.width - 160)
+                        .sorted(Comparator.comparingInt(AbstractWidget::getY)).toList();
+                require(!editors.isEmpty(), "Personal Settings presents a preference editor");
+                for (int index = 0; index < editors.size(); index++) {
+                    String field = PersonalSettingsSession.VISIBLE.get(index);
+                    var label = Component.translatable("config.taczweaponblueprints.research_tree_client." + field);
+                    var narration = new ScreenNarrationCollector();
+                    narration.update(editors.get(index)::updateNarration);
+                    require(narration.collectNarrationText(true).contains(label.getString()),
+                            "native preference narration includes its full setting name: " + field);
+                }
                 mc.screen.onClose();
                 Language.inject(new Language() {
                     public String getOrDefault(String key, String fallback) {

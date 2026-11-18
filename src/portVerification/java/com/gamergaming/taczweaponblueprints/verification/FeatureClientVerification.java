@@ -31,12 +31,12 @@ final class FeatureClientVerification {
             require(!ClientResearchState.publication().graph().nodes().isEmpty(),"research tree and Journal arrive as a client publication");
             for(var kind:java.util.List.of("gun","ammo","attachment"))require(ClientResearchState.publication().graph().nodes().stream().anyMatch(n->{var data=com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager.CLIENT.getBlueprintData(n.blueprintId().toString());return data!=null && data.getKind().serializedName().equals(kind);}),"enabled research domain reaches client: "+kind);
             screenshot(mc,"research-tree");
-            PacketDistributor.sendToServer(new ResearchBenchActionPacket(menu.containerId,101,ResearchBenchResearchAction.SELECT,Optional.of(CoreVerification.TARGET)));
+            PacketDistributor.sendToServer(new ResearchBenchActionPacket(menu.containerId,101,ResearchBenchResearchAction.SELECT,Optional.of(FeatureVerification.PATH_TARGET)));
         } else if(stage==103) {
             if(!(mc.player.containerMenu instanceof ResearchBenchMenu menu) || !menu.preview().researchable())return;
             require(menu.preview().routeFingerprint().isPresent() && menu.preview().unlockCount()>1,"client receives complete priced route and commit fingerprint");
             screenshot(mc,"research-selection");
-            PacketDistributor.sendToServer(new ResearchBenchActionPacket(menu.containerId,103,ResearchBenchResearchAction.RESEARCH,Optional.of(CoreVerification.TARGET),menu.preview().routeFingerprint()));
+            PacketDistributor.sendToServer(new ResearchBenchActionPacket(menu.containerId,103,ResearchBenchResearchAction.RESEARCH,Optional.of(FeatureVerification.PATH_TARGET),menu.preview().routeFingerprint()));
         } else if(stage==105) {
             if(!(mc.screen instanceof BlueprintRecyclerScreen) || !(mc.player.containerMenu instanceof BlueprintRecyclerMenu menu) || !menu.preview().actionable())return;
             var preview=menu.preview();require(preview.presentation().stationTier()==2 && preview.presentation().weapon().isPresent(),"client receives Analyzer tier, odds, payment and action preview");

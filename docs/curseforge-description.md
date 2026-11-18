@@ -1,118 +1,40 @@
 # [TaCZ] Weapon Research & Blueprints
 
-Build your arsenal through exploration, blueprints, and research. This add-on
-turns **Timeless and Classics Zero (TaCZ)** into a configurable progression
-system: find weapon blueprints, collect Scrap, analyze recovered guns, and work
-through a Tech Tree toward the weapons you want.
+Find a blueprint in a chest, learn the recipe, and you can craft that weapon again even after you lose it. **[TaCZ] Weapon Research & Blueprints** adds exploration, research, and tiered crafting to **Timeless and Classics Zero (TaCZ)**.
 
-Choose **Minecraft 1.20.1 with Forge** or the **Minecraft 1.21.1 NeoForge release**.
-Install the matching build and dependencies on both the client and server.
+If you have a particular weapon in mind, open the **Research Bench** and search for it. You can see which blueprints lead to it, what the route will cost, and which bench you need. If you find the gun itself first, take it to a **Blueprint Analyzer** for a chance at its blueprint or matching fragments.
 
-Learning a blueprint permanently unlocks its matching recipe for your player.
-Knowledge stays with you through death, dimension changes, logout, and server
-restarts. Crafting can also require a Workbench level or other server-defined
-progression requirements.
+## Find your way through the Tech Tree
 
-## Explore, Research, and Craft
+- **Choose what to work toward.** Group weapons by branch to follow a route, or by weapon type to compare your options. Rows show the required Research Bench tier when tiers are enabled. A dashed link marks a choice between prerequisites.
+- **Find a next step.** Amber tiles mark blueprints you can research now. Select a weapon to see its requirements and your available Scrap or Research Points (RP). Scroll through the materials for longer routes. In direct-learning mode you can buy the target and its required unlearned predecessors together.
+- **Navigate a large pack.** Use **Ctrl+F** to search, **F** for the whole tree, and **N** to jump to the next ready blueprint or inspect a suggestion. **?** explains the colors and links. Choose **Classic view** for the original canvas, minimap, and target tracking. The bench remembers your view.
+- **Learn once, craft again.** Learned recipes stay with your player through death and server restarts. Research Benches unlock blueprints. Crafting Workbenches make the items in TaCZ’s crafting screen. Servers can set the tiers for those two jobs independently.
 
-- **Find blueprints while exploring.** Configurable loot rewards you with
-  blueprints, Scrap, and Research Data. Learn recipes from blueprints or recycle
-  supported duplicates at a Blueprint Analyzer.
-- **Collect physical Scrap.** Find it, earn it from player kills, spend it on
-  research, or trade it. Scrap follows normal death drops. Servers can choose
-  banked Research Points (RP).
-- **Plan your next weapon.** Browse a searchable Tech Tree with weapon artwork,
-  branches, pan, zoom, keyboard navigation, and an interactive minimap. Track a
-  target and its requirements, or filter to research you can afford.
-- **See the full cost.** Compare your resources with a blueprint's prerequisite
-  path. Review and buy a whole path together; failed purchases don't consume
-  partial payments.
-- **Build better stations.** Three Research Bench tiers support research, and
-  three crafting Workbench levels open TaCZ's native crafting screen. Servers
-  configure research and crafting requirements separately.
-- **Keep a Blueprint Journal.** Review discoveries, learned recipes, recent
-  unlocks, and completion, with Getting Started guidance for your server.
+## Blueprints beyond the bench
 
-Servers can use a single Research Bench or enable **Portable Research** through
-the Journal / Research key. Costs and progression requirements still apply.
+**Explore and recycle.** Look for blueprints, Scrap, and Research Data while looting. Spend physical Scrap on research, trade it, or recycle eligible duplicate blueprints. Servers can use banked RP as their research currency. Physical Scrap follows normal death drops. The **Blueprint Journal** keeps track of discoveries, learned recipes, and recent unlocks.
 
-## Analyze Weapons and Research Data
+**Analyze what you bring home.** Basic, Advanced, and Experimental Blueprint Analyzers can process recovered equipment and Research Data. A Research Note targets Tier 1 weapons by default. Reports include Tiers 1–2, and Dossiers reach Tier 3. Archive matching analysis fragments to reconstruct a blueprint. Fragments found as loot have their own collection progress and can discount research or complete a blueprint, depending on server settings.
 
-Bring supported equipment to a **Blueprint Analyzer** for blueprints or
-fragments. Basic, Advanced, and Experimental Analyzers compare weapon and station
-tiers; attempts above the station's tier can produce nothing. Servers can use Single Analyzer mode to
-handle every weapon tier at the basic station.
-
-Research Data supplies another route to blueprints. By default, **Research
-Notes** target Tier 1 weapons, **Research Reports** target Tiers 1–2, and
-**Research Dossiers** target Tiers 1–3. Higher Analyzer tiers improve Data
-outcomes. Archive matching analysis fragments to reconstruct a blueprint;
-already learned targets can still produce duplicate rewards.
-
-Ordinary fragments found through loot have separate progress and settings.
-Completed sets can discount research, reconstruct a blueprint, or return currency
-for a learned weapon. Servers also control weapon recovery and recycling.
-Successful processing returns loaded ammo, with overflow dropped at your feet.
-
-## Establish Village Traders
-
-Place a **Gunsmith Station** or **Ballistics Desk** near an unemployed adult
-villager. The **Gunsmith** sells selected guns, matching ammo, and attachments.
-On Forge, supported TaCZ Magazines content also adds matching empty
-basic-magazine offers for guns that need them.
-
-The **Ballistics Researcher** sells Research Data and targeted analysis fragments.
-Bring those supplies to the Blueprint Analyzer. Purchases don't automatically
-learn recipes; protected reconstructed blueprints respect prerequisites and
-can't be recycled for currency under the default rules.
-
-Both professions use the familiar trading screen and five villager levels.
-Products stay selected through restocking; stock is shared between players.
-They accept physical research currency, or Emeralds in banked RP mode. Pack
-authors can change stock and currency. Craftable job sites work in existing worlds.
-
-## Design and Configure Progression
-
-**Research Designer** lets you build custom Tech Trees in game. Copy the server's
-tree or start an empty project, add weapons, connect paths, and edit costs and
-prerequisites. Test simulated progress, export a datapack, or share an editable
-project. Open it from the title or pause menu or `/researchdesigner`. Capturing
-server data requires operator permission level 2; local editing does not.
-
-Configure loot, starting blueprints, discovery visibility, research and crafting
-tiers, and progression exemptions. Datapacks can customize branches,
-requirements, Analyzer rewards, Data pools, and villager trades. The automatic
-tree adapts to compatible TaCZ catalogs; pack authors can select exact weapons.
-On **NeoForge**, open **World & Server Settings → Quick Setup** for common
-progression choices. **Advanced Settings** keeps detailed controls in searchable
-categories. Both views share pending changes: review the Gameplay Summary, then
-Apply or Discard. Recommended setup and Simpler Stations show what they will
-change first. Personal Settings keeps your own interface preferences separate.
-Existing configuration values are preserved.
-
-To enable the included ammo and attachment Tech Trees on NeoForge, set
-**Ammo research** and **Attachment research** to **On** in Quick Setup,
-keep **Research** on, and choose Apply. On Forge, use **Server Settings →
-Research Progression** and keep **Enable Research** on. Follow modpack follows your
-datapack's category rules; weapons are the only category enabled by the bundled
-profile. No additional datapack is needed to enable the bundled categories.
-See the [operations guide](https://github.com/BBoggia/TaCZWeaponBlueprints/blob/main/docs/operations-and-migration.md).
-
-On **Forge 1.20.1**, the optional **TaCZ Magazines** integration adds empty-magazine crafting
-at the three Workbench levels and TaCZ's ammo Workbench. Servers can require
-learned compatible weapons and minimum Workbench levels. Eject inserted
-magazines before analyzing a gun. This integration is not available in the
-NeoForge release. Compatibility between TaCZ Magazines and TaCZ 1.2.0
-still needs separate validation.
+**Set up village trades.** A **Gunsmith Station** gives an unemployed adult villager access to the Gunsmith profession. Gunsmiths sell selected guns, matching ammo, and attachments. A **Ballistics Desk** attracts a Ballistics Researcher who sells Research Data and targeted analysis fragments for your Analyzer. Both professions have five trading levels and can be established in existing villages.
 
 ## Getting Started
 
-1. Install matching mod versions on the client and server, with required dependencies.
-2. Explore for blueprints, Scrap, and Data; use blueprints to learn recipes.
-3. Open the Journal, then craft a Research Bench and the appropriate crafting Workbench.
-4. Build an Analyzer to process equipment and Data or archive fragments. Leave
-   two adjacent blocks of space; either half opens it.
-5. Establish village traders for equipment and research supplies.
+1. Install the matching addon and dependencies on the client and server.
+2. Use a found blueprint to learn its recipe. Open the Blueprint Journal to see what you know.
+3. Craft a Research Bench, select a target, and gather its listed currency and materials. Hold **Research** to confirm when hold-to-confirm is enabled.
+4. Take your crafting ingredients to the appropriate Crafting Workbench to make the unlocked item.
+
+## Servers and modpacks
+
+**Forge 1.20.1** uses Fzzy Config. To open the bundled ammo or attachment Tech Tree, go to **Server Settings → Research Progression**, keep **Enable Research** on, turn **Ammo Research** or **Attachment Research** to **On**, and save.
+
+**NeoForge 1.21.1** offers the same category choices under **World & Server Settings → Quick Setup**. Keep **Research** on, turn on the categories you want, and choose **Apply**. **Pace** lets you choose Relaxed, Normal, or Hard to adjust blueprint loot, currency drops, and research prices together. **Advanced Settings** lets you tune those values individually, including Tier 2 and Tier 3 currency prices. Both settings views share a draft you can review before applying.
+
+In NeoForge’s automatic tree, a weapon’s depth and strength help determine its research and crafting tiers. With the bundled weapons, the M249 sits in Tier 2 while the M4A1 and HK416D need Tier 3. Custom datapacks can assign different tiers.
+
+The bundled profile starts with weapon research. These switches enable the other two trees without installing a datapack. Servers can also choose a single Research Bench, open Portable Research from the journal key, or use one Analyzer for all tiers. Pack authors can use **Research Designer** to edit branches, prerequisites, and costs in game, try a route with simulated progress, and export a datapack.
 
 ## Requirements
 
@@ -122,25 +44,14 @@ still needs separate validation.
 | Loader | Forge 47.x | NeoForge 21.1.233 or newer in the 21.1 series |
 | Java | 17 | 21 |
 | TaCZ | Official Forge build, 1.2.0 or newer | Official NeoForge build, 1.2.0 or newer |
-| Fzzy Config | 0.7.6 or later in the 0.7 series, Forge build | 0.7.7 or later in the 0.7 series, NeoForge build |
-| Kotlin dependency | Kotlin for Forge | Kotlin for Forge, NeoForge variant; tested with 5.12.0 |
-| Optional recipe viewers | JEI 15.x or EMI 1.1.x | JEI 19.x or EMI 1.1.x for 1.21.1 NeoForge |
+| Fzzy Config | Forge 0.7.6 or later in the 0.7 series | NeoForge 0.7.7 or later in the 0.7 series |
+| Kotlin dependency | Kotlin for Forge | Kotlin for Forge, NeoForge variant |
+| Optional recipe viewers | JEI 15.x or EMI 1.1.x | JEI 19.x or EMI 1.1.x |
 
-Use the dependencies built for your chosen Minecraft version and loader. The
-NeoForge build requires the **official NeoForge TaCZ build**. Remove the
-unofficial port before installing it. The Forge TaCZ JAR cannot be used with it.
-Newer TaCZ versions are accepted by the dependency
-requirement, but future API changes can still require a compatibility update.
+Use matching addon builds on the server and every client. When moving from the unofficial NeoForge TaCZ port, replace it with the official NeoForge file. Start a separate world when switching between Minecraft 1.20.1 Forge and 1.21.1 NeoForge.
 
-The new settings screens are NeoForge-only. The Forge build retains its
-existing Fzzy Config interface.
+Back up your world and configuration before updating. If you switch from banked RP to physical currency, see the [currency migration guide](https://github.com/BBoggia/TaCZWeaponBlueprints/blob/main/docs/research-currency-migration.md).
 
-Back up worlds before updating. For a first NeoForge installation, start a new
-world; migration of Forge
-1.20.1 worlds and player progress is not supported. For supported updates within
-the Forge version, learned recipes, discoveries, fragment archives, and saved
-RP carry over. Changing currency
-modes does not turn RP into items automatically; see the
-[currency migration guide](https://github.com/BBoggia/TaCZWeaponBlueprints/blob/main/docs/research-currency-migration.md).
-[Report issues](https://github.com/BBoggia/TaCZWeaponBlueprints/issues) with mod and
-dependency versions, installed content packs, and the relevant `latest.log`.
+**TaCZ Magazines** integration is available on Forge. It adds empty-magazine crafting and optional Gunsmith magazine offers. Compatibility of TaCZ Magazines itself with the TaCZ 1.2.0 hotfix still needs in-game verification.
+
+For help with a modpack, include your Minecraft version, loader, addon and TaCZ versions, installed content packs, and the relevant log. [Report an issue](https://github.com/BBoggia/TaCZWeaponBlueprints/issues)

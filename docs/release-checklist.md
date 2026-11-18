@@ -6,6 +6,10 @@ then run `verifyPublicationReadiness` after finalizing the release version
 and copy. NeoForge metadata is `META-INF/neoforge.mods.toml`, and its build
 output is under `build/neoforge/`.
 
+For paired releases, tag the NeoForge commit `v<version>-neoforge` and the
+Forge commit `v<version>`. Publish both jars on the GitHub release for the Forge
+tag and link to both source tags in the release notes.
+
 The checklist below describes the preserved Forge 1.20.1 release workflow.
 Its release commands require JDK 17.
 The detailed contract checks and manual test coverage are documented in the

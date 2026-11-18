@@ -17,10 +17,8 @@ The Quick Setup and Advanced Settings foundation is documented in the
 [settings editing contract](settings-editing.md), including its field inventory,
 config preservation rules, and dedicated settings verification suite.
 
-The official TaCZ 1.2.0 changes pass the 1.3.10 build, automated tests, and
-packaged-artifact checks. Earlier runtime acceptance results used the unofficial
-1.1.8-hotfix-r7 dependency and do not certify this update. Client/server checks
-remain pending; see [TaCZ compatibility](tacz-compatibility.md).
+The 1.3.11 release was tested with the official TaCZ 1.2.0-hotfix. See
+[TaCZ compatibility](tacz-compatibility.md) for the packaged runtime coverage.
 
 ## Pinned environment
 
@@ -31,7 +29,7 @@ remain pending; see [TaCZ compatibility](tacz-compatibility.md).
 | ModDevGradle | 2.0.74 |
 | Minecraft | 1.21.1 |
 | NeoForge | 21.1.233 |
-| Official TaCZ NeoForge | 1.2.0; Modrinth project `SzzJttH8`, version `O2Pfsh6w` |
+| Official TaCZ NeoForge | 1.2.0-hotfix, Modrinth project `SzzJttH8`, version `tJiZL0He` |
 | Fzzy Config | 0.7.7+fix1+1.21+neoforge; Modrinth version `jRuOkBAG` |
 | Kotlin for Forge, NeoForge variant | 5.12.0 |
 | Optional EMI | 1.1.24+1.21.1, NeoForge |
@@ -39,7 +37,7 @@ remain pending; see [TaCZ compatibility](tacz-compatibility.md).
 
 Versions and artifact IDs are defined in `gradle.properties`. The loader and
 build-tool baseline is retained from the original port. The TaCZ dependency now
-uses the [official NeoForge release](https://github.com/MCModderAnchor/TACZ/releases/tag/1.2.0-neoforge-1.21.1). The
+uses the [official NeoForge release](https://modrinth.com/mod/timeless-and-classics-zero/version/tJiZL0He). The
 [ModDevGradle documentation](https://github.com/neoforged/ModDevGradle) explains
 the development runs and additional source sets. Kotlin uses its
 [1.20.6–1.21.8 integration](https://github.com/thedarkcolour/KotlinForForge/tree/5.x).

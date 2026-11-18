@@ -65,6 +65,19 @@ class ResearchPlanningAdmissionTest {
     }
 
     @Test
+    void backgroundWorkCannotConsumeThePlayerActionSlotOnAnyTick() {
+        UUID background = UUID.randomUUID();
+        ResearchPlanningAdmission.registerQueued(background);
+        for (long tick = 101; tick <= 104; tick++) {
+            assertTrue(ResearchPlanningAdmission.admitQueued(tick, background));
+            assertTrue(ResearchPlanningAdmission.admitInteractive(tick));
+            assertFalse(ResearchPlanningAdmission.admitInteractive(tick));
+            assertFalse(ResearchPlanningAdmission.admitQueued(tick, background));
+            assertFalse(ResearchPlanningAdmission.admit(tick));
+        }
+    }
+
+    @Test
     void reservedBackgroundTickDoesNotRejectAPlayerAction() {
         UUID background = UUID.randomUUID();
         ResearchPlanningAdmission.registerQueued(background);

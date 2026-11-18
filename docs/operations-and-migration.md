@@ -264,9 +264,9 @@ The fullscreen Affordable Now filter reuses that server authority through
 ordered batches of at most eight visible targets. The server evaluates no more
 than one queued target per tick across open Research Benches, and each player
 has a separate bounded batch-admission window. Regularly reserved background
-ticks prevent interactive requests from starving those queued sweeps, while
-selection, research, tracked guidance, and live preview refreshes share the
-same server-wide planning fuse. Repeated batch failures become bounded
+ticks let queued sweeps make progress alongside tracked guidance and preview
+refreshes. A separate server-wide slot admits one player selection or research
+purchase per tick, including while the server checks affordability. Repeated batch failures become bounded
 unavailable results instead of leaving the client in Checking indefinitely.
 If a response is lost entirely, tracked guidance retries once after ten
 seconds and then reports the route as unavailable. An Affordable Now batch

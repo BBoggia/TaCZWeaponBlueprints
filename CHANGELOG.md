@@ -6,89 +6,37 @@ documentation.
 
 ## Unreleased
 
+## 1.3.11 - 2026-11-18
+
 ### Added
 
-- Redesigned the Tech Tree. Weapons sit in lanes by branch or by weapon type,
-  rows follow the Research Bench tier each weapon needs, and a bar shows which
-  bench opens each tier. Links between branches are marked, dashed links mean
-  either blueprint works, and a tile turns amber only when you can research it
-  now. Search with the magnifier or Ctrl+F, move with the arrow keys, and press
-  F for an overview of the whole tree. **Classic view** on the Research Bench
-  switches back to the previous tree, and **New view** returns.
-- The new Tech Tree tells you what to do next. A line under the tree names
-  where to start, how many blueprints are ready, or what's in the way, and
-  **Next** (or N) steps through the blueprints you can research. Hovering a
-  blueprint shows its price or exactly what it still needs, and the **?**
-  button opens a key to the colors and lines. The key opens once by itself the
-  first time you use the tree.
-- Added **Pace** to Quick Setup: Relaxed, Normal or Hard. One choice sets
-  blueprint loot, currency loot and research prices together. New servers are
-  on Normal. A server that kept its earlier prices reads Custom until an
-  operator picks a pace.
-- Added **Research Price (%)**, which scales the currency price of every
-  blueprint, and **Currency Loot Amount (%)**, which scales how much Scrap
-  chests and mobs give. Both default to 100% and change nothing until set.
-- Added **Tier 2 Research Price** and **Tier 3 Research Price** server
-  settings. Each scales the currency price of blueprints that need that
-  Research Bench tier, so later weapons can cost more without editing a
-  datapack. New servers start at 200% and 300%, so the whole bundled weapon
-  tree costs about 1,170 Scrap instead of 534. Existing servers keep 100%
-  until an operator changes it. The settings apply only while Research Bench
-  tiers are enforced.
+- The Research Bench opens a new Tech Tree sheet. Follow a branch or group weapons by type. With bench tiers enabled, each weapon sits in the row for the bench it needs. Dashed links show alternative prerequisites, and markers show where paths meet across lanes.
+- Select a weapon to inspect its route, or press **N** for the next ready blueprint or a suggestion. Use **Ctrl+F** to search, the arrow keys to move, **F** for an overview, and **?** for the key to colors and links. The key opens on your first visit.
+- Switch to **Classic view** from the bench to use the original canvas and minimap. The bench remembers your view and lane grouping between sessions.
+- **Quick Setup → Pace** groups blueprint loot, currency drops, and research prices into **Relaxed**, **Normal**, and **Hard** presets. An existing combination that differs from the presets appears as **Custom** until you choose one.
+- **Advanced Settings** adds **Research Price (%)** and **Currency Loot Amount (%)**, plus separate **Tier 2 Research Price** and **Tier 3 Research Price** controls. The overall price and currency loot settings default to 100%. Material ingredient counts keep their datapack values.
 
 ### Changed
 
-- The new Tech Tree honours **Require Hold to Confirm**: hold **Research**
-  until the bar fills, or hold Enter. The setting is on by default; turn it off
-  in Personal Settings to research with one click.
-- Personal Settings adds **Tech Tree View** and **Tech Tree Lanes**, so the
-  view and lane grouping you pick on the Research Bench are remembered between
-  sessions. Settings that affect only Classic view now say so.
-- Settings screens are easier to read. Switches say On and Off everywhere,
-  every villager trading setting has a description, Quick Setup explains what
-  each choice does, and "Setup recipes" are now **Presets**.
-- Redesigned the Blueprint Analyzer and Blueprint Journal screens with clearer
-  panels, buttons, and status colors.
-
-- Automatic Tech Trees now set each weapon's Research Bench tier and
-  Workbench level from how deep it sits in the tree, and a strong weapon placed
-  early is raised to the tier its score earns. The bundled TaCZ weapons now
-  spread 16 / 31 / 23 across Tiers 1–3: Tier 1 is mostly pistols and light
-  guns, and the M4A1, HK416D and M107 need Tier 3. The M249 is set to Tier 2.
-  Existing worlds will see some weapons move tier; learned blueprints stay
-  learned.
-- Renamed the Tier 1 and Tier 2 Score Cutoff settings to Depth Cutoff to match.
-- Gunsmith stock follows the new tiers. Apprentices sell the Glock 17 in place
-  of the DB Long; Experts sell the AK47, M16A4, M16A1, QBZ-95, M870, UMP45 and
-  Vector; Masters sell the SCAR-L, RPK, SPR-15 HB and FN EVOLYS. Gun prices
-  are unchanged. A villager already stocked with a gun or fragment target that
-  changed tier stops offering it and does not pick a new one; employ a new
-  villager to get current stock.
-- Ballistics Researchers charge less. A Research Note costs 2 Scrap (was 4), a
-  Report 5 (was 12) and a Dossier 12 (was 24). Fragment bundles cost 4, 6 and
-  14 Scrap (were 8, 16 and 36), and their targets follow the new tiers.
+- On a fresh server with bench tiers enabled, Tier 2 blueprints cost 200% of their base currency price and Tier 3 blueprints cost 300%. The bundled weapon tree costs about 1,170 Scrap on Normal, up from 534. Upgrading an existing configuration starts the new tier multipliers at 100% unless the operator changes them.
+- Automatic weapon research and crafting tiers now use depth in the Tech Tree. A high weapon score can still raise an early weapon’s tier. The bundled weapons span 16 at Tier 1, 31 at Tier 2, and 23 at Tier 3. The M4A1, HK416D, and M107 need Tier 3, and the M249 is set to Tier 2. Existing players keep learned blueprints when a weapon moves. The Tier 1 and Tier 2 **Score Cutoff** settings are now called **Depth Cutoff**.
+- Gunsmith stock follows the new tiers. Apprentices can sell the Glock 17 in place of the DB Long. The Expert pool includes the AK47, M16A4, M16A1, QBZ-95, M870, UMP45, and Vector. Masters draw from the SCAR-L, RPK, SPR-15 HB, and FN EVOLYS. Gun prices stay the same. If a villager’s saved gun or fragment target no longer qualifies, that offer drops out. Newly employed villagers draw from the current pools.
+- Ballistics Researchers sell a Research Note for 2 Scrap, a Report for 5, and a Dossier for 12, down from 4, 12, and 24. The three targeted fragment bundles now cost 4, 6, and 14 Scrap, down from 8, 16, and 36.
+- The Blueprint Analyzer and Blueprint Journal have clearer panels, buttons, and status colors. Personal Settings adds **Tech Tree View** and **Tech Tree Lanes** and identifies Classic-only controls. Quick Setup explains each choice, villager trade settings have descriptions, switches read **On** or **Off**, and setup recipes are now called **Presets**.
 
 ### Fixed
 
-- Holding Research now confirms the displayed quote. A changed price or target
-  cancels the hold and requires a fresh press. Printed blueprints also use a
-  server-checked quote so stale prices are rejected.
-- The new Tech Tree checks materials, discounts, Progression Gates, and
-  capacity before marking research ready. Its balance uses the active currency.
-- The details panel scrolls, wraps long names, and lets you browse every page
-  of required materials. Either/or requirements retain undiscovered alternatives.
-- Successful blueprint printing clears the completed selection. Rejected
-  selections offer a retry, and delayed replies preserve a newer selection.
-- A blueprint keeps its own Research Bench tier even when a prerequisite
-  needs a higher-tier bench. Learning prerequisites no longer implies that
-  their bench requirement still applies to the remaining purchase.
-- Reaching the progression limit reports that limit instead of asking you to
-  clear inventory space.
+- Selecting a blueprint or confirming research can proceed while the bench checks which blueprints you can afford.
+- Amber tiles, hover text, and guidance use the server’s readiness checks, including materials, discounts, bench requirements, Progression Gates, and capacity. The balance shows the server’s active currency. A full inventory and a progression limit now give distinct messages.
+- Hold **Research** or Enter to confirm the displayed purchase when **Require Hold to Confirm** is on. Changing the target or price cancels the hold. Learning and printing both use the current quote, and an unchanged purchase survives a balance refresh or material page change.
+- The details panel wraps long names, scrolls independently of the tree, and lets you page through required materials. When a prerequisite has an undiscovered alternative, the panel acknowledges the choice without revealing its identity.
+- Printing a blueprint clears the completed selection. A rejected selection offers a retry, and a late server reply preserves a newer selection.
+- A blueprint keeps its assigned bench tier even if one of its prerequisites needs a higher tier. After you learn that prerequisite, the bench shows what the remaining purchase requires.
 
 ### Compatibility
 
-- NeoForge builds now use network protocol `neoforge-4`. Update the server
-  and every client together.
+- Supports the official TaCZ 1.2.0-hotfix for Minecraft 1.21.1 NeoForge. The minimum remains the official TaCZ 1.2.0.
+- Update the addon on the server and every client together. This build uses NeoForge network protocol `neoforge-4`.
 
 ## 1.3.10 - 2026-11-10
 

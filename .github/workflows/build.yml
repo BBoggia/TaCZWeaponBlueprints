@@ -34,7 +34,7 @@ jobs:
           properties = dict(line.split('=', 1) for line in Path('gradle.properties').read_text().splitlines()
                             if '=' in line and not line.lstrip().startswith('#'))
           version = properties['mod_version']
-          if version.endswith('-dev') or os.environ['GITHUB_REF_NAME'] != 'v' + version:
+          if version.endswith('-dev') or os.environ['GITHUB_REF_NAME'] != f'v{version}-neoforge':
               raise SystemExit('Release tags must match the finalized mod_version.')
           PY
       - name: Verify the addon and compile the isolated game fixtures

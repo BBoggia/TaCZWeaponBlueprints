@@ -29,6 +29,8 @@ import static com.gamergaming.taczweaponblueprints.verification.CoreVerification
 
 /** Feature acceptance uses production server menus and a connected NeoForge client. */
 final class FeatureVerification {
+    // This target has an authored predecessor even when automatic placements change.
+    static final ResourceLocation PATH_TARGET = ResourceLocation.parse("tacz:m320");
     static boolean enabled() { return Boolean.getBoolean("wrb.verifyFeatures"); }
     static final BlockPos STATION = new BlockPos(0, 85, 0);
     static List<ResourceLocation> targets;
@@ -74,16 +76,16 @@ final class FeatureVerification {
                 placeResearch();send(101);
             } else if (stage == 102) {
                 var menu=(ResearchBenchMenu)player.containerMenu;
-                require(menu.selectedBlueprint().filter(TARGET::equals).isPresent(),"network selection reaches authoritative Research Bench");
+                require(menu.selectedBlueprint().filter(PATH_TARGET::equals).isPresent(),"network selection reaches authoritative Research Bench");
                 require(menu.preview().researchable(),"funded path is researchable: "+menu.preview());
                 price=menu.preview().pointCost();unlocks=menu.preview().unlockCount();
                 require(unlocks>1 && price>0,"research preview prices a multi-blueprint path");send(103);
             } else if (stage == 104) {
-                require(data().getLearnedBlueprints().contains(TARGET.toString()),"network path purchase learns target");
+                require(data().getLearnedBlueprints().contains(PATH_TARGET.toString()),"network path purchase learns target");
                 require(data().getLearnedBlueprints().size()==unlocks,"path purchase learns complete quoted route");
                 require(player.getInventory().countItem(ModItems.SCRAP.get())==1920-price && data().getResearchPoints()==137,"path purchase deducts exact Scrap without touching banked RP: Scrap="+player.getInventory().countItem(ModItems.SCRAP.get())+", RP="+data().getResearchPoints());
                 var menu=(ResearchBenchMenu)player.containerMenu;
-                require(!menu.handleAction(player,ResearchBenchResearchAction.RESEARCH,Optional.of(TARGET)).orElseThrow().successful(),"replayed learned route rejected");
+                require(!menu.handleAction(player,ResearchBenchResearchAction.RESEARCH,Optional.of(PATH_TARGET)).orElseThrow().successful(),"replayed learned route rejected");
                 require(player.getInventory().countItem(ModItems.SCRAP.get())==1920-price,"replay does not charge twice");
                 reset();openAnalyzer(2,gun(targets.getFirst(),true));analysis=((BlueprintRecyclerMenu)player.containerMenu).preview();send(105);
             } else if(stage==106) {
