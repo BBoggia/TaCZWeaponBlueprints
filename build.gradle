@@ -368,6 +368,9 @@ repositories {
     }
     maven {
         url = "https://thedarkcolour.github.io/KotlinForForge/"
+        content {
+            includeGroup "thedarkcolour"
+        }
     }
     maven {
         name = "FzzyMaven"
