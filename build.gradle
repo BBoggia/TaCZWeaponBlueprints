@@ -199,7 +199,7 @@ configurations {
 
 // Baseline tooling is deliberately absent from release jars and ordinary runs.
 // Analyzer integration captures additionally require a marked disposable world copy.
-if (providers.gradleProperty('analyzerStationsQA').isPresent() || providers.gradleProperty('researchTreeBaseline').isPresent() || providers.gradleProperty('researchTreePrototype').isPresent() || providers.gradleProperty('researchTreeWorkbenchQA').isPresent() || providers.gradleProperty('analyzerBaseline').isPresent()) {
+if (providers.gradleProperty('analyzerStationsQA').isPresent() || providers.gradleProperty('researchTreePrototype').isPresent() || providers.gradleProperty('analyzerBaseline').isPresent()) {
     minecraft.runs.client {
         mods {
             "${mod_id}" { source sourceSets.development }
@@ -221,20 +221,7 @@ if (providers.gradleProperty('analyzerStationsQA').isPresent() || providers.grad
         if (providers.gradleProperty('analyzerBaseline').isPresent()) {
             property 'tacz.analyzerBaseline.output', file(providers.gradleProperty('analyzerBaseline').get()).absolutePath
         }
-        if (providers.gradleProperty('researchTreeBaseline').isPresent()) {
-            property 'tacz.techTree.classic', 'true'
-            property 'tacz.treeBaseline.output', file(
-                    providers.gradleProperty('researchTreeBaseline').get()).absolutePath
-            property 'tacz.treeBaseline.motion', providers.gradleProperty(
-                    'researchTreeBaselineMotion').orElse('false').get()
-        }
-        if (providers.gradleProperty('researchTreeWorkbenchQA').isPresent()) {
-            property 'tacz.techTree.classic', 'true'
-            property 'tacz.treeWorkbenchQA.output', file(providers.gradleProperty('researchTreeWorkbenchQA').get()).absolutePath
-            property 'tacz.treeWorkbenchQA.world', providers.gradleProperty('researchTreeWorkbenchQAWorld').orElse('M5 UI QA').get()
-        }
         if (providers.gradleProperty('researchTreePrototype').isPresent()) {
-            property 'tacz.techTree.classic', 'true'
             property 'tacz.treePrototype.enabled', 'true'
             property 'tacz.treePrototype.output', file(providers.gradleProperty('researchTreePrototype').get()).absolutePath
             property 'tacz.treePrototype.captureBench', 'true'
@@ -975,25 +962,10 @@ tasks.register('verifySharedLayoutKernelMigration') {
                             + missingTechComponents)
         }
 
-        // jdeps intentionally suppresses same-package dependencies. Pin these
-        // screen-level integrations at source and require the selector class in
-        // the packaged-artifact gate below.
-        def benchScreenSource = file(
-                'src/main/java/com/gamergaming/taczweaponblueprints/client/ResearchBenchScreen.java')
-                .getText('UTF-8')
-        def missingTechUiComponents = [
-                'ResearchTechTreeDomainSelectorLayout.forBounds',
-                'ResearchTechTreeDomainMenu.create',
-                'ResearchTechTreeViewState techTreeNavigation',
-                'ResearchTreeRecommendationEngine.recommend',
-                'ResearchTreePlanner.presentationPlan',
-                'ClientResearchPlannerState.track',
-                'treeCanvas.setTrackedPlan'
-        ].findAll { !benchScreenSource.contains(it) }
-        if (!missingTechUiComponents.isEmpty()) {
-            throw new GradleException(
-                    'The Research Bench no longer exposes the stateful Tech Tree domain selector: '
-                            + missingTechUiComponents)
+        def screenRegistration = file(
+                'src/main/java/com/gamergaming/taczweaponblueprints/client/ClientModEvents.java').getText('UTF-8')
+        if (!screenRegistration.contains('MenuScreens.register(ModMenus.RESEARCH_BENCH.get(), TechTreeSheetScreen::new)')) {
+            throw new GradleException('The Research Bench must open the Tech Tree sheet')
         }
 
         def configRegistration = file(
@@ -3215,7 +3187,7 @@ tasks.register('verifyReleaseArtifact') {
                     'com/gamergaming/taczweaponblueprints/compat/recipeviewer/BlueprintRecipeViewerInfo.class',
                     'com/gamergaming/taczweaponblueprints/compat/jei/TaCZWeaponBlueprintsJeiPlugin.class',
                     'com/gamergaming/taczweaponblueprints/compat/emi/TaCZWeaponBlueprintsEmiPlugin.class',
-                    'com/gamergaming/taczweaponblueprints/client/ResearchBenchScreen.class',
+                    'com/gamergaming/taczweaponblueprints/client/TechTreeSheetScreen.class',
                     'com/gamergaming/taczweaponblueprints/client/ClientModEvents.class',
                     'com/gamergaming/taczweaponblueprints/init/ModBlocks.class',
                     'com/gamergaming/taczweaponblueprints/init/ModItems.class',
@@ -5410,6 +5382,7 @@ if (providers.gradleProperty('villagerQA').isPresent()) {
         from(sourceSets.development.output) {
             include 'com/gamergaming/taczweaponblueprints/villagerqa/**'
             include 'com/gamergaming/taczweaponblueprints/acceptance/villager/**'
+            include 'com/gamergaming/taczweaponblueprints/acceptance/CreativeTabServerProbe.class'
         }
         from 'src/development/villager-acceptance'
         exclude 'META-INF/*.refmap.json'

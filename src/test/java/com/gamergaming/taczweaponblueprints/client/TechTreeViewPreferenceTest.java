@@ -15,18 +15,20 @@ class TechTreeViewPreferenceTest {
     @Test
     void aFreshInstallOpensTheNewTreeGroupedByBranch() {
         ResearchTreeClientConfig config = new ResearchTreeClientConfig();
-        assertEquals(TechTreeViewMode.NEW, config.techTreeView.get());
         assertEquals(TechTreeLaneMode.BRANCHES, config.techTreeLanes.get());
     }
 
     @Test
-    void classicViewAndTypeLanesCanBeChosenIndependently() {
-        ResearchTreeClientConfig config = new ResearchTreeClientConfig();
-        config.techTreeView.validateAndSet(TechTreeViewMode.CLASSIC);
-        assertEquals(TechTreeLaneMode.BRANCHES, config.techTreeLanes.get());
-        config.techTreeLanes.validateAndSet(TechTreeLaneMode.TYPES);
-        assertEquals(TechTreeViewMode.CLASSIC, config.techTreeView.get());
+    void retiringClassicPreservesOtherPreferences() {
+        var config = me.fzzyhmstrs.fzzy_config.api.ConfigApi.deserializeConfig(new ResearchTreeClientConfig(), """
+                version = 3
+                techTreeView = "CLASSIC"
+                techTreeLanes = "TYPES"
+                holdDurationMillis = 1100
+                """).get();
         assertEquals(TechTreeLaneMode.TYPES, config.techTreeLanes.get());
+        assertEquals(1100, config.holdDurationMillis());
+        assertFalse(me.fzzyhmstrs.fzzy_config.api.ConfigApi.serializeConfig(config).get().contains("techTreeView"));
     }
 
     @Test

@@ -55,68 +55,7 @@ loading, world rendering, frame pacing, and GPU execution. The tool does not
 measure retained memory or allocation rate. Use a profiler when those become
 relevant; a heap-size setting is not a memory-usage measurement.
 
-## Capture native client input and timing
-
-```sh
-./gradlew --offline runClient \
-  -PresearchTreeBaseline=build/reports/research-tree/native \
-  -PresearchTreeBaselineMotion=true
-```
-
-Open a test world and the Research Bench, then leave it open without input for
-at least 30 seconds. The observer records a nonempty canvas only when it
-matches a domain in `ClientResearchState`'s current public publication.
-
-The optional motion flag runs a repeatable camera-only workload: 60 warmup
-frames, 120 stationary frames, 120 pan frames, and 120 zoom frames. It restores
-the camera on completion, early closure, or error only while the captured view
-and publication still match. It does not select a node or send research actions.
-Reopening the Bench starts a new
-timestamped capture. Close the test client after collecting evidence when a
-quiet CPU replay comparison is needed.
-
-Omit the motion flag for observation without scripted camera movement. In that
-mode, later frames are labelled `manual_interaction`; the label does not prove
-that a user actually panned or zoomed.
-
-Each timestamped directory contains:
-
-- `projection.json`: the permitted typed domain inputs, including nodes,
-  groups, bands, boundary links, source ordinals, and automatic branch hints.
-- `runtime.json`: publication/input binding, active domain, screen and
-  framebuffer dimensions, GUI scale, frame limit, VSync, camera, layout policy,
-  dependency versions, opening interval, sample counts, and completion status.
-- `screenshots/`: native framebuffer captures of the opening view and completed
-  stationary, pan, and zoom intervals.
-
-Opening time is measured from Forge's screen-opening event to the first
-nonempty matching rendered Bench frame. The recurring native interval surrounds
-the whole Research Bench screen render through Forge screen events. It includes
-other screen-render event subscribers inside those boundaries, excludes world
-rendering and frame wait, and does not wait for GPU completion. It is not an
-isolated canvas or whole-game frame-time measurement.
-
-Capture/serialization and screenshot work happens outside measured screen
-render intervals. It can still perturb the following frame; inspect outliers
-and repeat when investigating small timing differences. Warmup timings remain
-separate from steady measurements. The observer checks canvas, graph, and layout
-identity, canvas bounds, screen/framebuffer size, effective GUI scale, frame
-limit, and VSync before and after each measured render. A changed view ends the
-sample without restoring an old camera into the replacement view. Completion,
-closure, and failure release retained screen/canvas references.
-A `screen_closed_early`, `view_changed`, `publication_changed`, or `failed`
-status is incomplete evidence, even if the
-projection file is usable.
-
-Camera snapshots use the existing viewport's target pan/zoom API. The opening
-frame can still be easing toward that target. Use the settled stationary
-screenshot for a stable comparison; do not infer exact opening-frame positions
-from a target snapshot.
-
-Capture the same catalog, disclosure state, selected target, viewport, GUI
-scale, settings, and view when comparing native screenshots. Record the commit
-and any uncommitted implementation alongside the artifact. A named capture
-alone does not identify source changes or prove visual quality.
+The recorded canvas fixtures describe the retired Classic view. The replay tasks can still read those fixtures. Use the current Tech Tree for in-game checks.
 
 ## Fixture coverage
 

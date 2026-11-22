@@ -23,7 +23,7 @@ public final class ClientModEvents {
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
-            MenuScreens.register(ModMenus.RESEARCH_BENCH.get(), TechTreeScreens::create);
+            MenuScreens.register(ModMenus.RESEARCH_BENCH.get(), TechTreeSheetScreen::new);
             MenuScreens.register(ModMenus.BLUEPRINT_RECYCLER.get(), BlueprintRecyclerScreen::new);
             ItemBlockRenderTypes.setRenderLayer(ModBlocks.RESEARCH_BENCH.get(), RenderType.cutout());
             ItemBlockRenderTypes.setRenderLayer(

@@ -72,7 +72,7 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
     private final boolean portable;
     private final com.gamergaming.taczweaponblueprints.progression.StationSetup.ResearchAccess openingAccessMode;
 
-    /** Both Tech Tree views share this sequence while the same bench is open. */
+    /** Sequence shared by screen instances for the lifetime of this open menu. */
     public int nextClientActionRequestId() {
         int id = nextClientActionRequestId;
         nextClientActionRequestId = id == Integer.MAX_VALUE ? 1 : id + 1;

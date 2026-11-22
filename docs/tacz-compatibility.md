@@ -61,3 +61,8 @@ datapack reload and shut down cleanly.
 The release checks used a fresh world. Existing-world upgrades, third-party
 gun packs, TaCZ Magazines with the hotfix, and Forge recipe-viewer combinations
 remain outside this runtime check.
+
+The 1.3.12 development build also ran on a dedicated Forge 47.4.10 server with
+TaCZ 1.2.0-hotfix and TaCZ Magazines 0.2.0-Beta. The server built its Creative
+tabs with 25 ammo blueprints. After a datapack reload, magazine discovery
+accepted 160 families and 160 recipes.

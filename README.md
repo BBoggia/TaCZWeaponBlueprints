@@ -1,7 +1,6 @@
 # [TaCZ] Weapon Research & Blueprints
 
-See the [1.3.11 release notes](docs/releases/1.3.11.md) for the redesigned Tech Tree,
-TaCZ 1.2.0-hotfix compatibility, and loader-specific changes.
+See the [1.3.12 release notes](docs/releases/1.3.12.md) for the dedicated-server crash fix and Research Bench changes.
 
 [TaCZ] Weapon Research & Blueprints turns the Timeless and Classics Zero (TaCZ) arsenal into a
 persistent progression system built around exploration, blueprints, and
@@ -24,12 +23,10 @@ an optional server setting.
 - A Blueprint Journal for discoveries, learned recipes, recent unlocks,
   completion, active rules, and a reusable Getting Started guide.
 - A Research Bench Tech Tree with branch or weapon-type lanes, search, keyboard
-  navigation, and a scrollable cost and prerequisite inspector. Switch to
-  **Classic** in the bench for the original canvas and interactive minimap.
+  navigation, and a scrollable cost and prerequisite inspector.
 - Three Research Bench tiers for the Tech Tree and three dedicated crafting
   Workbench levels using TaCZ's native crafting screen.
-- Guided research tools for pinning a target, highlighting its complete route,
-  tracking currency and material progress, and filtering to affordable unlocks.
+- Select a blueprint to inspect its requirements or jump to the next affordable blueprint.
 - Automatic weapon placement based on strength, handling, range, and play
   style, including compatible weapons added by TaCZ content packs.
 - Authored-only Tech Trees for pack authors who want complete control over
@@ -82,7 +79,7 @@ stock, research restrictions, and modpack examples.
 
 ## Requirements
 
-These requirements apply to the Forge 1.3.11 release.
+These requirements apply to Forge 1.3.12.
 
 | Component | Version |
 | --- | --- |
@@ -149,14 +146,9 @@ magazine crafting at all three Workbench tiers and TaCZ's ammo Workbench.
 Servers can keep material-only access or link magazines to learned compatible
 weapons, with separate minimum tiers for basic and extended magazines.
 
-The Research Bench remembers each player’s view and lane grouping. Players can
-also change these in Fzzy Config under **Tree Appearance**. Personal settings
-include research confirmation and currency notifications. Classic view has
-options for reduced motion, a background grid, and layout spacing. The fullscreen minimap can
-appear automatically for large trees, remain always visible, or stay hidden.
-Advanced canvas, weapon, level, and connection spacing plus crossing-reduction
-and compaction controls remain available under the collapsed Custom section.
-These settings affect presentation only and do not change server progression.
+The Research Bench remembers whether you group lanes by branch or weapon type.
+You can also choose the grouping under **Tree Appearance** in Fzzy Config.
+Personal settings control purchase confirmation and currency notifications.
 
 ## Servers and Modpacks
 

@@ -6,7 +6,6 @@ import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
 import com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager;
 
 import net.minecraft.core.registries.Registries;
-import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
@@ -94,6 +93,7 @@ public class ModCreativeTabs {
 
     @SubscribeEvent
     public static void buildCreativeModeTabs(BuildCreativeModeTabContentsEvent event) {
+        BlueprintDataManager catalog = BlueprintDataManager.presentationCatalog();
         if (event.getTabKey() == net.minecraft.world.item.CreativeModeTabs.INGREDIENTS) {
             event.accept(ModItems.SCRAP.get());
         }
@@ -114,102 +114,97 @@ public class ModCreativeTabs {
             event.accept(ModItems.RESEARCH_DOSSIER.get());
         }
         if (event.getTabKey() == ModCreativeTabs.AMMO_BLUEPRINT_TAB.getKey()) {
-            if (Minecraft.getInstance().player != null
-                    && BlueprintDataManager.CLIENT.getAllBlueprints().isEmpty()
-                    && ModConfigs.BLUEPRINT.enableBlueprints.get()) {
-                TaCZWeaponBlueprints.LOGGER.warn("Attempted to populate Ammo Blueprints tab, but BlueprintDataManager is empty!");
-            }
             TaCZWeaponBlueprints.LOGGER.debug("Populating Ammo Blueprints tab (Key: {})...", event.getTabKey());
-            for (BlueprintData data : BlueprintDataManager.CLIENT.getAmmoBlueprints()) {
+            for (BlueprintData data : catalog.getAmmoBlueprints()) {
                 if (!ModConfigs.BLUEPRINT.isItemBlacklisted(data.getBpId())) { // Check blacklist
                     event.accept(BlueprintItem.createBlueprint(data.getBpId()));
                 }
             }
         } else if (event.getTabKey() == ModCreativeTabs.GUN_RIFLE_BLUEPRINT_TAB.getKey()) {
             TaCZWeaponBlueprints.LOGGER.debug("Populating Rifle Blueprints tab (Key: {})...", event.getTabKey());
-            for (BlueprintData data : BlueprintDataManager.CLIENT.getRifleBlueprints()) {
+            for (BlueprintData data : catalog.getRifleBlueprints()) {
                 if (!ModConfigs.BLUEPRINT.isItemBlacklisted(data.getBpId())) {
                     event.accept(BlueprintItem.createBlueprint(data.getBpId()));
                 }
             }
-            for (BlueprintData data : BlueprintDataManager.CLIENT.getBlueprintsByType("dmr")) {
+            for (BlueprintData data : catalog.getBlueprintsByType("dmr")) {
                 if (!ModConfigs.BLUEPRINT.isItemBlacklisted(data.getBpId())) {
                     event.accept(BlueprintItem.createBlueprint(data.getBpId()));
                 }
             }
         } else if (event.getTabKey() == ModCreativeTabs.GUN_PISTOL_BLUEPRINT_TAB.getKey()) {
             TaCZWeaponBlueprints.LOGGER.debug("Populating Pistol Blueprints tab (Key: {})...", event.getTabKey());
-            for (BlueprintData data : BlueprintDataManager.CLIENT.getPistolBlueprints()) {
+            for (BlueprintData data : catalog.getPistolBlueprints()) {
                 if (!ModConfigs.BLUEPRINT.isItemBlacklisted(data.getBpId())) {
                     event.accept(BlueprintItem.createBlueprint(data.getBpId()));
                 }
             }
         } else if (event.getTabKey() == ModCreativeTabs.GUN_SNIPER_BLUEPRINT_TAB.getKey()) {
             TaCZWeaponBlueprints.LOGGER.debug("Populating Sniper Blueprints tab (Key: {})...", event.getTabKey());
-            for (BlueprintData data : BlueprintDataManager.CLIENT.getSniperBlueprints()) {
+            for (BlueprintData data : catalog.getSniperBlueprints()) {
                 if (!ModConfigs.BLUEPRINT.isItemBlacklisted(data.getBpId())) {
                     event.accept(BlueprintItem.createBlueprint(data.getBpId()));
                 }
             }
         } else if (event.getTabKey() == ModCreativeTabs.GUN_SHOTGUN_BLUEPRINT_TAB.getKey()) {
             TaCZWeaponBlueprints.LOGGER.debug("Populating Shotgun Blueprints tab (Key: {})...", event.getTabKey());
-            for (BlueprintData data : BlueprintDataManager.CLIENT.getShotgunBlueprints()) {
+            for (BlueprintData data : catalog.getShotgunBlueprints()) {
                 if (!ModConfigs.BLUEPRINT.isItemBlacklisted(data.getBpId())) {
                     event.accept(BlueprintItem.createBlueprint(data.getBpId()));
                 }
             }
         } else if (event.getTabKey() == ModCreativeTabs.GUN_SMG_BLUEPRINT_TAB.getKey()) {
             TaCZWeaponBlueprints.LOGGER.debug("Populating SMG Blueprints tab (Key: {})...", event.getTabKey());
-            for (BlueprintData data : BlueprintDataManager.CLIENT.getSmgBlueprints()) {
+            for (BlueprintData data : catalog.getSmgBlueprints()) {
                 if (!ModConfigs.BLUEPRINT.isItemBlacklisted(data.getBpId())) {
                     event.accept(BlueprintItem.createBlueprint(data.getBpId()));
                 }
             }
         } else if (event.getTabKey() == ModCreativeTabs.GUN_RPG_BLUEPRINT_TAB.getKey()) {
             TaCZWeaponBlueprints.LOGGER.debug("Populating RPG Blueprints tab (Key: {})...", event.getTabKey());
-            for (BlueprintData data : BlueprintDataManager.CLIENT.getRpgBlueprints()) {
+            for (BlueprintData data : catalog.getRpgBlueprints()) {
                 if (!ModConfigs.BLUEPRINT.isItemBlacklisted(data.getBpId())) {
                     event.accept(BlueprintItem.createBlueprint(data.getBpId()));
                 }
             }
         } else if (event.getTabKey() == ModCreativeTabs.GUN_MG_BLUEPRINT_TAB.getKey()) {
             TaCZWeaponBlueprints.LOGGER.debug("Populating MG Blueprints tab (Key: {})...", event.getTabKey());
-            for (BlueprintData data : BlueprintDataManager.CLIENT.getMgBlueprints()) {
+            for (BlueprintData data : catalog.getMgBlueprints()) {
                 if (!ModConfigs.BLUEPRINT.isItemBlacklisted(data.getBpId())) {
                     event.accept(BlueprintItem.createBlueprint(data.getBpId()));
                 }
             }
         } else if (event.getTabKey() == ModCreativeTabs.ATTACHMENT_SCOPE_BLUEPRINT_TAB.getKey()) {
             TaCZWeaponBlueprints.LOGGER.debug("Populating Scope Blueprints tab (Key: {})...", event.getTabKey());
-            for (BlueprintData data : BlueprintDataManager.CLIENT.getScopeBlueprints()) {
+            for (BlueprintData data : catalog.getScopeBlueprints()) {
                 if (!ModConfigs.BLUEPRINT.isItemBlacklisted(data.getBpId())) {
                     event.accept(BlueprintItem.createBlueprint(data.getBpId()));
                 }
             }
         } else if (event.getTabKey() == ModCreativeTabs.ATTACHMENT_MUZZLE_BLUEPRINT_TAB.getKey()) {
             TaCZWeaponBlueprints.LOGGER.debug("Populating Muzzle Blueprints tab (Key: {})...", event.getTabKey());
-            for (BlueprintData data : BlueprintDataManager.CLIENT.getMuzzleBlueprints()) {
+            for (BlueprintData data : catalog.getMuzzleBlueprints()) {
                 if (!ModConfigs.BLUEPRINT.isItemBlacklisted(data.getBpId())) {
                     event.accept(BlueprintItem.createBlueprint(data.getBpId()));
                 }
             }
         } else if (event.getTabKey() == ModCreativeTabs.ATTACHMENT_STOCK_BLUEPRINT_TAB.getKey()) {
             TaCZWeaponBlueprints.LOGGER.debug("Populating Stock Blueprints tab (Key: {})...", event.getTabKey());
-            for (BlueprintData data : BlueprintDataManager.CLIENT.getStockBlueprints()) {
+            for (BlueprintData data : catalog.getStockBlueprints()) {
                 if (!ModConfigs.BLUEPRINT.isItemBlacklisted(data.getBpId())) {
                     event.accept(BlueprintItem.createBlueprint(data.getBpId()));
                 }
             }
         } else if (event.getTabKey() == ModCreativeTabs.ATTACHMENT_GRIP_BLUEPRINT_TAB.getKey()) {
             TaCZWeaponBlueprints.LOGGER.debug("Populating Grip Blueprints tab (Key: {})...", event.getTabKey());
-            for (BlueprintData data : BlueprintDataManager.CLIENT.getGripBlueprints()) {
+            for (BlueprintData data : catalog.getGripBlueprints()) {
                 if (!ModConfigs.BLUEPRINT.isItemBlacklisted(data.getBpId())) {
                     event.accept(BlueprintItem.createBlueprint(data.getBpId()));
                 }
             }
         } else if (event.getTabKey() == ModCreativeTabs.ATTACHMENT_EXTENDED_MAG_BLUEPRINT_TAB.getKey()) {
             TaCZWeaponBlueprints.LOGGER.debug("Populating Extended Mag Blueprints tab (Key: {})...", event.getTabKey());
-            for (BlueprintData data : BlueprintDataManager.CLIENT.getExtendedMagBlueprints()) {
+            for (BlueprintData data : catalog.getExtendedMagBlueprints()) {
                 if (!ModConfigs.BLUEPRINT.isItemBlacklisted(data.getBpId())) {
                     event.accept(BlueprintItem.createBlueprint(data.getBpId()));
                 }

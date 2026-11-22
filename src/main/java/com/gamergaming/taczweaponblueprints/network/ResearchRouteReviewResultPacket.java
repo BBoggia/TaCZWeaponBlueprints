@@ -2,9 +2,7 @@ package com.gamergaming.taczweaponblueprints.network;
 
 import java.util.Optional;
 import java.util.function.Supplier;
-import com.gamergaming.taczweaponblueprints.client.ResearchBenchScreen;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
-import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
 
@@ -28,11 +26,7 @@ public record ResearchRouteReviewResultPacket(ResearchRouteReviewRequestPacket r
         result.snapshot().ifPresent(s -> ResearchGuidanceResultPacket.writeSnapshot(b,s));
     }
     public void handle(Supplier<NetworkEvent.Context> supplier) {
-        var context = supplier.get(); context.enqueueWork(() -> {
-            var mc = Minecraft.getInstance();
-            if (mc.player != null && mc.player.containerMenu instanceof ResearchBenchMenu
-                    && mc.player.containerMenu.containerId == request.containerId()
-                    && mc.screen instanceof ResearchBenchScreen screen) screen.acceptRouteReview(this);
-        }); context.setPacketHandled(true);
+        // Older clients can still request this response. The sheet uses the selected research quote.
+        supplier.get().setPacketHandled(true);
     }
 }

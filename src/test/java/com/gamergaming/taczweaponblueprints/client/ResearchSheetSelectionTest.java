@@ -52,4 +52,18 @@ class ResearchSheetSelectionTest {
         assertEquals(Optional.of(true), state.acceptResearch(2, Optional.of(A), false));
         assertEquals(Optional.of(A), state.selected()); assertTrue(state.confirmed());
     }
+
+    @Test void switchingDomainsDiscardsDelayedSelectionAndPurchaseFeedback() {
+        var state = confirmed();
+        state.sentResearch(2);
+        state.choose(B);
+        state.sentSelection(3);
+        state.clear();
+        state.restore(Optional.of(A));
+        assertTrue(state.selected().isEmpty());
+        assertFalse(state.acceptSelection(3, Optional.of(B), true));
+        assertEquals(Optional.of(false), state.acceptResearch(2, Optional.of(A), true));
+        assertFalse(state.researching());
+        assertTrue(state.selected().isEmpty());
+    }
 }

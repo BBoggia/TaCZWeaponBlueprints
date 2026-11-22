@@ -184,7 +184,7 @@ class TieredCraftingWorkbenchResourcesTest {
 
     @Test
     void researchAndCraftingScreensNoLongerOfferModeSwitching() throws IOException {
-        String researchScreen = source("client/ResearchBenchScreen.java");
+        String researchScreen = source("client/TechTreeSheetScreen.java");
         String craftingScreen = source("mixin/GunSmithTableScreenMixin.java");
         String legacyTransition = source(
                 "progression/workbench/ResearchWorkbenchMenuTransitions.java");

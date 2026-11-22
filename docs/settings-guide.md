@@ -29,8 +29,7 @@ saves these shared settings locally; Personal Settings is a separate file.
 
 The advanced sections start collapsed. Personal Settings keeps legacy layout
 controls in their own collapsed section because they do not affect the current
-Tech Tree. Restore Tree Appearance resets camera motion, the grid, the minimap,
-and saved legacy layout values; it does not reset confirmation controls.
+Tech Tree. Restore Tree Appearance resets lane grouping and saved legacy layout values.
 
 ## Enter values in familiar units
 

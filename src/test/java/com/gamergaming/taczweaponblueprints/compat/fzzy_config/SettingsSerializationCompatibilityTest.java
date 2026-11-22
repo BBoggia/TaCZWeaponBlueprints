@@ -55,11 +55,11 @@ class SettingsSerializationCompatibilityTest {
                 holdToResearch = false
                 """).get();
         var saved = ConfigApi.serializeConfig(config).get();
-        assertTrue(saved.contains("techTreeView = \"CLASSIC\""));
+        assertFalse(saved.contains("techTreeView"));
         assertTrue(saved.contains("techTreeLanes = \"TYPES\""));
         config.restoreTreeAppearanceDefaults();
         var restored = ConfigApi.serializeConfig(config).get();
-        assertTrue(restored.contains("techTreeView = \"NEW\""));
+        assertFalse(restored.contains("techTreeView"));
         assertTrue(restored.contains("techTreeLanes = \"BRANCHES\""));
         assertFalse(config.holdToResearch.get());
     }

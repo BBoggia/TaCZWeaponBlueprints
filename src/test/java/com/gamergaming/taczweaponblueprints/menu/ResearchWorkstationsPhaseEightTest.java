@@ -109,21 +109,9 @@ class ResearchWorkstationsPhaseEightTest {
                 "src/main/java/com/gamergaming/taczweaponblueprints/client/ClientModEvents.java"));
 
         assertTrue(clientEvents.contains(
-                "MenuScreens.register(ModMenus.RESEARCH_BENCH.get(), TechTreeScreens::create)"));
+                "MenuScreens.register(ModMenus.RESEARCH_BENCH.get(), TechTreeSheetScreen::new)"));
         assertTrue(clientEvents.contains(
                 "MenuScreens.register(ModMenus.BLUEPRINT_RECYCLER.get(), BlueprintRecyclerScreen::new)"));
-    }
-
-    @Test
-    void fullscreenOverlayTransitionsCannotRetainHiddenKeyboardFocus()
-            throws IOException {
-        String screen = Files.readString(PROJECT.resolve(
-                "src/main/java/com/gamergaming/taczweaponblueprints/client/ResearchBenchScreen.java"));
-
-        assertTrue(screen.contains("private void clearFocusIfHidden()"));
-        assertTrue(screen.contains("getFocused() instanceof AbstractWidget widget && !widget.visible"));
-        assertTrue(screen.contains("updateFullscreenContextCardWidgets();\n        clearFocusIfHidden();"));
-        assertTrue(screen.contains("trackResearchButton.visible = false;\n        }\n        clearFocusIfHidden();"));
     }
 
     @Test

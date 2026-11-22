@@ -10,6 +10,10 @@ Data-redemption checks explicitly require `BANKED_RP` plus `LEGACY_CURRENCY`
 in a disposable configuration. The [economy handoff](research-economy-release-handoff.md)
 adds the default Scrap/Data-analysis and full mode matrix.
 
+Use the [sheet view regression checks](#sheet-view-regression-checks) for the
+current Research Bench. Canvas, minimap, and Classic route-review checks below
+apply to historical builds through 1.3.11.
+
 ## Candidate record
 
 Fill this in before checking any runtime box. Do not combine results from
@@ -645,6 +649,10 @@ actual art/name rectangles, name lines, channels, and decoration flags. Compare
 these with screenshots when checking selection stability and zoom thresholds.
 
 ## Sheet view regression checks
+
+- [ ] Open a bench with an existing Classic preference. Check that the sheet opens with the saved lane grouping and confirmation settings.
+- [ ] Enable all three domains at 320 GUI pixels. Select each tab and switch the lane grouping. Check that all toolbar buttons have separate click targets.
+- [ ] Select a weapon and switch to Ammo while its selection or purchase reply is pending. Verify that the old inspector and purchase button close and that changing the lane grouping keeps Ammo open.
 
 - [ ] At the smallest GUI size, inspect long names, multiple requirement groups,
   and a route with more than six material types. Scroll to the end, use both
