@@ -9,22 +9,26 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import com.gamergaming.taczweaponblueprints.compat.fzzy_config.PersonalSettingsSession;
 import com.gamergaming.taczweaponblueprints.compat.fzzy_config.ResearchTreeClientConfig;
 
 class TechTreeViewPreferenceTest {
     @Test
     void aFreshInstallOpensTheNewTreeGroupedByBranch() {
         ResearchTreeClientConfig config = new ResearchTreeClientConfig();
-        assertEquals(TechTreeViewMode.NEW, config.techTreeView.get());
         assertEquals(TechTreeLaneMode.BRANCHES, config.techTreeLanes.get());
     }
 
     @Test
-    void viewAndLanesAreOfferedInPersonalSettingsAheadOfTheClassicOnlyOptions() {
-        assertEquals(0, PersonalSettingsSession.VISIBLE.indexOf("techTreeView"));
-        assertEquals(1, PersonalSettingsSession.VISIBLE.indexOf("techTreeLanes"));
-        assertTrue(PersonalSettingsSession.VISIBLE.contains("holdToResearch"));
+    void retiringClassicPreservesOtherPreferences() {
+        var config = me.fzzyhmstrs.fzzy_config.api.ConfigApi.deserializeConfig(new ResearchTreeClientConfig(), """
+                version = 3
+                techTreeView = "CLASSIC"
+                techTreeLanes = "TYPES"
+                holdDurationMillis = 1100
+                """).get();
+        assertEquals(TechTreeLaneMode.TYPES, config.techTreeLanes.get());
+        assertEquals(1100, config.holdDurationMillis());
+        assertFalse(me.fzzyhmstrs.fzzy_config.api.ConfigApi.serializeConfig(config).get().contains("techTreeView"));
     }
 
     @Test

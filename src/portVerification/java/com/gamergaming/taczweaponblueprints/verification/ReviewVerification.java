@@ -1,5 +1,8 @@
 package com.gamergaming.taczweaponblueprints.verification;
 
+import com.gamergaming.taczweaponblueprints.init.ModCreativeTabs;
+import com.gamergaming.taczweaponblueprints.item.BlueprintItem;
+import net.minecraft.world.item.CreativeModeTabs;
 import com.gamergaming.taczweaponblueprints.research.designer.*;
 import com.gamergaming.taczweaponblueprints.research.designer.io.*;
 import com.gamergaming.taczweaponblueprints.research.designer.server.ResearchDesignerCaptureService;
@@ -29,6 +32,7 @@ final class ReviewVerification {
     }
     static void run(MinecraftServer server) {
         try {
+            creativeTabs(server);
             pricing(server);
             missingItemCounts(server);
             export(server);
@@ -42,6 +46,15 @@ final class ReviewVerification {
             CoreVerification.delay = 1;
         }
     }
+    private static void creativeTabs(MinecraftServer server) {
+        CreativeModeTabs.tryRebuildTabContents(server.getWorldData().enabledFeatures(), true, server.registryAccess());
+        var ammo = ModCreativeTabs.AMMO_BLUEPRINT_TAB.get().getDisplayItems();
+        if (ammo.stream().noneMatch(stack -> BlueprintItem.getBlueprintId(stack).isPresent())) {
+            throw new IllegalStateException("Dedicated server did not populate the ammo blueprint tab");
+        }
+        CoreVerification.checks.add("dedicated server populated ammo blueprint Creative tab");
+    }
+
     private static void missingItemCounts(MinecraftServer server) {
         var slot = ResourceLocation.parse("wrb_core_verification:missing_item");
         var offer = VillagerTradeOffers.create(slot, new ItemStack(Items.EMERALD), new ItemStack(Items.IRON_INGOT),

@@ -59,6 +59,7 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
     private ResourceLocation selectedBlueprint;
     private ResearchSelectionPreview preview = ResearchSelectionPreview.EMPTY;
     private int materialOffset;
+    private int nextClientActionRequestId = 1;
     private ResearchInventorySnapshot previewInventory = ResearchInventorySnapshot.EMPTY;
     private final ResearchBenchRequestLimiter requestLimiter =
             new ResearchBenchRequestLimiter();
@@ -75,6 +76,13 @@ public final class ResearchBenchMenu extends AbstractContainerMenu {
         return new ResearchBenchMenu(id, inventory, inventory.player.level(), inventory.player.blockPosition(),
                 ResearchWorkbenchTier.TIER_3, true,
                 com.gamergaming.taczweaponblueprints.progression.StationSetup.ResearchAccess.PORTABLE);
+    }
+
+    /** Sequence shared by screen instances for the lifetime of this open menu. */
+    public int nextClientActionRequestId() {
+        int id = nextClientActionRequestId;
+        nextClientActionRequestId = id == Integer.MAX_VALUE ? 1 : id + 1;
+        return id;
     }
 
     public ResearchBenchMenu(int containerId, Inventory inventory, FriendlyByteBuf buffer) {

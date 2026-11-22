@@ -30,6 +30,7 @@ final class FeatureClientVerification {
             if(jei())JeiFeatureVerification.verify();
             require(!ClientResearchState.publication().graph().nodes().isEmpty(),"research tree and Journal arrive as a client publication");
             for(var kind:java.util.List.of("gun","ammo","attachment"))require(ClientResearchState.publication().graph().nodes().stream().anyMatch(n->{var data=com.gamergaming.taczweaponblueprints.resource.BlueprintDataManager.CLIENT.getBlueprintData(n.blueprintId().toString());return data!=null && data.getKind().serializedName().equals(kind);}),"enabled research domain reaches client: "+kind);
+            verifySheetToolbar(mc, (TechTreeSheetScreen) mc.screen);
             screenshot(mc,"research-tree");
             PacketDistributor.sendToServer(new ResearchBenchActionPacket(menu.containerId,101,ResearchBenchResearchAction.SELECT,Optional.of(FeatureVerification.PATH_TARGET)));
         } else if(stage==103) {
@@ -70,6 +71,51 @@ final class FeatureClientVerification {
         } else throw new IllegalStateException("unexpected feature stage "+stage);
         expected=0;PacketDistributor.sendToServer(new CoreVerification.Probe(stage));
     }
+    private static void verifySheetToolbar(Minecraft mc, TechTreeSheetScreen sheet) throws ReflectiveOperationException {
+        int width = sheet.width, height = sheet.height;
+        var preferences = com.gamergaming.taczweaponblueprints.init.ModConfigs.RESEARCH_TREE_CLIENT;
+        var savedLanes = preferences.techTreeLanes.get();
+        sheet.resize(mc, 320, 240);
+        try {
+            var controls = sheet.children().stream()
+                    .filter(net.minecraft.client.gui.components.Button.class::isInstance)
+                    .map(net.minecraft.client.gui.components.Button.class::cast)
+                    .filter(button -> button.visible && button.getY() == 4)
+                    .sorted(Comparator.comparingInt(button -> button.getX())).toList();
+            require(controls.size() == 8, "three domain tabs and five toolbar actions are present");
+            int end = 0;
+            for (var button : controls) {
+                require(button.getX() >= end && button.getRight() <= sheet.width, "toolbar hit areas fit at 320 GUI pixels");
+                end = button.getRight();
+            }
+            // Arrow navigation queues a selection for a later tick. Change domains before it is sent.
+            sheet.keyPressed(262, 0, 0);
+            sheet.tick();
+            var field = TechTreeSheetScreen.class.getDeclaredField("inspectorBody");
+            field.setAccessible(true);
+            var inspector = (net.minecraft.client.gui.components.AbstractWidget) field.get(sheet);
+            require(inspector.visible, "keyboard selection opens the inspector");
+            controls.get(2).onPress();
+            require(!inspector.visible, "switching domains clears the previous inspector");
+            var domain = TechTreeSheetScreen.class.getDeclaredField("domain");
+            domain.setAccessible(true);
+            var active = domain.get(sheet);
+            var group = sheet.children().stream().filter(net.minecraft.client.gui.components.Button.class::isInstance)
+                    .map(net.minecraft.client.gui.components.Button.class::cast)
+                    .filter(button -> button.getX() == controls.get(3).getX() && button.getY() == 4)
+                    .findFirst().orElseThrow();
+            group.onPress();
+            require(active == domain.get(sheet) && !inspector.visible, "changing lane grouping keeps the active domain");
+        } finally {
+            preferences.chooseTechTreeLanes(savedLanes);
+            sheet.resize(mc, width, height);
+            var weaponTab = sheet.children().stream().filter(net.minecraft.client.gui.components.Button.class::isInstance)
+                    .map(net.minecraft.client.gui.components.Button.class::cast).filter(button -> button.getY() == 4)
+                    .min(Comparator.comparingInt(button -> button.getX())).orElseThrow();
+            weaponTab.onPress();
+        }
+    }
+
     private static void verifyAnalyzerScrolling(BlueprintRecyclerScreen screen) throws ReflectiveOperationException {
         var open=BlueprintRecyclerScreen.class.getDeclaredField("detailsOpen");open.setAccessible(true);
         var offset=BlueprintRecyclerScreen.class.getDeclaredField("detailScroll");offset.setAccessible(true);

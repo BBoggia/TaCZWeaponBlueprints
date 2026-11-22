@@ -12,8 +12,8 @@ import net.peanuuutz.tomlkt.Toml;
 
 /** A client-only draft. Hidden legacy values remain intact; only explicit reset changes their defaults. */
 public final class PersonalSettingsSession {
-    public static final List<String> VISIBLE = List.of("techTreeView", "techTreeLanes", "holdToResearch", "holdDurationMillis",
-            "showResearchPointNotifications", "showBranchLabels", "reduceMotion", "showBackgroundGrid", "minimap");
+    public static final List<String> VISIBLE = List.of("techTreeLanes", "holdToResearch", "holdDurationMillis",
+            "showResearchPointNotifications");
     public interface Store {
         String read() throws IOException;
         void save(ResearchTreeClientConfig candidate) throws IOException;

@@ -77,14 +77,14 @@ public final class ResearchTreePrototypeEvents {
                 titleOpened = true;
                 var input = ResearchTreeBaselineInput.read(Path.of(System.getProperty("tacz.treePrototype.input")));
                 Minecraft.getInstance().setScreen(new ResearchTreePrototypeScreen(event.getScreen(), input, true));
-            } else if (!benchOpened && event.getScreen() instanceof ResearchBenchScreen && Boolean.getBoolean("tacz.treePrototype.captureBench")) {
+            } else if (!benchOpened && event.getScreen() instanceof TechTreeSheetScreen && Boolean.getBoolean("tacz.treePrototype.captureBench")) {
                 if (openBench()) benchOpened = true;
             }
         } catch (Exception failure) { System.err.println("[Tree prototype] Cannot open: " + failure); }
     }
 
     @SubscribeEvent public static void key(ScreenEvent.KeyPressed.Pre event) {
-        if (ENABLED && event.getKeyCode() == GLFW.GLFW_KEY_F8 && event.getScreen() instanceof ResearchBenchScreen) {
+        if (ENABLED && event.getKeyCode() == GLFW.GLFW_KEY_F8 && event.getScreen() instanceof TechTreeSheetScreen) {
             if (openBench()) { benchOpened = true; event.setCanceled(true); }
         }
     }

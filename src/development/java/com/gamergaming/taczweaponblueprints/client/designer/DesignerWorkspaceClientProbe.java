@@ -141,7 +141,7 @@ public final class DesignerWorkspaceClientProbe {
                 state.addProperty("draft_nodes",session.project().draft().nodes().size());state.addProperty("diagnostics",((List<?>)field(mc.screen,"diagnostics")).size());report.add("workspace",state);
             }
             report.addProperty("connected",mc.getConnection()!=null);report.addProperty("operator",mc.player!=null&&mc.player.hasPermissions(2));report.addProperty("capture_pending",ClientDesignerCapture.pending());report.addProperty("capture_present",ClientDesignerCapture.captured().isPresent());report.addProperty("capture_status",ClientDesignerCapture.status().map(Object::toString).orElse("none"));
-            if(mc.screen instanceof com.gamergaming.taczweaponblueprints.client.ResearchBenchScreen bench)report.add("bench_preview",DesignerValues.evidence(bench.getMenu().preview()));
+            if(mc.screen instanceof com.gamergaming.taczweaponblueprints.client.TechTreeSheetScreen bench)report.add("bench_preview",DesignerValues.evidence(bench.getMenu().preview()));
             report.addProperty("status","ok");Files.writeString(root.resolve("control-result.json"),report.toString());
         }catch(Exception error){try{Files.writeString(root.resolve("control-result.json"),new Gson().toJson(Map.of("status","failed","error",error.toString())));}catch(Exception ignored){}error.printStackTrace();}
     }

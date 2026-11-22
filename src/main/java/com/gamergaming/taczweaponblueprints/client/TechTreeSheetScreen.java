@@ -101,7 +101,6 @@ public final class TechTreeSheetScreen extends AbstractContainerScreen<ResearchB
     private boolean pressedOnSheet, dragging, centerOnSelection = true;
     private double pressX, pressY;
 
-    private int nextRequestId = 1;
     private Component feedback = Component.empty();
     private int feedbackColor = UiTheme.TEXT_MUTED;
     private int feedbackTicks;
@@ -142,23 +141,18 @@ public final class TechTreeSheetScreen extends AbstractContainerScreen<ResearchB
         UiButton closeButton = addRenderableWidget(UiButton.secondary(close, 4, 16, 16, Component.literal("×"),
                 ignored -> onClose()));
         closeButton.setTooltip(Tooltip.create(Component.translatable(BENCH + "close")));
-        Component classic = Component.translatable(SHEET + "classic_view");
-        int classicWidth = font.width(classic) + 12;
-        addRenderableWidget(UiButton.secondary(close - 4 - classicWidth, 4, classicWidth, 16, classic,
-                ignored -> openClassicView()));
-
         UiButton legendButton = addRenderableWidget(UiButton.secondary(
-                close - 4 - classicWidth - 2 - 16 - 2 - 16 - 2 - 16, 4, 16, 16, Component.literal("?"), ignored -> {
+                close - 54, 4, 16, 16, Component.literal("?"), ignored -> {
                     legendOpen = !legendOpen;
                     buildWidgets();
                 }));
         legendButton.setSelected(legendOpen);
         legendButton.setTooltip(Tooltip.create(Component.translatable(SHEET + "legend.tooltip")));
-        UiButton overviewButton = addRenderableWidget(UiButton.secondary(close - 4 - classicWidth - 2 - 16 - 2 - 16,
+        UiButton overviewButton = addRenderableWidget(UiButton.secondary(close - 36,
                 4, 16, 16, Component.literal("□"), ignored -> setOverview(!overview)));
         overviewButton.setSelected(overview);
         overviewButton.setTooltip(Tooltip.create(Component.translatable(SHEET + "overview.tooltip")));
-        UiButton searchButton = addRenderableWidget(UiButton.secondary(close - 4 - classicWidth - 2 - 16, 4, 16, 16,
+        UiButton searchButton = addRenderableWidget(UiButton.secondary(close - 18, 4, 16, 16,
                 Component.literal("⌕"), ignored -> toggleSearch()));
         searchButton.setSelected(searchOpen);
         searchButton.setTooltip(Tooltip.create(Component.translatable(
@@ -182,9 +176,13 @@ public final class TechTreeSheetScreen extends AbstractContainerScreen<ResearchB
 
         Component grouping = Component.translatable(SHEET + (arrangement == TechTreeSheetLayout.Arrangement.BRANCHES
                 ? "lanes.branches" : "lanes.families"));
-        int groupingWidth = font.width(grouping) + 12;
-        barRight = close - 4 - classicWidth - 2 - 16 - 2 - 16 - 2 - 16 - 2 - groupingWidth;
-        UiButton groupingButton = addRenderableWidget(UiButton.secondary(barRight, 4, groupingWidth, 16, grouping,
+        int domainWidth = domains.stream()
+                .mapToInt(view -> font.width(title(view.translationKey(), view.title())) + 14).sum();
+        var toolbar = TechTreeToolbar.fit(close - 56, font.width(grouping) + 12, domainWidth, domains.size());
+        int groupingWidth = toolbar.groupingWidth();
+        barRight = close - 56 - groupingWidth;
+        UiButton groupingButton = addRenderableWidget(UiButton.secondary(barRight, 4, groupingWidth, 16,
+                toolbar.compactGrouping() ? Component.literal("≡") : grouping,
                 ignored -> {
                     arrangement = arrangement == TechTreeSheetLayout.Arrangement.BRANCHES
                             ? TechTreeSheetLayout.Arrangement.FAMILIES : TechTreeSheetLayout.Arrangement.BRANCHES;
@@ -195,20 +193,21 @@ public final class TechTreeSheetScreen extends AbstractContainerScreen<ResearchB
                     rebuild(true);
                     buildWidgets();
                 }));
-        groupingButton.setTooltip(Tooltip.create(Component.translatable(SHEET + "lanes.tooltip")));
+        groupingButton.setTooltip(Tooltip.create(grouping.copy().append("\n").append(Component.translatable(SHEET + "lanes.tooltip"))));
         // On a narrow window the bench name gives way first, then its tier tag.
-        int domainsWidth = 0;
-        for (var view : domains) {
-            domainsWidth += font.width(title(view.translationKey(), view.title())) + 14;
-        }
-        int room = barRight - 8 - domainsWidth - 8;
+        int room = toolbar.compactDomains() ? 0 : barRight - 16 - domainWidth;
         showTag = !menu.portable() && room >= font.width(tierLabel()) + 14;
         showTitle = room >= font.width(title) + 8 + (showTag ? font.width(tierLabel()) + 14 : 0);
         int x = 8 + (showTitle ? font.width(title) + 8 : 0) + (showTag ? font.width(tierLabel()) + 14 : 0);
         for (var view : domains) {
-            Component label = title(view.translationKey(), view.title());
-            int buttonWidth = font.width(label) + 12;
+            Component fullLabel = title(view.translationKey(), view.title());
+            Component label = toolbar.compactDomains()
+                    ? Component.translatable(TREE + "domain." + view.domain().name().toLowerCase(Locale.ROOT) + ".short")
+                    : fullLabel;
+            int buttonWidth = toolbar.compactDomains()
+                    ? Math.min(font.width(label) + 12, toolbar.maxDomainWidth()) : font.width(label) + 12;
             UiButton button = UiButton.secondary(x, 4, buttonWidth, 16, label, ignored -> showDomain(view.domain()));
+            if (toolbar.compactDomains()) button.setTooltip(Tooltip.create(fullLabel));
             button.setSelected(view.domain() == domain);
             domainButtons.add(addRenderableWidget(button));
             x += buttonWidth + 2;
@@ -467,6 +466,10 @@ public final class TechTreeSheetScreen extends AbstractContainerScreen<ResearchB
         var view = domains.stream().filter(candidate -> candidate.domain() == domain).findFirst();
         layout = view.map(value -> TechTreeSheetLayout.build(value, publication.techTree().bands(), graph,
                 arrangement)).orElse(TechTreeSheetLayout.EMPTY);
+        if (selection.selected().filter(id -> layout.tile(id).isEmpty()).isPresent()
+                && !domains.isEmpty()) {
+            clearDomainSelection();
+        }
         rowsAreBenchTiers = layout.tiers().stream().anyMatch(tier -> tier.benchTier() != TechTreeSheetLayout.BAND_ROW);
         // Only this domain's blueprints: weapon art lookups would fail for ammo and attachments.
         art.prepare(domain, graph.inducedSubgraph(layout.tiles().stream()
@@ -476,20 +479,27 @@ public final class TechTreeSheetScreen extends AbstractContainerScreen<ResearchB
         refreshGuidance();
     }
 
+    private void clearDomainSelection() {
+        cancelHold(false);
+        selection.clear();
+        selectDelay = 0;
+        materialPage = null;
+        inspectorScroll = 0;
+        if (inspectorBody != null) inspectorBody.reset();
+        feedback = Component.empty();
+        feedbackTicks = 0;
+    }
+
     private void showDomain(Domain next) {
         if (next == domain) {
             return;
         }
+        clearDomainSelection();
         domain = next;
         scrollX = 0;
         scrollY = 0;
         rebuild(false);
         buildWidgets();
-    }
-
-    private void openClassicView() {
-        com.gamergaming.taczweaponblueprints.init.ModConfigs.RESEARCH_TREE_CLIENT.chooseTechTreeView(TechTreeViewMode.CLASSIC);
-        minecraft.setScreen(new ResearchBenchScreen(menu, inventory, title));
     }
 
     @Override
@@ -1208,12 +1218,6 @@ public final class TechTreeSheetScreen extends AbstractContainerScreen<ResearchB
                 .orElseGet(() -> Component.translatable(BENCH + "research.compact")));
     }
 
-    private int nextRequestId() {
-        int id = nextRequestId;
-        nextRequestId = id == Integer.MAX_VALUE ? 1 : id + 1;
-        return id;
-    }
-
     private void select(ResourceLocation id) {
         cancelHold(false);
         selection.choose(id);
@@ -1241,7 +1245,7 @@ public final class TechTreeSheetScreen extends AbstractContainerScreen<ResearchB
 
     private void sendSelection() {
         if (selection.selected().isEmpty()) return;
-        int request = nextRequestId();
+        int request = menu.nextClientActionRequestId();
         selection.sentSelection(request);
         feedback = Component.empty();
         PacketDistributor.sendToServer(new ResearchBenchActionPacket(menu.containerId, request,
@@ -1256,7 +1260,7 @@ public final class TechTreeSheetScreen extends AbstractContainerScreen<ResearchB
 
     private void requestResearch(ResearchPurchaseConfirmation.Intent intent) {
         if (selection.researching() || !intent.matches(currentPreview())) return;
-        int request = nextRequestId();
+        int request = menu.nextClientActionRequestId();
         selection.sentResearch(request);
         showFeedback(Component.translatable(TREE + "selection.research_pending"), UiTheme.TEXT_MUTED, 0);
         PacketDistributor.sendToServer(new ResearchBenchActionPacket(menu.containerId, request,

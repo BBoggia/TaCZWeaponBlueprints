@@ -7,6 +7,7 @@ import com.gamergaming.taczweaponblueprints.compat.fzzy_config.PersonalSettingsS
 import com.gamergaming.taczweaponblueprints.init.ModConfigs;
 import com.gamergaming.taczweaponblueprints.settings.*;
 import me.fzzyhmstrs.fzzy_config.api.ConfigApiJava;
+import com.gamergaming.taczweaponblueprints.client.TechTreeLaneMode;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.*;
 import net.minecraft.client.gui.screens.ConfirmScreen;
@@ -22,7 +23,7 @@ final class PersonalSettingsScreenVerification {
             case 0 -> {
                 server = FzzySettingsAdapter.capture(ModConfigs.BLUEPRINT);
                 live.nodeGap.validateAndSet(77); live.holdToResearch.validateAndSet(false);
-                live.holdDurationMillis.validateAndSet(1200); live.showBranchLabels.validateAndSet(false);
+                live.holdDurationMillis.validateAndSet(1200); live.techTreeLanes.validateAndSet(TechTreeLaneMode.BRANCHES);
                 live.onUpdateClient(); live.save(); personal = PersonalSettingsSession.capture(live);
                 button("settings.taczweaponblueprints.ui.personal").onPress();
                 require(mc.screen instanceof PersonalSettingsScreen, "personal scope opens the focused client-only editor");
@@ -32,21 +33,21 @@ final class PersonalSettingsScreenVerification {
                 require(personal.equals(PersonalSettingsSession.capture(live)), "opening Personal Settings preserves hidden and visible values");
                 var duration = editor("holdDurationMillis");
                 require(!duration.active, "hold duration is inactive while hold-to-confirm is off");
-                press("showBranchLabels");
-                require(!live.showBranchLabels.get(), "personal widget edit stays detached until Apply");
+                press("techTreeLanes");
+                require(live.techTreeLanes.get() == TechTreeLaneMode.BRANCHES, "personal widget edit stays detached until Apply");
                 button("settings.taczweaponblueprints.ui.apply").onPress();
             }
             case 2 -> {
-                require(live.showBranchLabels.get(), "personal Apply updates the same preference read by the Tech Tree");
+                require(live.techTreeLanes.get() == TechTreeLaneMode.TYPES, "personal Apply updates the same preference read by the Tech Tree");
                 require(live.nodeGap.getUnconditional() == 77 && live.holdDurationMillis() == 1200, "personal Apply preserves hidden layout and dormant hold duration");
                 mc.screen.onClose();
                 require(mc.screen instanceof SettingsLandingScreen, "Personal Settings Back returns to the landing page");
                 button("settings.taczweaponblueprints.ui.personal").onPress();
-                live.toggleBranchLabels(); // The existing in-tree button uses this exact path.
-                press("reduceMotion"); button("settings.taczweaponblueprints.ui.apply").onPress();
+                live.chooseTechTreeLanes(TechTreeLaneMode.BRANCHES);
+                press("holdToResearch"); button("settings.taczweaponblueprints.ui.apply").onPress();
             }
             case 3 -> {
-                require(!live.showBranchLabels.get() && !live.reduceMotion.get(), "stale personal draft cannot overwrite a newer in-tree toggle");
+                require(live.techTreeLanes.get() == TechTreeLaneMode.BRANCHES && !live.holdToResearchEnabled(), "stale personal draft cannot overwrite a newer in-tree toggle");
                 button("settings.taczweaponblueprints.ui.discard").onPress();
                 require(mc.screen instanceof ConfirmScreen, "discarding personal changes asks before dropping the proposal");
                 button("settings.taczweaponblueprints.ui.discard").onPress();
@@ -55,16 +56,16 @@ final class PersonalSettingsScreenVerification {
                 button("config.taczweaponblueprints.research_tree_client.resetTreeAppearance.button").onPress();
                 require(mc.screen instanceof ConfirmScreen, "appearance reset explains its scope before queuing");
                 button("gui.cancel").onPress();
-                require(live.nodeGap.getUnconditional() == 77 && !live.showBranchLabels.get(), "cancelled appearance reset changes nothing");
+                require(live.nodeGap.getUnconditional() == 77 && live.techTreeLanes.get() == TechTreeLaneMode.BRANCHES, "cancelled appearance reset changes nothing");
                 button("config.taczweaponblueprints.research_tree_client.resetTreeAppearance.button").onPress();
                 button("settings.taczweaponblueprints.ui.queue_reset").onPress();
             }
             case 5 -> {
-                require(live.nodeGap.getUnconditional() == 77 && !live.showBranchLabels.get(), "queued appearance reset waits for Apply");
+                require(live.nodeGap.getUnconditional() == 77 && live.techTreeLanes.get() == TechTreeLaneMode.BRANCHES, "queued appearance reset waits for Apply");
                 button("settings.taczweaponblueprints.ui.apply").onPress();
             }
             case 6 -> {
-                require(live.showBranchLabels.get() && live.nodeGap.getUnconditional() != 77, "appearance reset retains its visual and legacy layout scope");
+                require(live.techTreeLanes.get() == TechTreeLaneMode.BRANCHES && live.nodeGap.getUnconditional() != 77, "appearance reset retains its visual and legacy layout scope");
                 require(!live.holdToResearchEnabled() && live.holdDurationMillis() == 1200 && live.showResearchPointNotifications.get(), "appearance reset keeps interaction and reward-message preferences");
                 require(server.equals(FzzySettingsAdapter.capture(ModConfigs.BLUEPRINT)) && !ClientSettingsAccess.draft().orElseThrow().dirty(), "personal edits never mutate server gameplay or its pending draft");
                 mc.screen.resize(mc, 320, 240);

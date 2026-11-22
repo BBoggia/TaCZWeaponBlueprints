@@ -12,17 +12,15 @@ through a separate local draft. Main-menu Local Defaults retains the native edit
 `BlueprintConfig` remains registered as `taczweaponblueprints:blueprint`, with
 server schema 5 and flat fields in `config/taczweaponblueprints/blueprint.toml`.
 `ResearchTreeClientConfig` remains client-only, with schema 3 in
-`config/taczweaponblueprints/research_tree_client.toml`. Defaults, enum tokens,
-field wrappers, migrations, and public field names are unchanged. `GeneralConfig`
+`config/taczweaponblueprints/research_tree_client.toml`. Existing lane, hold, and notification preferences carry over. The retired
+`techTreeView` key is ignored on read. `GeneralConfig`
 is not registered.
 
-The [field inventory](settings-field-inventory.csv) records all 129 value, group,
-and action entries: 89 server values, 20 personal values, 19 groups, and one
-personal action. It includes each field's label, scope, permissions, current
+The [field inventory](settings-field-inventory.csv) lists the values, groups, and actions on each settings page. It includes each field's label, scope, permissions, current
 group/condition, destination, and persistence status. `ConfigGroup` and
 `ConfigAction` are presentation entries, not saved sections. Six personal layout
 fields were already deprecated and excluded by Fzzy; seven other legacy layout
-values remain serialized. The seven active personal controls remain separate
+values remain serialized. The four active personal controls remain separate
 from server settings.
 
 The fixed compatibility fixtures under `src/test/resources/settings/` capture
@@ -199,8 +197,7 @@ an explicit handoff. Keeping a reviewed proposal does not apply it automatically
 
 ## Personal preferences
 
-Personal Settings shows hold-to-confirm, hold duration, reward messages, branch
-labels, reduced motion, the background grid, and minimap mode. The same public
+Personal Settings shows lane grouping, hold-to-confirm, hold duration, and reward messages. The same public
 Fzzy field widgets retain their validation and units. The public screen provider
 routes both the landing-page button and the exact personal scope to this view.
 Inactive layout fields are omitted from navigation, not marked deprecated or
@@ -216,8 +213,7 @@ Discard abandons the draft and reloads current values. Failed saves do not insta
 the draft; saved changes whose refresh fails are reported separately.
 
 Reset tree appearance invokes the existing reset on the detached copy after a
-scope confirmation. It resets motion, branch labels, grid, minimap, and the
-existing legacy layout values. Hold-to-confirm, hold duration, and reward
+scope confirmation. It restores branch grouping and resets saved legacy layout values. Hold-to-confirm, hold duration, and reward
 messages are retained. Reset remains pending until Apply. Ordinary edits keep
 all hidden compatibility values; already deprecated fields retain the existing
 serializer's omission behavior.

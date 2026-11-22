@@ -39,7 +39,7 @@ final class ResearchSheetSelection {
     }
 
     boolean acceptSelection(int request, Optional<ResourceLocation> target, boolean successful) {
-        if (request != selectionRequest || !target.equals(selected)) return false;
+        if (selectionRequest == 0 || request != selectionRequest || !target.equals(selected)) return false;
         selectionRequest = 0;
         confirmed = successful;
         failed = !successful;
@@ -67,7 +67,8 @@ final class ResearchSheetSelection {
         return Optional.of(current);
     }
 
-    private void clear() {
+    void clear() {
+        selectionRequest = 0;
         selected = Optional.empty();
         confirmed = false;
         failed = false;

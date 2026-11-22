@@ -1,10 +1,8 @@
 # [TaCZ] Weapon Research & Blueprints
 
-See the [1.3.11 release notes](docs/releases/1.3.11.md) for the redesigned Tech Tree,
-TaCZ 1.2.0-hotfix compatibility, and loader-specific changes.
+See the [1.3.12 release notes](docs/releases/1.3.12.md) for the dedicated-server crash fix and Research Bench changes.
 
-This branch targets Minecraft 1.21.1 with NeoForge. The current build is a
-NeoForge release; the matching Forge 1.20.1 source is on branch `v1.3.11`. See
+This branch targets Minecraft 1.21.1 with NeoForge. Forge 1.20.1 has a separate build. See
 [NeoForge development](docs/neoforge-development.md) for the port's dependencies,
 setup commands, and current limitations.
 
@@ -28,13 +26,10 @@ an optional server setting.
 - Permanent per-player recipe knowledge enforced by the server.
 - A Blueprint Journal for discoveries, learned recipes, recent unlocks,
   completion, active rules, and a reusable Getting Started guide.
-- An edge-to-edge Research Bench Tech Tree with search, pan, zoom, keyboard
-  navigation, an interactive minimap for large trees, and selected-weapon
-  details.
+- A Research Bench Tech Tree with branch and weapon-type lanes, search, keyboard navigation, and an overview of the whole tree.
 - Three Research Bench tiers for the Tech Tree and three dedicated crafting
   Workbench levels using TaCZ's native crafting screen.
-- Guided research tools for pinning a target, highlighting its complete route,
-  tracking currency and material progress, and filtering to affordable unlocks.
+- Select a blueprint to inspect its requirements or jump to the next affordable blueprint.
 - Automatic weapon placement based on strength, handling, range, and play
   style, including compatible weapons added by TaCZ content packs.
 - Authored-only Tech Trees for pack authors who want complete control over
@@ -87,7 +82,7 @@ stock, research restrictions, and modpack examples.
 
 ## Requirements
 
-These requirements apply to NeoForge 1.3.11. The [release notes](docs/releases/1.3.11.md) also list the requirements for Forge 1.20.1.
+These requirements apply to NeoForge 1.3.12. The [release notes](docs/releases/1.3.12.md) also list the requirements for Forge 1.20.1.
 
 | Component | Version |
 | --- | --- |
@@ -130,8 +125,7 @@ rules. No additional datapack is needed to enable the bundled categories.
 
 Recommended setup and Simpler Stations offer a before-and-after review before
 queuing changes. They preserve unrelated custom values. Personal Settings has a
-separate draft for confirmation, notifications, motion, grid, minimap and context
-labels. Existing configuration files and hidden legacy values remain saved.
+separate draft for lane grouping, purchase confirmation, and reward notifications. Existing configuration files and hidden legacy values remain saved.
 See the [settings guide](docs/settings-guide.md) for navigation and editing help.
 
 These screens are available in NeoForge 1.3.10. The Forge version retains its

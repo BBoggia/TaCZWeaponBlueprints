@@ -7,7 +7,6 @@ import java.util.Optional;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.client.ClientResearchAffordabilityState;
 import com.gamergaming.taczweaponblueprints.client.ClientResearchState;
-import com.gamergaming.taczweaponblueprints.client.ResearchBenchScreen;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
 import com.gamergaming.taczweaponblueprints.progression.ResearchAffordabilitySnapshot;
 import com.gamergaming.taczweaponblueprints.progression.ResearchGuidanceSnapshot;

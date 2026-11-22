@@ -7,7 +7,6 @@ import java.util.Optional;
 import com.gamergaming.taczweaponblueprints.capabilities.PlayerProgressionLimits;
 import com.gamergaming.taczweaponblueprints.client.ClientResearchGuidanceState;
 import com.gamergaming.taczweaponblueprints.client.ClientResearchState;
-import com.gamergaming.taczweaponblueprints.client.ResearchBenchScreen;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
 import com.gamergaming.taczweaponblueprints.progression.ResearchCostMode;
 import com.gamergaming.taczweaponblueprints.progression.ResearchGuidanceSnapshot;
@@ -93,27 +92,16 @@ public final class ResearchGuidanceResultPacket implements CustomPacketPayload {
                     return;
                 }
                 if (result.code() == ResearchBenchMenu.GuidanceResultCode.SUCCESS) {
-                    boolean accepted = ClientResearchGuidanceState.accept(
+                    ClientResearchGuidanceState.accept(
                             requestId,
                             publicationGeneration,
                             result.snapshot().orElseThrow(),
                             ClientResearchState.publication());
-                    if ((accepted || ClientResearchGuidanceState.unavailable())
-                            && minecraft.screen instanceof ResearchBenchScreen screen) {
-                        screen.refreshAuthoritativeGuidance();
-                    }
                 } else {
-                    boolean rejected = ClientResearchGuidanceState.reject(
+                    ClientResearchGuidanceState.reject(
                             requestId,
                             publicationGeneration,
                             result.code() == ResearchBenchMenu.GuidanceResultCode.REJECTED);
-                    if (rejected && minecraft.screen instanceof ResearchBenchScreen screen) {
-                        if (result.code() == ResearchBenchMenu.GuidanceResultCode.THROTTLED) {
-                            screen.scheduleAuthoritativeGuidanceRetry();
-                        } else {
-                            screen.refreshAuthoritativeGuidance();
-                        }
-                    }
                 }
             });
         }

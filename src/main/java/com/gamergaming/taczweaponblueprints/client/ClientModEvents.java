@@ -22,7 +22,7 @@ public final class ClientModEvents {
 
     @SubscribeEvent
     public static void registerScreens(net.neoforged.neoforge.client.event.RegisterMenuScreensEvent event) {
-        event.register(ModMenus.RESEARCH_BENCH.get(), TechTreeScreens::create);
+        event.register(ModMenus.RESEARCH_BENCH.get(), TechTreeSheetScreen::new);
         event.register(ModMenus.BLUEPRINT_RECYCLER.get(), BlueprintRecyclerScreen::new);
     }
 

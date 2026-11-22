@@ -51,10 +51,15 @@ public final class ResearchTreeClientConfig extends Config {
     public ValidatedBoolean showResearchPointNotifications = new ValidatedBoolean(true);
 
     public ConfigGroup treeAppearance = new ConfigGroup("treeAppearance");
-    public ValidatedEnum<com.gamergaming.taczweaponblueprints.client.TechTreeViewMode> techTreeView = new ValidatedEnum<>(
-            com.gamergaming.taczweaponblueprints.client.TechTreeViewMode.NEW, ValidatedEnum.WidgetType.CYCLING);
     public ValidatedEnum<com.gamergaming.taczweaponblueprints.client.TechTreeLaneMode> techTreeLanes = new ValidatedEnum<>(
             com.gamergaming.taczweaponblueprints.client.TechTreeLaneMode.BRANCHES, ValidatedEnum.WidgetType.CYCLING);
+    @ConfigGroup.Pop
+    public ConfigAction resetTreeAppearance = new ConfigAction.Builder()
+            .title(Component.translatable(TRANSLATION_PREFIX + "resetTreeAppearance.button"))
+            .desc(Component.translatable(TRANSLATION_PREFIX + "resetTreeAppearance.desc"))
+            .build(this::restoreTreeAppearanceDefaults);
+
+    public ConfigGroup advancedLayout = new ConfigGroup("advancedLayout", true);
     public ValidatedBoolean showBranchLabels = new ValidatedBoolean(true);
     public ValidatedBoolean reduceMotion = new ValidatedBoolean(
             ResearchTreeDisplayPolicy.DEFAULT.reduceMotion());
@@ -63,13 +68,6 @@ public final class ResearchTreeClientConfig extends Config {
     public ValidatedEnum<ResearchTreeMinimapMode> minimap = new ValidatedEnum<>(
             ResearchTreeMinimapMode.AUTOMATIC,
             ValidatedEnum.WidgetType.CYCLING);
-    @ConfigGroup.Pop
-    public ConfigAction resetTreeAppearance = new ConfigAction.Builder()
-            .title(Component.translatable(TRANSLATION_PREFIX + "resetTreeAppearance.button"))
-            .desc(Component.translatable(TRANSLATION_PREFIX + "resetTreeAppearance.desc"))
-            .build(this::restoreTreeAppearanceDefaults);
-
-    public ConfigGroup advancedLayout = new ConfigGroup("advancedLayout", true);
     // Compatibility-only value; keep its persisted field path for older configurations.
     public ValidatedEnum<ResearchTreeLayoutPreset> layoutPreset = new ValidatedEnum<>(
             ResearchTreeLayoutPreset.BALANCED,
@@ -140,14 +138,6 @@ public final class ResearchTreeClientConfig extends Config {
         return layoutPolicy;
     }
 
-    /** Remembers a choice made from the Tech Tree itself, such as its Classic view button. */
-    public void chooseTechTreeView(com.gamergaming.taczweaponblueprints.client.TechTreeViewMode mode) {
-        if (techTreeView.get() != mode) {
-            techTreeView.validateAndSet(mode);
-            saveQuietly();
-        }
-    }
-
     public void chooseTechTreeLanes(com.gamergaming.taczweaponblueprints.client.TechTreeLaneMode mode) {
         if (techTreeLanes.get() != mode) {
             techTreeLanes.validateAndSet(mode);
@@ -160,7 +150,7 @@ public final class ResearchTreeClientConfig extends Config {
         try {
             save();
         } catch (RuntimeException error) {
-            TaCZWeaponBlueprints.LOGGER.warn("Could not save the Tech Tree view preference", error);
+            TaCZWeaponBlueprints.LOGGER.warn("Could not save the Tech Tree lane preference", error);
         }
     }
 
@@ -214,6 +204,7 @@ public final class ResearchTreeClientConfig extends Config {
     }
 
     void restoreTreeAppearanceDefaults() {
+        techTreeLanes.setAndUpdate(com.gamergaming.taczweaponblueprints.client.TechTreeLaneMode.BRANCHES);
         canvasPadding.setAndUpdate(DEFAULTS.canvasPadding());
         nodeGap.setAndUpdate(DEFAULTS.nodeGap());
         tierGap.setAndUpdate(DEFAULTS.tierGap());

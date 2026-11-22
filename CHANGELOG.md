@@ -6,6 +6,21 @@ documentation.
 
 ## Unreleased
 
+## 1.3.12 - 2026-11-21
+
+### Changed
+
+- Removed Classic view and its minimap. The Research Bench opens the lane-based Tech Tree for everyone. Existing lane grouping, hold-to-confirm, and reward notification preferences carry over.
+- Updated the mod-list and CurseForge descriptions to explain how to unlock recipes and where to craft learned items.
+- Personal Settings now shows lane grouping, hold-to-confirm, hold duration, and reward notifications. **Restore Tree Appearance** also resets lane grouping to Branches.
+
+### Fixed
+
+- Fixed a dedicated-server crash when another mod built the Creative tab list. Blueprint tabs now populate from the server’s blueprint catalog.
+- Switching between Weapons, Attachments, and Ammo clears the previous blueprint’s details and Research button. Changing the lane grouping keeps the current tab open.
+- Fixed overlapping Tech Tree toolbar buttons at small GUI sizes, including when all three research tabs are enabled.
+- Fixed a case where reopening the Tech Tree within the same Research Bench session could show a delayed server reply for an earlier selection.
+
 ## 1.3.11 - 2026-11-18
 
 ### Added

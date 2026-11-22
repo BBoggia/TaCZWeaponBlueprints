@@ -1,9 +1,7 @@
 package com.gamergaming.taczweaponblueprints.network;
 
 import java.util.Optional;
-import com.gamergaming.taczweaponblueprints.client.ResearchBenchScreen;
 import com.gamergaming.taczweaponblueprints.menu.ResearchBenchMenu;
-import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -38,19 +36,6 @@ public record ResearchRouteReviewResultPacket(ResearchRouteReviewRequestPacket r
         result.snapshot().ifPresent(s -> ResearchGuidanceResultPacket.writeSnapshot(b,s));
     }
     public void handle(IPayloadContext context) {
-        new ClientHandler().handle(context);
-    }
-
-    /** Loaded only when this clientbound payload is handled, never during server registration. */
-    @net.neoforged.api.distmarker.OnlyIn(net.neoforged.api.distmarker.Dist.CLIENT)
-    private final class ClientHandler {
-        void handle(IPayloadContext supplier) {
-            var context = supplier; context.enqueueWork(() -> {
-                var mc = Minecraft.getInstance();
-                if (mc.player != null && mc.player.containerMenu instanceof ResearchBenchMenu
-                        && mc.player.containerMenu.containerId == request.containerId()
-                        && mc.screen instanceof ResearchBenchScreen screen) screen.acceptRouteReview(ResearchRouteReviewResultPacket.this);
-            });
-        }
+        // Older clients can still request this response. The sheet uses the selected research quote.
     }
 }

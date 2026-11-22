@@ -67,15 +67,10 @@ TaCZ Magazines controls remain saved but are unavailable on NeoForge.
 
 ## Personal preferences
 
-Personal Settings starts with **Tech Tree View** (New or Classic) and **Tech
-Tree Lanes** (Branches or Weapon types). The view and Lanes buttons on the
-Research Bench change the same two settings. **Require Hold to Confirm** works
-in both views: in the new view, hold **Research** until the bar under it fills.
-Reward messages apply everywhere. Reduced motion, branch labels, the background
-grid and the minimap affect Classic view only, and say so in their
-descriptions. It has its own Apply and Discard controls. Appearance resets
-show their scope before updating your draft; hidden legacy layout values remain
-saved. Personal choices never change server progression.
+Personal Settings lets you choose branch or weapon-type lanes, set the research
+confirmation hold and its duration, and toggle reward messages. The Lanes button
+on the Research Bench saves the same grouping preference. Apply saves your edits.
+Restore Tree Appearance resets lane grouping and saved legacy layout values.
 
 ## Enter values in familiar units
 
